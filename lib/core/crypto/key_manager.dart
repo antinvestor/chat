@@ -1,48 +1,46 @@
 import 'dart:convert';
-import 'package:vodozemac/vodozemac.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+/// Simplified KeyManager for E2EE
+/// TODO: Implement proper vodozemac integration once API is stable
 class KeyManager {
   final FlutterSecureStorage _storage;
   
-  // Cache keys in memory
-  IdentityKeyPair? _identityKeyPair;
-  SignedPreKey? _signedPreKey;
-  List<OneTimePreKey> _oneTimePreKeys = [];
+  // Placeholder for account state
+  String? _identityKey;
 
   KeyManager(this._storage);
 
   Future<void> init() async {
     // Try to load from storage
-    final idKeyStr = await _storage.read(key: 'identity_key');
-    if (idKeyStr != null) {
-      // Assuming pickle takes a key string
-      _identityKeyPair = IdentityKeyPair.fromPickle(idKeyStr, "secret_key"); 
+    final key = await _storage.read(key: 'identity_key');
+    if (key != null) {
+      _identityKey = key;
     } else {
-      // Generate new
-      _identityKeyPair = IdentityKeyPair.generate();
-      await _storage.write(key: 'identity_key', value: _identityKeyPair!.pickle("secret_key"));
-    }
-
-    // Similar logic for SignedPreKey...
-    // For now, just generate if missing
-    if (_signedPreKey == null) {
-       _signedPreKey = _identityKeyPair!.generateSignedPreKey(1); // Assuming ID is int
+      // Generate placeholder key
+      _identityKey = base64Encode(List.generate(32, (i) => i));
+      await _storage.write(key: 'identity_key', value: _identityKey);
     }
   }
 
-  IdentityKey get identityKey => _identityKeyPair!.publicKey;
+  String get identityKey => _identityKey ?? '';
   
   // Helper to get public bundle to upload
   Map<String, dynamic> getPublicBundle() {
     return {
-      'identity_key': base64Encode(_identityKeyPair!.publicKey.toBytes()),
-      'signed_pre_key': {
-        'id': _signedPreKey!.id.value,
-        'key': base64Encode(_signedPreKey!.publicKey.toBytes()),
-        'signature': base64Encode(_signedPreKey!.signature.toBytes()),
-      },
-      // 'one_time_pre_keys': ...
+      'identity_key': _identityKey,
+      'curve25519_key': _identityKey,
     };
+  }
+  
+  // Placeholder encryption/decryption methods
+  Future<String> encrypt(String plaintext, String recipientKey) async {
+    // TODO: Implement proper Olm encryption
+    return base64Encode(utf8.encode(plaintext));
+  }
+  
+  Future<String> decrypt(String ciphertext, String senderKey) async {
+    // TODO: Implement proper Olm decryption
+    return utf8.decode(base64Decode(ciphertext));
   }
 }

@@ -24,7 +24,7 @@ class AuthRepository {
 }
 
 @riverpod
-AuthRepository authRepository(AuthRepositoryRef ref) {
+AuthRepository authRepository(Ref ref) {
   // TODO: Move config to environment variables
   const issuerUrl = 'https://auth.antinvestor.com'; 
   const clientId = 'chat_app';

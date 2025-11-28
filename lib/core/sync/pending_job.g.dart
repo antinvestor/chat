@@ -1,0 +1,32 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'pending_job.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_PendingJob _$PendingJobFromJson(Map<String, dynamic> json) => _PendingJob(
+  id: (json['id'] as num).toInt(),
+  type: $enumDecode(_$JobTypeEnumMap, json['type']),
+  payload: json['payload'] as Map<String, dynamic>,
+  createdAt: (json['createdAt'] as num).toInt(),
+  retryCount: (json['retryCount'] as num?)?.toInt() ?? 0,
+  status: json['status'] as String? ?? 'pending',
+);
+
+Map<String, dynamic> _$PendingJobToJson(_PendingJob instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': _$JobTypeEnumMap[instance.type]!,
+      'payload': instance.payload,
+      'createdAt': instance.createdAt,
+      'retryCount': instance.retryCount,
+      'status': instance.status,
+    };
+
+const _$JobTypeEnumMap = {
+  JobType.sendMessage: 'sendMessage',
+  JobType.updateRoom: 'updateRoom',
+  JobType.vote: 'vote',
+};

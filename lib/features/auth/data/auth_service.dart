@@ -33,7 +33,7 @@ class AuthService {
 
     await _storage.write(key: 'access_token', value: token.accessToken);
     await _storage.write(key: 'refresh_token', value: token.refreshToken);
-    await _storage.write(key: 'id_token', value: token.idToken);
+    await _storage.write(key: 'id_token', value: token.idToken?.toCompactSerialization());
 
     return token;
   }

@@ -2,25 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/router.dart';
 import 'core/db/database.dart';
+import 'core/sync/sync_engine.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Database
+  // Initialize database
   await AppDatabase.instance.database;
 
-  runApp(const ProviderScope(child: ChatApp()));
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
-class ChatApp extends ConsumerWidget {
-  const ChatApp({super.key});
+class MyApp extends ConsumerStatefulWidget {
+  const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(routerProvider);
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
 
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Start sync engine
+    ref.read(syncEngineProvider).start();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final router = ref.watch(routerProvider);
+    
     return MaterialApp.router(
-      title: 'Ant Investor Chat',
+      title: 'AntInvestor Chat',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,

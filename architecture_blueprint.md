@@ -349,3 +349,6 @@ final chatService = ChatServiceClient(client);
 *   **Database**: Encrypt `sqlite` file using SQLCipher (optional but recommended) or at least encrypt sensitive columns (keys) using `flutter_secure_storage` key wrapping.
 *   **Network**: TLS 1.3 enforced. Certificate pinning recommended.
 *   **Memory**: Clear sensitive keys from memory when not in use (hard in Dart, but best effort).
+
+
+* Device & device key management utilizes the devices api at : https://github.com/antinvestor/apis/blob/main/proto/device/device/v1/device.proto
