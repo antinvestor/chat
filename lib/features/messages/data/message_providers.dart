@@ -40,4 +40,19 @@ class MessageList extends _$MessageList {
       return messageRepo.getMessagesForRoom(event.roomId);
     });
   }
+
+  /// Fetch historical messages from server
+  Future<void> fetchHistory(String roomId, {String? cursor}) async {
+    final syncEngine = ref.read(syncEngineProvider);
+    final messageRepo = ref.read(messageRepositoryProvider);
+    
+    // Fetch from server
+    await syncEngine.getHistory(roomId, cursor: cursor);
+    
+    // Refresh local messages
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      return messageRepo.getMessagesForRoom(roomId);
+    });
+  }
 }

@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 import '../data/message_providers.dart';
+import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
+import 'message_bubble.dart';
+import 'typing_indicator.dart';
+import '../../../core/sync/sync_engine.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -21,12 +26,49 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  Timer? _typingDebounce;
+  Timer? _readReceiptDebounce;
 
   @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _typingDebounce?.cancel();
+    _readReceiptDebounce?.cancel();
     super.dispose();
+  }
+
+  void _sendReadReceipts(List<RoomEvent> messages) {
+    // Cancel previous debounce
+    _readReceiptDebounce?.cancel();
+    
+    // TODO: Re-implement receipts through Connect stream
+    // Temporary disabled until Connect stream is available
+    /*
+    _readReceiptDebounce = Timer(const Duration(milliseconds: 500), () {
+      final unreadIds = messages
+          .where((m) => 
+              m.senderId != 'current_user_id' && 
+              m.status != EventStatus.read)
+          .map((m) => m.id)
+          .toList();
+      
+      if (unreadIds.isNotEmpty) {
+        // Send through Connect stream
+      }
+    });
+    */
+  }
+
+  void _onTextChanged(String text) {
+    if (_typingDebounce?.isActive ?? false) _typingDebounce!.cancel();
+    
+    // TODO: Re-implement typing through Connect stream
+    // ref.read(typingProvider(widget.roomId).notifier).sendTyping(true);
+    
+    _typingDebounce = Timer(const Duration(seconds: 2), () {
+      // ref.read(typingProvider(widget.roomId).notifier).sendTyping(false);
+    });
   }
 
   void _sendMessage() {
@@ -62,42 +104,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 if (messages.isEmpty) {
                   return const Center(child: Text('No messages yet'));
                 }
+                
+                // Send read receipts for messages being viewed
+                _sendReadReceipts(messages);
+                
                 return ListView.builder(
                   controller: _scrollController,
+                  reverse: true, // Start from bottom
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index];
+                    // Reverse index since we're using reverse: true
+                    final reversedIndex = messages.length - 1 - index;
+                    final message = messages[reversedIndex];
                     final isMe = message.senderId == 'current_user_id'; // TODO: Check against real user
+                    
+                    // Show avatar only for first message in a group
+                    final showAvatar = reversedIndex == messages.length - 1 ||
+                        messages[reversedIndex + 1].senderId != message.senderId;
 
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isMe
-                              ? Theme.of(context).colorScheme.primaryContainer
-                              : Theme.of(context).colorScheme.secondaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              message.content['text'] ?? '',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatTimestamp(message.createdAt),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    return MessageBubble(
+                      message: message,
+                      isMe: isMe,
+                      showAvatar: showAvatar,
                     );
                   },
                 );
@@ -112,29 +140,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: const Offset(0, -2),
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Type a message...',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                TypingIndicator(roomId: widget.roomId),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        decoration: const InputDecoration(
+                          hintText: 'Type a message...',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        ),
+                        onChanged: _onTextChanged,
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
                     ),
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      icon: const Icon(Icons.send),
+                      onPressed: _sendMessage,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -144,14 +180,4 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  String _formatTimestamp(int timestamp) {
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final now = DateTime.now();
-    
-    if (date.day == now.day && date.month == now.month && date.year == now.year) {
-      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    }
-    
-    return '${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
 }

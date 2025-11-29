@@ -54,7 +54,7 @@ final class MessageRepositoryProvider
   }
 }
 
-String _$messageRepositoryHash() => r'ddb39a1137562c50f3a63b77fe08d4c8652b1da6';
+String _$messageRepositoryHash() => r'379b18468ad2ee5a14bf7317fc951e1cfbbb975d';
 
 @ProviderFor(MessageList)
 const messageListProvider = MessageListFamily._();
@@ -97,7 +97,7 @@ final class MessageListProvider
   }
 }
 
-String _$messageListHash() => r'ba45e25728e37c995cb43adfd5fe486a9a437db7';
+String _$messageListHash() => r'230a794853e3ab4289bd39670b3924c1ca930472';
 
 final class MessageListFamily extends $Family
     with

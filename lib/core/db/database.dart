@@ -57,6 +57,13 @@ class AppDatabase {
           db.execute(AppSchema.indexRoomEventsRoomId);
           db.execute(AppSchema.indexRoomEventsParentId);
           db.execute(AppSchema.indexPendingJobsStatus);
+          db.execute(AppSchema.indexRoomEventsCreatedAt);
+          db.execute(AppSchema.indexRoomsLastEventIndex);
+        }
+
+        if (currentVersion < 2) {
+          db.execute(AppSchema.indexRoomEventsCreatedAt);
+          db.execute(AppSchema.indexRoomsLastEventIndex);
         }
         
         db.userVersion = AppSchema.version;

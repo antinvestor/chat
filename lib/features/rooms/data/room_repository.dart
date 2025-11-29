@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:sqlite3/sqlite3.dart';
 import '../../../core/db/database.dart';
 import '../domain/room.dart';
+import '../domain/room_with_last_message.dart';
 
 class RoomRepository {
   final AppDatabase _database;
@@ -23,6 +23,43 @@ class RoomRepository {
         metadata: row['metadata'] != null 
           ? jsonDecode(row['metadata'] as String) 
           : null,
+      );
+    }).toList();
+  }
+
+  Future<List<RoomWithLastMessage>> getRoomsWithLastMessage() async {
+    final db = await _database.database;
+    
+    // Join rooms with their last message
+    final results = db.select('''
+      SELECT 
+        r.id,
+        r.name,
+        r.type,
+        r.unread_count,
+        e.content as last_message_content,
+        e.created_at as last_message_timestamp,
+        e.sender_id as last_message_sender_id
+      FROM rooms r
+      LEFT JOIN room_events e ON r.last_event_id = e.id
+      ORDER BY COALESCE(e.created_at, 0) DESC
+    ''');
+    
+    return results.map((row) {
+      String? lastMessageText;
+      if (row['last_message_content'] != null) {
+        final content = jsonDecode(row['last_message_content'] as String) as Map<String, dynamic>;
+        lastMessageText = content['text'] as String?;
+      }
+      
+      return RoomWithLastMessage(
+        id: row['id'] as String,
+        name: row['name'] as String,
+        type: row['type'] as String,
+        unreadCount: row['unread_count'] as int? ?? 0,
+        lastMessageText: lastMessageText,
+        lastMessageTimestamp: row['last_message_timestamp'] as int?,
+        lastMessageSenderId: row['last_message_sender_id'] as String?,
       );
     }).toList();
   }

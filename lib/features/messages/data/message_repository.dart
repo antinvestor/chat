@@ -44,6 +44,16 @@ class MessageRepository {
     db.execute('UPDATE room_events SET status = ? WHERE id = ?', [status.index, messageId]);
   }
 
+  Future<void> updateMessagesStatus(List<String> messageIds, EventStatus status) async {
+    if (messageIds.isEmpty) return;
+    final db = await _database.database;
+    final placeholders = List.filled(messageIds.length, '?').join(',');
+    db.execute(
+      'UPDATE room_events SET status = ? WHERE id IN ($placeholders)',
+      [status.index, ...messageIds],
+    );
+  }
+
   Future<List<RoomEvent>> getReactionsForEvent(String eventId) async {
     final db = await _database.database;
     final results = db.select(

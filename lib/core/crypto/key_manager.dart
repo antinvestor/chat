@@ -43,4 +43,13 @@ class KeyManager {
     // TODO: Implement proper Olm decryption
     return utf8.decode(base64Decode(ciphertext));
   }
+
+  Future<String> getDeviceId() async {
+    var deviceId = await _storage.read(key: 'device_id');
+    if (deviceId == null) {
+      deviceId = 'flutter_device_${DateTime.now().millisecondsSinceEpoch}';
+      await _storage.write(key: 'device_id', value: deviceId);
+    }
+    return deviceId;
+  }
 }

@@ -1,5 +1,5 @@
 class AppSchema {
-  static const int version = 1;
+  static const int version = 2;
 
   static const String createProfilesTable = """
     CREATE TABLE IF NOT EXISTS profiles (
@@ -110,4 +110,8 @@ class AppSchema {
   static const String indexRoomEventsRoomId = "CREATE INDEX IF NOT EXISTS idx_room_events_room_id ON room_events (room_id);";
   static const String indexRoomEventsParentId = "CREATE INDEX IF NOT EXISTS idx_room_events_parent_id ON room_events (parent_id);";
   static const String indexPendingJobsStatus = "CREATE INDEX IF NOT EXISTS idx_pending_jobs_status ON pending_jobs (status);";
+  
+  // Version 2 indexes
+  static const String indexRoomEventsCreatedAt = "CREATE INDEX IF NOT EXISTS idx_room_events_created_at ON room_events (created_at);";
+  static const String indexRoomsLastEventIndex = "CREATE INDEX IF NOT EXISTS idx_rooms_last_event_index ON rooms (last_event_index);";
 }

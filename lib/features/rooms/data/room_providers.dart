@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../domain/room.dart';
+import '../domain/room_with_last_message.dart';
 import '../../../core/db/database.dart';
 import 'room_repository.dart';
 
@@ -30,5 +31,22 @@ class RoomList extends _$RoomList {
     final repo = ref.read(roomRepositoryProvider);
     await repo.insertRoom(room);
     refresh();
+  }
+}
+
+@riverpod
+class RoomListWithMessages extends _$RoomListWithMessages {
+  @override
+  Future<List<RoomWithLastMessage>> build() async {
+    final repo = ref.watch(roomRepositoryProvider);
+    return repo.getRoomsWithLastMessage();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(roomRepositoryProvider);
+      return repo.getRoomsWithLastMessage();
+    });
   }
 }

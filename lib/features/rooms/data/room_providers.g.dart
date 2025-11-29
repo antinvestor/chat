@@ -48,7 +48,7 @@ final class RoomRepositoryProvider
   }
 }
 
-String _$roomRepositoryHash() => r'3b2c24b5b97378ba25564b9944ec574b20b387eb';
+String _$roomRepositoryHash() => r'8599dc9bf5fc727e8556974fdaedabbe3a8c28ce';
 
 @ProviderFor(RoomList)
 const roomListProvider = RoomListProvider._();
@@ -88,6 +88,65 @@ abstract class _$RoomList extends $AsyncNotifier<List<Room>> {
             as $ClassProviderElement<
               AnyNotifier<AsyncValue<List<Room>>, List<Room>>,
               AsyncValue<List<Room>>,
+              Object?,
+              Object?
+            >;
+    element.handleValue(ref, created);
+  }
+}
+
+@ProviderFor(RoomListWithMessages)
+const roomListWithMessagesProvider = RoomListWithMessagesProvider._();
+
+final class RoomListWithMessagesProvider
+    extends
+        $AsyncNotifierProvider<
+          RoomListWithMessages,
+          List<RoomWithLastMessage>
+        > {
+  const RoomListWithMessagesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'roomListWithMessagesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$roomListWithMessagesHash();
+
+  @$internal
+  @override
+  RoomListWithMessages create() => RoomListWithMessages();
+}
+
+String _$roomListWithMessagesHash() =>
+    r'7b3ee5491e207673bdca7ee7377b0c9f9ba72d35';
+
+abstract class _$RoomListWithMessages
+    extends $AsyncNotifier<List<RoomWithLastMessage>> {
+  FutureOr<List<RoomWithLastMessage>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref =
+        this.ref
+            as $Ref<
+              AsyncValue<List<RoomWithLastMessage>>,
+              List<RoomWithLastMessage>
+            >;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<List<RoomWithLastMessage>>,
+                List<RoomWithLastMessage>
+              >,
+              AsyncValue<List<RoomWithLastMessage>>,
               Object?,
               Object?
             >;
