@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:sqlite3/sqlite3.dart';
 import '../db/database.dart';
 import 'pending_job.dart';
 
@@ -12,11 +11,7 @@ class PendingJobRepository {
     final db = await _database.database;
     db.execute(
       'INSERT INTO pending_jobs (type, payload, created_at) VALUES (?, ?, ?)',
-      [
-        type.name,
-        jsonEncode(payload),
-        DateTime.now().millisecondsSinceEpoch,
-      ],
+      [type.name, jsonEncode(payload), DateTime.now().millisecondsSinceEpoch],
     );
   }
 

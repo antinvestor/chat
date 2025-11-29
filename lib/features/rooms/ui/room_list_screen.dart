@@ -12,6 +12,7 @@ import '../../calls/ui/incoming_call_banner.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/responsive/breakpoints.dart';
 import '../../messages/ui/chat_screen.dart';
+import '../../contacts/ui/contacts_screen.dart';
 
 class RoomListScreen extends ConsumerStatefulWidget {
   const RoomListScreen({super.key});
@@ -34,6 +35,14 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
       appBar: isLargeScreen ? null : AppBar(
         title: const Text('Chats'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.contacts),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ContactsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {

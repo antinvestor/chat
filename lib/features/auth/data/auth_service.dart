@@ -7,9 +7,12 @@ class AuthService {
   final String _issuerUrl;
   final String _clientId;
 
-  AuthService(this._storage, {required String issuerUrl, required String clientId})
-      : _issuerUrl = issuerUrl,
-        _clientId = clientId;
+  AuthService(
+    this._storage, {
+    required String issuerUrl,
+    required String clientId,
+  }) : _issuerUrl = issuerUrl,
+       _clientId = clientId;
 
   Future<TokenResponse?> authenticate() async {
     final issuer = await Issuer.discover(Uri.parse(_issuerUrl));
@@ -33,7 +36,10 @@ class AuthService {
 
     await _storage.write(key: 'access_token', value: token.accessToken);
     await _storage.write(key: 'refresh_token', value: token.refreshToken);
-    await _storage.write(key: 'id_token', value: token.idToken?.toCompactSerialization());
+    await _storage.write(
+      key: 'id_token',
+      value: token.idToken.toCompactSerialization(),
+    );
 
     return token;
   }

@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 import '../data/message_providers.dart';
-import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
 import 'message_bubble.dart';
 import 'typing_indicator.dart';
-import '../../../core/sync/sync_engine.dart';
 import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
 
@@ -15,11 +13,7 @@ class ChatScreen extends ConsumerStatefulWidget {
   final String roomId;
   final String roomName;
 
-  const ChatScreen({
-    super.key,
-    required this.roomId,
-    required this.roomName,
-  });
+  const ChatScreen({super.key, required this.roomId, required this.roomName});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -43,7 +37,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _sendReadReceipts(List<RoomEvent> messages) {
     // Cancel previous debounce
     _readReceiptDebounce?.cancel();
-    
+
     // TODO: Re-implement receipts through Connect stream
     // Temporary disabled until Connect stream is available
     /*
@@ -64,10 +58,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _onTextChanged(String text) {
     if (_typingDebounce?.isActive ?? false) _typingDebounce!.cancel();
-    
+
     // TODO: Re-implement typing through Connect stream
     // ref.read(typingProvider(widget.roomId).notifier).sendTyping(true);
-    
+
     _typingDebounce = Timer(const Duration(seconds: 2), () {
       // ref.read(typingProvider(widget.roomId).notifier).sendTyping(false);
     });
@@ -122,10 +116,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 if (messages.isEmpty) {
                   return const Center(child: Text('No messages yet'));
                 }
-                
+
                 // Send read receipts for messages being viewed
                 _sendReadReceipts(messages);
-                
+
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true, // Start from bottom
@@ -134,11 +128,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     // Reverse index since we're using reverse: true
                     final reversedIndex = messages.length - 1 - index;
                     final message = messages[reversedIndex];
-                    final isMe = message.senderId == 'current_user_id'; // TODO: Check against real user
-                    
+                    final isMe =
+                        message.senderId ==
+                        'current_user_id'; // TODO: Check against real user
+
                     // Show avatar only for first message in a group
-                    final showAvatar = reversedIndex == messages.length - 1 ||
-                        messages[reversedIndex + 1].senderId != message.senderId;
+                    final showAvatar =
+                        reversedIndex == messages.length - 1 ||
+                        messages[reversedIndex + 1].senderId !=
+                            message.senderId;
 
                     return MessageBubble(
                       message: message,
@@ -177,7 +175,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         decoration: const InputDecoration(
                           hintText: 'Type a message...',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                         ),
                         onChanged: _onTextChanged,
                         onSubmitted: (_) => _sendMessage(),
@@ -197,5 +198,4 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
   }
-
 }

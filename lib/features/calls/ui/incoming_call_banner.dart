@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/call_manager.dart';
-import 'call_screen.dart';
 
 class IncomingCallBanner extends ConsumerWidget {
   const IncomingCallBanner({super.key});
@@ -22,9 +21,7 @@ class IncomingCallBanner extends ConsumerWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const CircleAvatar(
-                      child: Icon(Icons.person),
-                    ),
+                    const CircleAvatar(child: Icon(Icons.person)),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(

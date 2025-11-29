@@ -16,7 +16,7 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     final senderName = isMe ? 'Me' : _getSenderName();
     final timestamp = _formatTimestamp(message.createdAt);
     final status = isMe ? _getStatusLabel(message.status) : '';
@@ -28,7 +28,9 @@ class MessageBubble extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         child: Row(
-          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: isMe
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (!isMe && showAvatar) ...[
@@ -37,7 +39,9 @@ class MessageBubble extends StatelessWidget {
             ],
             Flexible(
               child: Column(
-                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
                   Container(
                     constraints: BoxConstraints(
@@ -61,7 +65,10 @@ class MessageBubble extends StatelessWidget {
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -89,7 +96,9 @@ class MessageBubble extends StatelessWidget {
                         _formatTimestamp(message.createdAt),
                         style: TextStyle(
                           fontSize: 11,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                       if (isMe) ...[
@@ -127,7 +136,7 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildMessageContent(BuildContext context) {
     final text = message.content['text'] as String? ?? '';
-    
+
     return Text(
       text,
       style: TextStyle(
@@ -166,11 +175,7 @@ class MessageBubble extends StatelessWidget {
         break;
     }
 
-    return Icon(
-      iconData,
-      size: 14,
-      color: iconColor,
-    );
+    return Icon(iconData, size: 14, color: iconColor);
   }
 
   String _getSenderName() {
@@ -181,11 +186,13 @@ class MessageBubble extends StatelessWidget {
   String _formatTimestamp(int timestamp) {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
-    
-    if (date.day == now.day && date.month == now.month && date.year == now.year) {
+
+    if (date.day == now.day &&
+        date.month == now.month &&
+        date.year == now.year) {
       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     }
-    
+
     return '${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
