@@ -8,6 +8,7 @@ import '../../../widgets/empty_state.dart';
 import '../../../widgets/error_banner.dart';
 import '../../../widgets/skeleton_loader.dart';
 import '../../../widgets/connection_banner.dart';
+import '../../calls/ui/incoming_call_banner.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/responsive/breakpoints.dart';
 import '../../messages/ui/chat_screen.dart';
@@ -30,7 +31,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     final isLargeScreen = AppBreakpoints.isTablet(width) || AppBreakpoints.isDesktop(width);
 
     return Scaffold(
-      appBar: isLargeScreen ? null : AppBar( // Hide outer AppBar on large screens if we want custom layout, but here we keep it simple or adjust
+      appBar: isLargeScreen ? null : AppBar(
         title: const Text('Chats'),
         actions: [
           IconButton(
@@ -41,47 +42,52 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          const ConnectionBanner(),
-          Expanded(
-            child: isLargeScreen
-                ? Row(
-                    children: [
-                      SizedBox(
-                        width: 350,
-                        child: Scaffold(
-                          appBar: AppBar(
-                            title: const Text('Chats'),
-                            actions: [
-                              IconButton(
-                                icon: const Icon(Icons.add),
-                                onPressed: () {
-                                  // TODO: Navigate to create room screen
-                                },
+          Column(
+            children: [
+              const ConnectionBanner(),
+              const IncomingCallBanner(),
+              Expanded(
+                child: isLargeScreen
+                    ? Row(
+                        children: [
+                          SizedBox(
+                            width: 350,
+                            child: Scaffold(
+                              appBar: AppBar(
+                                title: const Text('Chats'),
+                                actions: [
+                                  IconButton(
+                                    icon: const Icon(Icons.add),
+                                    onPressed: () {
+                                      // TODO: Navigate to create room screen
+                                    },
+                                  ),
+                                ],
                               ),
-                            ],
+                              body: _buildRoomList(roomsAsync, isLargeScreen),
+                            ),
                           ),
-                          body: _buildRoomList(roomsAsync, isLargeScreen),
-                        ),
-                      ),
-                      const VerticalDivider(width: 1),
-                      Expanded(
-                        child: _selectedRoomId != null
-                            ? ChatScreen(
-                                roomId: _selectedRoomId!,
-                                roomName: _selectedRoomName ?? 'Chat',
-                                key: ValueKey(_selectedRoomId),
-                              )
-                            : const EmptyState(
-                                icon: Icons.chat_bubble_outline,
-                                title: 'Select a conversation',
-                                message: 'Choose a room from the list to start chatting',
-                              ),
-                      ),
-                    ],
-                  )
-                : _buildRoomList(roomsAsync, isLargeScreen),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: _selectedRoomId != null
+                                ? ChatScreen(
+                                    roomId: _selectedRoomId!,
+                                    roomName: _selectedRoomName ?? 'Chat',
+                                    key: ValueKey(_selectedRoomId),
+                                  )
+                                : const EmptyState(
+                                    icon: Icons.chat_bubble_outline,
+                                    title: 'Select a conversation',
+                                    message: 'Choose a room from the list to start chatting',
+                                  ),
+                          ),
+                        ],
+                      )
+                    : _buildRoomList(roomsAsync, isLargeScreen),
+              ),
+            ],
           ),
         ],
       ),

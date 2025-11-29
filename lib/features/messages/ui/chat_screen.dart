@@ -8,6 +8,8 @@ import '../domain/room_event.dart';
 import 'message_bubble.dart';
 import 'typing_indicator.dart';
 import '../../../core/sync/sync_engine.dart';
+import '../../calls/services/call_manager.dart';
+import '../../calls/ui/call_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -95,6 +97,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.roomName),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.video_call),
+            onPressed: () {
+              ref.read(callManagerProvider).startCall(widget.roomId);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => CallScreen(
+                    roomId: widget.roomId,
+                    roomName: widget.roomName,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

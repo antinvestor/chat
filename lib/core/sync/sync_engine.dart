@@ -57,6 +57,9 @@ class SyncEngine {
   final _typingEventsController = StreamController<pb.TypingEvent>.broadcast();
   Stream<pb.TypingEvent> get typingEvents => _typingEventsController.stream;
 
+  final _signalingEventsController = StreamController<RoomEvent>.broadcast();
+  Stream<RoomEvent> get signalingEvents => _signalingEventsController.stream;
+
   final _connectionStateController = StreamController<SyncConnectionState>.broadcast();
   Stream<SyncConnectionState> get connectionState => _connectionStateController.stream;
 
@@ -81,7 +84,10 @@ class SyncEngine {
   void stop() {
     _connectSubscription?.cancel();
     _uploadTimer?.cancel();
+    _connectSubscription?.cancel();
+    _uploadTimer?.cancel();
     _typingEventsController.close();
+    _signalingEventsController.close();
     _isConnected = false;
   }
 
@@ -107,6 +113,27 @@ class SyncEngine {
     } catch (e) {
       print('GetHistory error: $e');
       return 0;
+    }
+  }
+
+  Future<void> sendSignal(RoomEvent event) async {
+    // Insert into DB first (optional for signals, but good for history)
+    await _messageRepo.insertMessage(event);
+    
+    // Create pending job
+    await _jobRepo.addJob(
+      JobType.sendMessage,
+      {
+        'roomId': event.roomId,
+        'type': event.type.toString(),
+        'content': event.content,
+        'localId': event.localId,
+      },
+    );
+    
+    // Trigger immediate upload if connected
+    if (_isConnected) {
+      _startUploadLoop();
     }
   }
 
@@ -208,6 +235,18 @@ class SyncEngine {
     );
 
     await _messageRepo.insertMessage(roomEvent);
+
+    // Emit signaling events for real-time handling
+    if (_isCallEvent(roomEvent.type)) {
+      _signalingEventsController.add(roomEvent);
+    }
+  }
+
+  bool _isCallEvent(RoomEventType type) {
+    return type == RoomEventType.callOffer ||
+        type == RoomEventType.callAnswer ||
+        type == RoomEventType.callIce ||
+        type == RoomEventType.callEnd;
   }
 
   Future<void> _processReceiptEvent(pb.ReceiptEvent event) async {
