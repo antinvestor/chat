@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:openid_client/openid_client_io.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/logging/app_logger.dart';
@@ -8,6 +9,7 @@ AuthPlatform getAuthPlatform() => AuthPlatformIO();
 class AuthPlatformIO implements AuthPlatform {
   Issuer? _issuer;
   Client? _client;
+  Uri? _redirectUri;
 
   @override
   Issuer? get issuer => _issuer;
@@ -24,6 +26,9 @@ class AuthPlatformIO implements AuthPlatform {
           Uri.parse(issuerUrl),
         ).timeout(const Duration(seconds: 15));
         _client = Client(_issuer!, clientId);
+        _redirectUri = Uri.parse(
+          'http://localhost:5170?partition_id=$clientId',
+        );
       } catch (e) {
         AppLogger.error(
           'Failed to discover OIDC issuer',
@@ -42,13 +47,10 @@ class AuthPlatformIO implements AuthPlatform {
     }
 
     urlLauncher(String url) async {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        // Try platform default first (best for Android 11+)
-        if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
-          // Fallback to external application
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
+      var uri = Uri.parse(url);
+      // Force external application to avoid CCT closing issues
+      if (await canLaunchUrl(uri) || Platform.isAndroid) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         AppLogger.error('Could not launch OIDC URL', data: {'url': url});
         throw 'Could not launch browser for authentication';
@@ -60,9 +62,22 @@ class AuthPlatformIO implements AuthPlatform {
       scopes: scopes,
       port: 5170,
       urlLancher: urlLauncher,
+      redirectUri: _redirectUri!,
     );
 
-    final c = await authenticator.authorize();
+    AppLogger.debug('Starting authorization...');
+    final c = await authenticator.authorize().timeout(
+      const Duration(minutes: 2),
+      onTimeout: () {
+        throw 'Authentication timed out';
+      },
+    );
+    AppLogger.debug('Authorization completed');
+
+    if (Platform.isAndroid || Platform.isIOS) {
+      closeInAppWebView();
+    }
+
     return await c.getTokenResponse();
   }
 

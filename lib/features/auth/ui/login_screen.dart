@@ -152,7 +152,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text(
                   'By signing in, you agree to our terms of service and privacy policy',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),

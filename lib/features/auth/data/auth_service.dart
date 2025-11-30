@@ -37,7 +37,7 @@ class AuthService {
       final token = await _platform.authenticate([
         'openid',
         'profile',
-        'email',
+        'contact',
         'offline_access',
       ]);
 
@@ -67,10 +67,18 @@ class AuthService {
   Future<void> _saveTokens(TokenResponse token) async {
     await _storage.write(key: 'access_token', value: token.accessToken);
     await _storage.write(key: 'refresh_token', value: token.refreshToken);
-    await _storage.write(
-      key: 'id_token',
-      value: token.idToken.toCompactSerialization(),
-    );
+    try {
+      // ignore: unnecessary_null_comparison
+      if (token.idToken != null) {
+        await _storage.write(
+          key: 'id_token',
+          value: token.idToken.toCompactSerialization(),
+        );
+      }
+    } catch (_) {
+      // ID token might be missing or throw on access
+      AppLogger.debug('No ID token in response');
+    }
 
     // Store token expiry timestamp
     if (token.expiresAt != null) {
