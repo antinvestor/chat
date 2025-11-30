@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../logging/app_logger.dart';
 import '../../apis/chat/v1/chat.connect.client.dart';
 import '../../apis/chat/v1/chat.pb.dart' as pb;
 import '../../apis/google/protobuf/struct.pb.dart' as google_struct;
@@ -30,11 +31,7 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
   );
 });
 
-enum SyncConnectionState {
-  disconnected,
-  connecting,
-  connected,
-}
+enum SyncConnectionState { disconnected, connecting, connected }
 
 final connectionStateProvider = StreamProvider<SyncConnectionState>((ref) {
   return ref.watch(syncEngineProvider).connectionState;
@@ -53,15 +50,17 @@ class SyncEngine {
   bool _isConnected = false;
   int _reconnectAttempts = 0;
   final Set<String> _processedEventIds = {}; // For event deduplication
-  
+
   final _typingEventsController = StreamController<pb.TypingEvent>.broadcast();
   Stream<pb.TypingEvent> get typingEvents => _typingEventsController.stream;
 
   final _signalingEventsController = StreamController<RoomEvent>.broadcast();
   Stream<RoomEvent> get signalingEvents => _signalingEventsController.stream;
 
-  final _connectionStateController = StreamController<SyncConnectionState>.broadcast();
-  Stream<SyncConnectionState> get connectionState => _connectionStateController.stream;
+  final _connectionStateController =
+      StreamController<SyncConnectionState>.broadcast();
+  Stream<SyncConnectionState> get connectionState =>
+      _connectionStateController.stream;
 
   // Exponential backoff configuration
   static const _initialBackoffMs = 1000; // 1 second
@@ -93,7 +92,11 @@ class SyncEngine {
 
   /// Fetch historical messages for a room
   /// Returns number of events fetched (0 if none available)
-  Future<int> getHistory(String roomId, {String? cursor, int limit = 50}) async {
+  Future<int> getHistory(
+    String roomId, {
+    String? cursor,
+    int limit = 50,
+  }) async {
     try {
       final request = pb.GetHistoryRequest(
         roomId: roomId,
@@ -101,17 +104,22 @@ class SyncEngine {
         limit: limit,
         forward: false, // Get newer->older by default
       );
-      
+
       final response = await _chatClient.getHistory(request);
-      
+
       // Process each event in the response
       for (final connectResponse in response.events) {
         await _handleConnectResponse(connectResponse);
       }
-      
+
       return response.events.length;
-    } catch (e) {
-      print('GetHistory error: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to get history',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'roomId': roomId, 'limit': limit},
+      );
       return 0;
     }
   }
@@ -119,18 +127,15 @@ class SyncEngine {
   Future<void> sendSignal(RoomEvent event) async {
     // Insert into DB first (optional for signals, but good for history)
     await _messageRepo.insertMessage(event);
-    
+
     // Create pending job
-    await _jobRepo.addJob(
-      JobType.sendMessage,
-      {
-        'roomId': event.roomId,
-        'type': event.type.toString(),
-        'content': event.content,
-        'localId': event.localId,
-      },
-    );
-    
+    await _jobRepo.addJob(JobType.sendMessage, {
+      'roomId': event.roomId,
+      'type': event.type.toString(),
+      'content': event.content,
+      'localId': event.localId,
+    });
+
     // Trigger immediate upload if connected
     if (_isConnected) {
       _startUploadLoop();
@@ -146,25 +151,36 @@ class SyncEngine {
       try {
         final deviceId = await _keyManager.getDeviceId();
         final request = pb.ConnectRequest(deviceId: deviceId);
-        
+
         // Wrap request in a Stream as expected by the client
         final stream = _gatewayClient.connect(Stream.value(request));
         _isConnected = true;
         _reconnectAttempts = 0;
         _connectionStateController.add(SyncConnectionState.connected);
-        
+
         await for (final response in stream) {
           await _handleConnectResponse(response);
         }
-      } catch (e) {
-        print('Sync error: $e');
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Sync connection error',
+          error: e,
+          stackTrace: stackTrace,
+          data: {'reconnectAttempts': _reconnectAttempts},
+        );
       } finally {
         _isConnected = false;
         _connectionStateController.add(SyncConnectionState.disconnected);
-        
+
         // Exponential backoff
         final delay = _getBackoffDelay();
-        print('Reconnecting in ${delay.inSeconds}s...');
+        AppLogger.info(
+          'Reconnecting to sync',
+          data: {
+            'delaySeconds': delay.inSeconds,
+            'attempt': _reconnectAttempts + 1,
+          },
+        );
         await Future.delayed(delay);
         _reconnectAttempts++;
       }
@@ -185,8 +201,7 @@ class SyncEngine {
       await _processRoomEvent(response.message);
     } else if (response.hasTypingEvent()) {
       _typingEventsController.add(response.typingEvent);
-    }
- else if (response.hasPresenceEvent()) {
+    } else if (response.hasPresenceEvent()) {
       // TODO: Handle presence events
     } else if (response.hasReceiptEvent()) {
       await _processReceiptEvent(response.receiptEvent);
@@ -201,7 +216,7 @@ class SyncEngine {
       return;
     }
     _processedEventIds.add(event.id);
-    
+
     // Keep deduplication set bounded (last 1000 events)
     if (_processedEventIds.length > 1000) {
       final toRemove = _processedEventIds.take(100).toList();
@@ -226,10 +241,10 @@ class SyncEngine {
       content: content,
       parentId: event.hasParentId() ? event.parentId : null,
       status: EventStatus.delivered,
-      createdAt: event.hasSentAt() 
+      createdAt: event.hasSentAt()
           ? event.sentAt.seconds.toInt() * 1000 + event.sentAt.nanos ~/ 1000000
           : DateTime.now().millisecondsSinceEpoch,
-      serverTs: event.hasSentAt() 
+      serverTs: event.hasSentAt()
           ? event.sentAt.seconds.toInt() * 1000 + event.sentAt.nanos ~/ 1000000
           : null,
     );
@@ -254,7 +269,7 @@ class SyncEngine {
     // Skip if it's from ourselves (already marked as read locally)
     // TODO: Get actual current user ID from auth
     if (event.profileId == 'current_user_id') return;
-    
+
     // Mark messages as delivered (other user received them)
     await _messageRepo.updateMessagesStatus(
       event.eventId.toList(),
@@ -266,15 +281,15 @@ class SyncEngine {
     _uploadTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       if (_isUploading || !_isConnected) return;
       _isUploading = true;
-      
+
       try {
         final jobs = await _jobRepo.getPendingJobs();
         for (final job in jobs) {
           await _processJob(job);
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
         // Log but don't crash
-        print('Upload loop error: $e');
+        AppLogger.error('Upload loop error', error: e, stackTrace: stackTrace);
       } finally {
         _isUploading = false;
       }
@@ -301,25 +316,36 @@ class SyncEngine {
           break;
       }
       await _jobRepo.deleteJob(job.id);
-    } catch (e) {
-      print('Job failed: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Job processing failed',
+        error: e,
+        stackTrace: stackTrace,
+        data: {
+          'jobId': job.id,
+          'jobType': job.type.toString(),
+          'retryCount': job.retryCount,
+        },
+      );
       await _jobRepo.incrementRetry(job.id);
     }
   }
 
   Future<void> _processSendMessage(PendingJob job) async {
     final payload = job.payload;
-    
+
     // Convert content Map to Struct
-    final contentStruct = _mapToStruct(payload['content'] as Map<String, dynamic>);
-    
+    final contentStruct = _mapToStruct(
+      payload['content'] as Map<String, dynamic>,
+    );
+
     // Create timestamp
     final now = DateTime.now();
     final timestamp = google_timestamp.Timestamp(
       seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
-    
+
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
       roomId: payload['roomId'] as String,
@@ -333,10 +359,10 @@ class SyncEngine {
       payload: contentStruct,
       sentAt: timestamp,
     );
-    
+
     final request = pb.SendEventRequest(event: [event]);
     final response = await _chatClient.sendEvent(request);
-    
+
     // Update local message status to sent
     if (payload['localId'] != null && response.ack.isNotEmpty) {
       final ackEventId = response.ack.first.eventId;
@@ -359,24 +385,32 @@ class SyncEngine {
   }
 
   void _handleConnectionError(dynamic error) {
-    print('Connection error: $error');
+    AppLogger.error('Sync connection error', error: error);
     _scheduleReconnect();
   }
 
   void _scheduleReconnect() {
     if (_reconnectAttempts >= _maxReconnectAttempts) {
-      print('Max reconnect attempts reached. Giving up.');
+      AppLogger.warning(
+        'Max reconnect attempts reached, stopping reconnection',
+        data: {'maxAttempts': _maxReconnectAttempts},
+      );
       return;
     }
 
     // Calculate backoff delay with exponential increase
-    final backoffMs = (_initialBackoffMs * (1 << _reconnectAttempts))
-        .clamp(_initialBackoffMs, _maxBackoffMs);
-    
+    final backoffMs = (_initialBackoffMs * (1 << _reconnectAttempts)).clamp(
+      _initialBackoffMs,
+      _maxBackoffMs,
+    );
+
     _reconnectAttempts++;
-    
-    print('Scheduling reconnect in ${backoffMs}ms (attempt $_reconnectAttempts)');
-    
+
+    AppLogger.info(
+      'Scheduling reconnect',
+      data: {'backoffMs': backoffMs, 'attempt': _reconnectAttempts},
+    );
+
     Future.delayed(Duration(milliseconds: backoffMs), () {
       if (!_isConnected) {
         _startDownloadLoop();

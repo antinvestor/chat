@@ -13,6 +13,7 @@ import '../../../core/error/app_error.dart';
 import '../../../core/responsive/breakpoints.dart';
 import '../../messages/ui/chat_screen.dart';
 import '../../contacts/ui/contacts_screen.dart';
+import '../../auth/data/auth_state_provider.dart';
 
 class RoomListScreen extends ConsumerStatefulWidget {
   const RoomListScreen({super.key});
@@ -25,32 +26,65 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   String? _selectedRoomId;
   String? _selectedRoomName;
 
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(authStateProvider.notifier).logout();
+      // Router will automatically redirect to login screen
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final roomsAsync = ref.watch(roomListWithMessagesProvider);
     final width = MediaQuery.of(context).size.width;
-    final isLargeScreen = AppBreakpoints.isTablet(width) || AppBreakpoints.isDesktop(width);
+    final isLargeScreen =
+        AppBreakpoints.isTablet(width) || AppBreakpoints.isDesktop(width);
 
     return Scaffold(
-      appBar: isLargeScreen ? null : AppBar(
-        title: const Text('Chats'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.contacts),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ContactsScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // TODO: Navigate to create room screen
-            },
-          ),
-        ],
-      ),
+      appBar: isLargeScreen
+          ? null
+          : AppBar(
+              title: const Text('Chats'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.contacts),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ContactsScreen()),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    // TODO: Navigate to create room screen
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: _handleLogout,
+                  tooltip: 'Logout',
+                ),
+              ],
+            ),
       body: Stack(
         children: [
           Column(
@@ -89,7 +123,8 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                                 : const EmptyState(
                                     icon: Icons.chat_bubble_outline,
                                     title: 'Select a conversation',
-                                    message: 'Choose a room from the list to start chatting',
+                                    message:
+                                        'Choose a room from the list to start chatting',
                                   ),
                           ),
                         ],
@@ -103,7 +138,10 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     );
   }
 
-  Widget _buildRoomList(AsyncValue<List<RoomWithLastMessage>> roomsAsync, bool isLargeScreen) {
+  Widget _buildRoomList(
+    AsyncValue<List<RoomWithLastMessage>> roomsAsync,
+    bool isLargeScreen,
+  ) {
     return Column(
       children: [
         Expanded(
@@ -124,10 +162,13 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                 itemCount: rooms.length,
                 itemBuilder: (context, index) {
                   final room = rooms[index];
-                  final isSelected = isLargeScreen && room.id == _selectedRoomId;
-                  
+                  final isSelected =
+                      isLargeScreen && room.id == _selectedRoomId;
+
                   return Container(
-                    color: isSelected ? Theme.of(context).colorScheme.surfaceContainerHighest : null,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.surfaceContainerHighest
+                        : null,
                     child: RoomListTile(
                       room: room,
                       onTap: () {
@@ -137,7 +178,9 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                             _selectedRoomName = room.name;
                           });
                         } else {
-                          context.go('/chat/${room.id}?name=${Uri.encodeComponent(room.name)}');
+                          context.go(
+                            '/chat/${room.id}?name=${Uri.encodeComponent(room.name)}',
+                          );
                         }
                       },
                     ),

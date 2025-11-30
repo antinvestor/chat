@@ -4,6 +4,7 @@ import 'package:connectrpc/protocol/connect.dart' as connect_protocol;
 import 'package:connectrpc/protobuf.dart' as connect_protobuf;
 import 'package:connectrpc/io.dart' as connect_io;
 import '../db/database.dart';
+import '../logging/app_logger.dart';
 import '../../apis/chat/v1/chat.connect.client.dart';
 import 'pending_job_repository.dart';
 import 'pending_job.dart';
@@ -19,7 +20,7 @@ class BackgroundSyncTask {
   /// Returns true if sync completed successfully, false otherwise
   static Future<bool> run() async {
     try {
-      print('[BackgroundSync] Starting background sync task');
+      AppLogger.info('Starting background sync task');
 
       // Initialize database
       final database = AppDatabase.instance;
@@ -31,7 +32,7 @@ class BackgroundSyncTask {
       final authToken = await storage.read(key: 'auth_token');
 
       if (authToken == null) {
-        print('[BackgroundSync] No auth token found, skipping sync');
+        AppLogger.debug('No auth token found, skipping background sync');
         return true; // Not a failure, just nothing to do
       }
 
@@ -52,11 +53,14 @@ class BackgroundSyncTask {
         authToken,
       );
 
-      print('[BackgroundSync] Background sync completed: $success');
+      AppLogger.info('Background sync completed', data: {'success': success});
       return success;
     } catch (e, stack) {
-      print('[BackgroundSync] Error during background sync: $e');
-      print('[BackgroundSync] Stack trace: $stack');
+      AppLogger.error(
+        'Background sync task failed',
+        error: e,
+        stackTrace: stack,
+      );
       return false; // Signal failure so workmanager can retry
     }
   }
@@ -72,24 +76,36 @@ class BackgroundSyncTask {
       final jobs = await jobRepo.getPendingJobs();
 
       if (jobs.isEmpty) {
-        print('[BackgroundSync] No pending jobs to process');
+        AppLogger.debug('No pending jobs to process in background sync');
         return true;
       }
 
-      print('[BackgroundSync] Processing ${jobs.length} pending jobs');
+      AppLogger.info(
+        'Processing pending jobs in background',
+        data: {'jobCount': jobs.length},
+      );
 
       for (final job in jobs) {
         try {
           await _processJob(job, chatClient, messageRepo, jobRepo);
-        } catch (e) {
-          print('[BackgroundSync] Failed to process job ${job.id}: $e');
+        } catch (e, stackTrace) {
+          AppLogger.error(
+            'Failed to process background job',
+            error: e,
+            stackTrace: stackTrace,
+            data: {'jobId': job.id, 'jobType': job.type.toString()},
+          );
           // Continue with other jobs even if one fails
         }
       }
 
       return true;
-    } catch (e) {
-      print('[BackgroundSync] Error processing pending jobs: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Error processing pending jobs',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -106,12 +122,19 @@ class BackgroundSyncTask {
         await _processSendMessage(job, chatClient, messageRepo);
         break;
       default:
-        print('[BackgroundSync] Skipping job type in background: ${job.type}');
+        AppLogger.debug(
+          'Skipping unsupported job type in background',
+          data: {'jobType': job.type.toString()},
+        );
         return; // Skip unknown/unsupported jobs
     }
 
     // Mark job as completed
     await jobRepo.deleteJob(job.id);
+    AppLogger.debug(
+      'Background job completed',
+      data: {'jobId': job.id, 'jobType': job.type.toString()},
+    );
   }
 
   /// Send a message
@@ -155,9 +178,11 @@ class BackgroundSyncTask {
     if (payload['localId'] != null && response.ack.isNotEmpty) {
       final ackEventId = response.ack.first.eventId;
       await messageRepo.updateMessageStatus(ackEventId, EventStatus.sent);
+      AppLogger.debug(
+        'Message sent in background',
+        data: {'localId': payload['localId'], 'serverId': ackEventId},
+      );
     }
-
-    print('[BackgroundSync] Sent message: ${payload['localId']}');
   }
 
   // Helper methods for Struct conversion (copied from SyncEngine)

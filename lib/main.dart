@@ -4,22 +4,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 import 'app/router.dart';
 import 'core/db/database.dart';
+import 'core/logging/app_logger.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/sync/background_sync_task.dart';
+import 'features/auth/data/auth_repository.dart';
+import 'features/auth/data/token_refresh_service.dart';
 
 /// Background task callback - must be top-level function
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    print('[Workmanager] Executing task: $task');
-    
+    AppLogger.info('Workmanager executing task', data: {'task': task});
+
     try {
       // Run background sync
       final success = await BackgroundSyncTask.run();
-      print('[Workmanager] Task completed: $success');
+      AppLogger.info(
+        'Workmanager task completed',
+        data: {'task': task, 'success': success},
+      );
       return success;
-    } catch (e) {
-      print('[Workmanager] Task failed: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Workmanager task failed',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'task': task},
+      );
       return false;
     }
   });
@@ -27,15 +38,12 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize database
   await AppDatabase.instance.database;
 
   // Initialize workmanager
-  await Workmanager().initialize(
-    callbackDispatcher,
-    isInDebugMode: kDebugMode,
-  );
+  await Workmanager().initialize(callbackDispatcher, isInDebugMode: kDebugMode);
 
   // Register periodic background sync (15 minutes)
   await Workmanager().registerPeriodicTask(
@@ -49,13 +57,12 @@ void main() async {
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
 
-  print('[Main] Registered background sync task');
-
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
+  AppLogger.info(
+    'Application starting',
+    data: {'backgroundSyncRegistered': true},
   );
+
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -69,14 +76,31 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Start sync engine
-    ref.read(syncEngineProvider).start();
+    _initializeApp();
+  }
+
+  /// Initialize app and check authentication
+  Future<void> _initializeApp() async {
+    final authRepo = ref.read(authRepositoryProvider);
+    final isLoggedIn = await authRepo.isLoggedIn();
+
+    if (isLoggedIn) {
+      AppLogger.info('User is logged in, starting background services');
+
+      // Start token refresh service
+      ref.read(tokenRefreshServiceProvider).start();
+
+      // Start sync engine
+      ref.read(syncEngineProvider).start();
+    } else {
+      AppLogger.debug('User not logged in, skipping service initialization');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
-    
+
     return MaterialApp.router(
       title: 'AntInvestor Chat',
       theme: ThemeData(

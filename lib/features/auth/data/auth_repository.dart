@@ -18,19 +18,37 @@ class AuthRepository {
   }
 
   Future<bool> isLoggedIn() async {
-    final token = await _authService.getAccessToken();
-    return token != null;
+    return await _authService.isAuthenticated();
+  }
+
+  Future<bool> isTokenExpired() async {
+    return await _authService.isTokenExpired();
+  }
+
+  Future<void> refreshToken() async {
+    await _authService.refreshToken();
+  }
+
+  Future<Map<String, dynamic>?> getUserInfo() async {
+    return await _authService.getUserInfo();
+  }
+
+  Future<String?> getAccessToken() async {
+    return await _authService.getAccessToken();
   }
 }
 
 @riverpod
 AuthRepository authRepository(Ref ref) {
-  // TODO: Move config to environment variables
-  const issuerUrl = 'https://auth.antinvestor.com'; 
-  const clientId = 'chat_app';
-  
+  const issuerUrl = 'https://oauth2.antinvestor.com';
+  const clientId = '9bsv0s0hijjg02qk7l1g';
+
   const storage = FlutterSecureStorage();
-  final authService = AuthService(storage, issuerUrl: issuerUrl, clientId: clientId);
-  
+  final authService = AuthService(
+    storage,
+    issuerUrl: issuerUrl,
+    clientId: clientId,
+  );
+
   return AuthRepository(authService);
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:chat/features/messages/domain/room_event.dart';
+import 'package:chat/core/logging/app_logger.dart';
 import 'signaling_service.dart';
 
 final callManagerProvider = Provider<CallManager>((ref) {
@@ -19,12 +20,12 @@ enum CallState {
 
 class CallManager {
   final SignalingService _signalingService;
-  
+
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   MediaStream? _remoteStream;
   String? _currentRoomId;
-  
+
   final _callStateController = StreamController<CallState>.broadcast();
   Stream<CallState> get callStateStream => _callStateController.stream;
   CallState _state = CallState.idle;
@@ -47,40 +48,54 @@ class CallManager {
 
   Future<void> startCall(String roomId) async {
     if (_state != CallState.idle) return;
-    
+
     _currentRoomId = roomId;
     _setState(CallState.calling);
-    
+
     try {
       await _initPeerConnection();
       final offer = await _peerConnection!.createOffer();
       await _peerConnection!.setLocalDescription(offer);
-      
+
       await _signalingService.sendOffer(roomId, {
         'sdp': offer.sdp,
         'type': offer.type,
       });
-    } catch (e) {
-      print('Start call error: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to start call',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'roomId': roomId},
+      );
       endCall();
     }
   }
 
   Future<void> answerCall() async {
-    if (_state != CallState.incoming || _peerConnection == null || _currentRoomId == null) return;
-    
+    if (_state != CallState.incoming ||
+        _peerConnection == null ||
+        _currentRoomId == null) {
+      return;
+    }
+
     try {
       final answer = await _peerConnection!.createAnswer();
       await _peerConnection!.setLocalDescription(answer);
-      
+
       await _signalingService.sendAnswer(_currentRoomId!, {
         'sdp': answer.sdp,
         'type': answer.type,
       });
-      
+
       _setState(CallState.connected);
-    } catch (e) {
-      print('Answer call error: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to answer call',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'roomId': _currentRoomId},
+      );
       endCall();
     }
   }
@@ -98,7 +113,8 @@ class CallManager {
     _localStream?.dispose();
     _localStream = null;
     _localStreamController.add(null);
-    _remoteStream = null; // Remote stream is disposed by peer connection usually
+    _remoteStream =
+        null; // Remote stream is disposed by peer connection usually
     _remoteStreamController.add(null);
     _currentRoomId = null;
     _setState(CallState.idle);
@@ -107,26 +123,26 @@ class CallManager {
   Future<void> _initPeerConnection() async {
     // Request permissions
     await [Permission.camera, Permission.microphone].request();
-    
+
     final config = {
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
-      ]
+      ],
     };
-    
+
     _peerConnection = await createPeerConnection(config);
-    
+
     // Get local stream
     _localStream = await navigator.mediaDevices.getUserMedia({
       'audio': true,
       'video': true,
     });
     _localStreamController.add(_localStream);
-    
+
     _localStream!.getTracks().forEach((track) {
       _peerConnection!.addTrack(track, _localStream!);
     });
-    
+
     // Handle remote stream
     _peerConnection!.onTrack = (event) {
       if (event.streams.isNotEmpty) {
@@ -134,7 +150,7 @@ class CallManager {
         _remoteStreamController.add(_remoteStream);
       }
     };
-    
+
     // Handle ICE candidates
     _peerConnection!.onIceCandidate = (candidate) {
       if (_currentRoomId != null) {
@@ -145,13 +161,14 @@ class CallManager {
         });
       }
     };
-    
+
     _peerConnection!.onConnectionState = (state) {
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         _setState(CallState.connected);
-      } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
-                 state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-                 state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+      } else if (state ==
+              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
         endCall();
       }
     };
@@ -185,28 +202,32 @@ class CallManager {
       // TODO: Send busy signal
       return;
     }
-    
+
     _currentRoomId = event.roomId;
     _setState(CallState.incoming);
-    
+
     await _initPeerConnection();
-    
+
     final sdp = event.content['sdp'];
     final type = event.content['type'];
-    await _peerConnection!.setRemoteDescription(RTCSessionDescription(sdp, type));
+    await _peerConnection!.setRemoteDescription(
+      RTCSessionDescription(sdp, type),
+    );
   }
 
   Future<void> _handleAnswer(RoomEvent event) async {
     if (_state != CallState.calling) return;
-    
+
     final sdp = event.content['sdp'];
     final type = event.content['type'];
-    await _peerConnection!.setRemoteDescription(RTCSessionDescription(sdp, type));
+    await _peerConnection!.setRemoteDescription(
+      RTCSessionDescription(sdp, type),
+    );
   }
 
   Future<void> _handleCandidate(RoomEvent event) async {
     if (_peerConnection == null) return;
-    
+
     final candidate = RTCIceCandidate(
       event.content['candidate'],
       event.content['sdpMid'],
