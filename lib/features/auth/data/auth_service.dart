@@ -26,6 +26,9 @@ class AuthService {
   }
 
   /// Authenticate user with OIDC provider
+  /// 
+  /// Returns [TokenResponse] on success, null if redirect-based flow (web).
+  /// Throws on error.
   Future<TokenResponse?> authenticate() async {
     try {
       AppLogger.info(
@@ -60,6 +63,19 @@ class AuthService {
         data: {'issuerUrl': _issuerUrl},
       );
       rethrow;
+    }
+  }
+
+  /// Cancel any ongoing authentication flow
+  /// 
+  /// Call this if the user wants to abort authentication or if the app
+  /// needs to clean up before starting a new auth flow.
+  Future<void> cancelAuthentication() async {
+    try {
+      await _platform.cancelAuthentication();
+      AppLogger.debug('Authentication cancelled');
+    } catch (e) {
+      AppLogger.debug('Error cancelling authentication: $e');
     }
   }
 
@@ -206,18 +222,26 @@ class AuthService {
   }
 
   /// Handle redirect result from Web authentication
-  Future<void> _handleRedirectResult() async {
+  /// 
+  /// Returns true if a valid session was recovered from redirect.
+  Future<bool> _handleRedirectResult() async {
     try {
       await _ensureInitialized();
       final token = await _platform.getRedirectResult();
       if (token != null) {
         AppLogger.info('Recovered session from redirect');
         await _saveTokens(token);
+        return true;
       }
-    } catch (e) {
-      // Ignore errors here, as we might not be returning from redirect
-      // But log debug
-      AppLogger.debug('No redirect result or error checking: $e');
+      return false;
+    } catch (e, stackTrace) {
+      // Log the error but don't rethrow - we might not be returning from redirect
+      AppLogger.warning(
+        'Error handling redirect result',
+        data: {'error': e.toString()},
+      );
+      AppLogger.debug('Redirect error details', data: {'stackTrace': stackTrace.toString()});
+      return false;
     }
   }
 

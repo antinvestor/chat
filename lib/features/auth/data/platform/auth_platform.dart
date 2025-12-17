@@ -13,6 +13,10 @@ abstract class AuthPlatform {
   /// Check for redirect result (Web only)
   Future<TokenResponse?> getRedirectResult();
 
+  /// Cancel any ongoing authentication flow
+  /// This is a no-op on platforms that don't support cancellation
+  Future<void> cancelAuthentication() async {}
+
   /// Get the client instance (if initialized)
   Client? get client;
 
