@@ -40,6 +40,7 @@ class AuthRepository {
 
 @riverpod
 AuthRepository authRepository(Ref ref) {
+  // Use centralized API config for OAuth2 settings
   const issuerUrl = 'https://oauth2.antinvestor.com';
   const clientId = '9bsv0s0hijjg02qk7l1g';
 

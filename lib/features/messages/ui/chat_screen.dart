@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:xid/xid.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../data/message_providers.dart';
+import '../data/message_sending_service.dart';
 import '../domain/room_event.dart';
 import 'message_bubble.dart';
 import 'typing_indicator.dart';
@@ -22,8 +25,12 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _imagePicker = ImagePicker();
   Timer? _typingDebounce;
   Timer? _readReceiptDebounce;
+  bool _isEncryptionEnabled = false;
+  bool _isUploading = false;
+  double _uploadProgress = 0;
 
   @override
   void dispose() {
@@ -67,21 +74,166 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
 
-    final message = RoomEvent(
-      id: Xid().toString(),
+    final messagingService = ref.read(messageSendingServiceProvider);
+    await messagingService.sendTextMessage(
       roomId: widget.roomId,
-      senderId: 'current_user_id', // TODO: Get from auth
-      type: RoomEventType.text,
-      content: {'text': _controller.text.trim()},
-      createdAt: DateTime.now().millisecondsSinceEpoch,
-      localId: Xid().toString(),
+      text: _controller.text.trim(),
+      encrypt: _isEncryptionEnabled,
     );
-
-    ref.read(messageListProvider(widget.roomId).notifier).sendMessage(message);
     _controller.clear();
+  }
+
+  Future<void> _pickAndSendImage() async {
+    final XFile? image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    if (image != null) {
+      await _sendMediaFile(File(image.path), RoomEventType.image);
+    }
+  }
+
+  Future<void> _takeAndSendPhoto() async {
+    final XFile? photo = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+    );
+    if (photo != null) {
+      await _sendMediaFile(File(photo.path), RoomEventType.image);
+    }
+  }
+
+  Future<void> _pickAndSendVideo() async {
+    final XFile? video = await _imagePicker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 5),
+    );
+    if (video != null) {
+      await _sendMediaFile(File(video.path), RoomEventType.video);
+    }
+  }
+
+  Future<void> _pickAndSendFile() async {
+    final result = await FilePicker.platform.pickFiles();
+    if (result != null && result.files.single.path != null) {
+      await _sendMediaFile(
+        File(result.files.single.path!),
+        RoomEventType.file,
+      );
+    }
+  }
+
+  Future<void> _sendMediaFile(File file, RoomEventType type) async {
+    setState(() {
+      _isUploading = true;
+      _uploadProgress = 0;
+    });
+
+    try {
+      final messagingService = ref.read(messageSendingServiceProvider);
+      
+      switch (type) {
+        case RoomEventType.image:
+          await messagingService.sendImageMessage(
+            roomId: widget.roomId,
+            imageFile: file,
+            encrypt: _isEncryptionEnabled,
+            onProgress: (progress) {
+              setState(() => _uploadProgress = progress);
+            },
+          );
+          break;
+        case RoomEventType.video:
+          await messagingService.sendVideoMessage(
+            roomId: widget.roomId,
+            videoFile: file,
+            encrypt: _isEncryptionEnabled,
+            onProgress: (progress) {
+              setState(() => _uploadProgress = progress);
+            },
+          );
+          break;
+        case RoomEventType.file:
+          await messagingService.sendFileMessage(
+            roomId: widget.roomId,
+            file: file,
+            encrypt: _isEncryptionEnabled,
+            onProgress: (progress) {
+              setState(() => _uploadProgress = progress);
+            },
+          );
+          break;
+        default:
+          break;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File sent successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send file: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _uploadProgress = 0;
+        });
+      }
+    }
+  }
+
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Photo from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndSendImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _takeAndSendPhoto();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam),
+              title: const Text('Video'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndSendVideo();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file),
+              title: const Text('File'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndSendFile();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -90,8 +242,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.roomName),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.roomName),
+            if (_isEncryptionEnabled)
+              const Row(
+                children: [
+                  Icon(Icons.lock, size: 12, color: Colors.green),
+                  SizedBox(width: 4),
+                  Text(
+                    'Encrypted',
+                    style: TextStyle(fontSize: 12, color: Colors.green),
+                  ),
+                ],
+              ),
+          ],
+        ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _isEncryptionEnabled ? Icons.lock : Icons.lock_open,
+              color: _isEncryptionEnabled ? Colors.green : null,
+            ),
+            onPressed: () {
+              setState(() => _isEncryptionEnabled = !_isEncryptionEnabled);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    _isEncryptionEnabled
+                        ? 'End-to-end encryption enabled'
+                        : 'End-to-end encryption disabled',
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            tooltip: 'Toggle encryption',
+          ),
           IconButton(
             icon: const Icon(Icons.video_call),
             onPressed: () {
@@ -166,28 +354,61 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Upload progress indicator
+                if (_isUploading)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            value: _uploadProgress > 0 ? _uploadProgress : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _uploadProgress > 0
+                              ? '${(_uploadProgress * 100).toInt()}%'
+                              : 'Uploading...',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
                 TypingIndicator(roomId: widget.roomId),
                 Row(
                   children: [
+                    // Attachment button
+                    IconButton(
+                      icon: const Icon(Icons.attach_file),
+                      onPressed: _isUploading ? null : _showAttachmentOptions,
+                      tooltip: 'Attach file',
+                    ),
                     Expanded(
                       child: TextField(
                         controller: _controller,
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
+                        decoration: InputDecoration(
+                          hintText: _isEncryptionEnabled
+                              ? 'Type an encrypted message...'
+                              : 'Type a message...',
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 10,
                           ),
+                          prefixIcon: _isEncryptionEnabled
+                              ? const Icon(Icons.lock, size: 18, color: Colors.green)
+                              : null,
                         ),
                         onChanged: _onTextChanged,
                         onSubmitted: (_) => _sendMessage(),
+                        enabled: !_isUploading,
                       ),
                     ),
                     const SizedBox(width: 8),
                     IconButton.filled(
                       icon: const Icon(Icons.send),
-                      onPressed: _sendMessage,
+                      onPressed: _isUploading ? null : _sendMessage,
                     ),
                   ],
                 ),

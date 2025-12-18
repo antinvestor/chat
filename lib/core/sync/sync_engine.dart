@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../logging/app_logger.dart';
@@ -13,6 +14,7 @@ import '../../features/messages/domain/room_event.dart';
 import '../crypto/key_manager.dart';
 import '../db/database.dart';
 import '../networking/client.dart';
+import '../networking/authenticated_transport.dart';
 
 import 'pending_job.dart';
 import 'pending_job_repository.dart';
@@ -22,12 +24,14 @@ final pendingJobRepositoryProvider = Provider<PendingJobRepository>((ref) {
 });
 
 final syncEngineProvider = Provider<SyncEngine>((ref) {
+  final transportFactory = ref.watch(transportFactoryProvider);
   return SyncEngine(
     ref.watch(gatewayServiceClientProvider),
     ref.watch(chatServiceClientProvider),
     ref.watch(messageRepositoryProvider),
     ref.watch(pendingJobRepositoryProvider),
     KeyManager(const FlutterSecureStorage()),
+    transportFactory,
   );
 });
 
@@ -43,6 +47,7 @@ class SyncEngine {
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
   final KeyManager _keyManager;
+  final TransportFactory _transportFactory;
 
   StreamSubscription? _connectSubscription;
   Timer? _uploadTimer;
@@ -73,7 +78,13 @@ class SyncEngine {
     this._messageRepo,
     this._jobRepo,
     this._keyManager,
+    this._transportFactory,
   );
+
+  /// Get current auth headers for API calls
+  Future<connect.Headers> _getAuthHeaders() async {
+    return await _transportFactory.getAuthHeaders();
+  }
 
   void start() {
     _startDownloadLoop();
@@ -98,6 +109,7 @@ class SyncEngine {
     int limit = 50,
   }) async {
     try {
+      final headers = await _getAuthHeaders();
       final request = pb.GetHistoryRequest(
         roomId: roomId,
         cursor: cursor,
@@ -105,7 +117,7 @@ class SyncEngine {
         forward: false, // Get newer->older by default
       );
 
-      final response = await _chatClient.getHistory(request);
+      final response = await _chatClient.getHistory(request, headers: headers);
 
       // Process each event in the response
       for (final connectResponse in response.events) {
@@ -149,11 +161,12 @@ class SyncEngine {
 
     while (true) {
       try {
+        final headers = await _getAuthHeaders();
         final deviceId = await _keyManager.getDeviceId();
         final request = pb.ConnectRequest(deviceId: deviceId);
 
-        // Wrap request in a Stream as expected by the client
-        final stream = _gatewayClient.connect(Stream.value(request));
+        // Wrap request in a Stream as expected by the client with auth headers
+        final stream = _gatewayClient.connect(Stream.value(request), headers: headers);
         _isConnected = true;
         _reconnectAttempts = 0;
         _connectionStateController.add(SyncConnectionState.connected);
@@ -306,13 +319,20 @@ class SyncEngine {
     try {
       switch (job.type) {
         case JobType.sendMessage:
+        case JobType.sendMediaMessage:
           await _processSendMessage(job);
+          break;
+        case JobType.uploadFile:
+          // File uploads are handled by FileUploadService before queuing
           break;
         case JobType.updateRoom:
           // TODO: Implement room update
           break;
         case JobType.vote:
           // TODO: Implement voting
+          break;
+        case JobType.syncContacts:
+          // Contact sync is handled by ContactSyncRepository
           break;
       }
       await _jobRepo.deleteJob(job.id);
@@ -360,8 +380,9 @@ class SyncEngine {
       sentAt: timestamp,
     );
 
+    final headers = await _getAuthHeaders();
     final request = pb.SendEventRequest(event: [event]);
-    final response = await _chatClient.sendEvent(request);
+    final response = await _chatClient.sendEvent(request, headers: headers);
 
     // Update local message status to sent
     if (payload['localId'] != null && response.ack.isNotEmpty) {
@@ -384,11 +405,7 @@ class SyncEngine {
     }
   }
 
-  void _handleConnectionError(dynamic error) {
-    AppLogger.error('Sync connection error', error: error);
-    _scheduleReconnect();
-  }
-
+  // ignore: unused_element
   void _scheduleReconnect() {
     if (_reconnectAttempts >= _maxReconnectAttempts) {
       AppLogger.warning(
@@ -418,13 +435,9 @@ class SyncEngine {
     });
   }
 
-  Future<String> _getAuthToken() async {
-    const storage = FlutterSecureStorage();
-    return await storage.read(key: 'access_token') ?? '';
-  }
-
   // Helper methods for type conversion
 
+  // ignore: unused_element - kept for future use in reconnection logic
   RoomEventType _mapProtoEventType(pb.RoomEventType type) {
     switch (type) {
       case pb.RoomEventType.ROOM_EVENT_TYPE_TEXT:

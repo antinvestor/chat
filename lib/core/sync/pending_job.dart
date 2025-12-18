@@ -5,8 +5,11 @@ part 'pending_job.g.dart';
 
 enum JobType {
   sendMessage,
+  sendMediaMessage,
+  uploadFile,
   updateRoom,
   vote,
+  syncContacts,
 }
 
 @freezed

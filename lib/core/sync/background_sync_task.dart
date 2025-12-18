@@ -1,10 +1,12 @@
 import 'dart:io' as io;
+import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:connectrpc/protocol/connect.dart' as connect_protocol;
 import 'package:connectrpc/protobuf.dart' as connect_protobuf;
 import 'package:connectrpc/io.dart' as connect_io;
 import '../db/database.dart';
 import '../logging/app_logger.dart';
+import '../networking/api_config.dart';
 import '../../apis/chat/v1/chat.connect.client.dart';
 import 'pending_job_repository.dart';
 import 'pending_job.dart';
@@ -29,19 +31,27 @@ class BackgroundSyncTask {
 
       // Get auth token
       const storage = FlutterSecureStorage();
-      final authToken = await storage.read(key: 'auth_token');
+      final accessToken = await storage.read(key: 'access_token');
 
-      if (authToken == null) {
-        AppLogger.debug('No auth token found, skipping background sync');
+      if (accessToken == null) {
+        AppLogger.debug('No access token found, skipping background sync');
         return true; // Not a failure, just nothing to do
       }
 
-      // Initialize API client
-      const baseUrl = 'https://chat.antinvestor.com';
+      // Create auth headers
+      final authHeaders = connect.Headers();
+      authHeaders['Authorization'] = 'Bearer $accessToken';
+
+      // Initialize API client with optimized HTTP client
+      final httpClient = io.HttpClient();
+      httpClient.connectionTimeout = ApiConfig.connectionTimeout;
+      httpClient.idleTimeout = ApiConfig.idleTimeout;
+      httpClient.maxConnectionsPerHost = 2; // Limit for background tasks
+      
       final transport = connect_protocol.Transport(
-        baseUrl: baseUrl,
+        baseUrl: ApiConfig.chatBaseUrl,
         codec: const connect_protobuf.ProtoCodec(),
-        httpClient: connect_io.createHttpClient(io.HttpClient()),
+        httpClient: connect_io.createHttpClient(httpClient),
       );
       final chatClient = ChatServiceClient(transport);
 
@@ -50,7 +60,7 @@ class BackgroundSyncTask {
         jobRepo,
         messageRepo,
         chatClient,
-        authToken,
+        authHeaders,
       );
 
       AppLogger.info('Background sync completed', data: {'success': success});
@@ -70,7 +80,7 @@ class BackgroundSyncTask {
     PendingJobRepository jobRepo,
     MessageRepository messageRepo,
     ChatServiceClient chatClient,
-    String authToken,
+    connect.Headers authHeaders,
   ) async {
     try {
       final jobs = await jobRepo.getPendingJobs();
@@ -87,7 +97,7 @@ class BackgroundSyncTask {
 
       for (final job in jobs) {
         try {
-          await _processJob(job, chatClient, messageRepo, jobRepo);
+          await _processJob(job, chatClient, messageRepo, jobRepo, authHeaders);
         } catch (e, stackTrace) {
           AppLogger.error(
             'Failed to process background job',
@@ -116,10 +126,11 @@ class BackgroundSyncTask {
     ChatServiceClient chatClient,
     MessageRepository messageRepo,
     PendingJobRepository jobRepo,
+    connect.Headers authHeaders,
   ) async {
     switch (job.type) {
       case JobType.sendMessage:
-        await _processSendMessage(job, chatClient, messageRepo);
+        await _processSendMessage(job, chatClient, messageRepo, authHeaders);
         break;
       default:
         AppLogger.debug(
@@ -142,6 +153,7 @@ class BackgroundSyncTask {
     PendingJob job,
     ChatServiceClient chatClient,
     MessageRepository messageRepo,
+    connect.Headers authHeaders,
   ) async {
     final payload = job.payload;
 
@@ -172,7 +184,7 @@ class BackgroundSyncTask {
     );
 
     final request = pb.SendEventRequest(event: [event]);
-    final response = await chatClient.sendEvent(request);
+    final response = await chatClient.sendEvent(request, headers: authHeaders);
 
     // Update local message status
     if (payload['localId'] != null && response.ack.isNotEmpty) {
@@ -238,9 +250,9 @@ class BackgroundSyncTask {
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ICE;
       case RoomEventType.callEnd:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_END;
-      case RoomEventType.callEnd:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_END;
-      default:
+      case RoomEventType.motion:
+      case RoomEventType.vote:
+      case RoomEventType.transaction:
         return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
     }
   }
