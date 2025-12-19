@@ -8,7 +8,7 @@ import 'auth_platform.dart';
 
 /// Custom URL scheme for mobile OAuth (RFC 8252 compliant)
 const String _customScheme = 'com.antinvestor.chat';
-const String _customHost = 'oauth2redirect';
+const String _customHost = 'sso';
 
 /// Desktop authenticator using loopback interface
 class _DesktopAuthenticator {
@@ -253,7 +253,7 @@ class AuthPlatformIO implements AuthPlatform {
   Uri _getRedirectUri() {
     if (_isMobile) {
       // Mobile: Use custom URL scheme (RFC 8252 compliant)
-      return Uri.parse('$_customScheme://$_customHost');
+      return Uri.parse('$_customScheme://$_customHost/redirect');
     } else {
       // Desktop: Use loopback interface
       return Uri.parse('http://localhost:$_authPort');

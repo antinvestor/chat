@@ -28,7 +28,7 @@ When you create the iOS project on macOS, add the following URL scheme configura
 ```
 
 3. **Verify the redirect URI** matches what's registered on your OAuth server:
-   - iOS/Android: `com.antinvestor.chat://oauth2redirect`
+   - iOS/Android: `com.antinvestor.chat://sso/redirect`
 
 ## Full Info.plist Example
 
