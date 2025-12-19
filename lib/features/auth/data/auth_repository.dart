@@ -10,7 +10,12 @@ class AuthRepository {
   AuthRepository(this._authService);
 
   Future<void> login() async {
-    await _authService.authenticate();
+    final token = await _authService.authenticate();
+    if (token == null) {
+      // On IO platforms, authenticate() should always return a token
+      // On web, it might return null due to redirect flow
+      throw Exception('Authentication did not return a token');
+    }
   }
 
   Future<void> logout() async {

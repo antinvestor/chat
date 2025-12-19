@@ -53,10 +53,20 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     try {
       AppLogger.info('Login initiated');
       final authRepo = ref.read(authRepositoryProvider);
+      
+      // Perform authentication
       await authRepo.login();
 
       // Check if provider is still mounted after async operation
       if (!ref.mounted) return;
+
+      // Verify authentication was successful by checking if we have a token
+      final isLoggedIn = await authRepo.isLoggedIn();
+      if (!isLoggedIn) {
+        AppLogger.warning('Login completed but no token found');
+        state = const AsyncValue.data(AuthState.unauthenticated);
+        return;
+      }
 
       state = const AsyncValue.data(AuthState.authenticated);
       AppLogger.info('Login successful, state changed to authenticated');

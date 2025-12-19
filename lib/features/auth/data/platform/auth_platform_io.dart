@@ -5,6 +5,129 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/logging/app_logger.dart';
 import 'auth_platform.dart';
 
+/// Custom authenticator that provides better error handling and logging
+class _CustomAuthenticator {
+  final Flow flow;
+  final Future<void> Function(String url) urlLauncher;
+  final String successHtml;
+  HttpServer? _server;
+  bool _cancelled = false;
+
+  _CustomAuthenticator({
+    required this.flow,
+    required this.urlLauncher,
+    required this.successHtml,
+  });
+
+  Future<Credential> authorize() async {
+    final completer = Completer<Credential>();
+
+    try {
+      // Start local server to receive callback
+      _server = await HttpServer.bind(InternetAddress.loopbackIPv4, flow.redirectUri.port);
+      AppLogger.debug('Started auth callback server', data: {'port': flow.redirectUri.port});
+
+      // Handle incoming requests
+      _server!.listen((request) async {
+        if (_cancelled) {
+          request.response.statusCode = HttpStatus.gone;
+          request.response.write('Authentication cancelled');
+          await request.response.close();
+          return;
+        }
+
+        try {
+          AppLogger.debug('Received callback request', data: {
+            'uri': request.uri.toString(),
+            'queryParams': request.uri.queryParameters,
+          });
+
+          // Check for OAuth error response
+          final error = request.uri.queryParameters['error'];
+          if (error != null) {
+            final errorDesc = request.uri.queryParameters['error_description'] ?? error;
+            AppLogger.error('OAuth error from provider', data: {'error': error, 'description': errorDesc});
+            request.response.statusCode = HttpStatus.badRequest;
+            request.response.write('Authentication error: $errorDesc');
+            await request.response.close();
+            if (!completer.isCompleted) {
+              completer.completeError(Exception('OAuth error: $errorDesc'));
+            }
+            return;
+          }
+
+          // Get authorization code
+          final code = request.uri.queryParameters['code'];
+          final state = request.uri.queryParameters['state'];
+
+          if (code == null) {
+            AppLogger.warning('No code in callback', data: {'uri': request.uri.toString()});
+            request.response.statusCode = HttpStatus.badRequest;
+            request.response.write('Missing authorization code');
+            await request.response.close();
+            return;
+          }
+
+          AppLogger.debug('Processing auth callback', data: {'hasCode': true, 'hasState': state != null});
+
+          // Return success page
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.html;
+          request.response.write(successHtml);
+          await request.response.close();
+
+          // Exchange code for tokens
+          try {
+            final credential = await flow.callback({
+              'code': code,
+              if (state != null) 'state': state,
+            });
+            AppLogger.debug('Code exchange successful');
+            if (!completer.isCompleted) {
+              completer.complete(credential);
+            }
+          } catch (e, stackTrace) {
+            AppLogger.error('Code exchange failed', error: e, stackTrace: stackTrace);
+            if (!completer.isCompleted) {
+              completer.completeError(e);
+            }
+          }
+        } catch (e, stackTrace) {
+          AppLogger.error('Error handling callback request', error: e, stackTrace: stackTrace);
+          try {
+            request.response.statusCode = HttpStatus.internalServerError;
+            request.response.write('Internal error');
+            await request.response.close();
+          } catch (_) {}
+          if (!completer.isCompleted) {
+            completer.completeError(e);
+          }
+        }
+      });
+
+      // Launch browser
+      final authUri = flow.authenticationUri;
+      AppLogger.debug('Launching auth URL', data: {'url': authUri.toString()});
+      await urlLauncher(authUri.toString());
+
+      return await completer.future;
+    } catch (e) {
+      await cancel();
+      rethrow;
+    }
+  }
+
+  Future<void> cancel() async {
+    _cancelled = true;
+    try {
+      await _server?.close(force: true);
+      _server = null;
+    } catch (e) {
+      AppLogger.debug('Error closing auth server: $e');
+    }
+  }
+}
+
 AuthPlatform getAuthPlatform() => AuthPlatformIO();
 
 class AuthPlatformIO implements AuthPlatform {
@@ -14,7 +137,7 @@ class AuthPlatformIO implements AuthPlatform {
   Issuer? _issuer;
   Client? _client;
   Uri? _redirectUri;
-  Authenticator? _currentAuthenticator;
+  _CustomAuthenticator? _currentAuthenticator;
 
   @override
   Issuer? get issuer => _issuer;
@@ -31,6 +154,7 @@ class AuthPlatformIO implements AuthPlatform {
           Uri.parse(issuerUrl),
         ).timeout(const Duration(seconds: 15));
         _client = Client(_issuer!, clientId);
+        // Redirect URI with partition_id as required by the OAuth provider
         _redirectUri = Uri.parse('http://localhost:$_authPort?partition_id=$clientId');
       } catch (e) {
         AppLogger.error(
@@ -141,13 +265,16 @@ class AuthPlatformIO implements AuthPlatform {
 </html>
 ''';
 
-    _currentAuthenticator = Authenticator.fromFlow(
-      flow,
-      urlLancher: urlLauncher,
-      htmlPage: htmlPage,
+    _currentAuthenticator = _CustomAuthenticator(
+      flow: flow,
+      urlLauncher: urlLauncher,
+      successHtml: htmlPage,
     );
 
-    AppLogger.debug('Starting authorization flow...');
+    AppLogger.debug('Starting authorization flow...', data: {
+      'redirectUri': _redirectUri.toString(),
+      'scopes': scopes,
+    });
     
     try {
       final credential = await _currentAuthenticator!.authorize().timeout(
@@ -159,7 +286,7 @@ class AuthPlatformIO implements AuthPlatform {
         },
       );
       
-      AppLogger.debug('Authorization completed, exchanging for tokens...');
+      AppLogger.debug('Authorization flow completed, getting token response...');
       
       // Close any in-app browser on mobile
       if (Platform.isAndroid || Platform.isIOS) {
@@ -175,17 +302,31 @@ class AuthPlatformIO implements AuthPlatform {
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
-      // Retry token exchange with exponential backoff for network errors
+      // Get token response with retry for network errors
       final tokenResponse = await _retryWithBackoff(
-        () => credential.getTokenResponse(),
+        () async {
+          AppLogger.debug('Attempting to get token response...');
+          final response = await credential.getTokenResponse();
+          AppLogger.debug('Token response received', data: {
+            'hasAccessToken': response.accessToken != null,
+            'hasRefreshToken': response.refreshToken != null,
+            'expiresAt': response.expiresAt?.toIso8601String(),
+          });
+          return response;
+        },
         maxAttempts: 3,
         initialDelay: const Duration(seconds: 1),
       );
       
-      AppLogger.info('Authentication successful');
+      // Clean up
+      await _currentAuthenticator?.cancel();
       _currentAuthenticator = null;
+      
+      AppLogger.info('Authentication successful');
       return tokenResponse;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('Authentication failed', error: e, stackTrace: stackTrace);
+      await _currentAuthenticator?.cancel();
       _currentAuthenticator = null;
       rethrow;
     }

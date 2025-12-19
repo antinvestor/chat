@@ -35,8 +35,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
+      AppLogger.debug('Starting login process...');
       await ref.read(authStateProvider.notifier).login();
-      // Navigation will be handled by router redirect
+      
+      // Check if login was successful
+      final authState = ref.read(authStateProvider);
+      final isAuthenticated = authState.when(
+        data: (state) => state == AuthState.authenticated,
+        loading: () => false,
+        error: (_, __) => false,
+      );
+      
+      if (isAuthenticated) {
+        AppLogger.info('Login successful, navigation will be handled by router');
+        // Navigation will be handled by router redirect
+      } else {
+        AppLogger.warning('Login completed but state is not authenticated');
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Login incomplete. Please try again.';
+            _isLoading = false;
+          });
+        }
+      }
     } catch (e, stackTrace) {
       AppLogger.error(
         'User login attempt failed',
@@ -47,29 +68,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Provide better error messages based on error type
       String errorMessage = 'Authentication failed. Please try again.';
 
+      final errorStr = e.toString().toLowerCase();
+      
       // Check for common network-related errors
       if (e is SocketException ||
-          e.toString().contains('SocketException') ||
-          e.toString().contains('Failed host lookup') ||
-          e.toString().contains('Network is unreachable')) {
+          errorStr.contains('socketexception') ||
+          errorStr.contains('failed host lookup') ||
+          errorStr.contains('network is unreachable')) {
         errorMessage =
             'Cannot connect to server. Please check your internet connection.';
-      } else if (e.toString().contains('404')) {
+      } else if (errorStr.contains('404')) {
         errorMessage =
             'Authentication service unavailable. Please try again later.';
-      } else if (e.toString().contains('timeout') ||
-          e.toString().contains('TimeoutException')) {
+      } else if (errorStr.contains('timeout') ||
+          errorStr.contains('timeoutexception')) {
         errorMessage =
             'Connection timed out. Please check your internet connection.';
-      } else if (e.toString().contains('Could not launch browser')) {
+      } else if (errorStr.contains('could not launch')) {
         errorMessage =
             'Unable to open web browser. Please check your device settings.';
+      } else if (errorStr.contains('oauth error')) {
+        // Extract the actual OAuth error message
+        final match = RegExp(r'oauth error: (.+)').firstMatch(errorStr);
+        errorMessage = match != null 
+            ? 'Authentication error: ${match.group(1)}'
+            : 'Authentication was denied. Please try again.';
+      } else if (errorStr.contains('cancelled') || errorStr.contains('canceled')) {
+        errorMessage = 'Authentication was cancelled.';
+      } else if (errorStr.contains('code exchange failed')) {
+        errorMessage = 'Failed to complete authentication. Please try again.';
       }
 
-      setState(() {
-        _errorMessage = errorMessage;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = errorMessage;
+          _isLoading = false;
+        });
+      }
     }
   }
 
