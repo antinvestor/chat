@@ -60,7 +60,7 @@ String _$messageRepositoryHash() => r'379b18468ad2ee5a14bf7317fc951e1cfbbb975d';
 const messageListProvider = MessageListFamily._();
 
 final class MessageListProvider
-    extends $AsyncNotifierProvider<MessageList, List<RoomEvent>> {
+    extends $AsyncNotifierProvider<MessageList, List<domain.RoomEvent>> {
   const MessageListProvider._({
     required MessageListFamily super.from,
     required String super.argument,
@@ -97,15 +97,15 @@ final class MessageListProvider
   }
 }
 
-String _$messageListHash() => r'230a794853e3ab4289bd39670b3924c1ca930472';
+String _$messageListHash() => r'e01d04fc34051d154a72190578f9de164fec1bc5';
 
 final class MessageListFamily extends $Family
     with
         $ClassFamilyOverride<
           MessageList,
-          AsyncValue<List<RoomEvent>>,
-          List<RoomEvent>,
-          FutureOr<List<RoomEvent>>,
+          AsyncValue<List<domain.RoomEvent>>,
+          List<domain.RoomEvent>,
+          FutureOr<List<domain.RoomEvent>>,
           String
         > {
   const MessageListFamily._()
@@ -124,21 +124,26 @@ final class MessageListFamily extends $Family
   String toString() => r'messageListProvider';
 }
 
-abstract class _$MessageList extends $AsyncNotifier<List<RoomEvent>> {
+abstract class _$MessageList extends $AsyncNotifier<List<domain.RoomEvent>> {
   late final _$args = ref.$arg as String;
   String get roomId => _$args;
 
-  FutureOr<List<RoomEvent>> build(String roomId);
+  FutureOr<List<domain.RoomEvent>> build(String roomId);
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build(_$args);
-    final ref = this.ref as $Ref<AsyncValue<List<RoomEvent>>, List<RoomEvent>>;
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<List<domain.RoomEvent>>, List<domain.RoomEvent>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<List<RoomEvent>>, List<RoomEvent>>,
-              AsyncValue<List<RoomEvent>>,
+              AnyNotifier<
+                AsyncValue<List<domain.RoomEvent>>,
+                List<domain.RoomEvent>
+              >,
+              AsyncValue<List<domain.RoomEvent>>,
               Object?,
               Object?
             >;

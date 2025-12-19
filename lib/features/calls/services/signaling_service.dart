@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
-import 'package:chat/features/messages/domain/room_event.dart';
+import 'package:chat/features/messages/domain/room_event.dart' as domain;
 import '../../../core/sync/sync_engine.dart';
 
 final signalingServiceProvider = Provider<SignalingService>((ref) {
@@ -13,30 +13,30 @@ class SignalingService {
 
   SignalingService(this._syncEngine);
 
-  Stream<RoomEvent> get onSignal => _syncEngine.signalingEvents;
+  Stream<domain.RoomEvent> get onSignal => _syncEngine.signalingEvents;
 
   Future<void> sendOffer(String roomId, Map<String, dynamic> offer) async {
-    await _sendSignal(roomId, RoomEventType.callOffer, offer);
+    await _sendSignal(roomId, domain.RoomEventType.callOffer, offer);
   }
 
   Future<void> sendAnswer(String roomId, Map<String, dynamic> answer) async {
-    await _sendSignal(roomId, RoomEventType.callAnswer, answer);
+    await _sendSignal(roomId, domain.RoomEventType.callAnswer, answer);
   }
 
   Future<void> sendCandidate(String roomId, Map<String, dynamic> candidate) async {
-    await _sendSignal(roomId, RoomEventType.callIce, candidate);
+    await _sendSignal(roomId, domain.RoomEventType.callIce, candidate);
   }
 
   Future<void> sendHangup(String roomId) async {
-    await _sendSignal(roomId, RoomEventType.callEnd, {});
+    await _sendSignal(roomId, domain.RoomEventType.callEnd, {});
   }
 
   Future<void> _sendSignal(
     String roomId,
-    RoomEventType type,
+    domain.RoomEventType type,
     Map<String, dynamic> content,
   ) async {
-    final message = RoomEvent(
+    final message = domain.RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
       senderId: 'current_user_id', // TODO: Get from auth

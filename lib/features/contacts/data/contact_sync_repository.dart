@@ -1,4 +1,5 @@
-import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:drift/drift.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../apis/profile/v1/profile.pb.dart' as pb;
 import '../../../apis/profile/v1/profile.connect.client.dart';
@@ -26,13 +27,13 @@ class ContactSyncRepository {
       AppLogger.info('Starting contact sync');
 
       // Get device contacts
-      final hasPermission = await FlutterContacts.requestPermission();
+      final hasPermission = await flutter_contacts.FlutterContacts.requestPermission();
       if (!hasPermission) {
         AppLogger.warning('Contact permission denied');
         return [];
       }
 
-      final deviceContacts = await FlutterContacts.getContacts(
+      final deviceContacts = await flutter_contacts.FlutterContacts.getContacts(
         withProperties: true,
         withPhoto: false, // Don't load photos during sync for performance
       );
@@ -44,7 +45,7 @@ class ContactSyncRepository {
 
       // Extract phone numbers and create hash for privacy
       final contactRequests = <pb.AddContactRequest>[];
-      final phoneToContact = <String, Contact>{};
+      final phoneToContact = <String, flutter_contacts.Contact>{};
 
       for (final contact in deviceContacts) {
         for (final phone in contact.phones) {
@@ -175,39 +176,36 @@ class ContactSyncRepository {
   }
 
   Future<void> _storeSyncedContacts(List<SyncedContact> contacts) async {
-    final db = await _database.database;
-
     for (final contact in contacts) {
-      db.execute(
-        '''INSERT OR REPLACE INTO contacts 
-           (id, profile_id, display_name, phone_hash, is_blocked, created_at)
-           VALUES (?, ?, ?, ?, 0, ?)''',
-        [
-          contact.id,
-          contact.profileId,
-          contact.displayName,
-          contact.contactType == ContactSyncType.phone
+      await _database.into(_database.contacts).insertOnConflictUpdate(
+        ContactsCompanion.insert(
+          id: contact.id,
+          profileId: contact.profileId,
+          displayName: Value(contact.displayName),
+          phoneHash: Value(contact.contactType == ContactSyncType.phone
               ? _hashPhone(contact.displayName)
-              : null,
-          DateTime.now().millisecondsSinceEpoch,
-        ],
+              : null),
+          isBlocked: const Value(false),
+          createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+        ),
       );
     }
   }
 
   /// Get locally stored synced contacts
   Future<List<SyncedContact>> getLocalSyncedContacts() async {
-    final db = await _database.database;
-    final results = db.select(
-      'SELECT * FROM contacts WHERE is_blocked = 0 ORDER BY display_name',
-    );
+    final query = _database.select(_database.contacts)
+      ..where((t) => t.isBlocked.equals(false))
+      ..orderBy([(t) => OrderingTerm.asc(t.displayName)]);
+    
+    final results = await query.get();
 
     return results.map((row) {
       return SyncedContact(
-        id: row['id'] as String,
-        profileId: row['profile_id'] as String,
-        displayName: row['display_name'] as String? ?? '',
-        contactType: row['phone_hash'] != null
+        id: row.id,
+        profileId: row.profileId,
+        displayName: row.displayName ?? '',
+        contactType: row.phoneHash != null
             ? ContactSyncType.phone
             : ContactSyncType.email,
         isVerified: true,

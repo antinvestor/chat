@@ -1,82 +1,145 @@
-import 'dart:io';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:sqlite3/sqlite3.dart';
-import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
-import 'schema.dart';
+import 'package:drift/drift.dart';
+import 'package:drift_flutter/drift_flutter.dart';
 
-class AppDatabase {
-  static final AppDatabase _instance = AppDatabase._internal();
-  static AppDatabase get instance => _instance;
+part 'database.g.dart';
 
-  Database? _db;
+// Table definitions
+class Profiles extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().nullable()();
+  TextColumn get avatarUrl => text().nullable()();
+  IntColumn get updatedAt => integer().nullable()();
+  TextColumn get metadata => text().nullable()();
 
-  AppDatabase._internal();
+  @override
+  Set<Column> get primaryKey => {id};
+}
 
-  Future<Database> get database async {
-    if (_db != null) return _db!;
-    _db = await _initDatabase();
-    return _db!;
+class Contacts extends Table {
+  TextColumn get id => text()();
+  TextColumn get profileId => text().references(Profiles, #id)();
+  TextColumn get displayName => text().nullable()();
+  TextColumn get phoneHash => text().nullable()();
+  BoolColumn get isBlocked => boolean().withDefault(const Constant(false))();
+  IntColumn get createdAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class Rooms extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().nullable()();
+  TextColumn get type => text().nullable()();
+  TextColumn get lastEventId => text().nullable()();
+  IntColumn get lastEventIndex => integer().nullable()();
+  IntColumn get unreadCount => integer().withDefault(const Constant(0))();
+  TextColumn get metadata => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class RoomMembers extends Table {
+  TextColumn get roomId => text().references(Rooms, #id)();
+  TextColumn get profileId => text().references(Profiles, #id)();
+  TextColumn get role => text().nullable()();
+  IntColumn get joinedAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {roomId, profileId};
+}
+
+class RoomEvents extends Table {
+  TextColumn get id => text()();
+  TextColumn get roomId => text().references(Rooms, #id)();
+  TextColumn get senderId => text()();
+  IntColumn get type => integer()();
+  TextColumn get content => text().nullable()();
+  TextColumn get parentId => text().nullable()();
+  IntColumn get status => integer().withDefault(const Constant(0))();
+  IntColumn get createdAt => integer().nullable()();
+  IntColumn get serverTs => integer().nullable()();
+  TextColumn get localId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class Sessions extends Table {
+  TextColumn get sessionId => text()();
+  TextColumn get profileId => text()();
+  TextColumn get deviceId => text()();
+  BlobColumn get ratchetState => blob().nullable()();
+  IntColumn get createdAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {sessionId};
+}
+
+class Prekeys extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get publicKey => text().nullable()();
+  TextColumn get privateKey => text().nullable()();
+  BoolColumn get isSigned => boolean().withDefault(const Constant(false))();
+}
+
+class PendingJobs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get type => text()();
+  TextColumn get payload => text().nullable()();
+  IntColumn get createdAt => integer().nullable()();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+}
+
+class Transactions extends Table {
+  TextColumn get id => text()();
+  TextColumn get roomId => text().references(Rooms, #id)();
+  TextColumn get amount => text().nullable()();
+  TextColumn get currency => text().nullable()();
+  TextColumn get status => text().nullable()();
+  TextColumn get initiatorId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [
+  Profiles,
+  Contacts,
+  Rooms,
+  RoomMembers,
+  RoomEvents,
+  Sessions,
+  Prekeys,
+  PendingJobs,
+  Transactions,
+])
+class AppDatabase extends _$AppDatabase {
+  AppDatabase._() : super(_openConnection());
+
+  static final AppDatabase instance = AppDatabase._();
+
+  @override
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        // Handle migrations
+      },
+      beforeOpen: (details) async {
+        await customStatement('PRAGMA foreign_keys = ON');
+      },
+    );
   }
 
-  Future<Database> _initDatabase() async {
-    // Ensure sqlite3 is loaded
-    await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
-
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(join(dbFolder.path, 'chat_v1.db'));
-
-    final db = sqlite3.open(file.path);
-
-    // Enable foreign keys
-    db.execute('PRAGMA foreign_keys = ON;');
-
-    _migrate(db);
-
-    return db;
-  }
-
-  void _migrate(Database db) {
-    final currentVersion = db.userVersion;
-
-    if (currentVersion < AppSchema.version) {
-      db.execute('BEGIN TRANSACTION;');
-      try {
-        if (currentVersion < 1) {
-          db.execute(AppSchema.createProfilesTable);
-          db.execute(AppSchema.createContactsTable);
-          db.execute(AppSchema.createRoomsTable);
-          db.execute(AppSchema.createRoomMembersTable);
-          db.execute(AppSchema.createRoomEventsTable);
-          db.execute(AppSchema.createSessionsTable);
-          db.execute(AppSchema.createPrekeysTable);
-          db.execute(AppSchema.createPendingJobsTable);
-          db.execute(AppSchema.createTransactionsTable);
-          
-          // Indexes
-          db.execute(AppSchema.indexRoomEventsRoomId);
-          db.execute(AppSchema.indexRoomEventsParentId);
-          db.execute(AppSchema.indexPendingJobsStatus);
-          db.execute(AppSchema.indexRoomEventsCreatedAt);
-          db.execute(AppSchema.indexRoomsLastEventIndex);
-        }
-
-        if (currentVersion < 2) {
-          db.execute(AppSchema.indexRoomEventsCreatedAt);
-          db.execute(AppSchema.indexRoomsLastEventIndex);
-        }
-        
-        db.userVersion = AppSchema.version;
-        db.execute('COMMIT;');
-      } catch (e) {
-        db.execute('ROLLBACK;');
-        rethrow;
-      }
-    }
-  }
-
-  void close() {
-    _db?.dispose();
-    _db = null;
+  static QueryExecutor _openConnection() {
+    return driftDatabase(name: 'chat_v2.db');
   }
 }

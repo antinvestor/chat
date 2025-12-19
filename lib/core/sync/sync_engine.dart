@@ -10,13 +10,13 @@ import '../../apis/google/protobuf/timestamp.pb.dart' as google_timestamp;
 import 'package:fixnum/fixnum.dart' as fixnum;
 import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/data/message_repository.dart';
-import '../../features/messages/domain/room_event.dart';
+import '../../features/messages/domain/room_event.dart' as domain;
 import '../crypto/key_manager.dart';
 import '../db/database.dart';
 import '../networking/client.dart';
 import '../networking/authenticated_transport.dart';
 
-import 'pending_job.dart';
+import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
 
 final pendingJobRepositoryProvider = Provider<PendingJobRepository>((ref) {
@@ -59,8 +59,8 @@ class SyncEngine {
   final _typingEventsController = StreamController<pb.TypingEvent>.broadcast();
   Stream<pb.TypingEvent> get typingEvents => _typingEventsController.stream;
 
-  final _signalingEventsController = StreamController<RoomEvent>.broadcast();
-  Stream<RoomEvent> get signalingEvents => _signalingEventsController.stream;
+  final _signalingEventsController = StreamController<domain.RoomEvent>.broadcast();
+  Stream<domain.RoomEvent> get signalingEvents => _signalingEventsController.stream;
 
   final _connectionStateController =
       StreamController<SyncConnectionState>.broadcast();
@@ -136,12 +136,12 @@ class SyncEngine {
     }
   }
 
-  Future<void> sendSignal(RoomEvent event) async {
+  Future<void> sendSignal(domain.RoomEvent event) async {
     // Insert into DB first (optional for signals, but good for history)
     await _messageRepo.insertMessage(event);
 
     // Create pending job
-    await _jobRepo.addJob(JobType.sendMessage, {
+    await _jobRepo.addJob(domain_job.JobType.sendMessage, {
       'roomId': event.roomId,
       'type': event.type.toString(),
       'content': event.content,
@@ -211,7 +211,7 @@ class SyncEngine {
   Future<void> _handleConnectResponse(pb.ConnectResponse response) async {
     // Handle different event types
     if (response.hasMessage()) {
-      await _processRoomEvent(response.message);
+      await _processPbRoomEvent(response.message);
     } else if (response.hasTypingEvent()) {
       _typingEventsController.add(response.typingEvent);
     } else if (response.hasPresenceEvent()) {
@@ -223,7 +223,7 @@ class SyncEngine {
     }
   }
 
-  Future<void> _processRoomEvent(pb.RoomEvent event) async {
+  Future<void> _processPbRoomEvent(pb.RoomEvent event) async {
     // Deduplicate events
     if (_processedEventIds.contains(event.id)) {
       return;
@@ -246,14 +246,14 @@ class SyncEngine {
       content = _structToMap(event.payload);
     }
 
-    final roomEvent = RoomEvent(
+    final roomEvent = domain.RoomEvent(
       id: event.id,
       roomId: event.roomId,
       senderId: event.senderId,
       type: _mapProtoEventType(event.type),
       content: content,
       parentId: event.hasParentId() ? event.parentId : null,
-      status: EventStatus.delivered,
+      status: domain.EventStatus.delivered,
       createdAt: event.hasSentAt()
           ? event.sentAt.seconds.toInt() * 1000 + event.sentAt.nanos ~/ 1000000
           : DateTime.now().millisecondsSinceEpoch,
@@ -270,11 +270,11 @@ class SyncEngine {
     }
   }
 
-  bool _isCallEvent(RoomEventType type) {
-    return type == RoomEventType.callOffer ||
-        type == RoomEventType.callAnswer ||
-        type == RoomEventType.callIce ||
-        type == RoomEventType.callEnd;
+  bool _isCallEvent(domain.RoomEventType type) {
+    return type == domain.RoomEventType.callOffer ||
+        type == domain.RoomEventType.callAnswer ||
+        type == domain.RoomEventType.callIce ||
+        type == domain.RoomEventType.callEnd;
   }
 
   Future<void> _processReceiptEvent(pb.ReceiptEvent event) async {
@@ -286,7 +286,7 @@ class SyncEngine {
     // Mark messages as delivered (other user received them)
     await _messageRepo.updateMessagesStatus(
       event.eventId.toList(),
-      EventStatus.delivered,
+      domain.EventStatus.delivered,
     );
   }
 
@@ -309,7 +309,7 @@ class SyncEngine {
     });
   }
 
-  Future<void> _processJob(PendingJob job) async {
+  Future<void> _processJob(domain_job.PendingJob job) async {
     // Skip jobs that have exceeded retry limit
     if (job.retryCount >= 5) {
       await _jobRepo.deleteJob(job.id);
@@ -318,20 +318,20 @@ class SyncEngine {
 
     try {
       switch (job.type) {
-        case JobType.sendMessage:
-        case JobType.sendMediaMessage:
+        case domain_job.JobType.sendMessage:
+        case domain_job.JobType.sendMediaMessage:
           await _processSendMessage(job);
           break;
-        case JobType.uploadFile:
+        case domain_job.JobType.uploadFile:
           // File uploads are handled by FileUploadService before queuing
           break;
-        case JobType.updateRoom:
+        case domain_job.JobType.updateRoom:
           // TODO: Implement room update
           break;
-        case JobType.vote:
+        case domain_job.JobType.vote:
           // TODO: Implement voting
           break;
-        case JobType.syncContacts:
+        case domain_job.JobType.syncContacts:
           // Contact sync is handled by ContactSyncRepository
           break;
       }
@@ -351,7 +351,7 @@ class SyncEngine {
     }
   }
 
-  Future<void> _processSendMessage(PendingJob job) async {
+  Future<void> _processSendMessage(domain_job.PendingJob job) async {
     final payload = job.payload;
 
     // Convert content Map to Struct
@@ -371,9 +371,9 @@ class SyncEngine {
       roomId: payload['roomId'] as String,
       senderId: 'current_user_id', // TODO: Get from auth service
       type: _mapLocalEventTypeToProto(
-        RoomEventType.values.firstWhere(
+        domain.RoomEventType.values.firstWhere(
           (t) => t.toString() == payload['type'],
-          orElse: () => RoomEventType.text,
+          orElse: () => domain.RoomEventType.text,
         ),
       ),
       payload: contentStruct,
@@ -388,16 +388,16 @@ class SyncEngine {
     if (payload['localId'] != null && response.ack.isNotEmpty) {
       final ackEventId = response.ack.first.eventId;
       // Update the message with server ID
-      final updatedEvent = RoomEvent(
+      final updatedEvent = domain.RoomEvent(
         id: ackEventId,
         roomId: payload['roomId'] as String,
         senderId: 'current_user_id',
-        type: RoomEventType.values.firstWhere(
+        type: domain.RoomEventType.values.firstWhere(
           (t) => t.toString() == payload['type'],
-          orElse: () => RoomEventType.text,
+          orElse: () => domain.RoomEventType.text,
         ),
         content: payload['content'] as Map<String, dynamic>,
-        status: EventStatus.sent,
+        status: domain.EventStatus.sent,
         createdAt: now.millisecondsSinceEpoch,
         localId: payload['localId'] as String?,
       );
@@ -438,51 +438,51 @@ class SyncEngine {
   // Helper methods for type conversion
 
   // ignore: unused_element - kept for future use in reconnection logic
-  RoomEventType _mapProtoEventType(pb.RoomEventType type) {
+  domain.RoomEventType _mapProtoEventType(pb.RoomEventType type) {
     switch (type) {
       case pb.RoomEventType.ROOM_EVENT_TYPE_TEXT:
-        return RoomEventType.text;
+        return domain.RoomEventType.text;
       case pb.RoomEventType.ROOM_EVENT_TYPE_ATTACHMENT:
         // Map ATTACHMENT to image for now, could detect type from content
-        return RoomEventType.image;
+        return domain.RoomEventType.image;
       case pb.RoomEventType.ROOM_EVENT_TYPE_REACTION:
-        return RoomEventType.reaction;
+        return domain.RoomEventType.reaction;
       case pb.RoomEventType.ROOM_EVENT_TYPE_CALL_OFFER:
-        return RoomEventType.callOffer;
+        return domain.RoomEventType.callOffer;
       case pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ANSWER:
-        return RoomEventType.callAnswer;
+        return domain.RoomEventType.callAnswer;
       case pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ICE:
-        return RoomEventType.callIce;
+        return domain.RoomEventType.callIce;
       case pb.RoomEventType.ROOM_EVENT_TYPE_CALL_END:
-        return RoomEventType.callEnd;
+        return domain.RoomEventType.callEnd;
       default:
-        return RoomEventType.text;
+        return domain.RoomEventType.text;
     }
   }
 
-  pb.RoomEventType _mapLocalEventTypeToProto(RoomEventType type) {
+  pb.RoomEventType _mapLocalEventTypeToProto(domain.RoomEventType type) {
     switch (type) {
-      case RoomEventType.text:
+      case domain.RoomEventType.text:
         return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
-      case RoomEventType.image:
-      case RoomEventType.video:
-      case RoomEventType.audio:
-      case RoomEventType.file:
+      case domain.RoomEventType.image:
+      case domain.RoomEventType.video:
+      case domain.RoomEventType.audio:
+      case domain.RoomEventType.file:
         // All media types map to ATTACHMENT
         return pb.RoomEventType.ROOM_EVENT_TYPE_ATTACHMENT;
-      case RoomEventType.reaction:
+      case domain.RoomEventType.reaction:
         return pb.RoomEventType.ROOM_EVENT_TYPE_REACTION;
-      case RoomEventType.callOffer:
+      case domain.RoomEventType.callOffer:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_OFFER;
-      case RoomEventType.callAnswer:
+      case domain.RoomEventType.callAnswer:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ANSWER;
-      case RoomEventType.callIce:
+      case domain.RoomEventType.callIce:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ICE;
-      case RoomEventType.callEnd:
+      case domain.RoomEventType.callEnd:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_END;
-      case RoomEventType.motion:
-      case RoomEventType.vote:
-      case RoomEventType.transaction:
+      case domain.RoomEventType.motion:
+      case domain.RoomEventType.vote:
+      case domain.RoomEventType.transaction:
         // These might not be in protobuf yet, map to TEXT for now
         return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
     }

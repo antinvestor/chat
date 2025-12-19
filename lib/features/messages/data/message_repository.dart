@@ -1,81 +1,73 @@
 import 'dart:convert';
-import 'package:sqlite3/sqlite3.dart';
+import 'package:drift/drift.dart';
 import '../../../core/db/database.dart';
-import '../domain/room_event.dart';
+import '../domain/room_event.dart' as domain;
 
 class MessageRepository {
   final AppDatabase _database;
 
   MessageRepository(this._database);
 
-  Future<List<RoomEvent>> getMessagesForRoom(String roomId, {int limit = 50}) async {
-    final db = await _database.database;
-    final results = db.select(
-      'SELECT * FROM room_events WHERE room_id = ? ORDER BY created_at DESC LIMIT ?',
-      [roomId, limit],
-    );
+  Future<List<domain.RoomEvent>> getMessagesForRoom(String roomId, {int limit = 50}) async {
+    final query = _database.select(_database.roomEvents)
+      ..where((t) => t.roomId.equals(roomId))
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..limit(limit);
     
-    return results.map((row) => _rowToRoomEvent(row)).toList().reversed.toList();
+    final results = await query.get();
+    return results.map((row) => _toRoomEvent(row)).toList().reversed.toList();
   }
 
-  Future<void> insertMessage(RoomEvent event) async {
-    final db = await _database.database;
-    db.execute(
-      '''INSERT OR REPLACE INTO room_events 
-         (id, room_id, sender_id, type, content, parent_id, status, created_at, server_ts, local_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-      [
-        event.id,
-        event.roomId,
-        event.senderId,
-        event.type.index,
-        jsonEncode(event.content),
-        event.parentId,
-        event.status.index,
-        event.createdAt,
-        event.serverTs,
-        event.localId,
-      ],
+  Future<void> insertMessage(domain.RoomEvent event) async {
+    await _database.into(_database.roomEvents).insertOnConflictUpdate(
+      RoomEventsCompanion.insert(
+        id: event.id,
+        roomId: event.roomId,
+        senderId: event.senderId,
+        type: event.type.index,
+        content: Value(jsonEncode(event.content)),
+        parentId: Value(event.parentId),
+        status: Value(event.status.index),
+        createdAt: Value(event.createdAt),
+        serverTs: Value(event.serverTs),
+        localId: Value(event.localId),
+      ),
     );
   }
 
-  Future<void> updateMessageStatus(String messageId, EventStatus status) async {
-    final db = await _database.database;
-    db.execute('UPDATE room_events SET status = ? WHERE id = ?', [status.index, messageId]);
+  Future<void> updateMessageStatus(String messageId, domain.EventStatus status) async {
+    await (_database.update(_database.roomEvents)
+      ..where((t) => t.id.equals(messageId)))
+      .write(RoomEventsCompanion(status: Value(status.index)));
   }
 
-  Future<void> updateMessagesStatus(List<String> messageIds, EventStatus status) async {
+  Future<void> updateMessagesStatus(List<String> messageIds, domain.EventStatus status) async {
     if (messageIds.isEmpty) return;
-    final db = await _database.database;
-    final placeholders = List.filled(messageIds.length, '?').join(',');
-    db.execute(
-      'UPDATE room_events SET status = ? WHERE id IN ($placeholders)',
-      [status.index, ...messageIds],
-    );
+    await (_database.update(_database.roomEvents)
+      ..where((t) => t.id.isIn(messageIds)))
+      .write(RoomEventsCompanion(status: Value(status.index)));
   }
 
-  Future<List<RoomEvent>> getReactionsForEvent(String eventId) async {
-    final db = await _database.database;
-    final results = db.select(
-      'SELECT * FROM room_events WHERE parent_id = ? AND type = ?',
-      [eventId, RoomEventType.reaction.index],
-    );
+  Future<List<domain.RoomEvent>> getReactionsForEvent(String eventId) async {
+    final query = _database.select(_database.roomEvents)
+      ..where((t) => t.parentId.equals(eventId) & t.type.equals(domain.RoomEventType.reaction.index));
     
-    return results.map((row) => _rowToRoomEvent(row)).toList();
+    final results = await query.get();
+    return results.map((row) => _toRoomEvent(row)).toList();
   }
 
-  RoomEvent _rowToRoomEvent(Row row) {
-    return RoomEvent(
-      id: row['id'] as String,
-      roomId: row['room_id'] as String,
-      senderId: row['sender_id'] as String,
-      type: RoomEventType.values[row['type'] as int],
-      content: jsonDecode(row['content'] as String),
-      parentId: row['parent_id'] as String?,
-      status: EventStatus.values[row['status'] as int],
-      createdAt: row['created_at'] as int,
-      serverTs: row['server_ts'] as int?,
-      localId: row['local_id'] as String?,
+  domain.RoomEvent _toRoomEvent(RoomEvent row) {
+    return domain.RoomEvent(
+      id: row.id,
+      roomId: row.roomId,
+      senderId: row.senderId,
+      type: domain.RoomEventType.values[row.type],
+      content: row.content != null ? jsonDecode(row.content!) : {},
+      parentId: row.parentId,
+      status: domain.EventStatus.values[row.status],
+      createdAt: row.createdAt ?? 0,
+      serverTs: row.serverTs,
+      localId: row.localId,
     );
   }
 }

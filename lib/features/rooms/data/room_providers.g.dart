@@ -54,7 +54,7 @@ String _$roomRepositoryHash() => r'8599dc9bf5fc727e8556974fdaedabbe3a8c28ce';
 const roomListProvider = RoomListProvider._();
 
 final class RoomListProvider
-    extends $AsyncNotifierProvider<RoomList, List<Room>> {
+    extends $AsyncNotifierProvider<RoomList, List<domain.Room>> {
   const RoomListProvider._()
     : super(
         from: null,
@@ -74,20 +74,21 @@ final class RoomListProvider
   RoomList create() => RoomList();
 }
 
-String _$roomListHash() => r'eaf67bb0536ee3641ac4e0ec6a97fcf30aceaba7';
+String _$roomListHash() => r'4998cc462eeff2dfd5f61d1c2eb71ead5f56e6be';
 
-abstract class _$RoomList extends $AsyncNotifier<List<Room>> {
-  FutureOr<List<Room>> build();
+abstract class _$RoomList extends $AsyncNotifier<List<domain.Room>> {
+  FutureOr<List<domain.Room>> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
-    final ref = this.ref as $Ref<AsyncValue<List<Room>>, List<Room>>;
+    final ref =
+        this.ref as $Ref<AsyncValue<List<domain.Room>>, List<domain.Room>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<List<Room>>, List<Room>>,
-              AsyncValue<List<Room>>,
+              AnyNotifier<AsyncValue<List<domain.Room>>, List<domain.Room>>,
+              AsyncValue<List<domain.Room>>,
               Object?,
               Object?
             >;

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 import '../../../core/crypto/e2e_encryption_service.dart';
@@ -7,7 +8,7 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
-import '../domain/room_event.dart';
+import '../domain/room_event.dart' as domain;
 import 'file_upload_service.dart';
 import 'message_providers.dart';
 import 'message_repository.dart';
@@ -33,7 +34,7 @@ class MessageSendingService {
   );
 
   /// Send a text message
-  Future<RoomEvent> sendTextMessage({
+  Future<domain.RoomEvent> sendTextMessage({
     required String roomId,
     required String text,
     String? replyToId,
@@ -60,14 +61,14 @@ class MessageSendingService {
       }
     }
 
-    final event = RoomEvent(
+    final event = domain.RoomEvent(
       id: localId,
       roomId: roomId,
       senderId: senderId,
-      type: RoomEventType.text,
+      type: domain.RoomEventType.text,
       content: content,
       parentId: replyToId,
-      status: EventStatus.pending,
+      status: domain.EventStatus.pending,
       createdAt: now,
       localId: localId,
     );
@@ -89,7 +90,7 @@ class MessageSendingService {
   }
 
   /// Send an image message
-  Future<RoomEvent> sendImageMessage({
+  Future<domain.RoomEvent> sendImageMessage({
     required String roomId,
     required File imageFile,
     String? caption,
@@ -100,7 +101,7 @@ class MessageSendingService {
     return _sendMediaMessage(
       roomId: roomId,
       file: imageFile,
-      type: RoomEventType.image,
+      type: domain.RoomEventType.image,
       caption: caption,
       replyToId: replyToId,
       encrypt: encrypt,
@@ -109,7 +110,7 @@ class MessageSendingService {
   }
 
   /// Send a video message
-  Future<RoomEvent> sendVideoMessage({
+  Future<domain.RoomEvent> sendVideoMessage({
     required String roomId,
     required File videoFile,
     String? caption,
@@ -120,7 +121,7 @@ class MessageSendingService {
     return _sendMediaMessage(
       roomId: roomId,
       file: videoFile,
-      type: RoomEventType.video,
+      type: domain.RoomEventType.video,
       caption: caption,
       replyToId: replyToId,
       encrypt: encrypt,
@@ -129,7 +130,7 @@ class MessageSendingService {
   }
 
   /// Send an audio message
-  Future<RoomEvent> sendAudioMessage({
+  Future<domain.RoomEvent> sendAudioMessage({
     required String roomId,
     required File audioFile,
     int? durationMs,
@@ -140,7 +141,7 @@ class MessageSendingService {
     return _sendMediaMessage(
       roomId: roomId,
       file: audioFile,
-      type: RoomEventType.audio,
+      type: domain.RoomEventType.audio,
       extraContent: durationMs != null ? {'duration': durationMs} : null,
       replyToId: replyToId,
       encrypt: encrypt,
@@ -149,7 +150,7 @@ class MessageSendingService {
   }
 
   /// Send a file message
-  Future<RoomEvent> sendFileMessage({
+  Future<domain.RoomEvent> sendFileMessage({
     required String roomId,
     required File file,
     String? replyToId,
@@ -159,7 +160,7 @@ class MessageSendingService {
     return _sendMediaMessage(
       roomId: roomId,
       file: file,
-      type: RoomEventType.file,
+      type: domain.RoomEventType.file,
       replyToId: replyToId,
       encrypt: encrypt,
       onProgress: onProgress,
@@ -167,10 +168,10 @@ class MessageSendingService {
   }
 
   /// Internal method for sending media messages
-  Future<RoomEvent> _sendMediaMessage({
+  Future<domain.RoomEvent> _sendMediaMessage({
     required String roomId,
     required File file,
-    required RoomEventType type,
+    required domain.RoomEventType type,
     String? caption,
     String? replyToId,
     Map<String, dynamic>? extraContent,
@@ -193,14 +194,14 @@ class MessageSendingService {
       ...?extraContent,
     };
 
-    final event = RoomEvent(
+    final event = domain.RoomEvent(
       id: localId,
       roomId: roomId,
       senderId: senderId,
       type: type,
       content: content,
       parentId: replyToId,
-      status: EventStatus.pending,
+      status: domain.EventStatus.pending,
       createdAt: now,
       localId: localId,
     );
@@ -265,7 +266,7 @@ class MessageSendingService {
     } else {
       // Mark as failed
       final failedEvent = event.copyWith(
-        status: EventStatus.failed,
+        status: domain.EventStatus.failed,
         content: {...content, 'error': uploadResult.errorMessage},
       );
       await _messageRepo.insertMessage(failedEvent);
@@ -276,7 +277,7 @@ class MessageSendingService {
   }
 
   /// Send a reaction to a message
-  Future<RoomEvent> sendReaction({
+  Future<domain.RoomEvent> sendReaction({
     required String roomId,
     required String targetEventId,
     required String emoji,
@@ -285,14 +286,14 @@ class MessageSendingService {
     final now = DateTime.now().millisecondsSinceEpoch;
     final senderId = _getCurrentUserId();
 
-    final event = RoomEvent(
+    final event = domain.RoomEvent(
       id: localId,
       roomId: roomId,
       senderId: senderId,
-      type: RoomEventType.reaction,
+      type: domain.RoomEventType.reaction,
       content: {'emoji': emoji},
       parentId: targetEventId,
-      status: EventStatus.pending,
+      status: domain.EventStatus.pending,
       createdAt: now,
       localId: localId,
     );
@@ -312,11 +313,10 @@ class MessageSendingService {
 
   /// Retry a failed message
   Future<void> retryMessage(String localId) async {
-    final db = await AppDatabase.instance.database;
-    final results = db.select(
-      'SELECT * FROM room_events WHERE local_id = ? OR id = ?',
-      [localId, localId],
-    );
+    final db = AppDatabase.instance;
+    final query = db.select(db.roomEvents)
+      ..where((t) => t.localId.equals(localId) | t.id.equals(localId));
+    final results = await query.get();
 
     if (results.isEmpty) {
       AppLogger.warning('Message not found for retry', data: {'localId': localId});
@@ -324,39 +324,38 @@ class MessageSendingService {
     }
 
     final row = results.first;
-    final type = RoomEventType.values[row['type'] as int];
+    final type = domain.RoomEventType.values[row.type];
 
     // Re-queue the job
     final jobType = _isMediaType(type) ? JobType.sendMediaMessage : JobType.sendMessage;
 
     await _jobRepo.addJob(jobType, {
-      'roomId': row['room_id'] as String,
+      'roomId': row.roomId,
       'type': type.toString(),
-      'content': row['content'] as String,
+      'content': row.content ?? '',
       'localId': localId,
-      'parentId': row['parent_id'] as String?,
+      'parentId': row.parentId,
     });
 
     // Update status to pending
-    await _messageRepo.updateMessageStatus(localId, EventStatus.pending);
+    await _messageRepo.updateMessageStatus(localId, domain.EventStatus.pending);
 
     AppLogger.info('Message retry queued', data: {'localId': localId});
   }
 
   /// Delete a local message (before it's sent)
   Future<void> deleteLocalMessage(String localId) async {
-    final db = await AppDatabase.instance.database;
-    db.execute('DELETE FROM room_events WHERE local_id = ? AND status = ?', [
-      localId,
-      EventStatus.pending.index,
-    ]);
+    final db = AppDatabase.instance;
+    await (db.delete(db.roomEvents)
+      ..where((t) => t.localId.equals(localId) & t.status.equals(domain.EventStatus.pending.index)))
+      .go();
   }
 
-  bool _isMediaType(RoomEventType type) {
-    return type == RoomEventType.image ||
-        type == RoomEventType.video ||
-        type == RoomEventType.audio ||
-        type == RoomEventType.file;
+  bool _isMediaType(domain.RoomEventType type) {
+    return type == domain.RoomEventType.image ||
+        type == domain.RoomEventType.video ||
+        type == domain.RoomEventType.audio ||
+        type == domain.RoomEventType.file;
   }
 }
 

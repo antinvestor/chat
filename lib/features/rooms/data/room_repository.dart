@@ -1,6 +1,7 @@
 import 'dart:convert';
+import 'package:drift/drift.dart';
 import '../../../core/db/database.dart';
-import '../domain/room.dart';
+import '../domain/room.dart' as domain;
 import '../domain/room_with_last_message.dart';
 
 class RoomRepository {
@@ -8,30 +9,16 @@ class RoomRepository {
 
   RoomRepository(this._database);
 
-  Future<List<Room>> getAllRooms() async {
-    final db = await _database.database;
-    final results = db.select('SELECT * FROM rooms ORDER BY last_event_index DESC');
+  Future<List<domain.Room>> getAllRooms() async {
+    final query = _database.select(_database.rooms)
+      ..orderBy([(t) => OrderingTerm.desc(t.lastEventIndex)]);
+    final results = await query.get();
     
-    return results.map((row) {
-      return Room(
-        id: row['id'] as String,
-        name: row['name'] as String,
-        type: row['type'] as String,
-        lastEventId: row['last_event_id'] as String?,
-        lastEventIndex: row['last_event_index'] as int? ?? 0,
-        unreadCount: row['unread_count'] as int? ?? 0,
-        metadata: row['metadata'] != null 
-          ? jsonDecode(row['metadata'] as String) 
-          : null,
-      );
-    }).toList();
+    return results.map((row) => _toRoom(row)).toList();
   }
 
   Future<List<RoomWithLastMessage>> getRoomsWithLastMessage() async {
-    final db = await _database.database;
-    
-    // Join rooms with their last message
-    final results = db.select('''
+    final query = _database.customSelect('''
       SELECT 
         r.id,
         r.name,
@@ -43,66 +30,68 @@ class RoomRepository {
       FROM rooms r
       LEFT JOIN room_events e ON r.last_event_id = e.id
       ORDER BY COALESCE(e.created_at, 0) DESC
-    ''');
+    ''', readsFrom: {_database.rooms, _database.roomEvents});
+    
+    final results = await query.get();
     
     return results.map((row) {
       String? lastMessageText;
-      if (row['last_message_content'] != null) {
-        final content = jsonDecode(row['last_message_content'] as String) as Map<String, dynamic>;
-        lastMessageText = content['text'] as String?;
+      final content = row.read<String?>('last_message_content');
+      if (content != null) {
+        final decoded = jsonDecode(content) as Map<String, dynamic>;
+        lastMessageText = decoded['text'] as String?;
       }
       
       return RoomWithLastMessage(
-        id: row['id'] as String,
-        name: row['name'] as String,
-        type: row['type'] as String,
-        unreadCount: row['unread_count'] as int? ?? 0,
+        id: row.read<String>('id'),
+        name: row.read<String?>('name') ?? '',
+        type: row.read<String?>('type') ?? '',
+        unreadCount: row.read<int?>('unread_count') ?? 0,
         lastMessageText: lastMessageText,
-        lastMessageTimestamp: row['last_message_timestamp'] as int?,
-        lastMessageSenderId: row['last_message_sender_id'] as String?,
+        lastMessageTimestamp: row.read<int?>('last_message_timestamp'),
+        lastMessageSenderId: row.read<String?>('last_message_sender_id'),
       );
     }).toList();
   }
 
-  Future<Room?> getRoomById(String roomId) async {
-    final db = await _database.database;
-    final results = db.select('SELECT * FROM rooms WHERE id = ?', [roomId]);
+  Future<domain.Room?> getRoomById(String roomId) async {
+    final query = _database.select(_database.rooms)
+      ..where((t) => t.id.equals(roomId));
+    final result = await query.getSingleOrNull();
     
-    if (results.isEmpty) return null;
-    
-    final row = results.first;
-    return Room(
-      id: row['id'] as String,
-      name: row['name'] as String,
-      type: row['type'] as String,
-      lastEventId: row['last_event_id'] as String?,
-      lastEventIndex: row['last_event_index'] as int? ?? 0,
-      unreadCount: row['unread_count'] as int? ?? 0,
-      metadata: row['metadata'] != null 
-        ? jsonDecode(row['metadata'] as String) 
-        : null,
-    );
+    if (result == null) return null;
+    return _toRoom(result);
   }
 
-  Future<void> insertRoom(Room room) async {
-    final db = await _database.database;
-    db.execute(
-      '''INSERT OR REPLACE INTO rooms (id, name, type, last_event_id, last_event_index, unread_count, metadata)
-         VALUES (?, ?, ?, ?, ?, ?, ?)''',
-      [
-        room.id,
-        room.name,
-        room.type,
-        room.lastEventId,
-        room.lastEventIndex,
-        room.unreadCount,
-        room.metadata != null ? jsonEncode(room.metadata) : null,
-      ],
+  Future<void> insertRoom(domain.Room room) async {
+    await _database.into(_database.rooms).insertOnConflictUpdate(
+      RoomsCompanion.insert(
+        id: room.id,
+        name: Value(room.name),
+        type: Value(room.type),
+        lastEventId: Value(room.lastEventId),
+        lastEventIndex: Value(room.lastEventIndex),
+        unreadCount: Value(room.unreadCount),
+        metadata: Value(room.metadata != null ? jsonEncode(room.metadata) : null),
+      ),
     );
   }
 
   Future<void> updateUnreadCount(String roomId, int count) async {
-    final db = await _database.database;
-    db.execute('UPDATE rooms SET unread_count = ? WHERE id = ?', [count, roomId]);
+    await (_database.update(_database.rooms)
+      ..where((t) => t.id.equals(roomId)))
+      .write(RoomsCompanion(unreadCount: Value(count)));
+  }
+
+  domain.Room _toRoom(Room row) {
+    return domain.Room(
+      id: row.id,
+      name: row.name ?? '',
+      type: row.type ?? '',
+      lastEventId: row.lastEventId,
+      lastEventIndex: row.lastEventIndex ?? 0,
+      unreadCount: row.unreadCount,
+      metadata: row.metadata != null ? jsonDecode(row.metadata!) : null,
+    );
   }
 }

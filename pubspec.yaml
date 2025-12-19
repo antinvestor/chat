@@ -35,7 +35,8 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   http: ^1.6.0
-  sqlite3_flutter_libs: ^0.5.40
+  drift: ^2.22.1
+  drift_flutter: ^0.2.4
   path_provider: ^2.1.5
   path: ^1.9.1
   openid_client: ^0.4.9+1
@@ -53,7 +54,6 @@ dependencies:
   intl: ^0.20.2
   url_launcher: ^6.3.2
   flutter_vodozemac: ^0.4.1
-  sqlite3: ^3.1.0
   protobuf: ^4.2.0
   connectrpc: ^1.0.0
   fixnum: ^1.1.1
@@ -78,7 +78,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  build_runner: ^2.7.1
+  build_runner: ^2.10.4
+  drift_dev: ^2.22.1
   riverpod_generator: ^3.0.3
   freezed: ^3.2.3
   json_serializable: ^6.11.2

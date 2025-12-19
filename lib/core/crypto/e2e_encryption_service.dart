@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../logging/app_logger.dart';
@@ -295,21 +296,17 @@ class E2EEncryptionService {
     final session = _sessions[sessionId];
     if (session == null) return;
 
-    final db = await _database.database;
-    db.execute(
-      '''INSERT OR REPLACE INTO sessions 
-         (session_id, profile_id, device_id, ratchet_state, created_at)
-         VALUES (?, ?, ?, ?, ?)''',
-      [
-        sessionId,
-        '',
-        '',
-        jsonEncode({
+    await _database.into(_database.sessions).insertOnConflictUpdate(
+      SessionsCompanion.insert(
+        sessionId: sessionId,
+        profileId: '',
+        deviceId: '',
+        ratchetState: Value(Uint8List.fromList(utf8.encode(jsonEncode({
           'sharedKey': session.sharedKey,
           'messageIndex': session.messageIndex,
-        }),
-        DateTime.now().millisecondsSinceEpoch,
-      ],
+        })))),
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
     );
   }
 
@@ -329,14 +326,14 @@ class E2EEncryptionService {
 
   Future<void> _loadSessions() async {
     try {
-      final db = await _database.database;
-      final rows = db.select('SELECT * FROM sessions');
+      final rows = await _database.select(_database.sessions).get();
 
       for (final row in rows) {
-        final sessionId = row['session_id'] as String;
-        final stateJson = row['ratchet_state'] as String?;
-        if (stateJson != null) {
+        final sessionId = row.sessionId;
+        final stateBytes = row.ratchetState;
+        if (stateBytes != null) {
           try {
+            final stateJson = utf8.decode(stateBytes);
             final state = jsonDecode(stateJson) as Map<String, dynamic>;
             _sessions[sessionId] = _SessionState(
               sessionId: sessionId,

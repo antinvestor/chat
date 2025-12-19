@@ -9,9 +9,9 @@ import '../logging/app_logger.dart';
 import '../networking/api_config.dart';
 import '../../apis/chat/v1/chat.connect.client.dart';
 import 'pending_job_repository.dart';
-import 'pending_job.dart';
+import 'pending_job.dart' as domain_job;
 import '../../features/messages/data/message_repository.dart';
-import '../../features/messages/domain/room_event.dart';
+import '../../features/messages/domain/room_event.dart' as domain;
 import '../../apis/chat/v1/chat.pb.dart' as pb;
 import '../../apis/google/protobuf/struct.pb.dart' as google_struct;
 import '../../apis/google/protobuf/timestamp.pb.dart' as google_timestamp;
@@ -122,14 +122,14 @@ class BackgroundSyncTask {
 
   /// Process a single job
   static Future<void> _processJob(
-    PendingJob job,
+    domain_job.PendingJob job,
     ChatServiceClient chatClient,
     MessageRepository messageRepo,
     PendingJobRepository jobRepo,
     connect.Headers authHeaders,
   ) async {
     switch (job.type) {
-      case JobType.sendMessage:
+      case domain_job.JobType.sendMessage:
         await _processSendMessage(job, chatClient, messageRepo, authHeaders);
         break;
       default:
@@ -150,7 +150,7 @@ class BackgroundSyncTask {
 
   /// Send a message
   static Future<void> _processSendMessage(
-    PendingJob job,
+    domain_job.PendingJob job,
     ChatServiceClient chatClient,
     MessageRepository messageRepo,
     connect.Headers authHeaders,
@@ -174,9 +174,9 @@ class BackgroundSyncTask {
       roomId: payload['roomId'] as String,
       senderId: 'current_user_id', // TODO: Get from auth service
       type: _mapLocalEventTypeToProto(
-        RoomEventType.values.firstWhere(
+        domain.RoomEventType.values.firstWhere(
           (t) => t.toString() == payload['type'],
-          orElse: () => RoomEventType.text,
+          orElse: () => domain.RoomEventType.text,
         ),
       ),
       payload: contentStruct,
@@ -189,7 +189,7 @@ class BackgroundSyncTask {
     // Update local message status
     if (payload['localId'] != null && response.ack.isNotEmpty) {
       final ackEventId = response.ack.first.eventId;
-      await messageRepo.updateMessageStatus(ackEventId, EventStatus.sent);
+      await messageRepo.updateMessageStatus(ackEventId, domain.EventStatus.sent);
       AppLogger.debug(
         'Message sent in background',
         data: {'localId': payload['localId'], 'serverId': ackEventId},
@@ -231,28 +231,28 @@ class BackgroundSyncTask {
     return value;
   }
 
-  static pb.RoomEventType _mapLocalEventTypeToProto(RoomEventType type) {
+  static pb.RoomEventType _mapLocalEventTypeToProto(domain.RoomEventType type) {
     switch (type) {
-      case RoomEventType.text:
+      case domain.RoomEventType.text:
         return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
-      case RoomEventType.image:
-      case RoomEventType.video:
-      case RoomEventType.audio:
-      case RoomEventType.file:
+      case domain.RoomEventType.image:
+      case domain.RoomEventType.video:
+      case domain.RoomEventType.audio:
+      case domain.RoomEventType.file:
         return pb.RoomEventType.ROOM_EVENT_TYPE_ATTACHMENT;
-      case RoomEventType.reaction:
+      case domain.RoomEventType.reaction:
         return pb.RoomEventType.ROOM_EVENT_TYPE_REACTION;
-      case RoomEventType.callOffer:
+      case domain.RoomEventType.callOffer:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_OFFER;
-      case RoomEventType.callAnswer:
+      case domain.RoomEventType.callAnswer:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ANSWER;
-      case RoomEventType.callIce:
+      case domain.RoomEventType.callIce:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ICE;
-      case RoomEventType.callEnd:
+      case domain.RoomEventType.callEnd:
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_END;
-      case RoomEventType.motion:
-      case RoomEventType.vote:
-      case RoomEventType.transaction:
+      case domain.RoomEventType.motion:
+      case domain.RoomEventType.vote:
+      case domain.RoomEventType.transaction:
         return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
     }
   }

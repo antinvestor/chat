@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 import 'app/router.dart';
-import 'core/db/database.dart';
 import 'core/logging/app_logger.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/sync/background_sync_task.dart';
@@ -39,8 +38,7 @@ void callbackDispatcher() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize database
-  await AppDatabase.instance.database;
+  // Database is initialized lazily by Drift
 
   // Initialize workmanager
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: kDebugMode);

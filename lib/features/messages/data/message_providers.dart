@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../domain/room_event.dart';
+import '../domain/room_event.dart' as domain;
 import '../../../core/db/database.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/sync_engine.dart';
@@ -15,12 +15,12 @@ MessageRepository messageRepository(Ref ref) {
 @riverpod
 class MessageList extends _$MessageList {
   @override
-  Future<List<RoomEvent>> build(String roomId) async {
+  Future<List<domain.RoomEvent>> build(String roomId) async {
     final repo = ref.watch(messageRepositoryProvider);
     return repo.getMessagesForRoom(roomId);
   }
 
-  Future<void> sendMessage(RoomEvent event) async {
+  Future<void> sendMessage(domain.RoomEvent event) async {
     final messageRepo = ref.read(messageRepositoryProvider);
     final jobRepo = ref.read(pendingJobRepositoryProvider);
 

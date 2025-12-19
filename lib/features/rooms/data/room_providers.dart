@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../domain/room.dart';
+import '../domain/room.dart' as domain;
 import '../domain/room_with_last_message.dart';
 import '../../../core/db/database.dart';
 import 'room_repository.dart';
@@ -14,7 +14,7 @@ RoomRepository roomRepository(Ref ref) {
 @riverpod
 class RoomList extends _$RoomList {
   @override
-  Future<List<Room>> build() async {
+  Future<List<domain.Room>> build() async {
     final repo = ref.watch(roomRepositoryProvider);
     return repo.getAllRooms();
   }
@@ -27,7 +27,7 @@ class RoomList extends _$RoomList {
     });
   }
 
-  Future<void> createRoom(Room room) async {
+  Future<void> createRoom(domain.Room room) async {
     final repo = ref.read(roomRepositoryProvider);
     await repo.insertRoom(room);
     refresh();
