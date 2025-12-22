@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../onboarding/data/onboarding_repository.dart';
 import 'auth_repository.dart';
 
 part 'auth_state_provider.g.dart';
@@ -16,30 +17,17 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     final isLoggedIn = await authRepo.isLoggedIn();
 
     if (isLoggedIn) {
-      // Check if token needs refresh
-      final isExpired = await authRepo.isTokenExpired();
-      if (isExpired) {
-        // Try to refresh token
-        try {
-          AppLogger.debug('Token expired on app start, attempting refresh');
-          await authRepo.refreshToken();
-          AppLogger.info('Authentication state: authenticated (after refresh)');
-          return AuthState.authenticated;
-        } catch (e, stackTrace) {
-          AppLogger.error(
-            'Token refresh failed on app start',
-            error: e,
-            stackTrace: stackTrace,
-          );
-          AppLogger.info(
-            'Authentication state: unauthenticated (refresh failed)',
-          );
-          // If refresh fails, user needs to login again
-          return AuthState.unauthenticated;
-        }
+      // Ensure we have a valid access token (will refresh if expired)
+      final token = await authRepo.ensureValidAccessToken();
+      
+      if (token != null) {
+        AppLogger.info('Authentication state: authenticated');
+        return AuthState.authenticated;
       }
-      AppLogger.info('Authentication state: authenticated');
-      return AuthState.authenticated;
+      
+      // Token refresh failed, user needs to login again
+      AppLogger.info('Authentication state: unauthenticated (no valid token)');
+      return AuthState.unauthenticated;
     }
 
     AppLogger.info('Authentication state: unauthenticated');
@@ -90,7 +78,10 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     try {
       AppLogger.info('Logout initiated');
       final authRepo = ref.read(authRepositoryProvider);
+      final onboardingRepo = ref.read(onboardingRepositoryProvider);
+      
       await authRepo.logout();
+      await onboardingRepo.reset(); // Clear onboarding state for next login
 
       // Check if provider is still mounted after async operation
       if (!ref.mounted) return;

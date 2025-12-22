@@ -41,6 +41,17 @@ class AuthRepository {
   Future<String?> getAccessToken() async {
     return await _authService.getAccessToken();
   }
+
+  /// Ensure we have a valid access token, refreshing if necessary
+  /// Returns the access token if successful, null if user needs to re-login
+  Future<String?> ensureValidAccessToken() async {
+    return await _authService.ensureValidAccessToken();
+  }
+
+  /// Check if we have a valid, usable access token right now
+  Future<bool> hasValidAccessToken() async {
+    return await _authService.hasValidAccessToken();
+  }
 }
 
 @riverpod

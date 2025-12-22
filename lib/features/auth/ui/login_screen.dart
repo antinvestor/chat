@@ -97,6 +97,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         errorMessage = 'Authentication was cancelled.';
       } else if (errorStr.contains('code exchange failed')) {
         errorMessage = 'Failed to complete authentication. Please try again.';
+      } else if (errorStr.contains('no access token')) {
+        errorMessage = 'Authentication server did not return a valid token. Please try again.';
+      } else if (errorStr.contains('could not save credentials')) {
+        errorMessage = 'Failed to save login credentials. Please check app permissions.';
       }
 
       if (mounted) {

@@ -11,17 +11,22 @@ import 'api_config.dart';
 abstract class TokenProvider {
   Future<String?> getAccessToken();
   Future<void> onTokenExpired();
+  /// Ensure we have a valid access token, refreshing if necessary
+  Future<String?> ensureValidAccessToken();
 }
 
 /// Default token provider using FlutterSecureStorage
 class SecureStorageTokenProvider implements TokenProvider {
   final FlutterSecureStorage _storage;
   final Future<void> Function()? _onExpired;
+  final Future<String?> Function()? _ensureValidToken;
 
-  SecureStorageTokenProvider(this._storage, {Future<void> Function()? onExpired})
-      : _onExpired = onExpired;
-
-  // Private final with nullable type, assertion needed for callback invocation
+  SecureStorageTokenProvider(
+    this._storage, {
+    Future<void> Function()? onExpired,
+    Future<String?> Function()? ensureValidToken,
+  })  : _onExpired = onExpired,
+        _ensureValidToken = ensureValidToken;
 
   @override
   Future<String?> getAccessToken() async {
@@ -34,6 +39,16 @@ class SecureStorageTokenProvider implements TokenProvider {
     if (callback != null) {
       await callback();
     }
+  }
+
+  @override
+  Future<String?> ensureValidAccessToken() async {
+    final callback = _ensureValidToken;
+    if (callback != null) {
+      return await callback();
+    }
+    // Fallback: just return current token
+    return await getAccessToken();
   }
 }
 
@@ -65,9 +80,11 @@ class AuthenticatedHttpClient {
   io.HttpClient get httpClient => _httpClient;
 
   /// Get authorization headers with JWT token
+  /// Automatically refreshes token if expired
   Future<connect.Headers> getAuthHeaders() async {
     final headers = connect.Headers();
-    final token = await _tokenProvider.getAccessToken();
+    // Use ensureValidAccessToken to auto-refresh if needed
+    final token = await _tokenProvider.ensureValidAccessToken();
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }

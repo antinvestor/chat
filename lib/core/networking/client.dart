@@ -23,6 +23,10 @@ final tokenProviderProvider = Provider<TokenProvider>((ref) {
       // Try to refresh token when expired
       await authRepo.refreshToken();
     },
+    ensureValidToken: () async {
+      // Ensure we have a valid token, refreshing if needed
+      return await authRepo.ensureValidAccessToken();
+    },
   );
 });
 

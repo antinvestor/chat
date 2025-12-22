@@ -434,9 +434,17 @@ class AuthPlatformIO implements AuthPlatform {
           final response = await credential.getTokenResponse();
           AppLogger.debug('Token response received', data: {
             'hasAccessToken': response.accessToken != null,
+            'accessTokenLength': response.accessToken?.length ?? 0,
             'hasRefreshToken': response.refreshToken != null,
             'expiresAt': response.expiresAt?.toIso8601String(),
           });
+          
+          // Validate token response
+          if (response.accessToken == null || response.accessToken!.isEmpty) {
+            AppLogger.error('Token exchange returned empty access token');
+            throw Exception('Token exchange failed: No access token in response');
+          }
+          
           return response;
         },
         maxAttempts: 3,

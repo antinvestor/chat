@@ -130,7 +130,23 @@ class BackgroundSyncTask {
   ) async {
     switch (job.type) {
       case domain_job.JobType.sendMessage:
+      case domain_job.JobType.sendMediaMessage:
         await _processSendMessage(job, chatClient, messageRepo, authHeaders);
+        break;
+      case domain_job.JobType.createRoom:
+        await _processCreateRoom(job, chatClient, authHeaders);
+        break;
+      case domain_job.JobType.updateRoom:
+        await _processUpdateRoom(job, chatClient, authHeaders);
+        break;
+      case domain_job.JobType.deleteRoom:
+        await _processDeleteRoom(job, chatClient, authHeaders);
+        break;
+      case domain_job.JobType.addRoomMembers:
+        await _processAddRoomMembers(job, chatClient, authHeaders);
+        break;
+      case domain_job.JobType.removeRoomMembers:
+        await _processRemoveRoomMembers(job, chatClient, authHeaders);
         break;
       default:
         AppLogger.debug(
@@ -146,6 +162,128 @@ class BackgroundSyncTask {
       'Background job completed',
       data: {'jobId': job.id, 'jobType': job.type.toString()},
     );
+  }
+
+  /// Create a room
+  static Future<void> _processCreateRoom(
+    domain_job.PendingJob job,
+    ChatServiceClient chatClient,
+    connect.Headers authHeaders,
+  ) async {
+    final payload = job.payload;
+
+    final request = pb.CreateRoomRequest(
+      id: payload['id'] as String,
+      name: payload['name'] as String? ?? '',
+      description: payload['description'] as String? ?? '',
+      isPrivate: payload['isPrivate'] as bool? ?? false,
+      members: (payload['members'] as List<dynamic>?)?.cast<String>() ?? [],
+    );
+
+    if (payload['metadata'] != null) {
+      request.metadata = _mapToStruct(
+        payload['metadata'] as Map<String, dynamic>,
+      );
+    }
+
+    final response = await chatClient.createRoom(request, headers: authHeaders);
+
+    if (response.hasRoom()) {
+      AppLogger.debug('Room created in background', data: {
+        'localId': payload['id'],
+        'serverId': response.room.id,
+      });
+    } else if (response.hasError()) {
+      throw Exception('Room creation failed: ${response.error.message}');
+    }
+  }
+
+  /// Update a room
+  static Future<void> _processUpdateRoom(
+    domain_job.PendingJob job,
+    ChatServiceClient chatClient,
+    connect.Headers authHeaders,
+  ) async {
+    final payload = job.payload;
+
+    final request = pb.UpdateRoomRequest(
+      roomId: payload['id'] as String,
+      name: payload['name'] as String? ?? '',
+      topic: payload['description'] as String? ?? '',
+    );
+
+    if (payload['metadata'] != null) {
+      request.metadata = _mapToStruct(
+        payload['metadata'] as Map<String, dynamic>,
+      );
+    }
+
+    await chatClient.updateRoom(request, headers: authHeaders);
+    AppLogger.debug('Room updated in background', data: {'roomId': payload['id']});
+  }
+
+  /// Delete a room
+  static Future<void> _processDeleteRoom(
+    domain_job.PendingJob job,
+    ChatServiceClient chatClient,
+    connect.Headers authHeaders,
+  ) async {
+    final payload = job.payload;
+
+    final request = pb.DeleteRoomRequest(
+      roomId: payload['id'] as String,
+    );
+
+    await chatClient.deleteRoom(request, headers: authHeaders);
+    AppLogger.debug('Room deleted in background', data: {'roomId': payload['id']});
+  }
+
+  /// Add members to a room
+  static Future<void> _processAddRoomMembers(
+    domain_job.PendingJob job,
+    ChatServiceClient chatClient,
+    connect.Headers authHeaders,
+  ) async {
+    final payload = job.payload;
+    final roomId = payload['roomId'] as String;
+    final profileIds = (payload['profileIds'] as List<dynamic>).cast<String>();
+
+    // Convert profileIds to RoomSubscription objects
+    final members = profileIds.map((profileId) => pb.RoomSubscription(
+      roomId: roomId,
+      profileId: profileId,
+    )).toList();
+
+    final request = pb.AddRoomSubscriptionsRequest(
+      roomId: roomId,
+      members: members,
+    );
+
+    await chatClient.addRoomSubscriptions(request, headers: authHeaders);
+    AppLogger.debug('Members added in background', data: {
+      'roomId': roomId,
+      'memberCount': profileIds.length,
+    });
+  }
+
+  /// Remove members from a room
+  static Future<void> _processRemoveRoomMembers(
+    domain_job.PendingJob job,
+    ChatServiceClient chatClient,
+    connect.Headers authHeaders,
+  ) async {
+    final payload = job.payload;
+
+    final request = pb.RemoveRoomSubscriptionsRequest(
+      roomId: payload['roomId'] as String,
+      profileIds: (payload['profileIds'] as List<dynamic>).cast<String>(),
+    );
+
+    await chatClient.removeRoomSubscriptions(request, headers: authHeaders);
+    AppLogger.debug('Members removed in background', data: {
+      'roomId': payload['roomId'],
+      'memberCount': (payload['profileIds'] as List).length,
+    });
   }
 
   /// Send a message

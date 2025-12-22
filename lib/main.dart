@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 import 'app/router.dart';
 import 'core/logging/app_logger.dart';
+import 'core/networking/connectivity_service.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/sync/background_sync_task.dart';
 import 'features/auth/data/auth_repository.dart';
@@ -83,13 +84,27 @@ class _MyAppState extends ConsumerState<MyApp> {
     final isLoggedIn = await authRepo.isLoggedIn();
 
     if (isLoggedIn) {
-      AppLogger.info('User is logged in, starting background services');
+      AppLogger.info('User is logged in, ensuring valid access token');
+
+      // Ensure we have a valid access token (will refresh if expired)
+      final token = await authRepo.ensureValidAccessToken();
+      
+      if (token == null) {
+        // Token refresh failed, user needs to re-login
+        AppLogger.warning('Token refresh failed on app start, user needs to re-login');
+        return;
+      }
+
+      AppLogger.info('Valid access token obtained, starting background services');
 
       // Start token refresh service
       ref.read(tokenRefreshServiceProvider).start();
 
       // Start sync engine
       ref.read(syncEngineProvider).start();
+
+      // Start connectivity monitoring for auto-sync on reconnection
+      ref.read(connectivityServiceProvider).start();
     } else {
       AppLogger.debug('User not logged in, skipping service initialization');
     }

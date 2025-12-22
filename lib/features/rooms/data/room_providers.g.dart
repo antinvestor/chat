@@ -9,47 +9,6 @@ part of 'room_providers.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(roomRepository)
-const roomRepositoryProvider = RoomRepositoryProvider._();
-
-final class RoomRepositoryProvider
-    extends $FunctionalProvider<RoomRepository, RoomRepository, RoomRepository>
-    with $Provider<RoomRepository> {
-  const RoomRepositoryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'roomRepositoryProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$roomRepositoryHash();
-
-  @$internal
-  @override
-  $ProviderElement<RoomRepository> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  RoomRepository create(Ref ref) {
-    return roomRepository(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(RoomRepository value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<RoomRepository>(value),
-    );
-  }
-}
-
-String _$roomRepositoryHash() => r'8599dc9bf5fc727e8556974fdaedabbe3a8c28ce';
-
 @ProviderFor(RoomList)
 const roomListProvider = RoomListProvider._();
 
@@ -74,7 +33,7 @@ final class RoomListProvider
   RoomList create() => RoomList();
 }
 
-String _$roomListHash() => r'4998cc462eeff2dfd5f61d1c2eb71ead5f56e6be';
+String _$roomListHash() => r'5fd2447a4b24d906c41e662b8998fbfcc9d8c67d';
 
 abstract class _$RoomList extends $AsyncNotifier<List<domain.Room>> {
   FutureOr<List<domain.Room>> build();

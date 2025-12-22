@@ -325,8 +325,20 @@ class SyncEngine {
         case domain_job.JobType.uploadFile:
           // File uploads are handled by FileUploadService before queuing
           break;
+        case domain_job.JobType.createRoom:
+          await _processCreateRoom(job);
+          break;
         case domain_job.JobType.updateRoom:
-          // TODO: Implement room update
+          await _processUpdateRoom(job);
+          break;
+        case domain_job.JobType.deleteRoom:
+          await _processDeleteRoom(job);
+          break;
+        case domain_job.JobType.addRoomMembers:
+          await _processAddRoomMembers(job);
+          break;
+        case domain_job.JobType.removeRoomMembers:
+          await _processRemoveRoomMembers(job);
           break;
         case domain_job.JobType.vote:
           // TODO: Implement voting
@@ -349,6 +361,112 @@ class SyncEngine {
       );
       await _jobRepo.incrementRetry(job.id);
     }
+  }
+
+  Future<void> _processCreateRoom(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final headers = await _getAuthHeaders();
+
+    final request = pb.CreateRoomRequest(
+      id: payload['id'] as String,
+      name: payload['name'] as String? ?? '',
+      description: payload['description'] as String? ?? '',
+      isPrivate: payload['isPrivate'] as bool? ?? false,
+      members: (payload['members'] as List<dynamic>?)?.cast<String>() ?? [],
+    );
+
+    if (payload['metadata'] != null) {
+      request.metadata = _mapToStruct(
+        payload['metadata'] as Map<String, dynamic>,
+      );
+    }
+
+    final response = await _chatClient.createRoom(request, headers: headers);
+
+    if (response.hasRoom()) {
+      AppLogger.info('Room created on server', data: {
+        'localId': payload['id'],
+        'serverId': response.room.id,
+      });
+      // Room is already saved locally, server confirmed creation
+    } else if (response.hasError()) {
+      AppLogger.error('Server rejected room creation', data: {
+        'error': response.error.message,
+      });
+      throw Exception('Room creation failed: ${response.error.message}');
+    }
+  }
+
+  Future<void> _processUpdateRoom(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final headers = await _getAuthHeaders();
+
+    final request = pb.UpdateRoomRequest(
+      roomId: payload['id'] as String,
+      name: payload['name'] as String? ?? '',
+      topic: payload['description'] as String? ?? '',
+    );
+
+    if (payload['metadata'] != null) {
+      request.metadata = _mapToStruct(
+        payload['metadata'] as Map<String, dynamic>,
+      );
+    }
+
+    await _chatClient.updateRoom(request, headers: headers);
+    AppLogger.info('Room updated on server', data: {'roomId': payload['id']});
+  }
+
+  Future<void> _processDeleteRoom(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final headers = await _getAuthHeaders();
+
+    final request = pb.DeleteRoomRequest(
+      roomId: payload['id'] as String,
+    );
+
+    await _chatClient.deleteRoom(request, headers: headers);
+    AppLogger.info('Room deleted on server', data: {'roomId': payload['id']});
+  }
+
+  Future<void> _processAddRoomMembers(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final headers = await _getAuthHeaders();
+    final roomId = payload['roomId'] as String;
+    final profileIds = (payload['profileIds'] as List<dynamic>).cast<String>();
+
+    // Convert profileIds to RoomSubscription objects
+    final members = profileIds.map((profileId) => pb.RoomSubscription(
+      roomId: roomId,
+      profileId: profileId,
+    )).toList();
+
+    final request = pb.AddRoomSubscriptionsRequest(
+      roomId: roomId,
+      members: members,
+    );
+
+    await _chatClient.addRoomSubscriptions(request, headers: headers);
+    AppLogger.info('Members added to room on server', data: {
+      'roomId': roomId,
+      'memberCount': profileIds.length,
+    });
+  }
+
+  Future<void> _processRemoveRoomMembers(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final headers = await _getAuthHeaders();
+
+    final request = pb.RemoveRoomSubscriptionsRequest(
+      roomId: payload['roomId'] as String,
+      profileIds: (payload['profileIds'] as List<dynamic>).cast<String>(),
+    );
+
+    await _chatClient.removeRoomSubscriptions(request, headers: headers);
+    AppLogger.info('Members removed from room on server', data: {
+      'roomId': payload['roomId'],
+      'memberCount': (payload['profileIds'] as List).length,
+    });
   }
 
   Future<void> _processSendMessage(domain_job.PendingJob job) async {

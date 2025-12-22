@@ -7,7 +7,6 @@ import 'room_list_tile.dart';
 import '../../../widgets/empty_state.dart';
 import '../../../widgets/error_banner.dart';
 import '../../../widgets/skeleton_loader.dart';
-import '../../../widgets/connection_banner.dart';
 import '../../calls/ui/incoming_call_banner.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/responsive/breakpoints.dart';
@@ -89,7 +88,6 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         children: [
           Column(
             children: [
-              const ConnectionBanner(),
               const IncomingCallBanner(),
               Expanded(
                 child: isLargeScreen

@@ -45,7 +45,24 @@ class AuthService {
       ]);
 
       if (token != null) {
+        // Validate that we actually got an access token
+        if (token.accessToken == null || token.accessToken!.isEmpty) {
+          AppLogger.error('Token response missing access token', data: {
+            'hasRefreshToken': token.refreshToken != null,
+            'hasIdToken': token.idToken != null,
+          });
+          throw Exception('Authentication failed: No access token received');
+        }
+        
         await _saveTokens(token);
+        
+        // Verify the token was actually saved
+        final savedToken = await getAccessToken();
+        if (savedToken == null) {
+          AppLogger.error('Failed to save token to secure storage');
+          throw Exception('Authentication failed: Could not save credentials');
+        }
+        
         AppLogger.info('User authenticated successfully');
         return token;
       } else {
@@ -214,11 +231,63 @@ class AuthService {
   }
 
   /// Check if user is authenticated
+  /// Returns true if user has a valid access token OR a refresh token that can be used
   Future<bool> isAuthenticated() async {
     // Check for redirect result first (only matters for web)
     await _handleRedirectResult();
-    final token = await getAccessToken();
-    return token != null;
+    
+    final accessToken = await getAccessToken();
+    if (accessToken != null) {
+      return true;
+    }
+    
+    // No access token, but check if we have a refresh token
+    // If so, the user is still "logged in" and we can recover the session
+    final refreshTokenValue = await getRefreshToken();
+    return refreshTokenValue != null;
+  }
+  
+  /// Check if user has a valid, usable access token
+  /// This is different from isAuthenticated - this checks if we can make API calls right now
+  Future<bool> hasValidAccessToken() async {
+    final accessToken = await getAccessToken();
+    if (accessToken == null) {
+      return false;
+    }
+    
+    // Check if token is expired
+    final expired = await isTokenExpired();
+    return !expired;
+  }
+  
+  /// Ensure we have a valid access token, refreshing if necessary
+  /// Returns the access token if successful, null if refresh failed
+  Future<String?> ensureValidAccessToken() async {
+    final accessToken = await getAccessToken();
+    
+    // If we have a token and it's not expired, return it
+    if (accessToken != null) {
+      final expired = await isTokenExpired();
+      if (!expired) {
+        return accessToken;
+      }
+    }
+    
+    // Token is missing or expired, try to refresh
+    final refreshTokenValue = await getRefreshToken();
+    if (refreshTokenValue == null) {
+      AppLogger.debug('No refresh token available, user needs to login');
+      return null;
+    }
+    
+    // Attempt refresh
+    AppLogger.debug('Access token missing/expired, attempting refresh');
+    final newToken = await refreshToken();
+    if (newToken != null) {
+      return newToken.accessToken;
+    }
+    
+    return null;
   }
 
   /// Handle redirect result from Web authentication

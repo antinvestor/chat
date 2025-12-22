@@ -7,7 +7,11 @@ enum JobType {
   sendMessage,
   sendMediaMessage,
   uploadFile,
+  createRoom,
   updateRoom,
+  deleteRoom,
+  addRoomMembers,
+  removeRoomMembers,
   vote,
   syncContacts,
 }

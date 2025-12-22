@@ -1,30 +1,66 @@
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../features/rooms/ui/room_list_screen.dart';
 import '../features/messages/ui/chat_screen.dart';
 import '../features/auth/ui/login_screen.dart';
 import '../features/auth/data/auth_repository.dart';
+import '../features/auth/data/auth_state_provider.dart';
+import '../features/onboarding/ui/contact_sync_screen.dart';
+import '../features/onboarding/data/onboarding_repository.dart';
 
 part 'router.g.dart';
+
+/// Notifier that triggers router refresh when auth state changes
+class AuthChangeNotifier extends ChangeNotifier {
+  AuthChangeNotifier(Ref ref) {
+    // Listen to auth state changes and notify router to re-evaluate redirects
+    ref.listen(authStateProvider, (previous, next) {
+      notifyListeners();
+    });
+  }
+}
+
+/// Provider for the auth change notifier
+@riverpod
+AuthChangeNotifier authChangeNotifier(Ref ref) {
+  return AuthChangeNotifier(ref);
+}
 
 @riverpod
 GoRouter router(Ref ref) {
   final authRepository = ref.watch(authRepositoryProvider);
+  final onboardingRepository = ref.watch(onboardingRepositoryProvider);
+  final authChangeNotifier = ref.watch(authChangeProvider);
 
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: authChangeNotifier,
     redirect: (context, state) async {
       final isLoggedIn = await authRepository.isLoggedIn();
       final isLoginRoute = state.matchedLocation == '/login';
+      final isOnboardingRoute = state.matchedLocation == '/onboarding/contacts';
 
       // If not logged in and not on login page, redirect to login
       if (!isLoggedIn && !isLoginRoute) {
         return '/login';
       }
 
-      // If logged in and on login page, redirect to home
+      // If logged in and on login page, check if needs onboarding
       if (isLoggedIn && isLoginRoute) {
+        final hasContactsSynced = await onboardingRepository.hasContactsSynced();
+        if (!hasContactsSynced) {
+          return '/onboarding/contacts';
+        }
         return '/';
+      }
+
+      // If logged in and going to home, check if needs onboarding first
+      if (isLoggedIn && state.matchedLocation == '/' && !isOnboardingRoute) {
+        final hasContactsSynced = await onboardingRepository.hasContactsSynced();
+        if (!hasContactsSynced) {
+          return '/onboarding/contacts';
+        }
       }
 
       return null; // No redirect needed
@@ -32,6 +68,10 @@ GoRouter router(Ref ref) {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/', builder: (context, state) => const RoomListScreen()),
+      GoRoute(
+        path: '/onboarding/contacts',
+        builder: (context, state) => const ContactSyncScreen(),
+      ),
       GoRoute(
         path: '/chat/:roomId',
         builder: (context, state) {
