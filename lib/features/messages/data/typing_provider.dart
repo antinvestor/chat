@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../../../core/sync/sync_engine.dart';
 
 part 'typing_provider.g.dart';

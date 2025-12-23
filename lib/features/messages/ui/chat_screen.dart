@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
+
+import '../../calls/services/call_manager.dart';
+import '../../calls/ui/call_screen.dart';
 import '../data/message_providers.dart';
 import '../data/message_sending_service.dart';
 import '../domain/room_event.dart';
 import 'message_bubble.dart';
 import 'typing_indicator.dart';
-import '../../calls/services/call_manager.dart';
-import '../../calls/ui/call_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String roomId;

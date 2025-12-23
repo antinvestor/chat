@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../messages/domain/room_event.dart';
 
 class TransactionBubble extends StatelessWidget {

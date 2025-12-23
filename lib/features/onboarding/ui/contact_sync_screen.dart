@@ -1,9 +1,12 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
+
 import '../../../core/logging/app_logger.dart';
 import '../../contacts/data/contact_sync_repository.dart';
 import '../data/onboarding_repository.dart';

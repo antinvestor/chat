@@ -1,13 +1,15 @@
 import 'package:flutter/foundation.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../features/rooms/ui/room_list_screen.dart';
-import '../features/messages/ui/chat_screen.dart';
-import '../features/auth/ui/login_screen.dart';
+
 import '../features/auth/data/auth_repository.dart';
 import '../features/auth/data/auth_state_provider.dart';
-import '../features/onboarding/ui/contact_sync_screen.dart';
+import '../features/auth/ui/login_screen.dart';
+import '../features/messages/ui/chat_screen.dart';
 import '../features/onboarding/data/onboarding_repository.dart';
+import '../features/onboarding/ui/contact_sync_screen.dart';
+import '../features/rooms/ui/room_list_screen.dart';
 
 part 'router.g.dart';
 

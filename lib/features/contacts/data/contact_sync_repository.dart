@@ -1,12 +1,13 @@
+import 'package:antinvestor_api_profile/antinvestor_api_profile.dart' as pb;
+import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../apis/profile/v1/profile.pb.dart' as pb;
-import '../../../apis/profile/v1/profile.connect.client.dart';
+
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
-import '../../../core/networking/client.dart';
 import '../../../core/networking/authenticated_transport.dart';
+import '../../../core/networking/client.dart';
 
 /// Repository for syncing device contacts with server roster
 class ContactSyncRepository {

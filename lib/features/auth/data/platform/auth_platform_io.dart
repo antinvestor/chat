@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:app_links/app_links.dart';
 import 'package:openid_client/openid_client_io.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../core/logging/app_logger.dart';
 import 'auth_platform.dart';
 

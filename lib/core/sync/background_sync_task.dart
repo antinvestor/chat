@@ -1,21 +1,22 @@
 import 'dart:io' as io;
+
+import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
+import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
+import 'package:antinvestor_api_common/common.dart' as common;
 import 'package:connectrpc/connect.dart' as connect;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:connectrpc/protocol/connect.dart' as connect_protocol;
-import 'package:connectrpc/protobuf.dart' as connect_protobuf;
 import 'package:connectrpc/io.dart' as connect_io;
+import 'package:connectrpc/protobuf.dart' as connect_protobuf;
+import 'package:connectrpc/protocol/connect.dart' as connect_protocol;
+import 'package:fixnum/fixnum.dart' as fixnum;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../../features/messages/data/message_repository.dart';
+import '../../features/messages/domain/room_event.dart' as domain;
 import '../db/database.dart';
 import '../logging/app_logger.dart';
 import '../networking/api_config.dart';
-import '../../apis/chat/v1/chat.connect.client.dart';
-import 'pending_job_repository.dart';
 import 'pending_job.dart' as domain_job;
-import '../../features/messages/data/message_repository.dart';
-import '../../features/messages/domain/room_event.dart' as domain;
-import '../../apis/chat/v1/chat.pb.dart' as pb;
-import '../../apis/google/protobuf/struct.pb.dart' as google_struct;
-import '../../apis/google/protobuf/timestamp.pb.dart' as google_timestamp;
-import 'package:fixnum/fixnum.dart' as fixnum;
+import 'pending_job_repository.dart';
 
 class BackgroundSyncTask {
   /// Main entry point for background sync
@@ -302,7 +303,7 @@ class BackgroundSyncTask {
 
     // Create timestamp
     final now = DateTime.now();
-    final timestamp = google_timestamp.Timestamp(
+    final timestamp = common.Timestamp(
       seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
@@ -337,19 +338,19 @@ class BackgroundSyncTask {
 
   // Helper methods for Struct conversion (copied from SyncEngine)
 
-  static google_struct.Struct _mapToStruct(Map<String, dynamic> map) {
-    final struct = google_struct.Struct();
+  static common.Struct _mapToStruct(Map<String, dynamic> map) {
+    final struct = common.Struct();
     for (final entry in map.entries) {
       struct.fields[entry.key] = _objectToValue(entry.value);
     }
     return struct;
   }
 
-  static google_struct.Value _objectToValue(dynamic obj) {
-    final value = google_struct.Value();
+  static common.Value _objectToValue(dynamic obj) {
+    final value = common.Value();
 
     if (obj == null) {
-      value.nullValue = google_struct.NullValue.NULL_VALUE;
+      value.nullValue = common.NullValue.NULL_VALUE;
     } else if (obj is bool) {
       value.boolValue = obj;
     } else if (obj is num) {
@@ -357,7 +358,7 @@ class BackgroundSyncTask {
     } else if (obj is String) {
       value.stringValue = obj;
     } else if (obj is List) {
-      value.listValue = google_struct.ListValue(
+      value.listValue = common.ListValue(
         values: obj.map(_objectToValue).toList(),
       );
     } else if (obj is Map<String, dynamic>) {

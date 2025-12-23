@@ -1,21 +1,21 @@
 import 'dart:async';
+
+import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
+import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
+import 'package:antinvestor_api_common/common.dart' as common;
 import 'package:connectrpc/connect.dart' as connect;
+import 'package:fixnum/fixnum.dart' as fixnum;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../logging/app_logger.dart';
-import '../../apis/chat/v1/chat.connect.client.dart';
-import '../../apis/chat/v1/chat.pb.dart' as pb;
-import '../../apis/google/protobuf/struct.pb.dart' as google_struct;
-import '../../apis/google/protobuf/timestamp.pb.dart' as google_timestamp;
-import 'package:fixnum/fixnum.dart' as fixnum;
+
 import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../crypto/key_manager.dart';
 import '../db/database.dart';
-import '../networking/client.dart';
+import '../logging/app_logger.dart';
 import '../networking/authenticated_transport.dart';
-
+import '../networking/client.dart';
 import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
 
@@ -243,7 +243,7 @@ class SyncEngine {
       // content = await _keyManager.decrypt(event.payload);
       content = {'text': '[Encrypted message]'};
     } else if (event.hasPayload()) {
-      content = _structToMap(event.payload);
+    content = _structToMap(event.payload);
     }
 
     final roomEvent = domain.RoomEvent(
@@ -479,7 +479,7 @@ class SyncEngine {
 
     // Create timestamp
     final now = DateTime.now();
-    final timestamp = google_timestamp.Timestamp(
+    final timestamp = common.Timestamp(
       seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
@@ -607,7 +607,7 @@ class SyncEngine {
   }
 
   // Convert protobuf Struct to Dart Map
-  Map<String, dynamic> _structToMap(google_struct.Struct struct) {
+  Map<String, dynamic> _structToMap(common.Struct struct) {
     final result = <String, dynamic>{};
     for (final entry in struct.fields.entries) {
       result[entry.key] = _valueToObject(entry.value);
@@ -615,7 +615,7 @@ class SyncEngine {
     return result;
   }
 
-  dynamic _valueToObject(google_struct.Value value) {
+  dynamic _valueToObject(common.Value value) {
     if (value.hasStringValue()) return value.stringValue;
     if (value.hasNumberValue()) return value.numberValue;
     if (value.hasBoolValue()) return value.boolValue;
@@ -630,18 +630,18 @@ class SyncEngine {
   }
 
   // Convert Dart Map to protobuf Struct
-  google_struct.Struct _mapToStruct(Map<String, dynamic> map) {
-    final struct = google_struct.Struct();
+  common.Struct _mapToStruct(Map<String, dynamic> map) {
+    final struct = common.Struct();
     for (final entry in map.entries) {
       struct.fields[entry.key] = _objectToValue(entry.value);
     }
     return struct;
   }
 
-  google_struct.Value _objectToValue(dynamic obj) {
-    final value = google_struct.Value();
+  common.Value _objectToValue(dynamic obj) {
+    final value = common.Value();
     if (obj == null) {
-      value.nullValue = google_struct.NullValue.NULL_VALUE;
+      value.nullValue = common.NullValue.NULL_VALUE;
     } else if (obj is String) {
       value.stringValue = obj;
     } else if (obj is num) {
@@ -649,7 +649,7 @@ class SyncEngine {
     } else if (obj is bool) {
       value.boolValue = obj;
     } else if (obj is List) {
-      final listValue = google_struct.ListValue();
+      final listValue = common.ListValue();
       listValue.values.addAll(obj.map(_objectToValue));
       value.listValue = listValue;
     } else if (obj is Map) {

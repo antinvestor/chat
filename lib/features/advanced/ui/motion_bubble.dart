@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../messages/domain/room_event.dart';
 import '../services/motion_service.dart';
 

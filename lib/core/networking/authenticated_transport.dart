@@ -1,9 +1,11 @@
 import 'dart:io' as io;
+
 import 'package:connectrpc/connect.dart' as connect;
-import 'package:connectrpc/protocol/connect.dart' as connect_protocol;
-import 'package:connectrpc/protobuf.dart' as connect_protobuf;
 import 'package:connectrpc/io.dart' as connect_io;
+import 'package:connectrpc/protobuf.dart' as connect_protobuf;
+import 'package:connectrpc/protocol/connect.dart' as connect_protocol;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../logging/app_logger.dart';
 import 'api_config.dart';
 

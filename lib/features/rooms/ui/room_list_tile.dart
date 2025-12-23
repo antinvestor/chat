@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../domain/room_with_last_message.dart';
 
 class RoomListTile extends StatelessWidget {

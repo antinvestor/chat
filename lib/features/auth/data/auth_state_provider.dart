@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../../../core/logging/app_logger.dart';
 import '../../onboarding/data/onboarding_repository.dart';
 import 'auth_repository.dart';

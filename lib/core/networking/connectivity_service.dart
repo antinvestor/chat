@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../logging/app_logger.dart';
 import '../sync/sync_engine.dart';
 

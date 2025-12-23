@@ -1,9 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:chat/features/messages/domain/room_event.dart';
+
 import 'package:chat/core/logging/app_logger.dart';
+import 'package:chat/features/messages/domain/room_event.dart';
 import 'signaling_service.dart';
 
 final callManagerProvider = Provider<CallManager>((ref) {

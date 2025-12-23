@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:io';
+
+import 'package:flutter/material.dart';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/logging/app_logger.dart';
 import '../data/auth_state_provider.dart';
 

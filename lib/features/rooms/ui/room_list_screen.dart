@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../data/room_providers.dart';
-import '../domain/room_with_last_message.dart';
-import 'room_list_tile.dart';
+
+import '../../../core/error/app_error.dart';
+import '../../../core/responsive/breakpoints.dart';
 import '../../../widgets/empty_state.dart';
 import '../../../widgets/error_banner.dart';
 import '../../../widgets/skeleton_loader.dart';
-import '../../calls/ui/incoming_call_banner.dart';
-import '../../../core/error/app_error.dart';
-import '../../../core/responsive/breakpoints.dart';
-import '../../messages/ui/chat_screen.dart';
-import '../../contacts/ui/contacts_screen.dart';
 import '../../auth/data/auth_state_provider.dart';
+import '../../calls/ui/incoming_call_banner.dart';
+import '../../contacts/ui/contacts_screen.dart';
+import '../../messages/ui/chat_screen.dart';
+import '../data/room_providers.dart';
+import '../domain/room_with_last_message.dart';
+import 'room_list_tile.dart';
 
 class RoomListScreen extends ConsumerStatefulWidget {
   const RoomListScreen({super.key});

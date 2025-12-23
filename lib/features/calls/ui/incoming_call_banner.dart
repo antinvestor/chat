@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../services/call_manager.dart';
 
 class IncomingCallBanner extends ConsumerWidget {

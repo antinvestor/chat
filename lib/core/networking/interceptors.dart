@@ -1,5 +1,6 @@
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../logging/app_logger.dart';
 
 /// Auth interceptor for Connect RPC

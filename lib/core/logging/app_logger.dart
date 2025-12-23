@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'package:logger/logger.dart';
 
 /// Centralized application logger with structured logging support

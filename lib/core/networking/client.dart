@@ -1,9 +1,10 @@
+import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
+import 'package:antinvestor_api_device/antinvestor_api_device.dart';
+import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../apis/chat/v1/chat.connect.client.dart';
-import '../../apis/device/v1/device.connect.client.dart';
-import '../../apis/profile/v1/profile.connect.client.dart';
+
 import '../../features/auth/data/auth_repository.dart';
 import 'authenticated_transport.dart';
 

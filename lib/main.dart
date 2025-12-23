@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
+
 import 'app/router.dart';
 import 'core/logging/app_logger.dart';
 import 'core/networking/connectivity_service.dart';
-import 'core/sync/sync_engine.dart';
 import 'core/sync/background_sync_task.dart';
+import 'core/sync/sync_engine.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/data/token_refresh_service.dart';
 

@@ -1,8 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../domain/room_event.dart' as domain;
+
 import '../../../core/db/database.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/sync_engine.dart';
+import '../domain/room_event.dart' as domain;
 import 'message_repository.dart';
 
 part 'message_providers.g.dart';

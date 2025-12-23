@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../logging/app_logger.dart';
+
 import '../db/database.dart';
+import '../logging/app_logger.dart';
 
 /// End-to-End Encryption service
 /// Uses AES-like encryption for messages and files

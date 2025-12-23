@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:openid_client/openid_client.dart';
 import 'package:web/web.dart' as web;
+
 import '../../../../core/logging/app_logger.dart';
 import 'auth_platform.dart';
 

@@ -1,11 +1,14 @@
 import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openid_client/openid_client.dart';
+
+import '../../../core/logging/app_logger.dart';
 import 'platform/auth_platform.dart';
+
 import 'platform/auth_platform_stub.dart'
     if (dart.library.io) 'platform/auth_platform_io.dart'
     if (dart.library.html) 'platform/auth_platform_web.dart';
-import '../../../core/logging/app_logger.dart';
 
 class AuthService {
   final FlutterSecureStorage _storage;
