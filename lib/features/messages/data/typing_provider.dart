@@ -23,8 +23,8 @@ class Typing extends _$Typing {
     return {};
   }
 
-  void _init(String roomId) {
-    final syncEngine = ref.read(syncEngineProvider);
+  Future<void> _init(String roomId) async {
+    final syncEngine = await ref.read(syncEngineProvider.future);
     _subscription = syncEngine.typingEvents.listen((event) {
       if (event.roomId == roomId) {
         if (event.typing) {

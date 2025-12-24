@@ -57,18 +57,36 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     // TODO: Implement camera toggle logic in CallManager
   }
 
-  void _endCall() {
-    ref.read(callManagerProvider).endCall();
-    Navigator.of(context).pop();
+  Future<void> _endCall() async {
+    final callManager = await ref.read(callManagerProvider.future);
+    await callManager.endCall();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final callManager = ref.watch(callManagerProvider);
+    final callManagerAsync = ref.watch(callManagerProvider);
     
+    // Handle loading/error state for call manager
+    return callManagerAsync.when(
+      loading: () => const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: Text('Error: $error', style: const TextStyle(color: Colors.white))),
+      ),
+      data: (callManager) => _buildCallScreen(context, ref, callManager),
+    );
+  }
+
+  Widget _buildCallScreen(BuildContext context, WidgetRef ref, CallManager callManager) {
     // Listen to streams
     ref.listen<AsyncValue<MediaStream?>>(
-      StreamProvider((ref) => ref.watch(callManagerProvider).localStreamStream),
+      StreamProvider((ref) => callManager.localStreamStream),
       (previous, next) {
         next.whenData((stream) {
           if (stream != null) {
@@ -79,7 +97,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     );
 
     ref.listen<AsyncValue<MediaStream?>>(
-      StreamProvider((ref) => ref.watch(callManagerProvider).remoteStreamStream),
+      StreamProvider((ref) => callManager.remoteStreamStream),
       (previous, next) {
         next.whenData((stream) {
           if (stream != null) {

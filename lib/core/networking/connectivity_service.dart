@@ -91,8 +91,8 @@ class ConnectivityService {
 }
 
 /// Provider for connectivity service
-final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
-  final syncEngine = ref.watch(syncEngineProvider);
+final connectivityServiceProvider = FutureProvider<ConnectivityService>((ref) async {
+  final syncEngine = await ref.watch(syncEngineProvider.future);
   final service = ConnectivityService(Connectivity(), syncEngine);
   
   ref.onDispose(() {
@@ -104,7 +104,7 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
 
 /// Provider for current connectivity status
 final isConnectedProvider = FutureProvider<bool>((ref) async {
-  final service = ref.watch(connectivityServiceProvider);
+  final service = await ref.watch(connectivityServiceProvider.future);
   return service.isConnected();
 });
 

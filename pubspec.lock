@@ -53,42 +53,42 @@ packages:
     dependency: "direct main"
     description:
       name: antinvestor_api_chat
-      sha256: "3107dc446f39d2317173e357245f26376719336006c395bbf22be8802463152d"
+      sha256: e4bfe81993d57fde609d342444094b86996241538982c55bc28eea61cdd72293
       url: "https://pub.dev"
     source: hosted
-    version: "1.50.20"
+    version: "1.51.8"
   antinvestor_api_common:
     dependency: "direct main"
     description:
       name: antinvestor_api_common
-      sha256: "3bb9030ec9c08ec518bd7c3f39a7a1abfa32e10e8bc48e695be49c59324bd93d"
+      sha256: bb154590708a9573533b805c9a960995726efbbaca159e397a235771f0f5f3e4
       url: "https://pub.dev"
     source: hosted
-    version: "1.50.20"
+    version: "1.51.4"
   antinvestor_api_device:
     dependency: "direct main"
     description:
       name: antinvestor_api_device
-      sha256: "697399896bb47161fdbe7bda543580989dd975baf8ad70cc77a14206b2f9ecf5"
+      sha256: eef85ddd7894df9ad7a010552c75378716fd5ac9a6e382a0b3c01b7f1047caa4
       url: "https://pub.dev"
     source: hosted
-    version: "1.50.20"
+    version: "1.51.5"
   antinvestor_api_files:
     dependency: "direct main"
     description:
       name: antinvestor_api_files
-      sha256: d653e5de93e7dccd4e55a06c499f69c03f2197af67131287c4e1ff0bb1e62f06
+      sha256: a95e2f3dc4ea5e71f68c1d1ac752d566019227768e144dd857a1147cc30e4726
       url: "https://pub.dev"
     source: hosted
-    version: "1.50.20"
+    version: "1.51.5"
   antinvestor_api_profile:
     dependency: "direct main"
     description:
       name: antinvestor_api_profile
-      sha256: "963545d02a7fc86edd04e6cc74d8e31887cd11d7df0f2d17d6f7802330773700"
+      sha256: "0ee94d3bc470ecbc8656e685adf5f004f1d9668d5bfc5685a3d8bcf158e741b2"
       url: "https://pub.dev"
     source: hosted
-    version: "1.50.20"
+    version: "1.51.5"
   app_links:
     dependency: "direct main"
     description:
@@ -884,10 +884,10 @@ packages:
     dependency: transitive
     description:
       name: js
-      sha256: f2c445dce49627136094980615a031419f7f3eb393237e4ecd97ac15dea343f3
+      sha256: "53385261521cc4a0c4658fd0ad07a7d14591cf8fc33abbceae306ddb974888dc"
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.7"
+    version: "0.7.2"
   json_annotation:
     dependency: "direct main"
     description:

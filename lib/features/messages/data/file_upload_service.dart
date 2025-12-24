@@ -286,16 +286,9 @@ class UploadResult {
 
 // Providers
 final fileUploadServiceProvider = Provider<FileUploadService>((ref) {
-  final transportFactory = ref.watch(transportFactoryProvider);
+  final tokenManager = ref.watch(tokenManagerProvider);
 
   return FileUploadService(() async {
-    final headers = await transportFactory.getAuthHeaders();
-    // Extract token from headers
-    for (final entry in headers.entries) {
-      if (entry.name.toLowerCase() == 'authorization') {
-        return entry.value.replaceFirst('Bearer ', '');
-      }
-    }
-    return null;
+    return tokenManager.accessToken;
   });
 });

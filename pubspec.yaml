@@ -33,11 +33,11 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  antinvestor_api_chat: ^1.50.20
-  antinvestor_api_common: ^1.50.20
-  antinvestor_api_device: ^1.50.20
-  antinvestor_api_files: ^1.50.20
-  antinvestor_api_profile: ^1.50.20
+  antinvestor_api_chat: ^1.51.8
+  antinvestor_api_common: ^1.51.4
+  antinvestor_api_device: ^1.51.5
+  antinvestor_api_files: ^1.51.5
+  antinvestor_api_profile: ^1.51.5
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   drift: ^2.30.0

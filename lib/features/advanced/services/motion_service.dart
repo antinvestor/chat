@@ -4,8 +4,9 @@ import 'package:xid/xid.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../../messages/domain/room_event.dart';
 
-final motionServiceProvider = Provider<MotionService>((ref) {
-  return MotionService(ref.watch(syncEngineProvider));
+final motionServiceProvider = FutureProvider<MotionService>((ref) async {
+  final syncEngine = await ref.watch(syncEngineProvider.future);
+  return MotionService(syncEngine);
 });
 
 class MotionService {

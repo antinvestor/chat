@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
-import 'package:antinvestor_api_common/common.dart' as common;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart' as common;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenManager;
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:fixnum/fixnum.dart' as fixnum;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +15,6 @@ import '../../features/messages/domain/room_event.dart' as domain;
 import '../crypto/key_manager.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
-import '../networking/authenticated_transport.dart';
 import '../networking/client.dart';
 import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
@@ -23,22 +23,27 @@ final pendingJobRepositoryProvider = Provider<PendingJobRepository>((ref) {
   return PendingJobRepository(AppDatabase.instance);
 });
 
-final syncEngineProvider = Provider<SyncEngine>((ref) {
-  final transportFactory = ref.watch(transportFactoryProvider);
+/// Async provider for SyncEngine since it depends on async client providers
+final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
+  final gatewayClient = await ref.watch(gatewayServiceClientProvider.future);
+  final chatClient = await ref.watch(chatServiceClientProvider.future);
+  final tokenManager = ref.watch(tokenManagerProvider);
+  
   return SyncEngine(
-    ref.watch(gatewayServiceClientProvider),
-    ref.watch(chatServiceClientProvider),
+    gatewayClient,
+    chatClient,
     ref.watch(messageRepositoryProvider),
     ref.watch(pendingJobRepositoryProvider),
     KeyManager(const FlutterSecureStorage()),
-    transportFactory,
+    tokenManager,
   );
 });
 
 enum SyncConnectionState { disconnected, connecting, connected }
 
-final connectionStateProvider = StreamProvider<SyncConnectionState>((ref) {
-  return ref.watch(syncEngineProvider).connectionState;
+final connectionStateProvider = StreamProvider<SyncConnectionState>((ref) async* {
+  final syncEngine = await ref.watch(syncEngineProvider.future);
+  yield* syncEngine.connectionState;
 });
 
 class SyncEngine {
@@ -47,7 +52,7 @@ class SyncEngine {
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
   final KeyManager _keyManager;
-  final TransportFactory _transportFactory;
+  final TokenManager _tokenManager;
 
   StreamSubscription? _connectSubscription;
   Timer? _uploadTimer;
@@ -78,12 +83,17 @@ class SyncEngine {
     this._messageRepo,
     this._jobRepo,
     this._keyManager,
-    this._transportFactory,
+    this._tokenManager,
   );
 
   /// Get current auth headers for API calls
-  Future<connect.Headers> _getAuthHeaders() async {
-    return await _transportFactory.getAuthHeaders();
+  connect.Headers _getAuthHeaders() {
+    final headers = connect.Headers();
+    final token = _tokenManager.accessToken;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
   }
 
   void start() {
@@ -109,7 +119,7 @@ class SyncEngine {
     int limit = 50,
   }) async {
     try {
-      final headers = await _getAuthHeaders();
+      final headers = _getAuthHeaders();
       final request = pb.GetHistoryRequest(
         roomId: roomId,
         cursor: cursor,
@@ -161,14 +171,14 @@ class SyncEngine {
 
     while (true) {
       try {
-        final headers = await _getAuthHeaders();
+        final headers = _getAuthHeaders();
         final deviceId = await _keyManager.getDeviceId();
-        final request = pb.ConnectRequest(deviceId: deviceId);
+        final request = pb.StreamRequest(deviceId: deviceId);
 
         // Wrap request in a Stream as expected by the client with auth headers
-        final stream = _gatewayClient.connect(Stream.value(request), headers: headers);
+        final stream = _gatewayClient.stream(Stream.value(request), headers: headers);
         _isConnected = true;
-        _reconnectAttempts = 0;
+        _reconnectAttempts = 0;     
         _connectionStateController.add(SyncConnectionState.connected);
 
         await for (final response in stream) {
@@ -208,7 +218,7 @@ class SyncEngine {
     return Duration(milliseconds: delay);
   }
 
-  Future<void> _handleConnectResponse(pb.ConnectResponse response) async {
+  Future<void> _handleConnectResponse(pb.StreamResponse response) async {
     // Handle different event types
     if (response.hasMessage()) {
       await _processPbRoomEvent(response.message);
@@ -365,7 +375,7 @@ class SyncEngine {
 
   Future<void> _processCreateRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = await _getAuthHeaders();
+    final headers = _getAuthHeaders();
 
     final request = pb.CreateRoomRequest(
       id: payload['id'] as String,
@@ -399,7 +409,7 @@ class SyncEngine {
 
   Future<void> _processUpdateRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = await _getAuthHeaders();
+    final headers = _getAuthHeaders();
 
     final request = pb.UpdateRoomRequest(
       roomId: payload['id'] as String,
@@ -419,7 +429,7 @@ class SyncEngine {
 
   Future<void> _processDeleteRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = await _getAuthHeaders();
+    final headers = _getAuthHeaders();
 
     final request = pb.DeleteRoomRequest(
       roomId: payload['id'] as String,
@@ -431,7 +441,7 @@ class SyncEngine {
 
   Future<void> _processAddRoomMembers(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = await _getAuthHeaders();
+    final headers = _getAuthHeaders();
     final roomId = payload['roomId'] as String;
     final profileIds = (payload['profileIds'] as List<dynamic>).cast<String>();
 
@@ -455,7 +465,7 @@ class SyncEngine {
 
   Future<void> _processRemoveRoomMembers(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = await _getAuthHeaders();
+    final headers = _getAuthHeaders();
 
     final request = pb.RemoveRoomSubscriptionsRequest(
       roomId: payload['roomId'] as String,
@@ -498,7 +508,7 @@ class SyncEngine {
       sentAt: timestamp,
     );
 
-    final headers = await _getAuthHeaders();
+    final headers = _getAuthHeaders();
     final request = pb.SendEventRequest(event: [event]);
     final response = await _chatClient.sendEvent(request, headers: headers);
 

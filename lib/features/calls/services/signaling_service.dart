@@ -6,8 +6,9 @@ import 'package:xid/xid.dart';
 import 'package:chat/features/messages/domain/room_event.dart' as domain;
 import '../../../core/sync/sync_engine.dart';
 
-final signalingServiceProvider = Provider<SignalingService>((ref) {
-  return SignalingService(ref.watch(syncEngineProvider));
+final signalingServiceProvider = FutureProvider<SignalingService>((ref) async {
+  final syncEngine = await ref.watch(syncEngineProvider.future);
+  return SignalingService(syncEngine);
 });
 
 class SignalingService {

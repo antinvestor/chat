@@ -8,8 +8,9 @@ import 'package:chat/core/logging/app_logger.dart';
 import 'package:chat/features/messages/domain/room_event.dart';
 import 'signaling_service.dart';
 
-final callManagerProvider = Provider<CallManager>((ref) {
-  return CallManager(ref.watch(signalingServiceProvider));
+final callManagerProvider = FutureProvider<CallManager>((ref) async {
+  final signalingService = await ref.watch(signalingServiceProvider.future);
+  return CallManager(signalingService);
 });
 
 enum CallState {

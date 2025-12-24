@@ -1,25 +1,36 @@
+import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenManager;
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart' as pb;
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
+import 'package:connectrpc/connect.dart' as connect;
 import 'package:drift/drift.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
-import '../../../core/networking/authenticated_transport.dart';
 import '../../../core/networking/client.dart';
 
 /// Repository for syncing device contacts with server roster
 class ContactSyncRepository {
   final ProfileServiceClient _profileClient;
   final AppDatabase _database;
-  final TransportFactory _transportFactory;
+  final TokenManager _tokenManager;
 
   ContactSyncRepository(
     this._profileClient,
     this._database,
-    this._transportFactory,
+    this._tokenManager,
   );
+
+  /// Get current auth headers for API calls
+  connect.Headers _getAuthHeaders() {
+    final headers = connect.Headers();
+    final token = _tokenManager.accessToken;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
 
   /// Sync device contacts with server
   /// Returns list of contacts that are registered on the platform
@@ -110,7 +121,7 @@ class ContactSyncRepository {
 
   Future<List<SyncedContact>> _syncBatch(List<pb.AddContactRequest> batch) async {
     try {
-      final headers = await _transportFactory.getAuthHeaders();
+      final headers = _getAuthHeaders();
 
       final request = pb.AddRosterRequest(data: batch);
       final response = await _profileClient.addRoster(
@@ -143,7 +154,7 @@ class ContactSyncRepository {
   /// Get roster from server
   Future<List<SyncedContact>> getRoster() async {
     try {
-      final headers = await _transportFactory.getAuthHeaders();
+      final headers = _getAuthHeaders();
       final request = pb.SearchRosterRequest();
 
       final syncedContacts = <SyncedContact>[];
@@ -251,19 +262,19 @@ class SyncedContact {
 }
 
 // Providers
-final contactSyncRepositoryProvider = Provider<ContactSyncRepository>((ref) {
-  final profileClient = ref.watch(profileServiceClientProvider);
-  final transportFactory = ref.watch(transportFactoryProvider);
+final contactSyncRepositoryProvider = FutureProvider<ContactSyncRepository>((ref) async {
+  final profileClient = await ref.watch(profileServiceClientProvider.future);
+  final tokenManager = ref.watch(tokenManagerProvider);
 
   return ContactSyncRepository(
     profileClient,
     AppDatabase.instance,
-    transportFactory,
+    tokenManager,
   );
 });
 
 final syncedContactsProvider = FutureProvider<List<SyncedContact>>((ref) async {
-  final repo = ref.watch(contactSyncRepositoryProvider);
+  final repo = await ref.watch(contactSyncRepositoryProvider.future);
   // First try to get local contacts, then sync in background
   final local = await repo.getLocalSyncedContacts();
   if (local.isEmpty) {
@@ -275,6 +286,6 @@ final syncedContactsProvider = FutureProvider<List<SyncedContact>>((ref) async {
 });
 
 final contactSyncTriggerProvider = FutureProvider<List<SyncedContact>>((ref) async {
-  final repo = ref.watch(contactSyncRepositoryProvider);
+  final repo = await ref.watch(contactSyncRepositoryProvider.future);
   return await repo.syncContacts();
 });

@@ -82,8 +82,9 @@ class MotionBubble extends ConsumerWidget {
               child: InkWell(
                 onTap: isExpired
                     ? null
-                    : () {
-                        ref.read(motionServiceProvider).castVote(
+                    : () async {
+                        final motionService = await ref.read(motionServiceProvider.future);
+                        await motionService.castVote(
                               roomId: event.roomId,
                               motionId: event.id,
                               option: option,

@@ -2,17 +2,43 @@ import 'package:flutter/foundation.dart';
 
 import 'package:logger/logger.dart';
 
-/// Centralized application logger with structured logging support
+/// Simple log printer - one line per message, easy to scan
+class _SimpleLogPrinter extends LogPrinter {
+  static const _levelPrefixes = {
+    Level.trace: '🔍 TRACE',
+    Level.debug: '🐛 DEBUG',
+    Level.info: '✓ INFO',
+    Level.warning: '⚠ WARN',
+    Level.error: '❌ ERROR',
+    Level.fatal: '💀 FATAL',
+  };
+
+  @override
+  List<String> log(LogEvent event) {
+    final prefix = _levelPrefixes[event.level] ?? '?';
+    final time = DateTime.now().toString().substring(11, 19); // HH:MM:SS
+    final lines = <String>['$time $prefix  ${event.message}'];
+    
+    if (event.error != null) {
+      lines.add('         └─ ${event.error}');
+    }
+    if (event.stackTrace != null && event.level.index >= Level.error.index) {
+      // Only show first 3 frames for errors
+      final frames = event.stackTrace.toString().split('\n').take(3);
+      for (final frame in frames) {
+        if (frame.trim().isNotEmpty) {
+          lines.add('            $frame');
+        }
+      }
+    }
+    return lines;
+  }
+}
+
+/// Centralized application logger
 class AppLogger {
   static final Logger _logger = Logger(
-    printer: PrettyPrinter(
-      methodCount: 2, // Number of method calls to be displayed
-      errorMethodCount: 8, // Number of method calls for errors
-      lineLength: 120, // Width of the output
-      colors: true, // Colorful log messages
-      printEmojis: true, // Print an emoji for each log message
-      dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
-    ),
+    printer: _SimpleLogPrinter(),
     level: kDebugMode ? Level.debug : Level.info,
   );
 

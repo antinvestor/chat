@@ -285,16 +285,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.video_call),
-            onPressed: () {
-              ref.read(callManagerProvider).startCall(widget.roomId);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => CallScreen(
-                    roomId: widget.roomId,
-                    roomName: widget.roomName,
+            onPressed: () async {
+              final callManager = await ref.read(callManagerProvider.future);
+              await callManager.startCall(widget.roomId);
+              if (context.mounted) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => CallScreen(
+                      roomId: widget.roomId,
+                      roomName: widget.roomName,
+                    ),
                   ),
-                ),
-              );
+                );
+              }
             },
           ),
         ],

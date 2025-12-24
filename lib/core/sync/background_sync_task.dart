@@ -2,7 +2,7 @@ import 'dart:io' as io;
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
-import 'package:antinvestor_api_common/common.dart' as common;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart' as common;
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/io.dart' as connect_io;
 import 'package:connectrpc/protobuf.dart' as connect_protobuf;

@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -43,24 +46,27 @@ void main() async {
 
   // Database is initialized lazily by Drift
 
-  // Initialize workmanager
-  await Workmanager().initialize(callbackDispatcher, isInDebugMode: kDebugMode);
+  // Initialize workmanager (only supported on Android and iOS)
+  final isMobile = Platform.isAndroid || Platform.isIOS;
+  if (isMobile) {
+    await Workmanager().initialize(callbackDispatcher, isInDebugMode: kDebugMode);
 
-  // Register periodic background sync (15 minutes)
-  await Workmanager().registerPeriodicTask(
-    'background-sync',
-    'backgroundSync',
-    frequency: const Duration(minutes: 15),
-    constraints: Constraints(
-      networkType: NetworkType.connected,
-      requiresBatteryNotLow: true,
-    ),
-    existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
-  );
+    // Register periodic background sync (15 minutes)
+    await Workmanager().registerPeriodicTask(
+      'background-sync',
+      'backgroundSync',
+      frequency: const Duration(minutes: 15),
+      constraints: Constraints(
+        networkType: NetworkType.connected,
+        requiresBatteryNotLow: true,
+      ),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+    );
+  }
 
   AppLogger.info(
     'Application starting',
-    data: {'backgroundSyncRegistered': true},
+    data: {'backgroundSyncRegistered': isMobile},
   );
 
   runApp(const ProviderScope(child: MyApp()));
@@ -102,14 +108,49 @@ class _MyAppState extends ConsumerState<MyApp> {
       // Start token refresh service
       ref.read(tokenRefreshServiceProvider).start();
 
-      // Start sync engine
-      ref.read(syncEngineProvider).start();
+      // Wait for network to be available before starting sync
+      await _waitForNetwork();
 
-      // Start connectivity monitoring for auto-sync on reconnection
-      ref.read(connectivityServiceProvider).start();
+      // Start sync engine (async)
+      final syncEngine = await ref.read(syncEngineProvider.future);
+      syncEngine.start();
+
+      // Start connectivity monitoring for auto-sync on reconnection (async)
+      final connectivityService = await ref.read(connectivityServiceProvider.future);
+      connectivityService.start();
     } else {
       AppLogger.debug('User not logged in, skipping service initialization');
     }
+  }
+
+  /// Wait for network connectivity before proceeding
+  Future<void> _waitForNetwork() async {
+    final connectivity = Connectivity();
+    var results = await connectivity.checkConnectivity();
+    
+    // Check if we have a connection
+    bool hasConnection = results.any((r) =>
+        r == ConnectivityResult.wifi ||
+        r == ConnectivityResult.mobile ||
+        r == ConnectivityResult.ethernet);
+    
+    if (!hasConnection) {
+      AppLogger.info('Waiting for network connectivity...');
+      // Wait for connectivity change
+      await for (final results in connectivity.onConnectivityChanged) {
+        hasConnection = results.any((r) =>
+            r == ConnectivityResult.wifi ||
+            r == ConnectivityResult.mobile ||
+            r == ConnectivityResult.ethernet);
+        if (hasConnection) {
+          AppLogger.info('Network connectivity established');
+          break;
+        }
+      }
+    }
+    
+    // Small delay to ensure DNS is ready
+    await Future.delayed(const Duration(milliseconds: 500));
   }
 
   @override
