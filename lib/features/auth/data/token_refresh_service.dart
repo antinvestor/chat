@@ -4,44 +4,100 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/logging/app_logger.dart';
 import 'auth_repository.dart';
+import 'auth_service.dart';
 
 part 'token_refresh_service.g.dart';
 
 /// Service that handles automatic token refresh in the background
+/// 
+/// This service implements a robust token refresh strategy:
+/// - Proactive refresh: Refreshes tokens before they expire (5 min buffer)
+/// - Smart scheduling: Schedules next refresh based on token expiry time
+/// - Retry with backoff: Retries transient failures with exponential backoff
+/// - Graceful degradation: Only logs out on permanent errors
 class TokenRefreshService {
   final AuthRepository _authRepository;
   final Future<void> Function() _onLogoutNeeded;
   Timer? _refreshTimer;
+  Timer? _scheduledRefreshTimer;
   bool _isRefreshing = false;
+  int _consecutiveFailures = 0;
+  
+  // Configuration
+  static const _maxConsecutiveFailures = 5;
+  static const _baseRetryDelay = Duration(seconds: 5);
+  static const _maxRetryDelay = Duration(minutes: 2);
+  static const _fallbackCheckInterval = Duration(seconds: 30);
 
   TokenRefreshService(this._authRepository, this._onLogoutNeeded);
 
   /// Start the token refresh service
-  /// Checks token expiry every 60 seconds
+  /// Uses smart scheduling based on token expiry time
   void start() {
-    stop(); // Cancel any existing timer
+    stop(); // Cancel any existing timers
 
-    AppLogger.info('Token refresh service started (checking every 60s)');
+    AppLogger.info('Token refresh service started');
 
+    // Schedule based on token expiry, with fallback periodic check
+    _scheduleNextRefresh();
+    
+    // Fallback: periodic check every 30 seconds for edge cases
     _refreshTimer = Timer.periodic(
-      const Duration(seconds: 60),
-      (_) => _checkAndRefreshToken(),
+      _fallbackCheckInterval,
+      (_) => _checkAndRefreshIfNeeded(),
     );
 
     // Also check immediately on start
-    _checkAndRefreshToken();
+    _checkAndRefreshIfNeeded();
   }
 
   /// Stop the token refresh service
   void stop() {
-    AppLogger.info('Token refresh service stopped');
     _refreshTimer?.cancel();
     _refreshTimer = null;
+    _scheduledRefreshTimer?.cancel();
+    _scheduledRefreshTimer = null;
     _isRefreshing = false;
+    _consecutiveFailures = 0;
+    AppLogger.debug('Token refresh service stopped');
   }
 
-  /// Check if token is expired and refresh if needed
-  Future<void> _checkAndRefreshToken() async {
+  /// Schedule the next refresh based on token expiry time
+  Future<void> _scheduleNextRefresh() async {
+    _scheduledRefreshTimer?.cancel();
+    
+    try {
+      final timeUntilRefresh = await _authRepository.getTimeUntilRefreshNeeded();
+      
+      if (timeUntilRefresh == null) {
+        // No expiry info, rely on fallback periodic check
+        AppLogger.debug('No token expiry info, relying on fallback check');
+        return;
+      }
+      
+      if (timeUntilRefresh <= Duration.zero) {
+        // Need to refresh now
+        AppLogger.debug('Token refresh needed immediately');
+        _checkAndRefreshIfNeeded();
+        return;
+      }
+      
+      // Schedule refresh for when token is about to expire
+      AppLogger.info('Scheduled proactive token refresh', data: {
+        'inSeconds': timeUntilRefresh.inSeconds,
+        'inMinutes': timeUntilRefresh.inMinutes,
+      });
+      
+      _scheduledRefreshTimer = Timer(timeUntilRefresh, () {
+        _checkAndRefreshIfNeeded();
+      });
+    } catch (e) {
+      AppLogger.warning('Failed to schedule token refresh', data: {'error': e.toString()});
+    }
+  }
+
+  /// Check if token needs refresh and refresh if needed
+  Future<void> _checkAndRefreshIfNeeded() async {
     // Prevent concurrent refresh attempts
     if (_isRefreshing) {
       return;
@@ -52,40 +108,101 @@ class TokenRefreshService {
 
       final isLoggedIn = await _authRepository.isLoggedIn();
       if (!isLoggedIn) {
-        // User is not logged in, stop the service
         AppLogger.debug('User not logged in, stopping token refresh service');
         stop();
         return;
       }
 
       final isExpired = await _authRepository.isTokenExpired();
-      if (isExpired) {
-        AppLogger.info('Token expired or about to expire, refreshing...');
-
-        try {
-          await _authRepository.refreshToken();
-          AppLogger.info('Background token refresh successful');
-        } catch (e, stackTrace) {
-          AppLogger.error(
-            'Background token refresh failed, logging out user',
-            error: e,
-            stackTrace: stackTrace,
-          );
-
-          // If refresh fails, logout the user
-          await _onLogoutNeeded();
-          stop();
-        }
+      if (!isExpired) {
+        // Token is still valid, reschedule
+        await _scheduleNextRefresh();
+        return;
       }
+
+      AppLogger.info('Token expired or about to expire, refreshing...');
+      await _performRefreshWithRetry();
+      
     } finally {
       _isRefreshing = false;
     }
   }
 
+  /// Perform token refresh with retry logic for transient errors
+  Future<void> _performRefreshWithRetry() async {
+    final result = await _authRepository.refreshTokenWithResult();
+    
+    switch (result.result) {
+      case TokenRefreshResult.success:
+        _consecutiveFailures = 0;
+        AppLogger.info('Background token refresh successful');
+        // Schedule next refresh based on new token expiry
+        await _scheduleNextRefresh();
+        break;
+        
+      case TokenRefreshResult.permanentError:
+        AppLogger.error('Token refresh failed permanently, user must re-login', 
+            data: {'error': result.error});
+        await _onLogoutNeeded();
+        stop();
+        break;
+        
+      case TokenRefreshResult.transientError:
+        _consecutiveFailures++;
+        
+        if (_consecutiveFailures >= _maxConsecutiveFailures) {
+          AppLogger.error(
+            'Max consecutive refresh failures reached, prompting re-login',
+            data: {'failures': _consecutiveFailures},
+          );
+          await _onLogoutNeeded();
+          stop();
+          return;
+        }
+        
+        // Calculate retry delay with exponential backoff
+        final retryDelay = _calculateRetryDelay(_consecutiveFailures);
+        AppLogger.warning(
+          'Transient refresh error, will retry',
+          data: {
+            'consecutiveFailures': _consecutiveFailures,
+            'retryInSeconds': retryDelay.inSeconds,
+            'error': result.error,
+          },
+        );
+        
+        // Schedule retry
+        _scheduledRefreshTimer?.cancel();
+        _scheduledRefreshTimer = Timer(retryDelay, () {
+          _checkAndRefreshIfNeeded();
+        });
+        break;
+    }
+  }
+
+  /// Calculate retry delay with exponential backoff and jitter
+  Duration _calculateRetryDelay(int failureCount) {
+    // Exponential backoff: 5s, 10s, 20s, 40s, 80s (capped at 2 min)
+    final exponentialDelay = _baseRetryDelay * (1 << (failureCount - 1));
+    final cappedDelay = exponentialDelay > _maxRetryDelay ? _maxRetryDelay : exponentialDelay;
+    
+    // Add jitter (±20%) to prevent thundering herd
+    final jitterMs = (cappedDelay.inMilliseconds * 0.2 * (DateTime.now().millisecond / 500 - 1)).toInt();
+    
+    return Duration(milliseconds: cappedDelay.inMilliseconds + jitterMs);
+  }
+
   /// Manually trigger a token refresh
   Future<void> refreshNow() async {
-    await _checkAndRefreshToken();
+    _consecutiveFailures = 0; // Reset on manual refresh
+    await _checkAndRefreshIfNeeded();
   }
+  
+  /// Get current health status
+  ({bool isHealthy, int consecutiveFailures}) get healthStatus => (
+    isHealthy: _consecutiveFailures < _maxConsecutiveFailures,
+    consecutiveFailures: _consecutiveFailures,
+  );
 }
 
 /// Provider for the token refresh service

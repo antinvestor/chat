@@ -9,6 +9,7 @@ import 'package:fixnum/fixnum.dart' as fixnum;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../features/auth/data/auth_repository.dart';
 import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
@@ -28,6 +29,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final gatewayClient = await ref.watch(gatewayServiceClientProvider.future);
   final chatClient = await ref.watch(chatServiceClientProvider.future);
   final tokenManager = ref.watch(tokenManagerProvider);
+  final authRepo = ref.watch(authRepositoryProvider);
   
   return SyncEngine(
     gatewayClient,
@@ -36,6 +38,11 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     ref.watch(pendingJobRepositoryProvider),
     KeyManager(const FlutterSecureStorage()),
     tokenManager,
+    onTokenRefresh: () async {
+      // Use the robust token refresh with retry logic
+      final result = await authRepo.ensureValidAccessTokenWithStatus();
+      return result.token;
+    },
   );
 });
 
@@ -46,6 +53,9 @@ final connectionStateProvider = StreamProvider<SyncConnectionState>((ref) async*
   yield* syncEngine.connectionState;
 });
 
+/// Callback type for token refresh operations
+typedef TokenRefreshCallback = Future<String?> Function();
+
 class SyncEngine {
   final GatewayServiceClient _gatewayClient;
   final ChatServiceClient _chatClient;
@@ -53,13 +63,18 @@ class SyncEngine {
   final PendingJobRepository _jobRepo;
   final KeyManager _keyManager;
   final TokenManager _tokenManager;
+  final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
   Timer? _uploadTimer;
   bool _isUploading = false;
   bool _isConnected = false;
   int _reconnectAttempts = 0;
+  int _authErrorCount = 0; // Track consecutive auth errors
   final Set<String> _processedEventIds = {}; // For event deduplication
+  
+  // Configuration
+  static const _maxAuthErrors = 3; // Max auth errors before giving up
 
   final _typingEventsController = StreamController<pb.TypingEvent>.broadcast();
   Stream<pb.TypingEvent> get typingEvents => _typingEventsController.stream;
@@ -83,8 +98,9 @@ class SyncEngine {
     this._messageRepo,
     this._jobRepo,
     this._keyManager,
-    this._tokenManager,
-  );
+    this._tokenManager, {
+    TokenRefreshCallback? onTokenRefresh,
+  }) : _onTokenRefresh = onTokenRefresh;
 
   /// Get current auth headers for API calls
   connect.Headers _getAuthHeaders() {
@@ -178,19 +194,66 @@ class SyncEngine {
         // Wrap request in a Stream as expected by the client with auth headers
         final stream = _gatewayClient.stream(Stream.value(request), headers: headers);
         _isConnected = true;
-        _reconnectAttempts = 0;     
+        _reconnectAttempts = 0;
+        _authErrorCount = 0; // Reset auth error count on successful connection
         _connectionStateController.add(SyncConnectionState.connected);
 
         await for (final response in stream) {
           await _handleConnectResponse(response);
         }
       } catch (e, stackTrace) {
+        final errorStr = e.toString().toLowerCase();
+        final isAuthError = _isAuthenticationError(errorStr);
+        
         AppLogger.error(
           'Sync connection error',
           error: e,
           stackTrace: stackTrace,
-          data: {'reconnectAttempts': _reconnectAttempts},
+          data: {
+            'reconnectAttempts': _reconnectAttempts,
+            'isAuthError': isAuthError,
+            'authErrorCount': _authErrorCount,
+          },
         );
+        
+        // If it's an auth error, try to refresh token before reconnecting
+        if (isAuthError) {
+          _authErrorCount++;
+          
+          if (_authErrorCount > _maxAuthErrors) {
+            AppLogger.error('Max auth errors reached, stopping sync until re-login');
+            _connectionStateController.add(SyncConnectionState.disconnected);
+            return; // Exit the loop - user needs to re-login
+          }
+          
+          final refreshCallback = _onTokenRefresh;
+          if (refreshCallback != null) {
+            AppLogger.info('Authentication error detected, attempting token refresh', 
+                data: {'attempt': _authErrorCount, 'maxAttempts': _maxAuthErrors});
+            try {
+              final newToken = await refreshCallback();
+              if (newToken != null) {
+                AppLogger.info('Token refreshed after auth error, will retry connection');
+                _reconnectAttempts = 0; // Reset reconnect attempts on successful refresh
+                // Small delay to prevent tight loop if refresh succeeds but connection still fails
+                await Future.delayed(const Duration(milliseconds: 500));
+                continue; // Retry with the new token
+              } else {
+                // Refresh returned null - either failed or in progress
+                // Wait before retrying to avoid busy loop
+                AppLogger.debug('Token refresh returned null, waiting before retry');
+                await Future.delayed(const Duration(seconds: 2));
+              }
+            } catch (refreshError) {
+              AppLogger.warning('Token refresh failed after auth error', 
+                  data: {'error': refreshError.toString()});
+              // Don't immediately retry on refresh failure - let the backoff handle it
+            }
+          }
+        } else {
+          // Not an auth error, reset auth error count
+          _authErrorCount = 0;
+        }
       } finally {
         _isConnected = false;
         _connectionStateController.add(SyncConnectionState.disconnected);
@@ -208,6 +271,18 @@ class SyncEngine {
         _reconnectAttempts++;
       }
     }
+  }
+  
+  /// Check if an error is an authentication/authorization error
+  bool _isAuthenticationError(String errorStr) {
+    return errorStr.contains('unauthenticated') ||
+        errorStr.contains('unauthorized') ||
+        errorStr.contains('invalid authorization') ||
+        errorStr.contains('invalid token') ||
+        errorStr.contains('token expired') ||
+        errorStr.contains('jwt expired') ||
+        errorStr.contains('401') ||
+        errorStr.contains('403');
   }
 
   Duration _getBackoffDelay() {
