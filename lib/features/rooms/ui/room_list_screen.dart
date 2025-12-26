@@ -4,16 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_error.dart';
+import '../../../core/logging/app_logger.dart';
 import '../../../core/responsive/breakpoints.dart';
+import '../../../widgets/app_drawer.dart';
 import '../../../widgets/empty_state.dart';
 import '../../../widgets/error_banner.dart';
 import '../../../widgets/skeleton_loader.dart';
-import '../../auth/data/auth_state_provider.dart';
 import '../../calls/ui/incoming_call_banner.dart';
+import '../../contacts/data/contact_sync_repository.dart';
+import '../../contacts/ui/contact_sync_sheet.dart';
 import '../../contacts/ui/contacts_screen.dart';
 import '../../messages/ui/chat_screen.dart';
+import '../../onboarding/data/onboarding_repository.dart';
 import '../data/room_providers.dart';
 import '../domain/room_with_last_message.dart';
+import 'new_chat_screen.dart';
 import 'room_list_tile.dart';
 
 class RoomListScreen extends ConsumerStatefulWidget {
@@ -26,30 +31,60 @@ class RoomListScreen extends ConsumerStatefulWidget {
 class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   String? _selectedRoomId;
   String? _selectedRoomName;
+  bool _hasCheckedContactSync = false;
 
-  Future<void> _handleLogout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    // Check if contact sync is needed after frame is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowContactSync();
+    });
+  }
 
-    if (confirmed == true && mounted) {
-      await ref.read(authStateProvider.notifier).logout();
-      // Router will automatically redirect to login screen
+  Future<void> _checkAndShowContactSync() async {
+    if (_hasCheckedContactSync) return;
+    _hasCheckedContactSync = true;
+
+    final onboardingRepo = ref.read(onboardingRepositoryProvider);
+    final hasContactsSynced = await onboardingRepo.hasContactsSynced();
+    
+    AppLogger.debug('[RoomList] Contact sync check', data: {
+      'hasContactsSynced': hasContactsSynced,
+    });
+    
+    if (!hasContactsSynced && mounted) {
+      AppLogger.info('[RoomList] Contacts not synced, showing sync sheet');
+      final repo = await ref.read(rosterRepositoryProvider.future);
+      if (!mounted) return;
+      
+      await showContactSyncSheet(
+        context: context,
+        repository: repo,
+        onComplete: () {
+          AppLogger.info('[RoomList] Contact sync completed via sheet');
+          onboardingRepo.markContactsSynced();
+        },
+        onDismiss: () {
+          AppLogger.info('[RoomList] Contact sync skipped by user');
+          onboardingRepo.markContactsSynced();
+        },
+      );
+    } else {
+      AppLogger.debug('[RoomList] Contacts already synced, skipping sheet');
     }
+  }
+
+  void _navigateToNewChat() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const NewChatScreen()),
+    );
+  }
+
+  void _navigateToContacts() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ContactsScreen()),
+    );
   }
 
   @override
@@ -66,25 +101,19 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
               title: const Text('Chats'),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.contacts),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ContactsScreen()),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    // TODO: Navigate to create room screen
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.logout),
-                  onPressed: _handleLogout,
-                  tooltip: 'Logout',
+                  icon: const Icon(Icons.contacts_outlined),
+                  onPressed: _navigateToContacts,
+                  tooltip: 'Contacts',
                 ),
               ],
+            ),
+      drawer: isLargeScreen ? null : const AppDrawer(),
+      floatingActionButton: isLargeScreen
+          ? null
+          : FloatingActionButton(
+              onPressed: _navigateToNewChat,
+              tooltip: 'New Chat',
+              child: const Icon(Icons.chat_bubble_outline),
             ),
       body: Stack(
         children: [
@@ -102,12 +131,17 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                                 title: const Text('Chats'),
                                 actions: [
                                   IconButton(
-                                    icon: const Icon(Icons.add),
-                                    onPressed: () {
-                                      // TODO: Navigate to create room screen
-                                    },
+                                    icon: const Icon(Icons.contacts_outlined),
+                                    onPressed: _navigateToContacts,
+                                    tooltip: 'Contacts',
                                   ),
                                 ],
+                              ),
+                              drawer: const AppDrawer(),
+                              floatingActionButton: FloatingActionButton(
+                                onPressed: _navigateToNewChat,
+                                tooltip: 'New Chat',
+                                child: const Icon(Icons.chat_bubble_outline),
                               ),
                               body: _buildRoomList(roomsAsync, isLargeScreen),
                             ),
@@ -153,9 +187,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                   title: 'No conversations yet',
                   message: 'Start a new conversation to begin chatting',
                   actionLabel: 'New Chat',
-                  onAction: () {
-                    // TODO: Navigate to create room screen
-                  },
+                  onAction: _navigateToNewChat,
                 );
               }
               return ListView.builder(

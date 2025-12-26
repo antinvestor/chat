@@ -364,11 +364,11 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   }
 }
 
-class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
+class $RosterTable extends Roster with TableInfo<$RosterTable, RosterData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $ContactsTable(this.attachedDatabase, [this._alias]);
+  $RosterTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -388,9 +388,55 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contactIdMeta = const VerificationMeta(
+    'contactId',
+  );
+  @override
+  late final GeneratedColumn<String> contactId = GeneratedColumn<String>(
+    'contact_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _contactTypeMeta = const VerificationMeta(
+    'contactType',
+  );
+  @override
+  late final GeneratedColumn<int> contactType = GeneratedColumn<int>(
+    'contact_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _contactDetailMeta = const VerificationMeta(
+    'contactDetail',
+  );
+  @override
+  late final GeneratedColumn<String> contactDetail = GeneratedColumn<String>(
+    'contact_detail',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isVerifiedMeta = const VerificationMeta(
+    'isVerified',
+  );
+  @override
+  late final GeneratedColumn<bool> isVerified = GeneratedColumn<bool>(
+    'is_verified',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES profiles (id)',
+      'CHECK ("is_verified" IN (0, 1))',
     ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _displayNameMeta = const VerificationMeta(
     'displayName',
@@ -398,17 +444,6 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
   @override
   late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
     'display_name',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _phoneHashMeta = const VerificationMeta(
-    'phoneHash',
-  );
-  @override
-  late final GeneratedColumn<String> phoneHash = GeneratedColumn<String>(
-    'phone_hash',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -429,6 +464,17 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -444,19 +490,23 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
   List<GeneratedColumn> get $columns => [
     id,
     profileId,
+    contactId,
+    contactType,
+    contactDetail,
+    isVerified,
     displayName,
-    phoneHash,
     isBlocked,
+    syncedAt,
     createdAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'contacts';
+  static const String $name = 'roster';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Contact> instance, {
+    Insertable<RosterData> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -474,6 +524,38 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
     } else if (isInserting) {
       context.missing(_profileIdMeta);
     }
+    if (data.containsKey('contact_id')) {
+      context.handle(
+        _contactIdMeta,
+        contactId.isAcceptableOrUnknown(data['contact_id']!, _contactIdMeta),
+      );
+    }
+    if (data.containsKey('contact_type')) {
+      context.handle(
+        _contactTypeMeta,
+        contactType.isAcceptableOrUnknown(
+          data['contact_type']!,
+          _contactTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('contact_detail')) {
+      context.handle(
+        _contactDetailMeta,
+        contactDetail.isAcceptableOrUnknown(
+          data['contact_detail']!,
+          _contactDetailMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contactDetailMeta);
+    }
+    if (data.containsKey('is_verified')) {
+      context.handle(
+        _isVerifiedMeta,
+        isVerified.isAcceptableOrUnknown(data['is_verified']!, _isVerifiedMeta),
+      );
+    }
     if (data.containsKey('display_name')) {
       context.handle(
         _displayNameMeta,
@@ -483,16 +565,16 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
         ),
       );
     }
-    if (data.containsKey('phone_hash')) {
-      context.handle(
-        _phoneHashMeta,
-        phoneHash.isAcceptableOrUnknown(data['phone_hash']!, _phoneHashMeta),
-      );
-    }
     if (data.containsKey('is_blocked')) {
       context.handle(
         _isBlockedMeta,
         isBlocked.isAcceptableOrUnknown(data['is_blocked']!, _isBlockedMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -507,9 +589,9 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Contact map(Map<String, dynamic> data, {String? tablePrefix}) {
+  RosterData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Contact(
+    return RosterData(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -518,18 +600,34 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
         DriftSqlType.string,
         data['${effectivePrefix}profile_id'],
       )!,
+      contactId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contact_id'],
+      ),
+      contactType: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}contact_type'],
+      )!,
+      contactDetail: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contact_detail'],
+      )!,
+      isVerified: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_verified'],
+      )!,
       displayName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
-      ),
-      phoneHash: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}phone_hash'],
       ),
       isBlocked: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_blocked'],
       )!,
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -538,24 +636,32 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
   }
 
   @override
-  $ContactsTable createAlias(String alias) {
-    return $ContactsTable(attachedDatabase, alias);
+  $RosterTable createAlias(String alias) {
+    return $RosterTable(attachedDatabase, alias);
   }
 }
 
-class Contact extends DataClass implements Insertable<Contact> {
+class RosterData extends DataClass implements Insertable<RosterData> {
   final String id;
   final String profileId;
+  final String? contactId;
+  final int contactType;
+  final String contactDetail;
+  final bool isVerified;
   final String? displayName;
-  final String? phoneHash;
   final bool isBlocked;
+  final int? syncedAt;
   final int? createdAt;
-  const Contact({
+  const RosterData({
     required this.id,
     required this.profileId,
+    this.contactId,
+    required this.contactType,
+    required this.contactDetail,
+    required this.isVerified,
     this.displayName,
-    this.phoneHash,
     required this.isBlocked,
+    this.syncedAt,
     this.createdAt,
   });
   @override
@@ -563,47 +669,63 @@ class Contact extends DataClass implements Insertable<Contact> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['profile_id'] = Variable<String>(profileId);
+    if (!nullToAbsent || contactId != null) {
+      map['contact_id'] = Variable<String>(contactId);
+    }
+    map['contact_type'] = Variable<int>(contactType);
+    map['contact_detail'] = Variable<String>(contactDetail);
+    map['is_verified'] = Variable<bool>(isVerified);
     if (!nullToAbsent || displayName != null) {
       map['display_name'] = Variable<String>(displayName);
     }
-    if (!nullToAbsent || phoneHash != null) {
-      map['phone_hash'] = Variable<String>(phoneHash);
-    }
     map['is_blocked'] = Variable<bool>(isBlocked);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<int>(createdAt);
     }
     return map;
   }
 
-  ContactsCompanion toCompanion(bool nullToAbsent) {
-    return ContactsCompanion(
+  RosterCompanion toCompanion(bool nullToAbsent) {
+    return RosterCompanion(
       id: Value(id),
       profileId: Value(profileId),
+      contactId: contactId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contactId),
+      contactType: Value(contactType),
+      contactDetail: Value(contactDetail),
+      isVerified: Value(isVerified),
       displayName: displayName == null && nullToAbsent
           ? const Value.absent()
           : Value(displayName),
-      phoneHash: phoneHash == null && nullToAbsent
-          ? const Value.absent()
-          : Value(phoneHash),
       isBlocked: Value(isBlocked),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
     );
   }
 
-  factory Contact.fromJson(
+  factory RosterData.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Contact(
+    return RosterData(
       id: serializer.fromJson<String>(json['id']),
       profileId: serializer.fromJson<String>(json['profileId']),
+      contactId: serializer.fromJson<String?>(json['contactId']),
+      contactType: serializer.fromJson<int>(json['contactType']),
+      contactDetail: serializer.fromJson<String>(json['contactDetail']),
+      isVerified: serializer.fromJson<bool>(json['isVerified']),
       displayName: serializer.fromJson<String?>(json['displayName']),
-      phoneHash: serializer.fromJson<String?>(json['phoneHash']),
       isBlocked: serializer.fromJson<bool>(json['isBlocked']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
       createdAt: serializer.fromJson<int?>(json['createdAt']),
     );
   }
@@ -613,131 +735,200 @@ class Contact extends DataClass implements Insertable<Contact> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'profileId': serializer.toJson<String>(profileId),
+      'contactId': serializer.toJson<String?>(contactId),
+      'contactType': serializer.toJson<int>(contactType),
+      'contactDetail': serializer.toJson<String>(contactDetail),
+      'isVerified': serializer.toJson<bool>(isVerified),
       'displayName': serializer.toJson<String?>(displayName),
-      'phoneHash': serializer.toJson<String?>(phoneHash),
       'isBlocked': serializer.toJson<bool>(isBlocked),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
       'createdAt': serializer.toJson<int?>(createdAt),
     };
   }
 
-  Contact copyWith({
+  RosterData copyWith({
     String? id,
     String? profileId,
+    Value<String?> contactId = const Value.absent(),
+    int? contactType,
+    String? contactDetail,
+    bool? isVerified,
     Value<String?> displayName = const Value.absent(),
-    Value<String?> phoneHash = const Value.absent(),
     bool? isBlocked,
+    Value<int?> syncedAt = const Value.absent(),
     Value<int?> createdAt = const Value.absent(),
-  }) => Contact(
+  }) => RosterData(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
+    contactId: contactId.present ? contactId.value : this.contactId,
+    contactType: contactType ?? this.contactType,
+    contactDetail: contactDetail ?? this.contactDetail,
+    isVerified: isVerified ?? this.isVerified,
     displayName: displayName.present ? displayName.value : this.displayName,
-    phoneHash: phoneHash.present ? phoneHash.value : this.phoneHash,
     isBlocked: isBlocked ?? this.isBlocked,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
   );
-  Contact copyWithCompanion(ContactsCompanion data) {
-    return Contact(
+  RosterData copyWithCompanion(RosterCompanion data) {
+    return RosterData(
       id: data.id.present ? data.id.value : this.id,
       profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      contactId: data.contactId.present ? data.contactId.value : this.contactId,
+      contactType: data.contactType.present
+          ? data.contactType.value
+          : this.contactType,
+      contactDetail: data.contactDetail.present
+          ? data.contactDetail.value
+          : this.contactDetail,
+      isVerified: data.isVerified.present
+          ? data.isVerified.value
+          : this.isVerified,
       displayName: data.displayName.present
           ? data.displayName.value
           : this.displayName,
-      phoneHash: data.phoneHash.present ? data.phoneHash.value : this.phoneHash,
       isBlocked: data.isBlocked.present ? data.isBlocked.value : this.isBlocked,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('Contact(')
+    return (StringBuffer('RosterData(')
           ..write('id: $id, ')
           ..write('profileId: $profileId, ')
+          ..write('contactId: $contactId, ')
+          ..write('contactType: $contactType, ')
+          ..write('contactDetail: $contactDetail, ')
+          ..write('isVerified: $isVerified, ')
           ..write('displayName: $displayName, ')
-          ..write('phoneHash: $phoneHash, ')
           ..write('isBlocked: $isBlocked, ')
+          ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, profileId, displayName, phoneHash, isBlocked, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    contactId,
+    contactType,
+    contactDetail,
+    isVerified,
+    displayName,
+    isBlocked,
+    syncedAt,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Contact &&
+      (other is RosterData &&
           other.id == this.id &&
           other.profileId == this.profileId &&
+          other.contactId == this.contactId &&
+          other.contactType == this.contactType &&
+          other.contactDetail == this.contactDetail &&
+          other.isVerified == this.isVerified &&
           other.displayName == this.displayName &&
-          other.phoneHash == this.phoneHash &&
           other.isBlocked == this.isBlocked &&
+          other.syncedAt == this.syncedAt &&
           other.createdAt == this.createdAt);
 }
 
-class ContactsCompanion extends UpdateCompanion<Contact> {
+class RosterCompanion extends UpdateCompanion<RosterData> {
   final Value<String> id;
   final Value<String> profileId;
+  final Value<String?> contactId;
+  final Value<int> contactType;
+  final Value<String> contactDetail;
+  final Value<bool> isVerified;
   final Value<String?> displayName;
-  final Value<String?> phoneHash;
   final Value<bool> isBlocked;
+  final Value<int?> syncedAt;
   final Value<int?> createdAt;
   final Value<int> rowid;
-  const ContactsCompanion({
+  const RosterCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
+    this.contactId = const Value.absent(),
+    this.contactType = const Value.absent(),
+    this.contactDetail = const Value.absent(),
+    this.isVerified = const Value.absent(),
     this.displayName = const Value.absent(),
-    this.phoneHash = const Value.absent(),
     this.isBlocked = const Value.absent(),
+    this.syncedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  ContactsCompanion.insert({
+  RosterCompanion.insert({
     required String id,
     required String profileId,
+    this.contactId = const Value.absent(),
+    this.contactType = const Value.absent(),
+    required String contactDetail,
+    this.isVerified = const Value.absent(),
     this.displayName = const Value.absent(),
-    this.phoneHash = const Value.absent(),
     this.isBlocked = const Value.absent(),
+    this.syncedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       profileId = Value(profileId);
-  static Insertable<Contact> custom({
+       profileId = Value(profileId),
+       contactDetail = Value(contactDetail);
+  static Insertable<RosterData> custom({
     Expression<String>? id,
     Expression<String>? profileId,
+    Expression<String>? contactId,
+    Expression<int>? contactType,
+    Expression<String>? contactDetail,
+    Expression<bool>? isVerified,
     Expression<String>? displayName,
-    Expression<String>? phoneHash,
     Expression<bool>? isBlocked,
+    Expression<int>? syncedAt,
     Expression<int>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (profileId != null) 'profile_id': profileId,
+      if (contactId != null) 'contact_id': contactId,
+      if (contactType != null) 'contact_type': contactType,
+      if (contactDetail != null) 'contact_detail': contactDetail,
+      if (isVerified != null) 'is_verified': isVerified,
       if (displayName != null) 'display_name': displayName,
-      if (phoneHash != null) 'phone_hash': phoneHash,
       if (isBlocked != null) 'is_blocked': isBlocked,
+      if (syncedAt != null) 'synced_at': syncedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  ContactsCompanion copyWith({
+  RosterCompanion copyWith({
     Value<String>? id,
     Value<String>? profileId,
+    Value<String?>? contactId,
+    Value<int>? contactType,
+    Value<String>? contactDetail,
+    Value<bool>? isVerified,
     Value<String?>? displayName,
-    Value<String?>? phoneHash,
     Value<bool>? isBlocked,
+    Value<int?>? syncedAt,
     Value<int?>? createdAt,
     Value<int>? rowid,
   }) {
-    return ContactsCompanion(
+    return RosterCompanion(
       id: id ?? this.id,
       profileId: profileId ?? this.profileId,
+      contactId: contactId ?? this.contactId,
+      contactType: contactType ?? this.contactType,
+      contactDetail: contactDetail ?? this.contactDetail,
+      isVerified: isVerified ?? this.isVerified,
       displayName: displayName ?? this.displayName,
-      phoneHash: phoneHash ?? this.phoneHash,
       isBlocked: isBlocked ?? this.isBlocked,
+      syncedAt: syncedAt ?? this.syncedAt,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -752,14 +943,26 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
     if (profileId.present) {
       map['profile_id'] = Variable<String>(profileId.value);
     }
+    if (contactId.present) {
+      map['contact_id'] = Variable<String>(contactId.value);
+    }
+    if (contactType.present) {
+      map['contact_type'] = Variable<int>(contactType.value);
+    }
+    if (contactDetail.present) {
+      map['contact_detail'] = Variable<String>(contactDetail.value);
+    }
+    if (isVerified.present) {
+      map['is_verified'] = Variable<bool>(isVerified.value);
+    }
     if (displayName.present) {
       map['display_name'] = Variable<String>(displayName.value);
     }
-    if (phoneHash.present) {
-      map['phone_hash'] = Variable<String>(phoneHash.value);
-    }
     if (isBlocked.present) {
       map['is_blocked'] = Variable<bool>(isBlocked.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -772,12 +975,16 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
 
   @override
   String toString() {
-    return (StringBuffer('ContactsCompanion(')
+    return (StringBuffer('RosterCompanion(')
           ..write('id: $id, ')
           ..write('profileId: $profileId, ')
+          ..write('contactId: $contactId, ')
+          ..write('contactType: $contactType, ')
+          ..write('contactDetail: $contactDetail, ')
+          ..write('isVerified: $isVerified, ')
           ..write('displayName: $displayName, ')
-          ..write('phoneHash: $phoneHash, ')
           ..write('isBlocked: $isBlocked, ')
+          ..write('syncedAt: $syncedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3682,11 +3889,275 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   }
 }
 
+class $SyncMetadataTable extends SyncMetadata
+    with TableInfo<$SyncMetadataTable, SyncMetadataData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncMetadataTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [key, value, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_metadata';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncMetadataData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  SyncMetadataData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncMetadataData(
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+    );
+  }
+
+  @override
+  $SyncMetadataTable createAlias(String alias) {
+    return $SyncMetadataTable(attachedDatabase, alias);
+  }
+}
+
+class SyncMetadataData extends DataClass
+    implements Insertable<SyncMetadataData> {
+  final String key;
+  final String? value;
+  final int? updatedAt;
+  const SyncMetadataData({required this.key, this.value, this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    if (!nullToAbsent || value != null) {
+      map['value'] = Variable<String>(value);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    return map;
+  }
+
+  SyncMetadataCompanion toCompanion(bool nullToAbsent) {
+    return SyncMetadataCompanion(
+      key: Value(key),
+      value: value == null && nullToAbsent
+          ? const Value.absent()
+          : Value(value),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory SyncMetadataData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncMetadataData(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String?>(json['value']),
+      updatedAt: serializer.fromJson<int?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String?>(value),
+      'updatedAt': serializer.toJson<int?>(updatedAt),
+    };
+  }
+
+  SyncMetadataData copyWith({
+    String? key,
+    Value<String?> value = const Value.absent(),
+    Value<int?> updatedAt = const Value.absent(),
+  }) => SyncMetadataData(
+    key: key ?? this.key,
+    value: value.present ? value.value : this.value,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+  );
+  SyncMetadataData copyWithCompanion(SyncMetadataCompanion data) {
+    return SyncMetadataData(
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncMetadataData(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncMetadataData &&
+          other.key == this.key &&
+          other.value == this.value &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataData> {
+  final Value<String> key;
+  final Value<String?> value;
+  final Value<int?> updatedAt;
+  final Value<int> rowid;
+  const SyncMetadataCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncMetadataCompanion.insert({
+    required String key,
+    this.value = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : key = Value(key);
+  static Insertable<SyncMetadataData> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncMetadataCompanion copyWith({
+    Value<String>? key,
+    Value<String?>? value,
+    Value<int?>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return SyncMetadataCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncMetadataCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ProfilesTable profiles = $ProfilesTable(this);
-  late final $ContactsTable contacts = $ContactsTable(this);
+  late final $RosterTable roster = $RosterTable(this);
   late final $RoomsTable rooms = $RoomsTable(this);
   late final $RoomMembersTable roomMembers = $RoomMembersTable(this);
   late final $RoomEventsTable roomEvents = $RoomEventsTable(this);
@@ -3694,13 +4165,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PrekeysTable prekeys = $PrekeysTable(this);
   late final $PendingJobsTable pendingJobs = $PendingJobsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
+  late final $SyncMetadataTable syncMetadata = $SyncMetadataTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     profiles,
-    contacts,
+    roster,
     rooms,
     roomMembers,
     roomEvents,
@@ -3708,6 +4180,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     prekeys,
     pendingJobs,
     transactions,
+    syncMetadata,
   ];
 }
 
@@ -3733,25 +4206,6 @@ typedef $$ProfilesTableUpdateCompanionBuilder =
 final class $$ProfilesTableReferences
     extends BaseReferences<_$AppDatabase, $ProfilesTable, Profile> {
   $$ProfilesTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static MultiTypedResultKey<$ContactsTable, List<Contact>> _contactsRefsTable(
-    _$AppDatabase db,
-  ) => MultiTypedResultKey.fromTable(
-    db.contacts,
-    aliasName: $_aliasNameGenerator(db.profiles.id, db.contacts.profileId),
-  );
-
-  $$ContactsTableProcessedTableManager get contactsRefs {
-    final manager = $$ContactsTableTableManager(
-      $_db,
-      $_db.contacts,
-    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_contactsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
 
   static MultiTypedResultKey<$RoomMembersTable, List<RoomMember>>
   _roomMembersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
@@ -3805,31 +4259,6 @@ class $$ProfilesTableFilterComposer
     column: $table.metadata,
     builder: (column) => ColumnFilters(column),
   );
-
-  Expression<bool> contactsRefs(
-    Expression<bool> Function($$ContactsTableFilterComposer f) f,
-  ) {
-    final $$ContactsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.contacts,
-      getReferencedColumn: (t) => t.profileId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContactsTableFilterComposer(
-            $db: $db,
-            $table: $db.contacts,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 
   Expression<bool> roomMembersRefs(
     Expression<bool> Function($$RoomMembersTableFilterComposer f) f,
@@ -3916,31 +4345,6 @@ class $$ProfilesTableAnnotationComposer
   GeneratedColumn<String> get metadata =>
       $composableBuilder(column: $table.metadata, builder: (column) => column);
 
-  Expression<T> contactsRefs<T extends Object>(
-    Expression<T> Function($$ContactsTableAnnotationComposer a) f,
-  ) {
-    final $$ContactsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.contacts,
-      getReferencedColumn: (t) => t.profileId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ContactsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.contacts,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
   Expression<T> roomMembersRefs<T extends Object>(
     Expression<T> Function($$RoomMembersTableAnnotationComposer a) f,
   ) {
@@ -3980,7 +4384,7 @@ class $$ProfilesTableTableManager
           $$ProfilesTableUpdateCompanionBuilder,
           (Profile, $$ProfilesTableReferences),
           Profile,
-          PrefetchHooks Function({bool contactsRefs, bool roomMembersRefs})
+          PrefetchHooks Function({bool roomMembersRefs})
         > {
   $$ProfilesTableTableManager(_$AppDatabase db, $ProfilesTable table)
     : super(
@@ -4033,63 +4437,35 @@ class $$ProfilesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback:
-              ({contactsRefs = false, roomMembersRefs = false}) {
-                return PrefetchHooks(
-                  db: db,
-                  explicitlyWatchedTables: [
-                    if (contactsRefs) db.contacts,
-                    if (roomMembersRefs) db.roomMembers,
-                  ],
-                  addJoins: null,
-                  getPrefetchedDataCallback: (items) async {
-                    return [
-                      if (contactsRefs)
-                        await $_getPrefetchedData<
-                          Profile,
-                          $ProfilesTable,
-                          Contact
-                        >(
-                          currentTable: table,
-                          referencedTable: $$ProfilesTableReferences
-                              ._contactsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$ProfilesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).contactsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.profileId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (roomMembersRefs)
-                        await $_getPrefetchedData<
-                          Profile,
-                          $ProfilesTable,
-                          RoomMember
-                        >(
-                          currentTable: table,
-                          referencedTable: $$ProfilesTableReferences
-                              ._roomMembersRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$ProfilesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).roomMembersRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.profileId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                    ];
-                  },
-                );
+          prefetchHooksCallback: ({roomMembersRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (roomMembersRefs) db.roomMembers],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (roomMembersRefs)
+                    await $_getPrefetchedData<
+                      Profile,
+                      $ProfilesTable,
+                      RoomMember
+                    >(
+                      currentTable: table,
+                      referencedTable: $$ProfilesTableReferences
+                          ._roomMembersRefsTable(db),
+                      managerFromTypedResult: (p0) => $$ProfilesTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).roomMembersRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.profileId == item.id),
+                      typedResults: items,
+                    ),
+                ];
               },
+            );
+          },
         ),
       );
 }
@@ -4106,54 +4482,40 @@ typedef $$ProfilesTableProcessedTableManager =
       $$ProfilesTableUpdateCompanionBuilder,
       (Profile, $$ProfilesTableReferences),
       Profile,
-      PrefetchHooks Function({bool contactsRefs, bool roomMembersRefs})
+      PrefetchHooks Function({bool roomMembersRefs})
     >;
-typedef $$ContactsTableCreateCompanionBuilder =
-    ContactsCompanion Function({
+typedef $$RosterTableCreateCompanionBuilder =
+    RosterCompanion Function({
       required String id,
       required String profileId,
+      Value<String?> contactId,
+      Value<int> contactType,
+      required String contactDetail,
+      Value<bool> isVerified,
       Value<String?> displayName,
-      Value<String?> phoneHash,
       Value<bool> isBlocked,
+      Value<int?> syncedAt,
       Value<int?> createdAt,
       Value<int> rowid,
     });
-typedef $$ContactsTableUpdateCompanionBuilder =
-    ContactsCompanion Function({
+typedef $$RosterTableUpdateCompanionBuilder =
+    RosterCompanion Function({
       Value<String> id,
       Value<String> profileId,
+      Value<String?> contactId,
+      Value<int> contactType,
+      Value<String> contactDetail,
+      Value<bool> isVerified,
       Value<String?> displayName,
-      Value<String?> phoneHash,
       Value<bool> isBlocked,
+      Value<int?> syncedAt,
       Value<int?> createdAt,
       Value<int> rowid,
     });
 
-final class $$ContactsTableReferences
-    extends BaseReferences<_$AppDatabase, $ContactsTable, Contact> {
-  $$ContactsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $ProfilesTable _profileIdTable(_$AppDatabase db) => db.profiles
-      .createAlias($_aliasNameGenerator(db.contacts.profileId, db.profiles.id));
-
-  $$ProfilesTableProcessedTableManager get profileId {
-    final $_column = $_itemColumn<String>('profile_id')!;
-
-    final manager = $$ProfilesTableTableManager(
-      $_db,
-      $_db.profiles,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$ContactsTableFilterComposer
-    extends Composer<_$AppDatabase, $ContactsTable> {
-  $$ContactsTableFilterComposer({
+class $$RosterTableFilterComposer
+    extends Composer<_$AppDatabase, $RosterTable> {
+  $$RosterTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4165,13 +4527,33 @@ class $$ContactsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get displayName => $composableBuilder(
-    column: $table.displayName,
+  ColumnFilters<String> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get phoneHash => $composableBuilder(
-    column: $table.phoneHash,
+  ColumnFilters<String> get contactId => $composableBuilder(
+    column: $table.contactId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contactType => $composableBuilder(
+    column: $table.contactType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contactDetail => $composableBuilder(
+    column: $table.contactDetail,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isVerified => $composableBuilder(
+    column: $table.isVerified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4180,38 +4562,20 @@ class $$ContactsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$ProfilesTableFilterComposer get profileId {
-    final $$ProfilesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.profiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ProfilesTableFilterComposer(
-            $db: $db,
-            $table: $db.profiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
-class $$ContactsTableOrderingComposer
-    extends Composer<_$AppDatabase, $ContactsTable> {
-  $$ContactsTableOrderingComposer({
+class $$RosterTableOrderingComposer
+    extends Composer<_$AppDatabase, $RosterTable> {
+  $$RosterTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4223,13 +4587,33 @@ class $$ContactsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get displayName => $composableBuilder(
-    column: $table.displayName,
+  ColumnOrderings<String> get profileId => $composableBuilder(
+    column: $table.profileId,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get phoneHash => $composableBuilder(
-    column: $table.phoneHash,
+  ColumnOrderings<String> get contactId => $composableBuilder(
+    column: $table.contactId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contactType => $composableBuilder(
+    column: $table.contactType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contactDetail => $composableBuilder(
+    column: $table.contactDetail,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isVerified => $composableBuilder(
+    column: $table.isVerified,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4238,38 +4622,20 @@ class $$ContactsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$ProfilesTableOrderingComposer get profileId {
-    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.profiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ProfilesTableOrderingComposer(
-            $db: $db,
-            $table: $db.profiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
-class $$ContactsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ContactsTable> {
-  $$ContactsTableAnnotationComposer({
+class $$RosterTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RosterTable> {
+  $$RosterTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4279,85 +4645,91 @@ class $$ContactsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => column);
+
+  GeneratedColumn<int> get contactType => $composableBuilder(
+    column: $table.contactType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contactDetail => $composableBuilder(
+    column: $table.contactDetail,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isVerified => $composableBuilder(
+    column: $table.isVerified,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get displayName => $composableBuilder(
     column: $table.displayName,
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get phoneHash =>
-      $composableBuilder(column: $table.phoneHash, builder: (column) => column);
-
   GeneratedColumn<bool> get isBlocked =>
       $composableBuilder(column: $table.isBlocked, builder: (column) => column);
 
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  $$ProfilesTableAnnotationComposer get profileId {
-    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.profiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ProfilesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.profiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
-class $$ContactsTableTableManager
+class $$RosterTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $ContactsTable,
-          Contact,
-          $$ContactsTableFilterComposer,
-          $$ContactsTableOrderingComposer,
-          $$ContactsTableAnnotationComposer,
-          $$ContactsTableCreateCompanionBuilder,
-          $$ContactsTableUpdateCompanionBuilder,
-          (Contact, $$ContactsTableReferences),
-          Contact,
-          PrefetchHooks Function({bool profileId})
+          $RosterTable,
+          RosterData,
+          $$RosterTableFilterComposer,
+          $$RosterTableOrderingComposer,
+          $$RosterTableAnnotationComposer,
+          $$RosterTableCreateCompanionBuilder,
+          $$RosterTableUpdateCompanionBuilder,
+          (RosterData, BaseReferences<_$AppDatabase, $RosterTable, RosterData>),
+          RosterData,
+          PrefetchHooks Function()
         > {
-  $$ContactsTableTableManager(_$AppDatabase db, $ContactsTable table)
+  $$RosterTableTableManager(_$AppDatabase db, $RosterTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$ContactsTableFilterComposer($db: db, $table: table),
+              $$RosterTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$ContactsTableOrderingComposer($db: db, $table: table),
+              $$RosterTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$ContactsTableAnnotationComposer($db: db, $table: table),
+              $$RosterTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> profileId = const Value.absent(),
+                Value<String?> contactId = const Value.absent(),
+                Value<int> contactType = const Value.absent(),
+                Value<String> contactDetail = const Value.absent(),
+                Value<bool> isVerified = const Value.absent(),
                 Value<String?> displayName = const Value.absent(),
-                Value<String?> phoneHash = const Value.absent(),
                 Value<bool> isBlocked = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => ContactsCompanion(
+              }) => RosterCompanion(
                 id: id,
                 profileId: profileId,
+                contactId: contactId,
+                contactType: contactType,
+                contactDetail: contactDetail,
+                isVerified: isVerified,
                 displayName: displayName,
-                phoneHash: phoneHash,
                 isBlocked: isBlocked,
+                syncedAt: syncedAt,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -4365,86 +4737,49 @@ class $$ContactsTableTableManager
               ({
                 required String id,
                 required String profileId,
+                Value<String?> contactId = const Value.absent(),
+                Value<int> contactType = const Value.absent(),
+                required String contactDetail,
+                Value<bool> isVerified = const Value.absent(),
                 Value<String?> displayName = const Value.absent(),
-                Value<String?> phoneHash = const Value.absent(),
                 Value<bool> isBlocked = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
                 Value<int?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => ContactsCompanion.insert(
+              }) => RosterCompanion.insert(
                 id: id,
                 profileId: profileId,
+                contactId: contactId,
+                contactType: contactType,
+                contactDetail: contactDetail,
+                isVerified: isVerified,
                 displayName: displayName,
-                phoneHash: phoneHash,
                 isBlocked: isBlocked,
+                syncedAt: syncedAt,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$ContactsTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({profileId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (profileId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.profileId,
-                                referencedTable: $$ContactsTableReferences
-                                    ._profileIdTable(db),
-                                referencedColumn: $$ContactsTableReferences
-                                    ._profileIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ),
       );
 }
 
-typedef $$ContactsTableProcessedTableManager =
+typedef $$RosterTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $ContactsTable,
-      Contact,
-      $$ContactsTableFilterComposer,
-      $$ContactsTableOrderingComposer,
-      $$ContactsTableAnnotationComposer,
-      $$ContactsTableCreateCompanionBuilder,
-      $$ContactsTableUpdateCompanionBuilder,
-      (Contact, $$ContactsTableReferences),
-      Contact,
-      PrefetchHooks Function({bool profileId})
+      $RosterTable,
+      RosterData,
+      $$RosterTableFilterComposer,
+      $$RosterTableOrderingComposer,
+      $$RosterTableAnnotationComposer,
+      $$RosterTableCreateCompanionBuilder,
+      $$RosterTableUpdateCompanionBuilder,
+      (RosterData, BaseReferences<_$AppDatabase, $RosterTable, RosterData>),
+      RosterData,
+      PrefetchHooks Function()
     >;
 typedef $$RoomsTableCreateCompanionBuilder =
     RoomsCompanion Function({
@@ -6702,14 +7037,176 @@ typedef $$TransactionsTableProcessedTableManager =
       Transaction,
       PrefetchHooks Function({bool roomId})
     >;
+typedef $$SyncMetadataTableCreateCompanionBuilder =
+    SyncMetadataCompanion Function({
+      required String key,
+      Value<String?> value,
+      Value<int?> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$SyncMetadataTableUpdateCompanionBuilder =
+    SyncMetadataCompanion Function({
+      Value<String> key,
+      Value<String?> value,
+      Value<int?> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$SyncMetadataTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncMetadataTable> {
+  $$SyncMetadataTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncMetadataTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncMetadataTable> {
+  $$SyncMetadataTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncMetadataTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncMetadataTable> {
+  $$SyncMetadataTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$SyncMetadataTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncMetadataTable,
+          SyncMetadataData,
+          $$SyncMetadataTableFilterComposer,
+          $$SyncMetadataTableOrderingComposer,
+          $$SyncMetadataTableAnnotationComposer,
+          $$SyncMetadataTableCreateCompanionBuilder,
+          $$SyncMetadataTableUpdateCompanionBuilder,
+          (
+            SyncMetadataData,
+            BaseReferences<_$AppDatabase, $SyncMetadataTable, SyncMetadataData>,
+          ),
+          SyncMetadataData,
+          PrefetchHooks Function()
+        > {
+  $$SyncMetadataTableTableManager(_$AppDatabase db, $SyncMetadataTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncMetadataTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncMetadataTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncMetadataTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> key = const Value.absent(),
+                Value<String?> value = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncMetadataCompanion(
+                key: key,
+                value: value,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String key,
+                Value<String?> value = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncMetadataCompanion.insert(
+                key: key,
+                value: value,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncMetadataTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncMetadataTable,
+      SyncMetadataData,
+      $$SyncMetadataTableFilterComposer,
+      $$SyncMetadataTableOrderingComposer,
+      $$SyncMetadataTableAnnotationComposer,
+      $$SyncMetadataTableCreateCompanionBuilder,
+      $$SyncMetadataTableUpdateCompanionBuilder,
+      (
+        SyncMetadataData,
+        BaseReferences<_$AppDatabase, $SyncMetadataTable, SyncMetadataData>,
+      ),
+      SyncMetadataData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$ProfilesTableTableManager get profiles =>
       $$ProfilesTableTableManager(_db, _db.profiles);
-  $$ContactsTableTableManager get contacts =>
-      $$ContactsTableTableManager(_db, _db.contacts);
+  $$RosterTableTableManager get roster =>
+      $$RosterTableTableManager(_db, _db.roster);
   $$RoomsTableTableManager get rooms =>
       $$RoomsTableTableManager(_db, _db.rooms);
   $$RoomMembersTableTableManager get roomMembers =>
@@ -6724,4 +7221,6 @@ class $AppDatabaseManager {
       $$PendingJobsTableTableManager(_db, _db.pendingJobs);
   $$TransactionsTableTableManager get transactions =>
       $$TransactionsTableTableManager(_db, _db.transactions);
+  $$SyncMetadataTableTableManager get syncMetadata =>
+      $$SyncMetadataTableTableManager(_db, _db.syncMetadata);
 }

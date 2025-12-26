@@ -15,12 +15,18 @@ class Profiles extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-class Contacts extends Table {
+/// Roster table mirrors the server roster with minimal contact information.
+/// The contact detail (email/msisdn) is stored locally as-is for display.
+class Roster extends Table {
   TextColumn get id => text()();
-  TextColumn get profileId => text().references(Profiles, #id)();
+  TextColumn get profileId => text()();
+  TextColumn get contactId => text().nullable()();
+  IntColumn get contactType => integer().withDefault(const Constant(0))();
+  TextColumn get contactDetail => text()();
+  BoolColumn get isVerified => boolean().withDefault(const Constant(false))();
   TextColumn get displayName => text().nullable()();
-  TextColumn get phoneHash => text().nullable()();
   BoolColumn get isBlocked => boolean().withDefault(const Constant(false))();
+  IntColumn get syncedAt => integer().nullable()();
   IntColumn get createdAt => integer().nullable()();
 
   @override
@@ -105,9 +111,18 @@ class Transactions extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class SyncMetadata extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text().nullable()();
+  IntColumn get updatedAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
 @DriftDatabase(tables: [
   Profiles,
-  Contacts,
+  Roster,
   Rooms,
   RoomMembers,
   RoomEvents,
@@ -115,6 +130,7 @@ class Transactions extends Table {
   Prekeys,
   PendingJobs,
   Transactions,
+  SyncMetadata,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
@@ -122,7 +138,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -131,7 +147,14 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Handle migrations
+        if (from < 3) {
+          await m.createTable(syncMetadata);
+        }
+        if (from < 4) {
+          // Drop old Contacts table and create new Roster table
+          await m.deleteTable('contacts');
+          await m.createTable(roster);
+        }
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');

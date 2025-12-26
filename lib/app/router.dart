@@ -7,8 +7,6 @@ import '../features/auth/data/auth_repository.dart';
 import '../features/auth/data/auth_state_provider.dart';
 import '../features/auth/ui/login_screen.dart';
 import '../features/messages/ui/chat_screen.dart';
-import '../features/onboarding/data/onboarding_repository.dart';
-import '../features/onboarding/ui/contact_sync_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
 
 part 'router.g.dart';
@@ -32,7 +30,6 @@ AuthChangeNotifier authChangeNotifier(Ref ref) {
 @riverpod
 GoRouter router(Ref ref) {
   final authRepository = ref.watch(authRepositoryProvider);
-  final onboardingRepository = ref.watch(onboardingRepositoryProvider);
   final authChangeNotifier = ref.watch(authChangeProvider);
 
   return GoRouter(
@@ -41,28 +38,15 @@ GoRouter router(Ref ref) {
     redirect: (context, state) async {
       final isLoggedIn = await authRepository.isLoggedIn();
       final isLoginRoute = state.matchedLocation == '/login';
-      final isOnboardingRoute = state.matchedLocation == '/onboarding/contacts';
 
       // If not logged in and not on login page, redirect to login
       if (!isLoggedIn && !isLoginRoute) {
         return '/login';
       }
 
-      // If logged in and on login page, check if needs onboarding
+      // If logged in and on login page, go to home
       if (isLoggedIn && isLoginRoute) {
-        final hasContactsSynced = await onboardingRepository.hasContactsSynced();
-        if (!hasContactsSynced) {
-          return '/onboarding/contacts';
-        }
         return '/';
-      }
-
-      // If logged in and going to home, check if needs onboarding first
-      if (isLoggedIn && state.matchedLocation == '/' && !isOnboardingRoute) {
-        final hasContactsSynced = await onboardingRepository.hasContactsSynced();
-        if (!hasContactsSynced) {
-          return '/onboarding/contacts';
-        }
       }
 
       return null; // No redirect needed
@@ -70,10 +54,6 @@ GoRouter router(Ref ref) {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/', builder: (context, state) => const RoomListScreen()),
-      GoRoute(
-        path: '/onboarding/contacts',
-        builder: (context, state) => const ContactSyncScreen(),
-      ),
       GoRoute(
         path: '/chat/:roomId',
         builder: (context, state) {

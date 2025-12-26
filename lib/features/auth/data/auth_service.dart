@@ -109,6 +109,9 @@ class AuthService {
     }
   }
 
+  // Default token lifetime when server doesn't provide expiry (1 hour)
+  static const _defaultTokenLifetime = Duration(hours: 1);
+
   /// Save tokens to secure storage
   Future<void> _saveTokens(TokenResponse token) async {
     await _storage.write(key: 'access_token', value: token.accessToken);
@@ -125,17 +128,20 @@ class AuthService {
       AppLogger.debug('No ID token in response');
     }
 
-    // Store token expiry timestamp
-    if (token.expiresAt != null) {
-      await _storage.write(
-        key: 'token_expires_at',
-        value: token.expiresAt!.millisecondsSinceEpoch.toString(),
-      );
-      AppLogger.debug(
-        'Tokens saved to secure storage',
-        data: {'expiresAt': token.expiresAt!.toIso8601String()},
-      );
-    }
+    // Store token expiry timestamp - use default if server doesn't provide one
+    final expiresAt = token.expiresAt ?? DateTime.now().add(_defaultTokenLifetime);
+    await _storage.write(
+      key: 'token_expires_at',
+      value: expiresAt.millisecondsSinceEpoch.toString(),
+    );
+    
+    AppLogger.debug(
+      'Tokens saved to secure storage',
+      data: {
+        'expiresAt': expiresAt.toIso8601String(),
+        'usingDefault': token.expiresAt == null,
+      },
+    );
   }
 
   /// Get current access token

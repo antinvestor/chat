@@ -204,17 +204,24 @@ class SyncEngine {
       } catch (e, stackTrace) {
         final errorStr = e.toString().toLowerCase();
         final isAuthError = _isAuthenticationError(errorStr);
+        final isNormalDisconnect = _isNormalDisconnect(errorStr);
         
-        AppLogger.error(
-          'Sync connection error',
-          error: e,
-          stackTrace: stackTrace,
-          data: {
-            'reconnectAttempts': _reconnectAttempts,
-            'isAuthError': isAuthError,
-            'authErrorCount': _authErrorCount,
-          },
-        );
+        // Log appropriately based on error type
+        if (isNormalDisconnect) {
+          // Normal server disconnection - just log as debug, will auto-reconnect
+          AppLogger.debug('Sync connection closed by server, will reconnect');
+        } else {
+          AppLogger.error(
+            'Sync connection error',
+            error: e,
+            stackTrace: stackTrace,
+            data: {
+              'reconnectAttempts': _reconnectAttempts,
+              'isAuthError': isAuthError,
+              'authErrorCount': _authErrorCount,
+            },
+          );
+        }
         
         // If it's an auth error, try to refresh token before reconnecting
         if (isAuthError) {
@@ -273,8 +280,26 @@ class SyncEngine {
     }
   }
   
+  /// Check if this is a normal/expected disconnection (not a real error)
+  bool _isNormalDisconnect(String errorStr) {
+    return errorStr.contains('connection closed') ||
+        errorStr.contains('stream was reset') ||
+        errorStr.contains('connection reset') ||
+        errorStr.contains('eof') ||
+        errorStr.contains('cancelled');
+  }
+
   /// Check if an error is an authentication/authorization error
   bool _isAuthenticationError(String errorStr) {
+    // Exclude database errors - these are NOT auth errors
+    if (errorStr.contains('sqliteexception') ||
+        errorStr.contains('foreign key') ||
+        errorStr.contains('constraint failed') ||
+        errorStr.contains('database') ||
+        errorStr.contains('sqlite')) {
+      return false;
+    }
+    
     return errorStr.contains('unauthenticated') ||
         errorStr.contains('unauthorized') ||
         errorStr.contains('invalid authorization') ||
@@ -309,6 +334,19 @@ class SyncEngine {
   }
 
   Future<void> _processPbRoomEvent(pb.RoomEvent event) async {
+    // Skip events with missing required fields
+    if (event.id.isEmpty) {
+      AppLogger.warning('Skipping event with empty id');
+      return;
+    }
+    if (event.roomId.isEmpty) {
+      AppLogger.debug('Skipping system event with no room', data: {
+        'eventId': event.id,
+        'type': event.type.toString(),
+      });
+      return;
+    }
+
     // Deduplicate events
     if (_processedEventIds.contains(event.id)) {
       return;

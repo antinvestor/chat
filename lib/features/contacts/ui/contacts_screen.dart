@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/contact_sync_repository.dart';
 import '../services/contact_service.dart';
+import 'contact_sync_sheet.dart';
 
 class ContactsScreen extends ConsumerStatefulWidget {
   const ContactsScreen({super.key});
@@ -31,21 +32,23 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   Future<void> _syncContacts() async {
+    if (_isSyncing) return;
+    
     setState(() => _isSyncing = true);
+    
     try {
-      await ref.read(contactSyncTriggerProvider.future);
-      ref.invalidate(syncedContactsProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contacts synced successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sync failed: $e')),
-        );
-      }
+      final repo = await ref.read(rosterRepositoryProvider.future);
+      
+      if (!mounted) return;
+      
+      await showContactSyncSheet(
+        context: context,
+        repository: repo,
+        onComplete: () {
+          ref.invalidate(syncedContactsProvider);
+          ref.invalidate(rosterEntriesProvider);
+        },
+      );
     } finally {
       if (mounted) setState(() => _isSyncing = false);
     }
@@ -137,7 +140,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
               ),
               title: Text(contact.displayName),
               subtitle: Text(
-                contact.contactType == ContactSyncType.phone ? 'Phone' : 'Email',
+                contact.contactType == ContactSyncType.msisdn ? 'Phone' : 'Email',
               ),
               trailing: contact.isVerified
                   ? const Icon(Icons.verified, color: Colors.green, size: 20)
