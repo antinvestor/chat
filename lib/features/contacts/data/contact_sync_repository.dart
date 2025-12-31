@@ -6,6 +6,8 @@ export 'roster_repository.dart'
         RosterRepository,
         RosterEntry,
         RosterContactType,
+        ProfileData,
+        ProfileWithContacts,
         SyncProgress,
         SyncProgressCallback,
         SyncState,
@@ -14,7 +16,9 @@ export 'roster_repository.dart'
         rosterSyncTriggerProvider,
         rosterReconcileProvider,
         rosterSyncNeededProvider,
-        blockedRosterEntriesProvider;
+        blockedRosterEntriesProvider,
+        profilesWithContactsProvider,
+        profilesWithContactsStreamProvider;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

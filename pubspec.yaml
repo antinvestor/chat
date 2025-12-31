@@ -33,11 +33,11 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  antinvestor_api_chat: ^1.51.8
-  antinvestor_api_common: ^1.51.4
-  antinvestor_api_device: ^1.51.5
-  antinvestor_api_files: ^1.51.5
-  antinvestor_api_profile: ^1.51.5
+  antinvestor_api_chat: ^1.51.12
+  antinvestor_api_common: ^1.51.11
+  antinvestor_api_device: ^1.51.12
+  antinvestor_api_files: ^1.51.12
+  antinvestor_api_profile: ^1.51.12
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   drift: ^2.30.0
@@ -72,6 +72,7 @@ dependencies:
   web: ^1.1.1
   app_links: ^7.0.0
   crypto: ^3.0.6
+  libphonenumber_plugin: ^0.3.3
 
 
 dev_dependencies:
@@ -152,3 +153,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  antinvestor_api_common:
+    path: ../apis/dart/common

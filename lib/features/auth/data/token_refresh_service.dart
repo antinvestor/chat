@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenRefreshResult;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/networking/client.dart';
 import 'auth_repository.dart';
-import 'auth_service.dart';
+import 'auth_state_provider.dart';
 
 part 'token_refresh_service.g.dart';
 
@@ -15,9 +17,11 @@ part 'token_refresh_service.g.dart';
 /// - Smart scheduling: Schedules next refresh based on token expiry time
 /// - Retry with backoff: Retries transient failures with exponential backoff
 /// - Graceful degradation: Only logs out on permanent errors
+/// - TokenManager sync: Updates TokenManager's in-memory cache after refresh
 class TokenRefreshService {
   final AuthRepository _authRepository;
   final Future<void> Function() _onLogoutNeeded;
+  final Future<void> Function(String token)? _onTokenRefreshed;
   Timer? _refreshTimer;
   Timer? _scheduledRefreshTimer;
   bool _isRefreshing = false;
@@ -29,7 +33,11 @@ class TokenRefreshService {
   static const _maxRetryDelay = Duration(minutes: 2);
   static const _fallbackCheckInterval = Duration(seconds: 30);
 
-  TokenRefreshService(this._authRepository, this._onLogoutNeeded);
+  TokenRefreshService(
+    this._authRepository, 
+    this._onLogoutNeeded, {
+    Future<void> Function(String token)? onTokenRefreshed,
+  }) : _onTokenRefreshed = onTokenRefreshed;
 
   /// Start the token refresh service
   /// Uses smart scheduling based on token expiry time
@@ -136,13 +144,28 @@ class TokenRefreshService {
       case TokenRefreshResult.success:
         _consecutiveFailures = 0;
         AppLogger.info('Background token refresh successful');
+        
+        // Update TokenManager's in-memory cache so Connect RPC clients use the new token
+        if (_onTokenRefreshed != null) {
+          final newToken = await _authRepository.getAccessToken();
+          if (newToken != null) {
+            await _onTokenRefreshed(newToken);
+            AppLogger.debug('TokenManager updated with new token');
+          }
+        }
+        
         // Schedule next refresh based on new token expiry
         await _scheduleNextRefresh();
         break;
         
       case TokenRefreshResult.permanentError:
-        AppLogger.error('Token refresh failed permanently, user must re-login', 
-            data: {'error': result.error});
+        AppLogger.error(
+          'Token refresh failed permanently - forcing re-login',
+          data: {
+            'error': result.error,
+            'action': 'User will be redirected to login screen',
+          },
+        );
         await _onLogoutNeeded();
         stop();
         break;
@@ -209,12 +232,29 @@ class TokenRefreshService {
 @riverpod
 TokenRefreshService tokenRefreshService(Ref ref) {
   final authRepository = ref.watch(authRepositoryProvider);
+  final tokenManager = ref.watch(tokenManagerProvider);
 
-  // Create service with logout callback
-  final service = TokenRefreshService(authRepository, () async {
-    // Logout by clearing tokens
-    await authRepository.logout();
-  });
+  // Create service with logout callback and TokenManager sync
+  final service = TokenRefreshService(
+    authRepository, 
+    () async {
+      AppLogger.warning('Token refresh service triggering re-login flow');
+      
+      // Logout by clearing tokens
+      await authRepository.logout();
+      
+      // Invalidate the auth state notifier to trigger UI update
+      // This ensures the user sees the login screen instead of hanging
+      ref.invalidate(authStateProvider);
+      
+      AppLogger.info('Auth state invalidated - user should see login screen');
+    },
+    onTokenRefreshed: (String newToken) async {
+      // Update TokenManager's in-memory cache so Connect RPC clients use the new token
+      await tokenManager.setAccessToken(newToken);
+      AppLogger.debug('TokenManager in-memory cache updated after background refresh');
+    },
+  );
 
   // Cleanup when provider is disposed
   ref.onDispose(() {

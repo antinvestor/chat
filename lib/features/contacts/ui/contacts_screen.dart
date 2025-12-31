@@ -95,11 +95,11 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   Widget _buildSyncedContactsList() {
-    final syncedAsync = ref.watch(syncedContactsProvider);
+    final profilesAsync = ref.watch(profilesWithContactsProvider);
 
-    return syncedAsync.when(
-      data: (contacts) {
-        if (contacts.isEmpty) {
+    return profilesAsync.when(
+      data: (profiles) {
+        if (profiles.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -123,30 +123,10 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
           );
         }
         return ListView.builder(
-          itemCount: contacts.length,
+          itemCount: profiles.length,
           itemBuilder: (context, index) {
-            final contact = contacts[index];
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Text(
-                  contact.displayName.isNotEmpty
-                      ? contact.displayName[0].toUpperCase()
-                      : '?',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                ),
-              ),
-              title: Text(contact.displayName),
-              subtitle: Text(
-                contact.contactType == ContactSyncType.msisdn ? 'Phone' : 'Email',
-              ),
-              trailing: contact.isVerified
-                  ? const Icon(Icons.verified, color: Colors.green, size: 20)
-                  : null,
-              onTap: () => _startChatWithContact(contact),
-            );
+            final profileWithContacts = profiles[index];
+            return _buildProfileCard(profileWithContacts);
           },
         );
       },
@@ -158,13 +138,171 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
             Text('Error: $error'),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: () => ref.invalidate(syncedContactsProvider),
+              onPressed: () => ref.invalidate(profilesWithContactsProvider),
               child: const Text('Retry'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Build a profile card showing profile info enriched with contacts
+  Widget _buildProfileCard(ProfileWithContacts profileWithContacts) {
+    final theme = Theme.of(context);
+    final displayName = profileWithContacts.displayName;
+    final avatarUrl = profileWithContacts.avatarUrl;
+    final hasVerified = profileWithContacts.hasVerifiedContact;
+    final contactSummary = profileWithContacts.contactSummary;
+    final contacts = profileWithContacts.contacts;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: InkWell(
+        onTap: () => _startChatWithProfile(profileWithContacts),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Avatar
+              _buildAvatar(displayName, avatarUrl, theme),
+              const SizedBox(width: 12),
+              // Profile info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Name with verified badge
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            displayName,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (hasVerified)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Icon(
+                              Icons.verified,
+                              color: theme.colorScheme.primary,
+                              size: 18,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Contact summary
+                    Text(
+                      contactSummary,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    // Show contact details if multiple
+                    if (contacts.length > 1) ..._buildContactChips(contacts, theme),
+                  ],
+                ),
+              ),
+              // Action button
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline),
+                onPressed: () => _startChatWithProfile(profileWithContacts),
+                tooltip: 'Start chat',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar(String displayName, String? avatarUrl, ThemeData theme) {
+    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+    
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 24,
+        backgroundImage: NetworkImage(avatarUrl),
+        onBackgroundImageError: (_, __) {},
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child: Text(
+          initials,
+          style: TextStyle(
+            color: theme.colorScheme.onPrimaryContainer,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: theme.colorScheme.primaryContainer,
+      child: Text(
+        initials,
+        style: TextStyle(
+          color: theme.colorScheme.onPrimaryContainer,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildContactChips(List<RosterEntry> contacts, ThemeData theme) {
+    return [
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: contacts.take(3).map((contact) {
+          final isPhone = contact.contactType == RosterContactType.msisdn;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isPhone ? Icons.phone : Icons.email,
+                  size: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _truncateContact(contact.contactDetail),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (contact.isVerified) ...[
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.verified,
+                    size: 10,
+                    color: theme.colorScheme.primary,
+                  ),
+                ],
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    ];
+  }
+
+  String _truncateContact(String detail) {
+    if (detail.length <= 15) return detail;
+    return '${detail.substring(0, 12)}...';
   }
 
   Widget _buildDeviceContactsList() {
@@ -222,9 +360,11 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     );
   }
 
-  void _startChatWithContact(SyncedContact contact) {
-    // Navigate to create/open chat with this contact
-    context.go('/chat/${contact.profileId}?name=${Uri.encodeComponent(contact.displayName)}');
+  void _startChatWithProfile(ProfileWithContacts profileWithContacts) {
+    // Navigate to create/open chat with this profile
+    final profileId = profileWithContacts.profile.id;
+    final name = profileWithContacts.displayName;
+    context.go('/chat/$profileId?name=${Uri.encodeComponent(name)}');
   }
 
   void _showContactOptions(String name) {

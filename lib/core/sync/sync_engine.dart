@@ -4,7 +4,6 @@ import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
 import 'package:antinvestor_api_common/antinvestor_api_common.dart' as common;
 import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenManager;
-import 'package:connectrpc/connect.dart' as connect;
 import 'package:fixnum/fixnum.dart' as fixnum;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -39,9 +38,26 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     KeyManager(const FlutterSecureStorage()),
     tokenManager,
     onTokenRefresh: () async {
-      // Use the robust token refresh with retry logic
-      final result = await authRepo.ensureValidAccessTokenWithStatus();
-      return result.token;
+      AppLogger.debug('SyncEngine: Starting token refresh via authRepo');
+      try {
+        // Use the robust token refresh with retry logic
+        final result = await authRepo.ensureValidAccessTokenWithStatus();
+        final newToken = result.token;
+        AppLogger.debug('SyncEngine: Token refresh result', data: {
+          'hasToken': newToken != null,
+          'needsRelogin': result.needsRelogin,
+        });
+        // Update TokenManager's in-memory cache so subsequent requests use the new token
+        if (newToken != null) {
+          await tokenManager.setAccessToken(newToken);
+          AppLogger.debug('SyncEngine: TokenManager updated with new token');
+        }
+        return newToken;
+      } catch (e, st) {
+        AppLogger.error('SyncEngine: Token refresh failed with exception', 
+            error: e, stackTrace: st);
+        rethrow;
+      }
     },
   );
 });
@@ -62,7 +78,7 @@ class SyncEngine {
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
   final KeyManager _keyManager;
-  final TokenManager _tokenManager;
+  final TokenManager _tokenManager; // Keep for potential future use
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
@@ -102,16 +118,6 @@ class SyncEngine {
     TokenRefreshCallback? onTokenRefresh,
   }) : _onTokenRefresh = onTokenRefresh;
 
-  /// Get current auth headers for API calls
-  connect.Headers _getAuthHeaders() {
-    final headers = connect.Headers();
-    final token = _tokenManager.accessToken;
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-    return headers;
-  }
-
   void start() {
     _startDownloadLoop();
     _startUploadLoop();
@@ -135,7 +141,7 @@ class SyncEngine {
     int limit = 50,
   }) async {
     try {
-      final headers = _getAuthHeaders();
+      // Don't pass manual headers - let the interceptor handle authorization
       final request = pb.GetHistoryRequest(
         roomId: roomId,
         cursor: cursor,
@@ -143,7 +149,7 @@ class SyncEngine {
         forward: false, // Get newer->older by default
       );
 
-      final response = await _chatClient.getHistory(request, headers: headers);
+      final response = await _chatClient.getHistory(request);
 
       // Process each event in the response
       for (final connectResponse in response.events) {
@@ -187,12 +193,12 @@ class SyncEngine {
 
     while (true) {
       try {
-        final headers = _getAuthHeaders();
         final deviceId = await _keyManager.getDeviceId();
         final request = pb.StreamRequest(deviceId: deviceId);
 
-        // Wrap request in a Stream as expected by the client with auth headers
-        final stream = _gatewayClient.stream(Stream.value(request), headers: headers);
+        // Don't pass manual headers - let the interceptor handle authorization
+        // This ensures token refresh works correctly on 401
+        final stream = _gatewayClient.stream(Stream.value(request));
         _isConnected = true;
         _reconnectAttempts = 0;
         _authErrorCount = 0; // Reset auth error count on successful connection
@@ -488,7 +494,6 @@ class SyncEngine {
 
   Future<void> _processCreateRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = _getAuthHeaders();
 
     final request = pb.CreateRoomRequest(
       id: payload['id'] as String,
@@ -504,7 +509,7 @@ class SyncEngine {
       );
     }
 
-    final response = await _chatClient.createRoom(request, headers: headers);
+    final response = await _chatClient.createRoom(request);
 
     if (response.hasRoom()) {
       AppLogger.info('Room created on server', data: {
@@ -522,7 +527,6 @@ class SyncEngine {
 
   Future<void> _processUpdateRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = _getAuthHeaders();
 
     final request = pb.UpdateRoomRequest(
       roomId: payload['id'] as String,
@@ -536,25 +540,23 @@ class SyncEngine {
       );
     }
 
-    await _chatClient.updateRoom(request, headers: headers);
+    await _chatClient.updateRoom(request);
     AppLogger.info('Room updated on server', data: {'roomId': payload['id']});
   }
 
   Future<void> _processDeleteRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = _getAuthHeaders();
 
     final request = pb.DeleteRoomRequest(
       roomId: payload['id'] as String,
     );
 
-    await _chatClient.deleteRoom(request, headers: headers);
+    await _chatClient.deleteRoom(request);
     AppLogger.info('Room deleted on server', data: {'roomId': payload['id']});
   }
 
   Future<void> _processAddRoomMembers(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = _getAuthHeaders();
     final roomId = payload['roomId'] as String;
     final profileIds = (payload['profileIds'] as List<dynamic>).cast<String>();
 
@@ -569,7 +571,7 @@ class SyncEngine {
       members: members,
     );
 
-    await _chatClient.addRoomSubscriptions(request, headers: headers);
+    await _chatClient.addRoomSubscriptions(request);
     AppLogger.info('Members added to room on server', data: {
       'roomId': roomId,
       'memberCount': profileIds.length,
@@ -578,14 +580,13 @@ class SyncEngine {
 
   Future<void> _processRemoveRoomMembers(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final headers = _getAuthHeaders();
 
     final request = pb.RemoveRoomSubscriptionsRequest(
       roomId: payload['roomId'] as String,
       profileIds: (payload['profileIds'] as List<dynamic>).cast<String>(),
     );
 
-    await _chatClient.removeRoomSubscriptions(request, headers: headers);
+    await _chatClient.removeRoomSubscriptions(request);
     AppLogger.info('Members removed from room on server', data: {
       'roomId': payload['roomId'],
       'memberCount': (payload['profileIds'] as List).length,
@@ -621,9 +622,8 @@ class SyncEngine {
       sentAt: timestamp,
     );
 
-    final headers = _getAuthHeaders();
     final request = pb.SendEventRequest(event: [event]);
-    final response = await _chatClient.sendEvent(request, headers: headers);
+    final response = await _chatClient.sendEvent(request);
 
     // Update local message status to sent
     if (payload['localId'] != null && response.ack.isNotEmpty) {

@@ -234,17 +234,62 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: _progress.progress,
-                  minHeight: 6,
+                  minHeight: 8,
                   backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '${_progress.processedContacts} / ${_progress.totalContacts}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
+              const SizedBox(height: 12),
+              // Batch and contact progress info
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _progress.totalBatches > 0
+                        ? 'Batch ${_progress.currentBatch}/${_progress.totalBatches}'
+                        : 'Processing...',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  Text(
+                    '${_progress.processedContacts}/${_progress.totalContacts} contacts',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
               ),
+              // Show found contacts count with animation
+              if (_progress.foundOnPlatform > 0) ...[
+                const SizedBox(height: 12),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.person_add,
+                        size: 16,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${_progress.foundOnPlatform} contacts found',
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
             
             // Loading indicator for non-upload states

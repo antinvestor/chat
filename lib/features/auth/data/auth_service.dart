@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenRefreshResult;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openid_client/openid_client.dart';
 
@@ -10,16 +11,6 @@ import 'platform/auth_platform.dart';
 import 'platform/auth_platform_stub.dart'
     if (dart.library.io) 'platform/auth_platform_io.dart'
     if (dart.library.html) 'platform/auth_platform_web.dart';
-
-/// Represents the result of a token refresh attempt
-enum TokenRefreshResult {
-  /// Token was refreshed successfully
-  success,
-  /// Transient error (network, timeout) - can retry
-  transientError,
-  /// Permanent error (invalid/expired refresh token) - must re-authenticate
-  permanentError,
-}
 
 class AuthService {
   final FlutterSecureStorage _storage;
@@ -249,7 +240,14 @@ class AuthService {
         return noTokenResult;
       }
 
-      AppLogger.debug('Attempting to refresh access token');
+      // Log refresh attempt with masked refresh token for debugging
+      final maskedRefreshToken = refreshTokenValue.length > 10 
+          ? '${refreshTokenValue.substring(0, 5)}...${refreshTokenValue.substring(refreshTokenValue.length - 5)}'
+          : '***';
+      AppLogger.debug('Attempting to refresh access token', data: {
+        'refreshTokenPrefix': maskedRefreshToken,
+        'refreshTokenLength': refreshTokenValue.length,
+      });
       
       try {
         await _ensureInitialized();
@@ -272,18 +270,42 @@ class AuthService {
         refreshToken: refreshTokenValue,
       );
 
-      // Refresh the token with timeout
-      final newCredential = await credential.getTokenResponse()
+      // Refresh the token with timeout - pass forceRefresh=true to actually refresh
+      final newCredential = await credential.getTokenResponse(true)
           .timeout(const Duration(seconds: 30));
+      
+      // Validate that we actually got a new access token
+      if (newCredential.accessToken == null || newCredential.accessToken!.isEmpty) {
+        AppLogger.error('Token refresh returned empty access token', data: {
+          'hasRefreshToken': newCredential.refreshToken != null,
+          'expiresAt': newCredential.expiresAt?.toIso8601String(),
+          'refreshTokenUsed': maskedRefreshToken,
+        });
+        final emptyTokenResult = (result: TokenRefreshResult.permanentError, token: null as TokenResponse?, error: 'Refresh returned empty access token');
+        _refreshCompleter!.complete(emptyTokenResult);
+        return emptyTokenResult;
+      }
       
       // Save tokens including any new refresh token issued
       await _saveTokens(newCredential);
       
-      // Log success without sensitive data
+      // Verify the token was actually saved
+      final savedToken = await getAccessToken();
+      if (savedToken == null || savedToken.isEmpty) {
+        AppLogger.error('Failed to save refreshed token to storage', data: {
+          'refreshTokenUsed': maskedRefreshToken,
+        });
+        final saveFailResult = (result: TokenRefreshResult.transientError, token: null as TokenResponse?, error: 'Failed to save refreshed token');
+        _refreshCompleter!.complete(saveFailResult);
+        return saveFailResult;
+      }
+      
+      // Log success with details
       AppLogger.info('Access token refreshed successfully', data: {
         'expiresAt': newCredential.expiresAt?.toIso8601String(),
         'newRefreshTokenIssued': newCredential.refreshToken != null && 
             newCredential.refreshToken != refreshTokenValue,
+        'accessTokenLength': newCredential.accessToken!.length,
       });
 
       final successResult = (result: TokenRefreshResult.success, token: newCredential, error: null as String?);
@@ -320,17 +342,21 @@ class AuthService {
   }
   
   /// Check if an error indicates permanent refresh failure
+  /// Note: We must be careful not to flag access token expiry as permanent.
+  /// Only refresh token issues should be considered permanent.
   bool _isPermanentRefreshError(String errorStr) {
+    // These indicate the refresh token itself is invalid/expired
     return errorStr.contains('invalid_grant') ||
-        errorStr.contains('invalid_token') ||
-        errorStr.contains('expired') ||
-        errorStr.contains('revoked') ||
         errorStr.contains('invalid_client') ||
         errorStr.contains('unauthorized_client') ||
         errorStr.contains('access_denied') ||
         errorStr.contains('invalid refresh token') ||
         errorStr.contains('refresh token expired') ||
+        errorStr.contains('refresh token is invalid') ||
+        errorStr.contains('refresh token has been revoked') ||
         errorStr.contains('token has been revoked');
+    // Note: Removed 'expired' and 'invalid_token' and 'revoked' as standalone
+    // because these can refer to the access token, not the refresh token
   }
 
   /// Legacy refresh method for backward compatibility

@@ -20,8 +20,15 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
 });
 
 /// Token manager provider using antinvestor_api_common TokenManager
+/// 
+/// TokenManager handles:
+/// - Persistent storage of tokens
+/// - Reactive refresh on 401 (via interceptor)
+/// - Concurrent refresh prevention
+/// - Logout on permanent errors
 final tokenManagerProvider = Provider<TokenManager>((ref) {
   final storage = ref.watch(secureStorageProvider);
+  final authRepo = ref.watch(authRepositoryProvider);
   
   final tokenManager = TokenManager(
     persistTokens: (accessToken, refreshToken) async {
@@ -47,6 +54,22 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
       }
       return null;
     },
+    onRefreshToken: (String? refreshToken) async {
+      // Use the auth repository to refresh the token via OIDC
+      final result = await authRepo.refreshTokenWithResult();
+      if (result.result != TokenRefreshResult.success) {
+        throw Exception(result.error ?? 'Token refresh failed');
+      }
+      final newToken = await authRepo.getAccessToken();
+      if (newToken == null) {
+        throw Exception('Failed to get new access token after refresh');
+      }
+      return newToken;
+    },
+    onLogout: () async {
+      // Clear auth state when permanent error occurs
+      await authRepo.logout();
+    },
   );
   
   ref.onDispose(() {
@@ -56,19 +79,21 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
   return tokenManager;
 });
 
-/// Token refresh callback provider
+/// Token refresh callback provider - delegates to TokenManager's performRefresh
 final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
-  final authRepo = ref.watch(authRepositoryProvider);
+  final tokenManager = ref.watch(tokenManagerProvider);
   
   return (String? refreshToken) async {
-    // Use the auth repository to refresh the token
-    await authRepo.refreshToken();
-    // Return the new access token
-    final newToken = await authRepo.getAccessToken();
-    if (newToken == null) {
-      throw Exception('Failed to refresh token');
+    // Use TokenManager's built-in refresh which handles concurrent requests
+    final result = await tokenManager.performRefresh();
+    if (result != TokenRefreshResult.success) {
+      throw Exception('Token refresh failed');
     }
-    return newToken;
+    final token = tokenManager.accessToken;
+    if (token == null) {
+      throw Exception('No access token after refresh');
+    }
+    return token;
   };
 });
 

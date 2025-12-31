@@ -53,42 +53,41 @@ packages:
     dependency: "direct main"
     description:
       name: antinvestor_api_chat
-      sha256: e4bfe81993d57fde609d342444094b86996241538982c55bc28eea61cdd72293
+      sha256: "8e7b7a909208ec3b4c860bec552f58473f062f723159ee4c101a1f4a9d61c0f9"
       url: "https://pub.dev"
     source: hosted
-    version: "1.51.8"
+    version: "1.51.12"
   antinvestor_api_common:
     dependency: "direct main"
     description:
-      name: antinvestor_api_common
-      sha256: bb154590708a9573533b805c9a960995726efbbaca159e397a235771f0f5f3e4
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.51.4"
+      path: "../apis/dart/common"
+      relative: true
+    source: path
+    version: "1.51.11"
   antinvestor_api_device:
     dependency: "direct main"
     description:
       name: antinvestor_api_device
-      sha256: eef85ddd7894df9ad7a010552c75378716fd5ac9a6e382a0b3c01b7f1047caa4
+      sha256: "2181e08f8bd64fc302e7ec06e3ed08e5473e64765dfffa68c0f2e13da37b4d67"
       url: "https://pub.dev"
     source: hosted
-    version: "1.51.5"
+    version: "1.51.12"
   antinvestor_api_files:
     dependency: "direct main"
     description:
       name: antinvestor_api_files
-      sha256: a95e2f3dc4ea5e71f68c1d1ac752d566019227768e144dd857a1147cc30e4726
+      sha256: "3a89854f1944ddc9a92cdbc0f4c08ea27cb0dd2cbb12ae77ba907d08097b78b4"
       url: "https://pub.dev"
     source: hosted
-    version: "1.51.5"
+    version: "1.51.12"
   antinvestor_api_profile:
     dependency: "direct main"
     description:
       name: antinvestor_api_profile
-      sha256: "0ee94d3bc470ecbc8656e685adf5f004f1d9668d5bfc5685a3d8bcf158e741b2"
+      sha256: d04364edc34b9cf952d865d4d712c52748a4dd89b4fb4d7917be6098a8d5fd1e
       url: "https://pub.dev"
     source: hosted
-    version: "1.51.5"
+    version: "1.51.12"
   app_links:
     dependency: "direct main"
     description:
@@ -884,10 +883,10 @@ packages:
     dependency: transitive
     description:
       name: js
-      sha256: "53385261521cc4a0c4658fd0ad07a7d14591cf8fc33abbceae306ddb974888dc"
+      sha256: f2c445dce49627136094980615a031419f7f3eb393237e4ecd97ac15dea343f3
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.2"
+    version: "0.6.7"
   json_annotation:
     dependency: "direct main"
     description:
@@ -928,6 +927,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
+  libphonenumber_platform_interface:
+    dependency: transitive
+    description:
+      name: libphonenumber_platform_interface
+      sha256: f801f6c65523f56504b83f0890e6dad584ab3a7507dca65fec0eed640afea40f
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.2"
+  libphonenumber_plugin:
+    dependency: "direct main"
+    description:
+      name: libphonenumber_plugin
+      sha256: c615021d9816fbda2b2587881019ed595ecdf54d999652d7e4cce0e1f026368c
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.3"
+  libphonenumber_web:
+    dependency: transitive
+    description:
+      name: libphonenumber_web
+      sha256: "8186f420dbe97c3132283e52819daff1e55d60d6db46f7ea5ac42f42a28cc2ef"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.2"
   lints:
     dependency: transitive
     description:

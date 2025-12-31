@@ -49,14 +49,21 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     final onboardingRepo = ref.read(onboardingRepositoryProvider);
     final hasContactsSynced = await onboardingRepo.hasContactsSynced();
     
+    // Also check if there are any profiles in the database
+    final repo = await ref.read(rosterRepositoryProvider.future);
+    final existingProfiles = await repo.getProfilesWithContacts();
+    final hasProfiles = existingProfiles.isNotEmpty;
+    
     AppLogger.debug('[RoomList] Contact sync check', data: {
       'hasContactsSynced': hasContactsSynced,
+      'existingProfileCount': existingProfiles.length,
     });
     
-    if (!hasContactsSynced && mounted) {
-      AppLogger.info('[RoomList] Contacts not synced, showing sync sheet');
-      final repo = await ref.read(rosterRepositoryProvider.future);
-      if (!mounted) return;
+    // Show sync sheet if never synced OR if there are no profiles to use
+    if ((!hasContactsSynced || !hasProfiles) && mounted) {
+      AppLogger.info('[RoomList] Showing contact sync sheet', data: {
+        'reason': !hasContactsSynced ? 'never synced' : 'no profiles found',
+      });
       
       await showContactSyncSheet(
         context: context,
@@ -64,6 +71,8 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         onComplete: () {
           AppLogger.info('[RoomList] Contact sync completed via sheet');
           onboardingRepo.markContactsSynced();
+          // Refresh the profiles provider to show new contacts
+          ref.invalidate(profilesWithContactsProvider);
         },
         onDismiss: () {
           AppLogger.info('[RoomList] Contact sync skipped by user');
@@ -71,7 +80,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         },
       );
     } else {
-      AppLogger.debug('[RoomList] Contacts already synced, skipping sheet');
+      AppLogger.debug('[RoomList] Contacts already synced with profiles available');
     }
   }
 

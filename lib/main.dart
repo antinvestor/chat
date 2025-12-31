@@ -13,7 +13,6 @@ import 'core/networking/connectivity_service.dart';
 import 'core/sync/background_sync_task.dart';
 import 'core/sync/sync_engine.dart';
 import 'features/auth/data/auth_repository.dart';
-import 'features/auth/data/token_refresh_service.dart';
 
 /// Background task callback - must be top-level function
 @pragma('vm:entry-point')
@@ -105,8 +104,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
       AppLogger.info('Valid access token obtained, starting background services');
 
-      // Start token refresh service
-      ref.read(tokenRefreshServiceProvider).start();
+      // Token refresh is now handled reactively by TokenManager on 401
 
       // Wait for network to be available before starting sync
       await _waitForNetwork();

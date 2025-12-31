@@ -2,18 +2,84 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenManager;
+import 'package:flutter/widgets.dart';
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart' as pb;
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
-import 'package:connectrpc/connect.dart' as connect;
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:libphonenumber_plugin/libphonenumber_plugin.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
+
+// ============================================================================
+// Contact Validation Utilities
+// ============================================================================
+
+/// Email validation regex pattern
+final _emailRegex = RegExp(
+  r'^[a-zA-Z0-9.!#$%&*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?)*$',
+);
+
+/// Validate email format
+bool isValidEmail(String email) {
+  if (email.isEmpty) return false;
+  final normalized = email.toLowerCase().trim();
+  if (normalized.length < 5) return false; // a@b.c minimum
+  if (!normalized.contains('@')) return false;
+  return _emailRegex.hasMatch(normalized);
+}
+
+/// Validate phone number using libphonenumber
+/// Returns the formatted E.164 number if valid, null otherwise
+Future<String?> validateAndFormatPhoneNumber(String phone, {String? regionCode}) async {
+  if (phone.isEmpty) return null;
+  
+  // Normalize the phone number first
+  final hasPlus = phone.startsWith('+');
+  final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+  if (digits.isEmpty || digits.length < 6) return null;
+  
+  final normalized = hasPlus ? '+$digits' : digits;
+  
+  try {
+    // Use provided region, or get from device locale
+    final region = regionCode ?? _getDeviceRegionCode();
+    
+    // Check if the number is valid
+    final isValid = await PhoneNumberUtil.isValidPhoneNumber(normalized, region);
+    if (isValid != true) {
+      return null;
+    }
+    
+    // Format to E.164 for consistency
+    final formatted = await PhoneNumberUtil.normalizePhoneNumber(normalized, region);
+    return formatted;
+  } catch (e) {
+    AppLogger.debug('Phone validation failed', data: {'phone': normalized, 'error': e.toString()});
+    return null;
+  }
+}
+
+/// Get the device's region code from platform locale
+String _getDeviceRegionCode() {
+  try {
+    // Get locale from platform dispatcher
+    final locale = WidgetsBinding.instance.platformDispatcher.locale;
+    if (locale.countryCode != null && locale.countryCode!.isNotEmpty) {
+      return locale.countryCode!;
+    }
+  } catch (e) {
+    AppLogger.debug('Failed to get locale region', data: {'error': e.toString()});
+  }
+  
+  // Fallback if locale not available
+  return 'US';
+}
 
 // Sync metadata keys
 const _kContactsHashKey = 'roster_contacts_hash';
@@ -36,6 +102,51 @@ enum RosterContactType {
 
   static RosterContactType fromProto(pb.ContactType type) {
     return type == pb.ContactType.MSISDN ? msisdn : email;
+  }
+}
+
+/// Profile data model for local storage
+class ProfileData {
+  final String id;
+  final String? name;
+  final String? avatarUrl;
+  final DateTime? updatedAt;
+  final Map<String, dynamic>? metadata;
+
+  ProfileData({
+    required this.id,
+    this.name,
+    this.avatarUrl,
+    this.updatedAt,
+    this.metadata,
+  });
+
+  factory ProfileData.fromDbRow(Profile row) {
+    Map<String, dynamic>? meta;
+    if (row.metadata != null) {
+      try {
+        meta = json.decode(row.metadata!) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+    return ProfileData(
+      id: row.id,
+      name: row.name,
+      avatarUrl: row.avatarUrl,
+      updatedAt: row.updatedAt != null
+          ? DateTime.fromMillisecondsSinceEpoch(row.updatedAt!)
+          : null,
+      metadata: meta,
+    );
+  }
+
+  ProfilesCompanion toCompanion() {
+    return ProfilesCompanion(
+      id: Value(id),
+      name: Value(name),
+      avatarUrl: Value(avatarUrl),
+      updatedAt: Value(updatedAt?.millisecondsSinceEpoch),
+      metadata: Value(metadata != null ? json.encode(metadata) : null),
+    );
   }
 }
 
@@ -120,6 +231,55 @@ class RosterEntry {
   }
 }
 
+/// Profile with associated contacts (roster entries)
+/// This is the primary display model - profile is the person,
+/// contacts are the ways to reach them
+class ProfileWithContacts {
+  final ProfileData profile;
+  final List<RosterEntry> contacts;
+
+  ProfileWithContacts({
+    required this.profile,
+    required this.contacts,
+  });
+
+  /// Get display name - prefer profile name, fallback to first contact display name
+  String get displayName {
+    if (profile.name != null && profile.name!.isNotEmpty) {
+      return profile.name!;
+    }
+    if (contacts.isNotEmpty && contacts.first.displayName != null) {
+      return contacts.first.displayName!;
+    }
+    return profile.id;
+  }
+
+  /// Get avatar URL from profile
+  String? get avatarUrl => profile.avatarUrl;
+
+  /// Check if any contact is verified
+  bool get hasVerifiedContact => contacts.any((c) => c.isVerified);
+
+  /// Get primary contact (first verified, or first available)
+  RosterEntry? get primaryContact {
+    if (contacts.isEmpty) return null;
+    return contacts.firstWhere(
+      (c) => c.isVerified,
+      orElse: () => contacts.first,
+    );
+  }
+
+  /// Get contact summary for display (e.g., "2 contacts")
+  String get contactSummary {
+    if (contacts.isEmpty) return 'No contacts';
+    if (contacts.length == 1) {
+      final c = contacts.first;
+      return c.contactType == RosterContactType.msisdn ? 'Phone' : 'Email';
+    }
+    return '${contacts.length} contacts';
+  }
+}
+
 /// Callback for sync progress updates
 typedef SyncProgressCallback = void Function(SyncProgress progress);
 
@@ -129,6 +289,8 @@ class SyncProgress {
   final int totalContacts;
   final int processedContacts;
   final int foundOnPlatform;
+  final int currentBatch;
+  final int totalBatches;
   final String? message;
 
   const SyncProgress({
@@ -136,10 +298,15 @@ class SyncProgress {
     this.totalContacts = 0,
     this.processedContacts = 0,
     this.foundOnPlatform = 0,
+    this.currentBatch = 0,
+    this.totalBatches = 0,
     this.message,
   });
 
   double get progress => totalContacts > 0 ? processedContacts / totalContacts : 0;
+  
+  /// Whether new contacts were just stored and are ready for display
+  bool get hasNewContacts => foundOnPlatform > 0;
 }
 
 enum SyncState {
@@ -163,30 +330,20 @@ enum SyncState {
 class RosterRepository {
   final ProfileServiceClient _profileClient;
   final AppDatabase _database;
-  final TokenManager _tokenManager;
+  final TokenManager _tokenManager; // Keep for potential future use
 
   // Mutex for sync operations
   Completer<void>? _syncCompleter;
   bool _isSyncing = false;
 
   // Configuration
-  static const _batchSize = 100;
+  static const _batchSize = 20;
 
   RosterRepository(
     this._profileClient,
     this._database,
     this._tokenManager,
   );
-
-  /// Get current auth headers for API calls
-  connect.Headers _getAuthHeaders() {
-    final headers = connect.Headers();
-    final token = _tokenManager.accessToken;
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-    return headers;
-  }
 
   // ============================================================================
   // Sync Metadata Management
@@ -405,29 +562,51 @@ class RosterRepository {
       // Compute hash for change detection
       final contactsHash = _computeContactsHash(deviceContacts);
 
-      // Build contact requests and lookup map
-      final contactRequests = <pb.AddContactRequest>[];
+      // Build contact requests and lookup map with validation
+      final contactRequests = <pb.RawContact>[];
       final contactLookup = <String, flutter_contacts.Contact>{};
+      var invalidPhones = 0;
+      var invalidEmails = 0;
+      var validPhones = 0;
+      var validEmails = 0;
+
+      reportProgress(const SyncProgress(
+        state: SyncState.readingContacts,
+        message: 'Validating contacts...',
+      ));
 
       for (final contact in deviceContacts) {
-        // Process phone numbers
+        // Process and validate phone numbers using libphonenumber
         for (final phone in contact.phones) {
-          final normalized = _normalizePhone(phone.number);
-          if (normalized.isNotEmpty && normalized.length >= 6) {
-            contactLookup[normalized] = contact;
-            contactRequests.add(pb.AddContactRequest(contact: normalized));
+          final validatedPhone = await validateAndFormatPhoneNumber(phone.number);
+          if (validatedPhone != null) {
+            contactLookup[validatedPhone] = contact;
+            contactRequests.add(pb.RawContact(contact: validatedPhone));
+            validPhones++;
+          } else {
+            invalidPhones++;
           }
         }
 
-        // Process emails
+        // Process and validate emails
         for (final email in contact.emails) {
           final normalized = email.address.toLowerCase().trim();
-          if (normalized.isNotEmpty && normalized.contains('@')) {
+          if (isValidEmail(normalized)) {
             contactLookup[normalized] = contact;
-            contactRequests.add(pb.AddContactRequest(contact: normalized));
+            contactRequests.add(pb.RawContact(contact: normalized));
+            validEmails++;
+          } else {
+            invalidEmails++;
           }
         }
       }
+
+      AppLogger.info('[ContactSync] Contact validation completed', data: {
+        'validPhones': validPhones,
+        'invalidPhones': invalidPhones,
+        'validEmails': validEmails,
+        'invalidEmails': invalidEmails,
+      });
 
       if (contactRequests.isEmpty) {
         AppLogger.warning('[ContactSync] No valid phone numbers or emails found in contacts');
@@ -439,7 +618,7 @@ class RosterRepository {
       }
 
       // Remove duplicates
-      final uniqueRequests = <String, pb.AddContactRequest>{};
+      final uniqueRequests = <String, pb.RawContact>{};
       for (final req in contactRequests) {
         uniqueRequests[req.contact] = req;
       }
@@ -459,7 +638,7 @@ class RosterRepository {
         message: 'Syncing with server...',
       ));
 
-      // Sync in batches
+      // Sync in batches - serial processing with immediate storage
       final syncedEntries = <RosterEntry>[];
       var processedCount = 0;
       final totalBatches = (deduplicatedRequests.length / _batchSize).ceil();
@@ -471,26 +650,49 @@ class RosterRepository {
         batchNum++;
         final batch = deduplicatedRequests.skip(i).take(_batchSize).toList();
         
-        AppLogger.debug('[ContactSync] Uploading batch $batchNum/$totalBatches (${batch.length} contacts)');
+        AppLogger.debug('[ContactSync] Processing batch $batchNum/$totalBatches (${batch.length} contacts)');
         
-        final results = await _syncBatch(batch, contactLookup);
-        syncedEntries.addAll(results);
-        processedCount += batch.length;
-        
-        AppLogger.debug('[ContactSync] Batch $batchNum result: ${results.length} contacts found on platform');
-        
+        // Report batch starting
         reportProgress(SyncProgress(
           state: SyncState.uploading,
           totalContacts: deduplicatedRequests.length,
           processedContacts: processedCount,
           foundOnPlatform: syncedEntries.length,
-          message: 'Found ${syncedEntries.length} contacts on platform...',
+          currentBatch: batchNum,
+          totalBatches: totalBatches,
+          message: 'Processing batch $batchNum of $totalBatches...',
+        ));
+        
+        // Send batch to server and wait for response (serial processing)
+        final results = await _syncBatch(batch, contactLookup);
+        
+        if (results.isNotEmpty) {
+          // Store batch results immediately so contacts are available for use
+          AppLogger.debug('[ContactSync] Storing ${results.length} entries from batch $batchNum');
+          await _storeRosterEntries(results);
+          
+          // Fetch and store profile data for this batch immediately
+          final batchProfileIds = results.map((e) => e.profileId).toSet().toList();
+          await fetchAndStoreProfiles(batchProfileIds);
+          
+          syncedEntries.addAll(results);
+        }
+        
+        processedCount += batch.length;
+        
+        AppLogger.debug('[ContactSync] Batch $batchNum completed: ${results.length} contacts found, total: ${syncedEntries.length}');
+        
+        // Report batch completion with updated counts
+        reportProgress(SyncProgress(
+          state: SyncState.uploading,
+          totalContacts: deduplicatedRequests.length,
+          processedContacts: processedCount,
+          foundOnPlatform: syncedEntries.length,
+          currentBatch: batchNum,
+          totalBatches: totalBatches,
+          message: 'Found ${syncedEntries.length} contacts (batch $batchNum/$totalBatches done)',
         ));
       }
-
-      // Store in local database
-      AppLogger.debug('[ContactSync] Storing ${syncedEntries.length} entries in local database');
-      await _storeRosterEntries(syncedEntries);
 
       // Update sync metadata
       await _setSyncMetadata(_kContactsHashKey, contactsHash);
@@ -535,19 +737,18 @@ class RosterRepository {
 
   /// Sync a batch of contacts with the server
   Future<List<RosterEntry>> _syncBatch(
-    List<pb.AddContactRequest> batch,
+    List<pb.RawContact> batch,
     Map<String, flutter_contacts.Contact> contactLookup,
   ) async {
     try {
-      final headers = _getAuthHeaders();
-      final hasAuth = headers['Authorization']?.isNotEmpty ?? false;
       AppLogger.debug('[ContactSync] Sending batch to server', data: {
         'batchSize': batch.length,
-        'hasAuth': hasAuth,
       });
       
       final request = pb.AddRosterRequest(data: batch);
-      final response = await _profileClient.addRoster(request, headers: headers);
+      // Don't pass manual headers - let the interceptor handle authorization
+      // This ensures token refresh works correctly on 401
+      final response = await _profileClient.addRoster(request);
 
       AppLogger.debug('[ContactSync] Server response received', data: {
         'responseCount': response.data.length,
@@ -595,12 +796,12 @@ class RosterRepository {
   /// Fetch complete roster from server
   Future<List<RosterEntry>> fetchServerRoster() async {
     try {
-      final headers = _getAuthHeaders();
       final request = pb.SearchRosterRequest();
       final entries = <RosterEntry>[];
 
+      // Don't pass manual headers - let the interceptor handle authorization
       await for (final response
-          in _profileClient.searchRoster(request, headers: headers)) {
+          in _profileClient.searchRoster(request)) {
         for (final roster in response.data) {
           entries.add(RosterEntry.fromProto(roster));
         }
@@ -716,9 +917,9 @@ class RosterRepository {
   /// Remove a contact from the roster (server and local)
   Future<void> removeRosterEntry(String id) async {
     try {
-      final headers = _getAuthHeaders();
       final request = pb.RemoveRosterRequest(id: id);
-      await _profileClient.removeRoster(request, headers: headers);
+      // Don't pass manual headers - let the interceptor handle authorization
+      await _profileClient.removeRoster(request);
 
       await (_database.delete(_database.roster)..where((t) => t.id.equals(id)))
           .go();
@@ -776,6 +977,158 @@ class RosterRepository {
       ..orderBy([(t) => OrderingTerm.asc(t.displayName)]);
 
     return query.watch().map((rows) => rows.map(RosterEntry.fromDbRow).toList());
+  }
+
+  // ============================================================================
+  // Profile Operations
+  // ============================================================================
+
+  /// Fetch profile data from server by ID
+  Future<ProfileData?> fetchProfileFromServer(String profileId) async {
+    try {
+      final request = pb.GetByIdRequest(id: profileId);
+      // Don't pass manual headers - let the interceptor handle authorization
+      final response = await _profileClient.getById(request);
+
+      if (!response.hasData()) return null;
+
+      final profile = response.data;
+      String? name;
+      String? avatarUrl;
+
+      // Extract name and avatar from properties
+      if (profile.hasProperties()) {
+        final props = profile.properties;
+        if (props.fields.containsKey('name')) {
+          name = props.fields['name']?.stringValue;
+        }
+        if (props.fields.containsKey('avatar')) {
+          avatarUrl = props.fields['avatar']?.stringValue;
+        }
+        if (props.fields.containsKey('avatarUrl')) {
+          avatarUrl = props.fields['avatarUrl']?.stringValue;
+        }
+      }
+
+      return ProfileData(
+        id: profile.id,
+        name: name,
+        avatarUrl: avatarUrl,
+        updatedAt: DateTime.now(),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.warning('Failed to fetch profile from server',
+          data: {'profileId': profileId, 'error': e.toString()});
+      AppLogger.debug('Profile fetch error details', data: {'stackTrace': stackTrace.toString()});
+      return null;
+    }
+  }
+
+  /// Fetch and store profile data for multiple profile IDs
+  Future<void> fetchAndStoreProfiles(List<String> profileIds) async {
+    if (profileIds.isEmpty) return;
+
+    final uniqueIds = profileIds.toSet().toList();
+    AppLogger.debug('[ProfileSync] Fetching ${uniqueIds.length} profiles from server');
+
+    final profiles = <ProfileData>[];
+    for (final profileId in uniqueIds) {
+      final profile = await fetchProfileFromServer(profileId);
+      if (profile != null) {
+        profiles.add(profile);
+      }
+    }
+
+    if (profiles.isNotEmpty) {
+      await _storeProfiles(profiles);
+      AppLogger.debug('[ProfileSync] Stored ${profiles.length} profiles');
+    }
+  }
+
+  /// Store profiles in local database
+  Future<void> _storeProfiles(List<ProfileData> profiles) async {
+    if (profiles.isEmpty) return;
+
+    await _database.batch((batch) {
+      for (final profile in profiles) {
+        batch.insert(
+          _database.profiles,
+          profile.toCompanion(),
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
+  }
+
+  /// Get profile from local database
+  Future<ProfileData?> getLocalProfile(String profileId) async {
+    final query = _database.select(_database.profiles)
+      ..where((t) => t.id.equals(profileId));
+    final result = await query.getSingleOrNull();
+    return result != null ? ProfileData.fromDbRow(result) : null;
+  }
+
+  /// Get all profiles with their associated contacts (roster entries)
+  /// This is the primary method for displaying contacts - groups by profile
+  Future<List<ProfileWithContacts>> getProfilesWithContacts({
+    bool includeBlocked = false,
+  }) async {
+    // Get all roster entries
+    final rosterEntries = await getLocalRoster(includeBlocked: includeBlocked);
+    if (rosterEntries.isEmpty) return [];
+
+    // Group roster entries by profileId
+    final groupedByProfile = <String, List<RosterEntry>>{};
+    for (final entry in rosterEntries) {
+      groupedByProfile.putIfAbsent(entry.profileId, () => []).add(entry);
+    }
+
+    // Get all profiles
+    final profileIds = groupedByProfile.keys.toList();
+    final query = _database.select(_database.profiles)
+      ..where((t) => t.id.isIn(profileIds));
+    final profileRows = await query.get();
+    final profileMap = {for (final p in profileRows) p.id: ProfileData.fromDbRow(p)};
+
+    // Build ProfileWithContacts list
+    final result = <ProfileWithContacts>[];
+    for (final profileId in groupedByProfile.keys) {
+      final contacts = groupedByProfile[profileId]!;
+      
+      // Get profile or create placeholder from roster data
+      var profile = profileMap[profileId];
+      if (profile == null) {
+        // Create placeholder profile from roster entry
+        final firstContact = contacts.first;
+        profile = ProfileData(
+          id: profileId,
+          name: firstContact.displayName,
+        );
+      }
+
+      result.add(ProfileWithContacts(
+        profile: profile,
+        contacts: contacts,
+      ));
+    }
+
+    // Sort by display name
+    result.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+    return result;
+  }
+
+  /// Watch profiles with contacts as a stream
+  Stream<List<ProfileWithContacts>> watchProfilesWithContacts() {
+    return watchRoster().asyncMap((_) => getProfilesWithContacts());
+  }
+
+  /// Get all roster entries for a specific profile
+  Future<List<RosterEntry>> getRosterEntriesForProfile(String profileId) async {
+    final query = _database.select(_database.roster)
+      ..where((t) => t.profileId.equals(profileId))
+      ..where((t) => t.isBlocked.equals(false));
+    final results = await query.get();
+    return results.map(RosterEntry.fromDbRow).toList();
   }
 }
 
@@ -846,4 +1199,28 @@ final blockedRosterEntriesProvider =
 final rosterCountProvider = FutureProvider<int>((ref) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
   return await repo.getRosterCount();
+});
+
+/// Provider for profiles with their associated contacts
+/// This is the primary provider for displaying contacts - profile-centric view
+final profilesWithContactsProvider = FutureProvider<List<ProfileWithContacts>>((ref) async {
+  final repo = await ref.watch(rosterRepositoryProvider.future);
+
+  // First get local data
+  final local = await repo.getProfilesWithContacts();
+  if (local.isEmpty) {
+    // No local data, must sync first
+    await repo.syncContacts();
+    return await repo.getProfilesWithContacts();
+  }
+
+  // Trigger background sync only if contacts have changed
+  repo.syncIfNeeded();
+  return local;
+});
+
+/// Stream provider for watching profiles with contacts reactively
+final profilesWithContactsStreamProvider = StreamProvider<List<ProfileWithContacts>>((ref) async* {
+  final repo = await ref.watch(rosterRepositoryProvider.future);
+  yield* repo.watchProfilesWithContacts();
 });
