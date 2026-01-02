@@ -56,6 +56,20 @@ class RoomMembers extends Table {
   Set<Column> get primaryKey => {roomId, profileId};
 }
 
+/// Off-platform members in rooms (contacts without profiles)
+/// These members receive messages via SMS/Email automatically
+class RoomOffPlatformMembers extends Table {
+  TextColumn get roomId => text().references(Rooms, #id)();
+  TextColumn get rosterId => text().references(Roster, #id)();
+  TextColumn get contactDetail => text()(); // Phone/Email for quick access
+  IntColumn get contactType => integer()(); // 0=email, 1=msisdn
+  TextColumn get displayName => text().nullable()();
+  IntColumn get addedAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {roomId, rosterId};
+}
+
 class RoomEvents extends Table {
   TextColumn get id => text()();
   TextColumn get roomId => text().references(Rooms, #id)();
@@ -125,6 +139,7 @@ class SyncMetadata extends Table {
   Roster,
   Rooms,
   RoomMembers,
+  RoomOffPlatformMembers,
   RoomEvents,
   Sessions,
   Prekeys,
@@ -138,7 +153,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -154,6 +169,10 @@ class AppDatabase extends _$AppDatabase {
           // Drop old Contacts table and create new Roster table
           await m.deleteTable('contacts');
           await m.createTable(roster);
+        }
+        if (from < 5) {
+          // Add off-platform room members table for universal messaging
+          await m.createTable(roomOffPlatformMembers);
         }
       },
       beforeOpen: (details) async {

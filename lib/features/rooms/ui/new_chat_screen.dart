@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../contacts/data/contact_sync_repository.dart';
+import '../data/room_service.dart';
 
 class NewChatScreen extends ConsumerStatefulWidget {
   const NewChatScreen({super.key});
@@ -335,26 +337,34 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     setState(() => _isCreatingRoom = true);
 
     try {
+      final roomService = ref.read(roomServiceProvider);
+
+      // Get all contact IDs - server will handle routing
+      final contactIds = _selectedContacts.map((c) => c.id).toList();
+
+      // Generate room name
+      final roomName = _selectedContacts.length == 1
+          ? (_selectedContacts.first.displayName ?? _selectedContacts.first.contactDetail)
+          : '${_selectedContacts.map((c) => c.displayName ?? c.contactDetail).take(3).join(', ')}${_selectedContacts.length > 3 ? '...' : ''}';
+
+      final roomType = _selectedContacts.length == 1 ? 'direct' : 'group';
+
       AppLogger.info('[NewChat] Creating room', data: {
-        'contactCount': _selectedContacts.length,
-        'contacts': _selectedContacts.map((c) => c.contactDetail).toList(),
+        'name': roomName,
+        'type': roomType,
+        'memberCount': contactIds.length,
       });
 
-      // TODO: Implement room creation via gateway API
-      // For now, show a message
+      // Create room - server handles member routing and billing
+      final room = await roomService.createRoom(
+        name: roomName,
+        type: roomType,
+        contactIds: contactIds,
+      );
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _selectedContacts.length == 1
-                  ? 'Starting chat with ${_selectedContacts.first.displayName ?? _selectedContacts.first.contactDetail}...'
-                  : 'Creating group with ${_selectedContacts.length} contacts...',
-            ),
-          ),
-        );
-        
-        // Pop back to room list
-        Navigator.of(context).pop();
+        // Navigate to the new chat room
+        context.go('/chat/${room.id}?name=${Uri.encodeComponent(room.name)}');
       }
     } catch (e, stackTrace) {
       AppLogger.error('[NewChat] Failed to create room', error: e, stackTrace: stackTrace);

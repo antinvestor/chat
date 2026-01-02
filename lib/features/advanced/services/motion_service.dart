@@ -2,17 +2,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 
 import '../../../core/sync/sync_engine.dart';
+import '../../../features/auth/data/auth_repository.dart';
 import '../../messages/domain/room_event.dart';
 
 final motionServiceProvider = FutureProvider<MotionService>((ref) async {
   final syncEngine = await ref.watch(syncEngineProvider.future);
-  return MotionService(syncEngine);
+  final authRepo = ref.watch(authRepositoryProvider);
+  return MotionService(syncEngine, authRepo);
 });
 
 class MotionService {
   final SyncEngine _syncEngine;
+  final AuthRepository _authRepository;
 
-  MotionService(this._syncEngine);
+  MotionService(this._syncEngine, this._authRepository);
 
   Future<void> createMotion({
     required String roomId,
@@ -29,10 +32,12 @@ class MotionService {
       'votes': <String, String>{}, // userId -> option
     };
 
+    final currentUserId = await _authRepository.getCurrentUserId();
+
     final event = RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
-      senderId: 'current_user_id', // TODO: Get from auth
+      senderId: currentUserId ?? 'unknown',
       type: RoomEventType.motion,
       content: content,
       createdAt: DateTime.now().millisecondsSinceEpoch,
@@ -52,10 +57,12 @@ class MotionService {
       'option': option,
     };
 
+    final currentUserId = await _authRepository.getCurrentUserId();
+
     final event = RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
-      senderId: 'current_user_id', // TODO: Get from auth
+      senderId: currentUserId ?? 'unknown',
       type: RoomEventType.vote,
       content: content,
       createdAt: DateTime.now().millisecondsSinceEpoch,

@@ -6,11 +6,13 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'package:chat/core/logging/app_logger.dart';
 import 'package:chat/features/messages/domain/room_event.dart';
+import '../../../features/auth/data/auth_repository.dart';
 import 'signaling_service.dart';
 
 final callManagerProvider = FutureProvider<CallManager>((ref) async {
   final signalingService = await ref.watch(signalingServiceProvider.future);
-  return CallManager(signalingService);
+  final authRepo = ref.watch(authRepositoryProvider);
+  return CallManager(signalingService, authRepo);
 });
 
 enum CallState {
@@ -23,6 +25,7 @@ enum CallState {
 
 class CallManager {
   final SignalingService _signalingService;
+  final AuthRepository _authRepository;
 
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
@@ -40,7 +43,7 @@ class CallManager {
   final _remoteStreamController = StreamController<MediaStream?>.broadcast();
   Stream<MediaStream?> get remoteStreamStream => _remoteStreamController.stream;
 
-  CallManager(this._signalingService) {
+  CallManager(this._signalingService, this._authRepository) {
     _signalingService.onSignal.listen(_handleSignal);
   }
 
@@ -179,7 +182,8 @@ class CallManager {
 
   Future<void> _handleSignal(RoomEvent event) async {
     // Ignore own signals
-    if (event.senderId == 'current_user_id') return; // TODO: Real auth check
+    final currentUserId = await _authRepository.getCurrentUserId();
+    if (currentUserId != null && event.senderId == currentUserId) return;
 
     switch (event.type) {
       case RoomEventType.callOffer:

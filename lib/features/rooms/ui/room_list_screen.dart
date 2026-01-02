@@ -13,7 +13,6 @@ import '../../../widgets/skeleton_loader.dart';
 import '../../calls/ui/incoming_call_banner.dart';
 import '../../contacts/data/contact_sync_repository.dart';
 import '../../contacts/ui/contact_sync_sheet.dart';
-import '../../contacts/ui/contacts_screen.dart';
 import '../../messages/ui/chat_screen.dart';
 import '../../onboarding/data/onboarding_repository.dart';
 import '../data/room_providers.dart';
@@ -90,12 +89,6 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     );
   }
 
-  void _navigateToContacts() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ContactsScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final roomsAsync = ref.watch(roomListWithMessagesProvider);
@@ -108,13 +101,6 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
           ? null
           : AppBar(
               title: const Text('Chats'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.contacts_outlined),
-                  onPressed: _navigateToContacts,
-                  tooltip: 'Contacts',
-                ),
-              ],
             ),
       drawer: isLargeScreen ? null : const AppDrawer(),
       floatingActionButton: isLargeScreen
@@ -138,13 +124,6 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                             child: Scaffold(
                               appBar: AppBar(
                                 title: const Text('Chats'),
-                                actions: [
-                                  IconButton(
-                                    icon: const Icon(Icons.contacts_outlined),
-                                    onPressed: _navigateToContacts,
-                                    tooltip: 'Contacts',
-                                  ),
-                                ],
                               ),
                               drawer: const AppDrawer(),
                               floatingActionButton: FloatingActionButton(

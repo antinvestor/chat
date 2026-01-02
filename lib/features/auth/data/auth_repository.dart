@@ -57,6 +57,13 @@ class AuthRepository {
     return await _authService.getUserInfo();
   }
 
+  /// Get the current user ID from the JWT token ('sub' claim)
+  /// Returns the profile ID of the authenticated user, or null if not authenticated
+  Future<String?> getCurrentUserId() async {
+    final claims = await getUserInfo();
+    return claims?['sub'] as String?;
+  }
+
   Future<String?> getAccessToken() async {
     return await _authService.getAccessToken();
   }

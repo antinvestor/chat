@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
@@ -39,6 +40,27 @@ class BackgroundSyncTask {
         return true; // Not a failure, just nothing to do
       }
 
+      // Get user ID from ID token
+      final idToken = await storage.read(key: 'id_token');
+      String? currentUserId;
+      if (idToken != null) {
+        try {
+          final parts = idToken.split('.');
+          if (parts.length == 3) {
+            var payload = parts[1];
+            // Add padding if needed for base64 decoding
+            while (payload.length % 4 != 0) {
+              payload += '=';
+            }
+            final decoded = utf8.decode(base64.decode(payload));
+            final claims = json.decode(decoded) as Map<String, dynamic>;
+            currentUserId = claims['sub'] as String?;
+          }
+        } catch (e) {
+          AppLogger.error('Failed to decode ID token in background task', error: e);
+        }
+      }
+
       // Create auth headers
       final authHeaders = connect.Headers();
       authHeaders['Authorization'] = 'Bearer $accessToken';
@@ -62,6 +84,7 @@ class BackgroundSyncTask {
         messageRepo,
         chatClient,
         authHeaders,
+        currentUserId,
       );
 
       AppLogger.info('Background sync completed', data: {'success': success});
@@ -82,6 +105,7 @@ class BackgroundSyncTask {
     MessageRepository messageRepo,
     ChatServiceClient chatClient,
     connect.Headers authHeaders,
+    String? currentUserId,
   ) async {
     try {
       final jobs = await jobRepo.getPendingJobs();
@@ -98,7 +122,7 @@ class BackgroundSyncTask {
 
       for (final job in jobs) {
         try {
-          await _processJob(job, chatClient, messageRepo, jobRepo, authHeaders);
+          await _processJob(job, chatClient, messageRepo, jobRepo, authHeaders, currentUserId);
         } catch (e, stackTrace) {
           AppLogger.error(
             'Failed to process background job',
@@ -128,11 +152,12 @@ class BackgroundSyncTask {
     MessageRepository messageRepo,
     PendingJobRepository jobRepo,
     connect.Headers authHeaders,
+    String? currentUserId,
   ) async {
     switch (job.type) {
       case domain_job.JobType.sendMessage:
       case domain_job.JobType.sendMediaMessage:
-        await _processSendMessage(job, chatClient, messageRepo, authHeaders);
+        await _processSendMessage(job, chatClient, messageRepo, authHeaders, currentUserId);
         break;
       case domain_job.JobType.createRoom:
         await _processCreateRoom(job, chatClient, authHeaders);
@@ -293,6 +318,7 @@ class BackgroundSyncTask {
     ChatServiceClient chatClient,
     MessageRepository messageRepo,
     connect.Headers authHeaders,
+    String? currentUserId,
   ) async {
     final payload = job.payload;
 
@@ -311,7 +337,7 @@ class BackgroundSyncTask {
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
       roomId: payload['roomId'] as String,
-      senderId: 'current_user_id', // TODO: Get from auth service
+      senderId: currentUserId ?? 'unknown',
       type: _mapLocalEventTypeToProto(
         domain.RoomEventType.values.firstWhere(
           (t) => t.toString() == payload['type'],

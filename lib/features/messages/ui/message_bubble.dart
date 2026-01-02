@@ -1,12 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../features/contacts/data/contact_sync_repository.dart';
 import '../domain/room_event.dart';
 
-class MessageBubble extends StatelessWidget {
+class MessageBubble extends ConsumerWidget {
   final RoomEvent message;
   final bool isMe;
   final bool showAvatar;
@@ -19,10 +21,10 @@ class MessageBubble extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    final senderName = isMe ? 'Me' : _getSenderName();
+    final senderName = isMe ? 'Me' : _getSenderName(ref);
     final timestamp = _formatTimestamp(message.createdAt);
     final status = isMe ? _getStatusLabel(message.status) : '';
     final text = message.content['text'] as String? ?? '';
@@ -39,7 +41,7 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (!isMe && showAvatar) ...[
-              _buildAvatar(context),
+              _buildAvatar(context, ref),
               const SizedBox(width: 8),
             ],
             Flexible(
@@ -81,7 +83,7 @@ class MessageBubble extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Text(
-                              _getSenderName(),
+                              _getSenderName(ref),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -117,7 +119,7 @@ class MessageBubble extends StatelessWidget {
             ),
             if (isMe && showAvatar) ...[
               const SizedBox(width: 8),
-              _buildAvatar(context),
+              _buildAvatar(context, ref),
             ],
           ],
         ),
@@ -125,12 +127,13 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(BuildContext context) {
+  Widget _buildAvatar(BuildContext context, WidgetRef ref) {
+    final senderName = _getSenderName(ref);
     return CircleAvatar(
       radius: 16,
       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       child: Text(
-        _getSenderName()[0].toUpperCase(),
+        senderName.isNotEmpty ? senderName[0].toUpperCase() : '?',
         style: TextStyle(
           fontSize: 14,
           color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -470,9 +473,23 @@ class MessageBubble extends StatelessWidget {
     return Icon(iconData, size: 14, color: iconColor);
   }
 
-  String _getSenderName() {
-    // TODO: Get actual sender name from profile
-    return message.senderId;
+  String _getSenderName(WidgetRef ref) {
+    // Try to get sender name from profiles
+    final profilesAsync = ref.watch(profilesWithContactsProvider);
+
+    return profilesAsync.when(
+      data: (profiles) {
+        // Find profile matching sender ID
+        final senderProfile = profiles.where((p) => p.profile.id == message.senderId).firstOrNull;
+        if (senderProfile != null) {
+          return senderProfile.displayName;
+        }
+        // Fallback to sender ID if profile not found
+        return message.senderId;
+      },
+      loading: () => message.senderId,
+      error: (_, __) => message.senderId,
+    );
   }
 
   String _formatTimestamp(int timestamp) {

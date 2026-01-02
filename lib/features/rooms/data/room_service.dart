@@ -11,6 +11,7 @@ import 'room_repository.dart';
 
 /// Service for managing rooms with offline-first support
 /// All operations are saved locally first, then queued for server sync
+/// Supports universal messaging: server handles routing to on/off-platform members
 class RoomService {
   final RoomRepository _roomRepo;
   final PendingJobRepository _jobRepo;
@@ -19,12 +20,16 @@ class RoomService {
 
   /// Create a new room (group or direct chat)
   /// Saves locally first, then queues for server sync
+  ///
+  /// Universal messaging: Pass all contact IDs regardless of platform status.
+  /// The server will determine which members are on-platform vs off-platform,
+  /// handle credit checks, and forward messages via notification service as needed.
   Future<domain.Room> createRoom({
     required String name,
     required String type,
     String? description,
     bool isPrivate = false,
-    List<String> members = const [],
+    List<String> contactIds = const [], // All member contact IDs - server handles routing
     Map<String, dynamic>? metadata,
   }) async {
     final roomId = Xid().toString();
@@ -44,13 +49,13 @@ class RoomService {
     // Save locally first
     await _roomRepo.insertRoom(room);
 
-    // Queue for server sync
+    // Queue for server sync - server handles all member types
     await _jobRepo.addJob(JobType.createRoom, {
       'id': roomId,
       'name': name,
       'description': description ?? '',
       'isPrivate': isPrivate,
-      'members': members,
+      'contactIds': contactIds, // Server determines platform status and routing
       'metadata': metadata,
     });
 
@@ -58,6 +63,7 @@ class RoomService {
       'roomId': roomId,
       'name': name,
       'type': type,
+      'memberCount': contactIds.length,
     });
 
     return room;

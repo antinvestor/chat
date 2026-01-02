@@ -60,9 +60,10 @@ packages:
   antinvestor_api_common:
     dependency: "direct main"
     description:
-      path: "../apis/dart/common"
-      relative: true
-    source: path
+      name: antinvestor_api_common
+      sha256: "185a6e5edb854963fb45063fa16a7496e4b3a4992f544ae1ac287132176971b8"
+      url: "https://pub.dev"
+    source: hosted
     version: "1.51.11"
   antinvestor_api_device:
     dependency: "direct main"

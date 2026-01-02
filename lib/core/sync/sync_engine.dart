@@ -29,7 +29,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final chatClient = await ref.watch(chatServiceClientProvider.future);
   final tokenManager = ref.watch(tokenManagerProvider);
   final authRepo = ref.watch(authRepositoryProvider);
-  
+
   return SyncEngine(
     gatewayClient,
     chatClient,
@@ -37,6 +37,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     ref.watch(pendingJobRepositoryProvider),
     KeyManager(const FlutterSecureStorage()),
     tokenManager,
+    authRepo,
     onTokenRefresh: () async {
       AppLogger.debug('SyncEngine: Starting token refresh via authRepo');
       try {
@@ -79,6 +80,7 @@ class SyncEngine {
   final PendingJobRepository _jobRepo;
   final KeyManager _keyManager;
   final TokenManager _tokenManager; // Keep for potential future use
+  final AuthRepository _authRepository;
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
@@ -114,7 +116,8 @@ class SyncEngine {
     this._messageRepo,
     this._jobRepo,
     this._keyManager,
-    this._tokenManager, {
+    this._tokenManager,
+    this._authRepository, {
     TokenRefreshCallback? onTokenRefresh,
   }) : _onTokenRefresh = onTokenRefresh;
 
@@ -368,9 +371,14 @@ class SyncEngine {
     // Decrypt if needed
     Map<String, dynamic> content = {};
     if (event.type == pb.RoomEventType.ROOM_EVENT_TYPE_ENCRYPTED) {
-      // TODO: Decrypt using vodozemac
-      // content = await _keyManager.decrypt(event.payload);
-      content = {'text': '[Encrypted message]'};
+      // Encryption temporarily disabled - parse payload directly
+      // TODO: Implement decryption using vodozemac when enabling E2EE
+      AppLogger.warning('Encrypted message received but encryption disabled');
+      if (event.hasPayload()) {
+        content = _structToMap(event.payload);
+      } else {
+        content = {'text': '[Encrypted message - no payload]'};
+      }
     } else if (event.hasPayload()) {
     content = _structToMap(event.payload);
     }
@@ -393,6 +401,10 @@ class SyncEngine {
 
     await _messageRepo.insertMessage(roomEvent);
 
+    // Note: Server handles message forwarding to off-platform members
+    // No client-side forwarding needed - server determines routing based on
+    // member platform status, credit balance, and handles billing
+
     // Emit signaling events for real-time handling
     if (_isCallEvent(roomEvent.type)) {
       _signalingEventsController.add(roomEvent);
@@ -409,8 +421,8 @@ class SyncEngine {
   Future<void> _processReceiptEvent(pb.ReceiptEvent event) async {
     // Update status for received read receipts
     // Skip if it's from ourselves (already marked as read locally)
-    // TODO: Get actual current user ID from auth
-    if (event.profileId == 'current_user_id') return;
+    final currentUserId = await _authRepository.getCurrentUserId();
+    if (currentUserId != null && event.profileId == currentUserId) return;
 
     // Mark messages as delivered (other user received them)
     await _messageRepo.updateMessagesStatus(
@@ -608,10 +620,12 @@ class SyncEngine {
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
 
+    final currentUserId = await _authRepository.getCurrentUserId();
+
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
       roomId: payload['roomId'] as String,
-      senderId: 'current_user_id', // TODO: Get from auth service
+      senderId: currentUserId ?? 'unknown',
       type: _mapLocalEventTypeToProto(
         domain.RoomEventType.values.firstWhere(
           (t) => t.toString() == payload['type'],
@@ -632,7 +646,7 @@ class SyncEngine {
       final updatedEvent = domain.RoomEvent(
         id: ackEventId,
         roomId: payload['roomId'] as String,
-        senderId: 'current_user_id',
+        senderId: currentUserId ?? 'unknown',
         type: domain.RoomEventType.values.firstWhere(
           (t) => t.toString() == payload['type'],
           orElse: () => domain.RoomEventType.text,

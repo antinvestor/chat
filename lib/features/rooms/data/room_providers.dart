@@ -24,12 +24,13 @@ class RoomList extends _$RoomList {
 
   /// Create a new room (offline-first)
   /// Saves locally first, then syncs when online
+  /// Server handles routing to on/off-platform members
   Future<domain.Room> createRoom({
     required String name,
     required String type,
     String? description,
     bool isPrivate = false,
-    List<String> members = const [],
+    List<String> contactIds = const [], // Server determines routing
     Map<String, dynamic>? metadata,
   }) async {
     final service = ref.read(roomServiceProvider);
@@ -38,7 +39,7 @@ class RoomList extends _$RoomList {
       type: type,
       description: description,
       isPrivate: isPrivate,
-      members: members,
+      contactIds: contactIds,
       metadata: metadata,
     );
     await refresh();

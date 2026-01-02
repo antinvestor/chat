@@ -5,16 +5,19 @@ import 'package:xid/xid.dart';
 
 import 'package:chat/features/messages/domain/room_event.dart' as domain;
 import '../../../core/sync/sync_engine.dart';
+import '../../../features/auth/data/auth_repository.dart';
 
 final signalingServiceProvider = FutureProvider<SignalingService>((ref) async {
   final syncEngine = await ref.watch(syncEngineProvider.future);
-  return SignalingService(syncEngine);
+  final authRepo = ref.watch(authRepositoryProvider);
+  return SignalingService(syncEngine, authRepo);
 });
 
 class SignalingService {
   final SyncEngine _syncEngine;
+  final AuthRepository _authRepository;
 
-  SignalingService(this._syncEngine);
+  SignalingService(this._syncEngine, this._authRepository);
 
   Stream<domain.RoomEvent> get onSignal => _syncEngine.signalingEvents;
 
@@ -39,10 +42,12 @@ class SignalingService {
     domain.RoomEventType type,
     Map<String, dynamic> content,
   ) async {
+    final currentUserId = await _authRepository.getCurrentUserId();
+
     final message = domain.RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
-      senderId: 'current_user_id', // TODO: Get from auth
+      senderId: currentUserId ?? 'unknown',
       type: type,
       content: content,
       createdAt: DateTime.now().millisecondsSinceEpoch,

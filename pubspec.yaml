@@ -37,6 +37,7 @@ dependencies:
   antinvestor_api_common: ^1.51.11
   antinvestor_api_device: ^1.51.12
   antinvestor_api_files: ^1.51.12
+  # antinvestor_api_notification: ^1.51.12  # Temporarily disabled - incompatible with common 1.51.11
   antinvestor_api_profile: ^1.51.12
   cupertino_icons: ^1.0.8
   http: ^1.6.0
@@ -154,6 +155,7 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-dependency_overrides:
-  antinvestor_api_common:
-    path: ../apis/dart/common
+# dependency_overrides:
+#   antinvestor_api_common:
+#     path: ../apis/dart/common
+# Note: Commented out to use pub.dev version for compatibility with notification package

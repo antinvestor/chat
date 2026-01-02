@@ -1784,6 +1784,452 @@ class RoomMembersCompanion extends UpdateCompanion<RoomMember> {
   }
 }
 
+class $RoomOffPlatformMembersTable extends RoomOffPlatformMembers
+    with TableInfo<$RoomOffPlatformMembersTable, RoomOffPlatformMember> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RoomOffPlatformMembersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _roomIdMeta = const VerificationMeta('roomId');
+  @override
+  late final GeneratedColumn<String> roomId = GeneratedColumn<String>(
+    'room_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES rooms (id)',
+    ),
+  );
+  static const VerificationMeta _rosterIdMeta = const VerificationMeta(
+    'rosterId',
+  );
+  @override
+  late final GeneratedColumn<String> rosterId = GeneratedColumn<String>(
+    'roster_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES roster (id)',
+    ),
+  );
+  static const VerificationMeta _contactDetailMeta = const VerificationMeta(
+    'contactDetail',
+  );
+  @override
+  late final GeneratedColumn<String> contactDetail = GeneratedColumn<String>(
+    'contact_detail',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contactTypeMeta = const VerificationMeta(
+    'contactType',
+  );
+  @override
+  late final GeneratedColumn<int> contactType = GeneratedColumn<int>(
+    'contact_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<int> addedAt = GeneratedColumn<int>(
+    'added_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    roomId,
+    rosterId,
+    contactDetail,
+    contactType,
+    displayName,
+    addedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'room_off_platform_members';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RoomOffPlatformMember> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('room_id')) {
+      context.handle(
+        _roomIdMeta,
+        roomId.isAcceptableOrUnknown(data['room_id']!, _roomIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roomIdMeta);
+    }
+    if (data.containsKey('roster_id')) {
+      context.handle(
+        _rosterIdMeta,
+        rosterId.isAcceptableOrUnknown(data['roster_id']!, _rosterIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rosterIdMeta);
+    }
+    if (data.containsKey('contact_detail')) {
+      context.handle(
+        _contactDetailMeta,
+        contactDetail.isAcceptableOrUnknown(
+          data['contact_detail']!,
+          _contactDetailMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contactDetailMeta);
+    }
+    if (data.containsKey('contact_type')) {
+      context.handle(
+        _contactTypeMeta,
+        contactType.isAcceptableOrUnknown(
+          data['contact_type']!,
+          _contactTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contactTypeMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {roomId, rosterId};
+  @override
+  RoomOffPlatformMember map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RoomOffPlatformMember(
+      roomId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}room_id'],
+      )!,
+      rosterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}roster_id'],
+      )!,
+      contactDetail: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contact_detail'],
+      )!,
+      contactType: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}contact_type'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}added_at'],
+      ),
+    );
+  }
+
+  @override
+  $RoomOffPlatformMembersTable createAlias(String alias) {
+    return $RoomOffPlatformMembersTable(attachedDatabase, alias);
+  }
+}
+
+class RoomOffPlatformMember extends DataClass
+    implements Insertable<RoomOffPlatformMember> {
+  final String roomId;
+  final String rosterId;
+  final String contactDetail;
+  final int contactType;
+  final String? displayName;
+  final int? addedAt;
+  const RoomOffPlatformMember({
+    required this.roomId,
+    required this.rosterId,
+    required this.contactDetail,
+    required this.contactType,
+    this.displayName,
+    this.addedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['room_id'] = Variable<String>(roomId);
+    map['roster_id'] = Variable<String>(rosterId);
+    map['contact_detail'] = Variable<String>(contactDetail);
+    map['contact_type'] = Variable<int>(contactType);
+    if (!nullToAbsent || displayName != null) {
+      map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || addedAt != null) {
+      map['added_at'] = Variable<int>(addedAt);
+    }
+    return map;
+  }
+
+  RoomOffPlatformMembersCompanion toCompanion(bool nullToAbsent) {
+    return RoomOffPlatformMembersCompanion(
+      roomId: Value(roomId),
+      rosterId: Value(rosterId),
+      contactDetail: Value(contactDetail),
+      contactType: Value(contactType),
+      displayName: displayName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayName),
+      addedAt: addedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(addedAt),
+    );
+  }
+
+  factory RoomOffPlatformMember.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RoomOffPlatformMember(
+      roomId: serializer.fromJson<String>(json['roomId']),
+      rosterId: serializer.fromJson<String>(json['rosterId']),
+      contactDetail: serializer.fromJson<String>(json['contactDetail']),
+      contactType: serializer.fromJson<int>(json['contactType']),
+      displayName: serializer.fromJson<String?>(json['displayName']),
+      addedAt: serializer.fromJson<int?>(json['addedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'roomId': serializer.toJson<String>(roomId),
+      'rosterId': serializer.toJson<String>(rosterId),
+      'contactDetail': serializer.toJson<String>(contactDetail),
+      'contactType': serializer.toJson<int>(contactType),
+      'displayName': serializer.toJson<String?>(displayName),
+      'addedAt': serializer.toJson<int?>(addedAt),
+    };
+  }
+
+  RoomOffPlatformMember copyWith({
+    String? roomId,
+    String? rosterId,
+    String? contactDetail,
+    int? contactType,
+    Value<String?> displayName = const Value.absent(),
+    Value<int?> addedAt = const Value.absent(),
+  }) => RoomOffPlatformMember(
+    roomId: roomId ?? this.roomId,
+    rosterId: rosterId ?? this.rosterId,
+    contactDetail: contactDetail ?? this.contactDetail,
+    contactType: contactType ?? this.contactType,
+    displayName: displayName.present ? displayName.value : this.displayName,
+    addedAt: addedAt.present ? addedAt.value : this.addedAt,
+  );
+  RoomOffPlatformMember copyWithCompanion(
+    RoomOffPlatformMembersCompanion data,
+  ) {
+    return RoomOffPlatformMember(
+      roomId: data.roomId.present ? data.roomId.value : this.roomId,
+      rosterId: data.rosterId.present ? data.rosterId.value : this.rosterId,
+      contactDetail: data.contactDetail.present
+          ? data.contactDetail.value
+          : this.contactDetail,
+      contactType: data.contactType.present
+          ? data.contactType.value
+          : this.contactType,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RoomOffPlatformMember(')
+          ..write('roomId: $roomId, ')
+          ..write('rosterId: $rosterId, ')
+          ..write('contactDetail: $contactDetail, ')
+          ..write('contactType: $contactType, ')
+          ..write('displayName: $displayName, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    roomId,
+    rosterId,
+    contactDetail,
+    contactType,
+    displayName,
+    addedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoomOffPlatformMember &&
+          other.roomId == this.roomId &&
+          other.rosterId == this.rosterId &&
+          other.contactDetail == this.contactDetail &&
+          other.contactType == this.contactType &&
+          other.displayName == this.displayName &&
+          other.addedAt == this.addedAt);
+}
+
+class RoomOffPlatformMembersCompanion
+    extends UpdateCompanion<RoomOffPlatformMember> {
+  final Value<String> roomId;
+  final Value<String> rosterId;
+  final Value<String> contactDetail;
+  final Value<int> contactType;
+  final Value<String?> displayName;
+  final Value<int?> addedAt;
+  final Value<int> rowid;
+  const RoomOffPlatformMembersCompanion({
+    this.roomId = const Value.absent(),
+    this.rosterId = const Value.absent(),
+    this.contactDetail = const Value.absent(),
+    this.contactType = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RoomOffPlatformMembersCompanion.insert({
+    required String roomId,
+    required String rosterId,
+    required String contactDetail,
+    required int contactType,
+    this.displayName = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : roomId = Value(roomId),
+       rosterId = Value(rosterId),
+       contactDetail = Value(contactDetail),
+       contactType = Value(contactType);
+  static Insertable<RoomOffPlatformMember> custom({
+    Expression<String>? roomId,
+    Expression<String>? rosterId,
+    Expression<String>? contactDetail,
+    Expression<int>? contactType,
+    Expression<String>? displayName,
+    Expression<int>? addedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (roomId != null) 'room_id': roomId,
+      if (rosterId != null) 'roster_id': rosterId,
+      if (contactDetail != null) 'contact_detail': contactDetail,
+      if (contactType != null) 'contact_type': contactType,
+      if (displayName != null) 'display_name': displayName,
+      if (addedAt != null) 'added_at': addedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RoomOffPlatformMembersCompanion copyWith({
+    Value<String>? roomId,
+    Value<String>? rosterId,
+    Value<String>? contactDetail,
+    Value<int>? contactType,
+    Value<String?>? displayName,
+    Value<int?>? addedAt,
+    Value<int>? rowid,
+  }) {
+    return RoomOffPlatformMembersCompanion(
+      roomId: roomId ?? this.roomId,
+      rosterId: rosterId ?? this.rosterId,
+      contactDetail: contactDetail ?? this.contactDetail,
+      contactType: contactType ?? this.contactType,
+      displayName: displayName ?? this.displayName,
+      addedAt: addedAt ?? this.addedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (roomId.present) {
+      map['room_id'] = Variable<String>(roomId.value);
+    }
+    if (rosterId.present) {
+      map['roster_id'] = Variable<String>(rosterId.value);
+    }
+    if (contactDetail.present) {
+      map['contact_detail'] = Variable<String>(contactDetail.value);
+    }
+    if (contactType.present) {
+      map['contact_type'] = Variable<int>(contactType.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<int>(addedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RoomOffPlatformMembersCompanion(')
+          ..write('roomId: $roomId, ')
+          ..write('rosterId: $rosterId, ')
+          ..write('contactDetail: $contactDetail, ')
+          ..write('contactType: $contactType, ')
+          ..write('displayName: $displayName, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RoomEventsTable extends RoomEvents
     with TableInfo<$RoomEventsTable, RoomEvent> {
   @override
@@ -4160,6 +4606,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RosterTable roster = $RosterTable(this);
   late final $RoomsTable rooms = $RoomsTable(this);
   late final $RoomMembersTable roomMembers = $RoomMembersTable(this);
+  late final $RoomOffPlatformMembersTable roomOffPlatformMembers =
+      $RoomOffPlatformMembersTable(this);
   late final $RoomEventsTable roomEvents = $RoomEventsTable(this);
   late final $SessionsTable sessions = $SessionsTable(this);
   late final $PrekeysTable prekeys = $PrekeysTable(this);
@@ -4175,6 +4623,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     roster,
     rooms,
     roomMembers,
+    roomOffPlatformMembers,
     roomEvents,
     sessions,
     prekeys,
@@ -4513,6 +4962,39 @@ typedef $$RosterTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
+final class $$RosterTableReferences
+    extends BaseReferences<_$AppDatabase, $RosterTable, RosterData> {
+  $$RosterTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<
+    $RoomOffPlatformMembersTable,
+    List<RoomOffPlatformMember>
+  >
+  _roomOffPlatformMembersRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.roomOffPlatformMembers,
+        aliasName: $_aliasNameGenerator(
+          db.roster.id,
+          db.roomOffPlatformMembers.rosterId,
+        ),
+      );
+
+  $$RoomOffPlatformMembersTableProcessedTableManager
+  get roomOffPlatformMembersRefs {
+    final manager = $$RoomOffPlatformMembersTableTableManager(
+      $_db,
+      $_db.roomOffPlatformMembers,
+    ).filter((f) => f.rosterId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _roomOffPlatformMembersRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
 class $$RosterTableFilterComposer
     extends Composer<_$AppDatabase, $RosterTable> {
   $$RosterTableFilterComposer({
@@ -4571,6 +5053,32 @@ class $$RosterTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> roomOffPlatformMembersRefs(
+    Expression<bool> Function($$RoomOffPlatformMembersTableFilterComposer f) f,
+  ) {
+    final $$RoomOffPlatformMembersTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.roomOffPlatformMembers,
+          getReferencedColumn: (t) => t.rosterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$RoomOffPlatformMembersTableFilterComposer(
+                $db: $db,
+                $table: $db.roomOffPlatformMembers,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$RosterTableOrderingComposer
@@ -4679,6 +5187,32 @@ class $$RosterTableAnnotationComposer
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> roomOffPlatformMembersRefs<T extends Object>(
+    Expression<T> Function($$RoomOffPlatformMembersTableAnnotationComposer a) f,
+  ) {
+    final $$RoomOffPlatformMembersTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.roomOffPlatformMembers,
+          getReferencedColumn: (t) => t.rosterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$RoomOffPlatformMembersTableAnnotationComposer(
+                $db: $db,
+                $table: $db.roomOffPlatformMembers,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$RosterTableTableManager
@@ -4692,9 +5226,9 @@ class $$RosterTableTableManager
           $$RosterTableAnnotationComposer,
           $$RosterTableCreateCompanionBuilder,
           $$RosterTableUpdateCompanionBuilder,
-          (RosterData, BaseReferences<_$AppDatabase, $RosterTable, RosterData>),
+          (RosterData, $$RosterTableReferences),
           RosterData,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool roomOffPlatformMembersRefs})
         > {
   $$RosterTableTableManager(_$AppDatabase db, $RosterTable table)
     : super(
@@ -4760,9 +5294,42 @@ class $$RosterTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) =>
+                    (e.readTable(table), $$RosterTableReferences(db, table, e)),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({roomOffPlatformMembersRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (roomOffPlatformMembersRefs) db.roomOffPlatformMembers,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (roomOffPlatformMembersRefs)
+                    await $_getPrefetchedData<
+                      RosterData,
+                      $RosterTable,
+                      RoomOffPlatformMember
+                    >(
+                      currentTable: table,
+                      referencedTable: $$RosterTableReferences
+                          ._roomOffPlatformMembersRefsTable(db),
+                      managerFromTypedResult: (p0) => $$RosterTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).roomOffPlatformMembersRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.rosterId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -4777,9 +5344,9 @@ typedef $$RosterTableProcessedTableManager =
       $$RosterTableAnnotationComposer,
       $$RosterTableCreateCompanionBuilder,
       $$RosterTableUpdateCompanionBuilder,
-      (RosterData, BaseReferences<_$AppDatabase, $RosterTable, RosterData>),
+      (RosterData, $$RosterTableReferences),
       RosterData,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool roomOffPlatformMembersRefs})
     >;
 typedef $$RoomsTableCreateCompanionBuilder =
     RoomsCompanion Function({
@@ -4821,6 +5388,34 @@ final class $$RoomsTableReferences
     ).filter((f) => f.roomId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_roomMembersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $RoomOffPlatformMembersTable,
+    List<RoomOffPlatformMember>
+  >
+  _roomOffPlatformMembersRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.roomOffPlatformMembers,
+        aliasName: $_aliasNameGenerator(
+          db.rooms.id,
+          db.roomOffPlatformMembers.roomId,
+        ),
+      );
+
+  $$RoomOffPlatformMembersTableProcessedTableManager
+  get roomOffPlatformMembersRefs {
+    final manager = $$RoomOffPlatformMembersTableTableManager(
+      $_db,
+      $_db.roomOffPlatformMembers,
+    ).filter((f) => f.roomId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _roomOffPlatformMembersRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -4928,6 +5523,32 @@ class $$RoomsTableFilterComposer extends Composer<_$AppDatabase, $RoomsTable> {
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> roomOffPlatformMembersRefs(
+    Expression<bool> Function($$RoomOffPlatformMembersTableFilterComposer f) f,
+  ) {
+    final $$RoomOffPlatformMembersTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.roomOffPlatformMembers,
+          getReferencedColumn: (t) => t.roomId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$RoomOffPlatformMembersTableFilterComposer(
+                $db: $db,
+                $table: $db.roomOffPlatformMembers,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 
@@ -5088,6 +5709,32 @@ class $$RoomsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> roomOffPlatformMembersRefs<T extends Object>(
+    Expression<T> Function($$RoomOffPlatformMembersTableAnnotationComposer a) f,
+  ) {
+    final $$RoomOffPlatformMembersTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.roomOffPlatformMembers,
+          getReferencedColumn: (t) => t.roomId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$RoomOffPlatformMembersTableAnnotationComposer(
+                $db: $db,
+                $table: $db.roomOffPlatformMembers,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> roomEventsRefs<T extends Object>(
     Expression<T> Function($$RoomEventsTableAnnotationComposer a) f,
   ) {
@@ -5154,6 +5801,7 @@ class $$RoomsTableTableManager
           Room,
           PrefetchHooks Function({
             bool roomMembersRefs,
+            bool roomOffPlatformMembersRefs,
             bool roomEventsRefs,
             bool transactionsRefs,
           })
@@ -5218,6 +5866,7 @@ class $$RoomsTableTableManager
           prefetchHooksCallback:
               ({
                 roomMembersRefs = false,
+                roomOffPlatformMembersRefs = false,
                 roomEventsRefs = false,
                 transactionsRefs = false,
               }) {
@@ -5225,6 +5874,7 @@ class $$RoomsTableTableManager
                   db: db,
                   explicitlyWatchedTables: [
                     if (roomMembersRefs) db.roomMembers,
+                    if (roomOffPlatformMembersRefs) db.roomOffPlatformMembers,
                     if (roomEventsRefs) db.roomEvents,
                     if (transactionsRefs) db.transactions,
                   ],
@@ -5246,6 +5896,27 @@ class $$RoomsTableTableManager
                                 table,
                                 p0,
                               ).roomMembersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.roomId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (roomOffPlatformMembersRefs)
+                        await $_getPrefetchedData<
+                          Room,
+                          $RoomsTable,
+                          RoomOffPlatformMember
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RoomsTableReferences
+                              ._roomOffPlatformMembersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RoomsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).roomOffPlatformMembersRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.roomId == item.id,
@@ -5312,6 +5983,7 @@ typedef $$RoomsTableProcessedTableManager =
       Room,
       PrefetchHooks Function({
         bool roomMembersRefs,
+        bool roomOffPlatformMembersRefs,
         bool roomEventsRefs,
         bool transactionsRefs,
       })
@@ -5702,6 +6374,460 @@ typedef $$RoomMembersTableProcessedTableManager =
       (RoomMember, $$RoomMembersTableReferences),
       RoomMember,
       PrefetchHooks Function({bool roomId, bool profileId})
+    >;
+typedef $$RoomOffPlatformMembersTableCreateCompanionBuilder =
+    RoomOffPlatformMembersCompanion Function({
+      required String roomId,
+      required String rosterId,
+      required String contactDetail,
+      required int contactType,
+      Value<String?> displayName,
+      Value<int?> addedAt,
+      Value<int> rowid,
+    });
+typedef $$RoomOffPlatformMembersTableUpdateCompanionBuilder =
+    RoomOffPlatformMembersCompanion Function({
+      Value<String> roomId,
+      Value<String> rosterId,
+      Value<String> contactDetail,
+      Value<int> contactType,
+      Value<String?> displayName,
+      Value<int?> addedAt,
+      Value<int> rowid,
+    });
+
+final class $$RoomOffPlatformMembersTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $RoomOffPlatformMembersTable,
+          RoomOffPlatformMember
+        > {
+  $$RoomOffPlatformMembersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $RoomsTable _roomIdTable(_$AppDatabase db) => db.rooms.createAlias(
+    $_aliasNameGenerator(db.roomOffPlatformMembers.roomId, db.rooms.id),
+  );
+
+  $$RoomsTableProcessedTableManager get roomId {
+    final $_column = $_itemColumn<String>('room_id')!;
+
+    final manager = $$RoomsTableTableManager(
+      $_db,
+      $_db.rooms,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_roomIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RosterTable _rosterIdTable(_$AppDatabase db) => db.roster.createAlias(
+    $_aliasNameGenerator(db.roomOffPlatformMembers.rosterId, db.roster.id),
+  );
+
+  $$RosterTableProcessedTableManager get rosterId {
+    final $_column = $_itemColumn<String>('roster_id')!;
+
+    final manager = $$RosterTableTableManager(
+      $_db,
+      $_db.roster,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_rosterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$RoomOffPlatformMembersTableFilterComposer
+    extends Composer<_$AppDatabase, $RoomOffPlatformMembersTable> {
+  $$RoomOffPlatformMembersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get contactDetail => $composableBuilder(
+    column: $table.contactDetail,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contactType => $composableBuilder(
+    column: $table.contactType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$RoomsTableFilterComposer get roomId {
+    final $$RoomsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.roomId,
+      referencedTable: $db.rooms,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoomsTableFilterComposer(
+            $db: $db,
+            $table: $db.rooms,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RosterTableFilterComposer get rosterId {
+    final $$RosterTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rosterId,
+      referencedTable: $db.roster,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RosterTableFilterComposer(
+            $db: $db,
+            $table: $db.roster,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RoomOffPlatformMembersTableOrderingComposer
+    extends Composer<_$AppDatabase, $RoomOffPlatformMembersTable> {
+  $$RoomOffPlatformMembersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get contactDetail => $composableBuilder(
+    column: $table.contactDetail,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contactType => $composableBuilder(
+    column: $table.contactType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$RoomsTableOrderingComposer get roomId {
+    final $$RoomsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.roomId,
+      referencedTable: $db.rooms,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoomsTableOrderingComposer(
+            $db: $db,
+            $table: $db.rooms,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RosterTableOrderingComposer get rosterId {
+    final $$RosterTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rosterId,
+      referencedTable: $db.roster,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RosterTableOrderingComposer(
+            $db: $db,
+            $table: $db.roster,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RoomOffPlatformMembersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RoomOffPlatformMembersTable> {
+  $$RoomOffPlatformMembersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get contactDetail => $composableBuilder(
+    column: $table.contactDetail,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get contactType => $composableBuilder(
+    column: $table.contactType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  $$RoomsTableAnnotationComposer get roomId {
+    final $$RoomsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.roomId,
+      referencedTable: $db.rooms,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoomsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.rooms,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RosterTableAnnotationComposer get rosterId {
+    final $$RosterTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rosterId,
+      referencedTable: $db.roster,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RosterTableAnnotationComposer(
+            $db: $db,
+            $table: $db.roster,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RoomOffPlatformMembersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RoomOffPlatformMembersTable,
+          RoomOffPlatformMember,
+          $$RoomOffPlatformMembersTableFilterComposer,
+          $$RoomOffPlatformMembersTableOrderingComposer,
+          $$RoomOffPlatformMembersTableAnnotationComposer,
+          $$RoomOffPlatformMembersTableCreateCompanionBuilder,
+          $$RoomOffPlatformMembersTableUpdateCompanionBuilder,
+          (RoomOffPlatformMember, $$RoomOffPlatformMembersTableReferences),
+          RoomOffPlatformMember,
+          PrefetchHooks Function({bool roomId, bool rosterId})
+        > {
+  $$RoomOffPlatformMembersTableTableManager(
+    _$AppDatabase db,
+    $RoomOffPlatformMembersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RoomOffPlatformMembersTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$RoomOffPlatformMembersTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$RoomOffPlatformMembersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> roomId = const Value.absent(),
+                Value<String> rosterId = const Value.absent(),
+                Value<String> contactDetail = const Value.absent(),
+                Value<int> contactType = const Value.absent(),
+                Value<String?> displayName = const Value.absent(),
+                Value<int?> addedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RoomOffPlatformMembersCompanion(
+                roomId: roomId,
+                rosterId: rosterId,
+                contactDetail: contactDetail,
+                contactType: contactType,
+                displayName: displayName,
+                addedAt: addedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String roomId,
+                required String rosterId,
+                required String contactDetail,
+                required int contactType,
+                Value<String?> displayName = const Value.absent(),
+                Value<int?> addedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RoomOffPlatformMembersCompanion.insert(
+                roomId: roomId,
+                rosterId: rosterId,
+                contactDetail: contactDetail,
+                contactType: contactType,
+                displayName: displayName,
+                addedAt: addedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$RoomOffPlatformMembersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({roomId = false, rosterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (roomId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.roomId,
+                                referencedTable:
+                                    $$RoomOffPlatformMembersTableReferences
+                                        ._roomIdTable(db),
+                                referencedColumn:
+                                    $$RoomOffPlatformMembersTableReferences
+                                        ._roomIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (rosterId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.rosterId,
+                                referencedTable:
+                                    $$RoomOffPlatformMembersTableReferences
+                                        ._rosterIdTable(db),
+                                referencedColumn:
+                                    $$RoomOffPlatformMembersTableReferences
+                                        ._rosterIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$RoomOffPlatformMembersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RoomOffPlatformMembersTable,
+      RoomOffPlatformMember,
+      $$RoomOffPlatformMembersTableFilterComposer,
+      $$RoomOffPlatformMembersTableOrderingComposer,
+      $$RoomOffPlatformMembersTableAnnotationComposer,
+      $$RoomOffPlatformMembersTableCreateCompanionBuilder,
+      $$RoomOffPlatformMembersTableUpdateCompanionBuilder,
+      (RoomOffPlatformMember, $$RoomOffPlatformMembersTableReferences),
+      RoomOffPlatformMember,
+      PrefetchHooks Function({bool roomId, bool rosterId})
     >;
 typedef $$RoomEventsTableCreateCompanionBuilder =
     RoomEventsCompanion Function({
@@ -7211,6 +8337,11 @@ class $AppDatabaseManager {
       $$RoomsTableTableManager(_db, _db.rooms);
   $$RoomMembersTableTableManager get roomMembers =>
       $$RoomMembersTableTableManager(_db, _db.roomMembers);
+  $$RoomOffPlatformMembersTableTableManager get roomOffPlatformMembers =>
+      $$RoomOffPlatformMembersTableTableManager(
+        _db,
+        _db.roomOffPlatformMembers,
+      );
   $$RoomEventsTableTableManager get roomEvents =>
       $$RoomEventsTableTableManager(_db, _db.roomEvents);
   $$SessionsTableTableManager get sessions =>

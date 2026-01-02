@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../messages/ui/off_platform_warning_dialog.dart';
 import '../data/contact_sync_repository.dart';
 import '../services/contact_service.dart';
 import 'contact_sync_sheet.dart';
@@ -173,7 +175,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Name with verified badge
+                    // Name with verified and on-platform badges
                     Row(
                       children: [
                         Expanded(
@@ -194,6 +196,39 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                               size: 18,
                             ),
                           ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.green.shade200,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 10,
+                                  color: Colors.green.shade700,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'On App',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.green.shade700,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -348,8 +383,8 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                       ? Text(contact.emails.first.address)
                       : null,
               onTap: () {
-                // Show options to invite or view details
-                _showContactOptions(contact.displayName);
+                // Show options to message, invite or view details
+                _showContactOptions(contact);
               },
             );
           },
@@ -367,13 +402,54 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     context.go('/chat/$profileId?name=${Uri.encodeComponent(name)}');
   }
 
-  void _showContactOptions(String name) {
+  void _showContactOptions(Contact contact) {
+    final name = contact.displayName;
+    final hasPhone = contact.phones.isNotEmpty;
+    final hasEmail = contact.emails.isNotEmpty;
+
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (hasPhone || hasEmail)
+              ListTile(
+                leading: Icon(hasPhone ? Icons.sms : Icons.email),
+                title: Text('Send Message via ${hasPhone ? "SMS" : "Email"}'),
+                subtitle: Text(hasPhone ? 'Standard rates may apply' : 'Via email'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final deliveryMethod = hasPhone ? 'SMS' : 'Email';
+
+                  // Show warning dialog
+                  final confirmed = await OffPlatformWarningDialog.show(
+                    context: context,
+                    contactName: name,
+                    deliveryMethod: deliveryMethod,
+                  );
+
+                  if (confirmed && mounted) {
+                    // TODO: Implement actual message sending via SMS/Email
+                    // final contactDetail = hasPhone
+                    //     ? contact.phones.first.number
+                    //     : contact.emails.first.address;
+                    // await messageSendingService.sendOffPlatformMessage(
+                    //   contactDetail: contactDetail,
+                    //   contactType: hasPhone ? 'msisdn' : 'email',
+                    //   message: messageText,
+                    // );
+
+                    // For now, show a snackbar
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Message to $name via $deliveryMethod (feature coming soon)'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.share),
               title: const Text('Invite to App'),

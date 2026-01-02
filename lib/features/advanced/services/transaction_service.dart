@@ -2,17 +2,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 
 import '../../../core/sync/sync_engine.dart';
+import '../../../features/auth/data/auth_repository.dart';
 import '../../messages/domain/room_event.dart';
 
 final transactionServiceProvider = FutureProvider<TransactionService>((ref) async {
   final syncEngine = await ref.watch(syncEngineProvider.future);
-  return TransactionService(syncEngine);
+  final authRepo = ref.watch(authRepositoryProvider);
+  return TransactionService(syncEngine, authRepo);
 });
 
 class TransactionService {
   final SyncEngine _syncEngine;
+  final AuthRepository _authRepository;
 
-  TransactionService(this._syncEngine);
+  TransactionService(this._syncEngine, this._authRepository);
 
   Future<void> sendMoney({
     required String roomId,
@@ -29,10 +32,12 @@ class TransactionService {
       'status': 'pending', // pending, completed, failed
     };
 
+    final currentUserId = await _authRepository.getCurrentUserId();
+
     final event = RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
-      senderId: 'current_user_id', // TODO: Get from auth
+      senderId: currentUserId ?? 'unknown',
       type: RoomEventType.transaction,
       content: content,
       createdAt: DateTime.now().millisecondsSinceEpoch,

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:antinvestor_api_common/antinvestor_api_common.dart' as common;
+// import 'package:antinvestor_api_notification/antinvestor_api_notification.dart' as pb_notification;  // Temporarily disabled
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
@@ -7,9 +9,11 @@ import 'package:xid/xid.dart';
 import '../../../core/crypto/e2e_encryption_service.dart';
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../../core/networking/client.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
+import '../../../features/auth/data/auth_repository.dart';
 import '../domain/room_event.dart' as domain;
 import 'file_upload_service.dart';
 import 'message_providers.dart';
@@ -19,32 +23,35 @@ import 'message_repository.dart';
 /// - Text messages
 /// - Media messages (images, videos, audio, files)
 /// - Encrypted messages (E2E)
+/// - Off-platform messaging (SMS/Email)
 /// - Offline queue with retry
 class MessageSendingService {
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
   final FileUploadService _fileUploadService;
   final E2EEncryptionService _encryptionService;
-  final String Function() _getCurrentUserId;
+  final Future<dynamic> Function()? _getNotificationClient;  // Type changed to dynamic - notification package temporarily disabled
+  final Future<String> Function() _getCurrentUserId;
 
   MessageSendingService(
     this._messageRepo,
     this._jobRepo,
     this._fileUploadService,
     this._encryptionService,
-    this._getCurrentUserId,
-  );
+    this._getCurrentUserId, {
+    Future<dynamic> Function()? getNotificationClient,  // Type changed to dynamic
+  }) : _getNotificationClient = getNotificationClient;
 
   /// Send a text message
   Future<domain.RoomEvent> sendTextMessage({
     required String roomId,
     required String text,
     String? replyToId,
-    bool encrypt = false,
+    bool encrypt = false, // Encryption disabled by default for MVP
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = _getCurrentUserId();
+    final senderId = await _getCurrentUserId();
 
     Map<String, dynamic> content = {'text': text};
 
@@ -182,7 +189,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = _getCurrentUserId();
+    final senderId = await _getCurrentUserId();
     final fileName = file.path.split('/').last;
     final fileSize = await file.length();
 
@@ -286,7 +293,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = _getCurrentUserId();
+    final senderId = await _getCurrentUserId();
 
     final event = domain.RoomEvent(
       id: localId,
@@ -359,6 +366,142 @@ class MessageSendingService {
         type == domain.RoomEventType.audio ||
         type == domain.RoomEventType.file;
   }
+
+  /// Send message to off-platform contact via SMS or Email
+  ///
+  /// This is used for contacts who don't have profiles on the platform.
+  /// The message is delivered through the notification service.
+  Future<void> sendOffPlatformMessage({
+    required String contactDetail, // phone number or email address
+    required String contactType,   // 'msisdn' or 'email'
+    required String message,
+    String? senderName,
+  }) async {
+    if (_getNotificationClient == null) {
+      throw Exception('Notification client not configured');
+    }
+
+    final notificationClient = await _getNotificationClient();
+
+    try {
+      if (contactType == 'msisdn') {
+        await _sendSMS(notificationClient, contactDetail, message, senderName);
+      } else if (contactType == 'email') {
+        await _sendEmail(notificationClient, contactDetail, message, senderName);
+      } else {
+        throw Exception('Unsupported contact type: $contactType');
+      }
+
+      AppLogger.info('Off-platform message sent', data: {
+        'contactType': contactType,
+        'contactDetail': '${contactDetail.substring(0, 3)}***', // Log partial for privacy
+      });
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to send off-platform message',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'contactType': contactType},
+      );
+      rethrow;
+    }
+  }
+
+  /// Send SMS via notification service
+  /// TEMPORARILY DISABLED - Notification package incompatible with current common package version
+  Future<void> _sendSMS(
+    dynamic client,  // pb_notification.NotificationServiceClient
+    String phoneNumber,
+    String message,
+    String? senderName,
+  ) async {
+    // TODO: Re-enable when notification package is compatible
+    throw UnimplementedError('SMS sending temporarily disabled - awaiting compatible notification package');
+
+    /* Commented out until notification package is compatible
+    // Create payload with message content
+    final payload = common.Struct();
+    payload.fields['message'] = common.Value(stringValue: message);
+    if (senderName != null) {
+      payload.fields['from'] = common.Value(stringValue: senderName);
+    }
+
+    // Create recipient contact link
+    final recipient = common.ContactLink(
+      profileType: 'msisdn',
+      detail: phoneNumber,
+    );
+
+    // Create notification
+    final notification = pb_notification.Notification(
+      id: Xid().toString(),
+      type: 'sms',
+      recipient: recipient,
+      payload: payload,
+      outBound: true,
+      autoRelease: true,
+    );
+
+    final request = pb_notification.SendRequest(
+      data: [notification],
+    );
+
+    // Send returns a stream - collect first response
+    await for (final response in client.send(request)) {
+      AppLogger.debug('SMS sent via notification service',
+        data: {'to': phoneNumber, 'status': response.data.isNotEmpty ? 'queued' : 'failed'});
+      break; // Take first response
+    }
+    */
+  }
+
+  /// Send Email via notification service
+  /// TEMPORARILY DISABLED - Notification package incompatible with current common package version
+  Future<void> _sendEmail(
+    dynamic client,  // pb_notification.NotificationServiceClient
+    String emailAddress,
+    String message,
+    String? senderName,
+  ) async {
+    // TODO: Re-enable when notification package is compatible
+    throw UnimplementedError('Email sending temporarily disabled - awaiting compatible notification package');
+
+    /* Commented out until notification package is compatible
+    // Create payload with email content
+    final payload = common.Struct();
+    payload.fields['subject'] = common.Value(
+      stringValue: senderName != null ? 'Message from $senderName' : 'New Message',
+    );
+    payload.fields['body'] = common.Value(stringValue: message);
+
+    // Create recipient contact link
+    final recipient = common.ContactLink(
+      profileType: 'email',
+      detail: emailAddress,
+    );
+
+    // Create notification
+    final notification = pb_notification.Notification(
+      id: Xid().toString(),
+      type: 'email',
+      recipient: recipient,
+      payload: payload,
+      outBound: true,
+      autoRelease: true,
+    );
+
+    final request = pb_notification.SendRequest(
+      data: [notification],
+    );
+
+    // Send returns a stream - collect first response
+    await for (final response in client.send(request)) {
+      AppLogger.debug('Email sent via notification service',
+        data: {'to': emailAddress, 'status': response.data.isNotEmpty ? 'queued' : 'failed'});
+      break; // Take first response
+    }
+    */
+  }
 }
 
 // Provider
@@ -367,12 +510,18 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
   final fileUploadService = ref.watch(fileUploadServiceProvider);
   final encryptionService = ref.watch(e2eEncryptionServiceProvider);
+  final authRepo = ref.watch(authRepositoryProvider);
 
   return MessageSendingService(
     messageRepo,
     jobRepo,
     fileUploadService,
     encryptionService,
-    () => 'current_user_id', // TODO: Get from auth service
+    () async {
+      final userId = await authRepo.getCurrentUserId();
+      return userId ?? 'unknown_user';
+    },
+    // getNotificationClient: () => ref.read(notificationServiceClientProvider.future),  // Temporarily disabled
+    getNotificationClient: null,  // Notification client disabled until package compatibility is resolved
   );
 });
