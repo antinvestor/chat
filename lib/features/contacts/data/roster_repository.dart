@@ -774,6 +774,326 @@ class RosterRepository {
     }
   }
 
+  // ============================================================================
+  // Two-Phase Contact Sync
+  // ============================================================================
+
+  /// Phase 1: Sync contacts to local database immediately (no server call)
+  /// Reads device contacts and stores them locally with display names.
+  /// Returns the list of locally stored contacts.
+  Future<List<RosterEntry>> syncContactsLocal({SyncProgressCallback? progressCallback}) async {
+    void reportProgress(SyncProgress progress) {
+      AppLogger.debug('[ContactSync] Local sync progress: ${progress.state.name}', data: {
+        'message': progress.message,
+        'total': progress.totalContacts,
+        'processed': progress.processedContacts,
+      });
+      progressCallback?.call(progress);
+    }
+
+    try {
+      AppLogger.info('[ContactSync] ========== PHASE 1: LOCAL SYNC ==========');
+      final stopwatch = Stopwatch()..start();
+
+      reportProgress(const SyncProgress(
+        state: SyncState.requestingPermission,
+        message: 'Requesting permission...',
+      ));
+
+      // Check and request contact permission
+      var permissionStatus = await Permission.contacts.status;
+      if (!permissionStatus.isGranted) {
+        permissionStatus = await Permission.contacts.request();
+      }
+
+      if (!permissionStatus.isGranted) {
+        AppLogger.warning('[ContactSync] Contact permission denied');
+        reportProgress(const SyncProgress(
+          state: SyncState.permissionDenied,
+          message: 'Permission denied',
+        ));
+        return [];
+      }
+
+      reportProgress(const SyncProgress(
+        state: SyncState.readingContacts,
+        message: 'Reading contacts...',
+      ));
+
+      final deviceContacts = await flutter_contacts.FlutterContacts.getContacts(
+        withProperties: true,
+        withPhoto: false,
+      );
+
+      AppLogger.info('[ContactSync] Read ${deviceContacts.length} contacts from device');
+
+      if (deviceContacts.isEmpty) {
+        reportProgress(const SyncProgress(
+          state: SyncState.completed,
+          message: 'No contacts found',
+        ));
+        return [];
+      }
+
+      reportProgress(const SyncProgress(
+        state: SyncState.readingContacts,
+        message: 'Processing contacts...',
+      ));
+
+      // Build local roster entries (no server call)
+      final localEntries = <RosterEntry>[];
+      final now = DateTime.now();
+
+      for (final contact in deviceContacts) {
+        // Process phone numbers
+        for (final phone in contact.phones) {
+          final validatedPhone = await validateAndFormatPhoneNumber(phone.number);
+          if (validatedPhone != null) {
+            final id = _generateLocalId(validatedPhone);
+            localEntries.add(RosterEntry(
+              id: id,
+              profileId: '', // Empty until server sync
+              contactId: null, // Null until server sync
+              contactType: RosterContactType.msisdn,
+              contactDetail: validatedPhone,
+              displayName: contact.displayName.isNotEmpty ? contact.displayName : null,
+              isVerified: false,
+              isBlocked: false,
+              syncedAt: null, // Not synced to server yet
+              createdAt: now,
+            ));
+          }
+        }
+
+        // Process emails
+        for (final email in contact.emails) {
+          final normalized = email.address.toLowerCase().trim();
+          if (isValidEmail(normalized)) {
+            final id = _generateLocalId(normalized);
+            localEntries.add(RosterEntry(
+              id: id,
+              profileId: '', // Empty until server sync
+              contactId: null, // Null until server sync
+              contactType: RosterContactType.email,
+              contactDetail: normalized,
+              displayName: contact.displayName.isNotEmpty ? contact.displayName : null,
+              isVerified: false,
+              isBlocked: false,
+              syncedAt: null, // Not synced to server yet
+              createdAt: now,
+            ));
+          }
+        }
+      }
+
+      AppLogger.info('[ContactSync] Processed ${localEntries.length} valid contact details');
+
+      // Store locally
+      await _database.batch((batch) {
+        for (final entry in localEntries) {
+          batch.insert(
+            _database.roster,
+            entry.toCompanion(),
+            mode: InsertMode.insertOrReplace,
+          );
+        }
+      });
+
+      stopwatch.stop();
+      AppLogger.info('[ContactSync] Local sync completed', data: {
+        'entriesStored': localEntries.length,
+        'durationMs': stopwatch.elapsedMilliseconds,
+      });
+
+      reportProgress(SyncProgress(
+        state: SyncState.completed,
+        message: 'Contacts loaded locally',
+        totalContacts: localEntries.length,
+        processedContacts: localEntries.length,
+      ));
+
+      return localEntries;
+    } catch (e, stackTrace) {
+      AppLogger.error('[ContactSync] Local sync failed', error: e, stackTrace: stackTrace);
+      reportProgress(SyncProgress(
+        state: SyncState.error,
+        message: 'Local sync failed: ${e.toString()}',
+      ));
+      return [];
+    }
+  }
+
+  /// Phase 2: Sync unsynced contacts to server (background, best effort)
+  /// Only syncs contacts that:
+  /// - Have empty profileId (not linked yet)
+  /// - Haven't been synced in last 2 weeks (or never synced)
+  /// Updates roster with server response (contactId, profileId, syncedAt)
+  Future<List<RosterEntry>> syncContactsToServer({SyncProgressCallback? progressCallback}) async {
+    if (_isSyncing) {
+      AppLogger.debug('[ContactSync] Server sync already in progress, skipping');
+      return [];
+    }
+
+    _isSyncing = true;
+    _syncCompleter = Completer<void>();
+
+    void reportProgress(SyncProgress progress) {
+      AppLogger.debug('[ContactSync] Server sync progress: ${progress.state.name}', data: {
+        'message': progress.message,
+        'total': progress.totalContacts,
+        'processed': progress.processedContacts,
+      });
+      progressCallback?.call(progress);
+    }
+
+    try {
+      AppLogger.info('[ContactSync] ========== PHASE 2: SERVER SYNC ==========');
+      final stopwatch = Stopwatch()..start();
+
+      // Get contacts that need server sync
+      final twoWeeksAgo = DateTime.now().subtract(const Duration(days: 14)).millisecondsSinceEpoch;
+
+      final query = _database.select(_database.roster)
+        ..where((t) =>
+          // Empty profileId (not linked to a profile yet)
+          t.profileId.equals('') &
+          // Never synced OR synced more than 2 weeks ago
+          (t.syncedAt.isNull() | t.syncedAt.isSmallerThanValue(twoWeeksAgo))
+        );
+
+      final unsyncedRows = await query.get();
+
+      if (unsyncedRows.isEmpty) {
+        AppLogger.info('[ContactSync] No contacts need server sync');
+        reportProgress(const SyncProgress(
+          state: SyncState.completed,
+          message: 'All contacts up to date',
+        ));
+        return [];
+      }
+
+      AppLogger.info('[ContactSync] Found ${unsyncedRows.length} contacts needing server sync');
+
+      // Build contact requests for server
+      final contactRequests = unsyncedRows.map((row) {
+        return pb.RawContact(contact: row.contactDetail);
+      }).toList();
+
+      reportProgress(SyncProgress(
+        state: SyncState.uploading,
+        totalContacts: contactRequests.length,
+        processedContacts: 0,
+        message: 'Syncing to server...',
+      ));
+
+      // Sync in batches
+      final syncedEntries = <RosterEntry>[];
+      var processedCount = 0;
+      final totalBatches = (contactRequests.length / _batchSize).ceil();
+      var batchNum = 0;
+
+      for (var i = 0; i < contactRequests.length; i += _batchSize) {
+        batchNum++;
+        final batch = contactRequests.skip(i).take(_batchSize).toList();
+
+        AppLogger.debug('[ContactSync] Processing batch $batchNum/$totalBatches (${batch.length} contacts)');
+
+        // Build lookup map for this batch
+        final batchLookup = <String, RosterData>{};
+        for (var j = i; j < i + batch.length && j < unsyncedRows.length; j++) {
+          batchLookup[unsyncedRows[j].contactDetail] = unsyncedRows[j];
+        }
+
+        reportProgress(SyncProgress(
+          state: SyncState.uploading,
+          totalContacts: contactRequests.length,
+          processedContacts: processedCount,
+          currentBatch: batchNum,
+          totalBatches: totalBatches,
+          message: 'Processing batch $batchNum of $totalBatches...',
+        ));
+
+        // Send batch to server
+        final request = pb.AddRosterRequest(data: batch);
+        final response = await _profileClient.addRoster(request);
+
+        // Process server response and update local roster
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await _database.batch((dbBatch) {
+          for (final roster in response.data) {
+            if (!roster.hasContact()) continue;
+
+            final contactDetail = roster.contact.detail;
+            final localRow = batchLookup[contactDetail];
+            if (localRow == null) continue;
+
+            // Update roster entry with server data
+            dbBatch.update(
+              _database.roster,
+              RosterCompanion(
+                contactId: Value(roster.hasId() ? roster.id : null),
+                profileId: Value(roster.hasProfileId() ? roster.profileId : ''),
+                isVerified: Value(roster.hasContact() ? (roster.contact.verified) : false),
+                syncedAt: Value(now), // Mark as synced
+              ),
+              where: (t) => t.id.equals(localRow.id),
+            );
+
+            syncedEntries.add(RosterEntry.fromProto(
+              roster,
+              localDisplayName: localRow.displayName,
+            ));
+          }
+        });
+
+        processedCount += batch.length;
+        reportProgress(SyncProgress(
+          state: SyncState.uploading,
+          totalContacts: contactRequests.length,
+          processedContacts: processedCount,
+          foundOnPlatform: syncedEntries.length,
+          message: 'Processed $processedCount/${contactRequests.length} contacts',
+        ));
+      }
+
+      stopwatch.stop();
+      AppLogger.info('[ContactSync] Server sync completed', data: {
+        'totalSynced': processedCount,
+        'foundOnPlatform': syncedEntries.length,
+        'durationMs': stopwatch.elapsedMilliseconds,
+      });
+
+      reportProgress(SyncProgress(
+        state: SyncState.completed,
+        message: 'Server sync completed',
+        totalContacts: contactRequests.length,
+        processedContacts: processedCount,
+        foundOnPlatform: syncedEntries.length,
+      ));
+
+      return syncedEntries;
+    } catch (e, stackTrace) {
+      AppLogger.error('[ContactSync] Server sync failed', error: e, stackTrace: stackTrace);
+      reportProgress(SyncProgress(
+        state: SyncState.error,
+        message: 'Server sync failed: ${e.toString()}',
+      ));
+      return [];
+    } finally {
+      _isSyncing = false;
+      _syncCompleter?.complete();
+      _syncCompleter = null;
+    }
+  }
+
+  /// Generate a stable local ID for a contact detail
+  String _generateLocalId(String contactDetail) {
+    final bytes = utf8.encode(contactDetail);
+    final hash = sha256.convert(bytes);
+    return hash.toString();
+  }
+
   /// Store roster entries in local database efficiently
   Future<void> _storeRosterEntries(List<RosterEntry> entries) async {
     if (entries.isEmpty) return;
@@ -1147,20 +1467,24 @@ final rosterRepositoryProvider = FutureProvider<RosterRepository>((ref) async {
   );
 });
 
-/// Provider for roster entries - uses hash-based change detection
-/// Returns local roster immediately and syncs in background only if needed
+/// Provider for roster entries - uses two-phase sync
+/// Phase 1: Returns local roster immediately (or syncs from device if empty)
+/// Phase 2: Triggers background server sync for contacts without profileId
 final rosterEntriesProvider = FutureProvider<List<RosterEntry>>((ref) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
 
   // First get local roster
   final local = await repo.getLocalRoster();
   if (local.isEmpty) {
-    // No local roster, must sync
-    return await repo.syncContacts();
+    // No local roster, run Phase 1: sync from device to local DB
+    final localSynced = await repo.syncContactsLocal();
+    // Trigger Phase 2: server sync in background (don't await)
+    repo.syncContactsToServer();
+    return localSynced;
   }
 
-  // Trigger background sync only if contacts have changed
-  repo.syncIfNeeded();
+  // Trigger Phase 2: background server sync for unsynced contacts
+  repo.syncContactsToServer();
   return local;
 });
 
@@ -1223,4 +1547,20 @@ final profilesWithContactsProvider = FutureProvider<List<ProfileWithContacts>>((
 final profilesWithContactsStreamProvider = StreamProvider<List<ProfileWithContacts>>((ref) async* {
   final repo = await ref.watch(rosterRepositoryProvider.future);
   yield* repo.watchProfilesWithContacts();
+});
+
+/// Provider for Phase 1: Local contact sync (immediate)
+/// Reads device contacts and stores them locally without server call
+/// This provides instant availability of contacts
+final rosterLocalSyncProvider = FutureProvider<List<RosterEntry>>((ref) async {
+  final repo = await ref.watch(rosterRepositoryProvider.future);
+  return await repo.syncContactsLocal();
+});
+
+/// Provider for Phase 2: Server contact sync (background, best effort)
+/// Syncs contacts without profileId to server if not synced in last 2 weeks
+/// Updates roster with server response (contactId, profileId, syncedAt)
+final rosterServerSyncProvider = FutureProvider<List<RosterEntry>>((ref) async {
+  final repo = await ref.watch(rosterRepositoryProvider.future);
+  return await repo.syncContactsToServer();
 });

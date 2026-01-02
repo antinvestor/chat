@@ -18,7 +18,9 @@ export 'roster_repository.dart'
         rosterSyncNeededProvider,
         blockedRosterEntriesProvider,
         profilesWithContactsProvider,
-        profilesWithContactsStreamProvider;
+        profilesWithContactsStreamProvider,
+        rosterLocalSyncProvider,
+        rosterServerSyncProvider;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

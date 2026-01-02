@@ -79,28 +79,45 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
   }
 
   Future<void> _startSync() async {
-    AppLogger.debug('[ContactSyncSheet] Calling repository.syncContacts()');
-    await widget.repository.syncContacts(
+    AppLogger.debug('[ContactSyncSheet] Starting two-phase sync');
+
+    // Phase 1: Local sync (immediate)
+    AppLogger.info('[ContactSyncSheet] ========== PHASE 1: LOCAL SYNC ==========');
+    await widget.repository.syncContactsLocal(
       progressCallback: (progress) {
         if (mounted) {
           setState(() => _progress = progress);
-          
-          if (progress.state == SyncState.completed) {
-            _isComplete = true;
-            AppLogger.info('[ContactSyncSheet] Sync completed, auto-dismissing in ${widget.autoDismissDelay.inSeconds}s');
-            Future.delayed(widget.autoDismissDelay, () {
-              if (mounted) {
-                AppLogger.debug('[ContactSyncSheet] Auto-dismiss triggered');
-                widget.onComplete();
-              }
-            });
-          } else if (progress.state == SyncState.permissionDenied) {
+
+          if (progress.state == SyncState.permissionDenied) {
             AppLogger.warning('[ContactSyncSheet] Permission denied, checking if permanent');
             _checkIfPermanentlyDenied();
           }
         }
       },
     );
+
+    // Phase 2: Server sync (background)
+    if (mounted && _progress.state != SyncState.permissionDenied) {
+      AppLogger.info('[ContactSyncSheet] ========== PHASE 2: SERVER SYNC ==========');
+      await widget.repository.syncContactsToServer(
+        progressCallback: (progress) {
+          if (mounted) {
+            setState(() => _progress = progress);
+
+            if (progress.state == SyncState.completed) {
+              _isComplete = true;
+              AppLogger.info('[ContactSyncSheet] Sync completed, auto-dismissing in ${widget.autoDismissDelay.inSeconds}s');
+              Future.delayed(widget.autoDismissDelay, () {
+                if (mounted) {
+                  AppLogger.debug('[ContactSyncSheet] Auto-dismiss triggered');
+                  widget.onComplete();
+                }
+              });
+            }
+          }
+        },
+      );
+    }
   }
 
   Future<void> _checkIfPermanentlyDenied() async {
