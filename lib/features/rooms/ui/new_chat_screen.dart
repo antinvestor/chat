@@ -331,6 +331,18 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     ref.invalidate(rosterEntriesProvider);
   }
 
+  /// Get the correct contact identifier based on priority:
+  /// 1. contactId (if available) - from server
+  /// 2. contactDetail (phone/email) - fallback
+  String _getContactIdentifier(RosterEntry contact) {
+    // Priority 1: Use contactId if available (from server)
+    if (contact.contactId != null && contact.contactId!.isNotEmpty) {
+      return contact.contactId!;
+    }
+    // Priority 2: Use contactDetail (phone/email)
+    return contact.contactDetail;
+  }
+
   Future<void> _createRoom() async {
     if (_selectedContacts.isEmpty) return;
 
@@ -339,8 +351,8 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     try {
       final roomService = ref.read(roomServiceProvider);
 
-      // Get all contact IDs - server will handle routing
-      final contactIds = _selectedContacts.map((c) => c.id).toList();
+      // Get all contact identifiers using priority logic - server will handle routing
+      final contactIds = _selectedContacts.map((c) => _getContactIdentifier(c)).toList();
 
       // Generate room name
       final roomName = _selectedContacts.length == 1
