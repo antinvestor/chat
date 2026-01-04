@@ -32,7 +32,8 @@ abstract class RoomEvent with _$RoomEvent {
   const factory RoomEvent({
     required String id,
     required String roomId,
-    required String senderId,
+    required String senderId, // Profile ID (from ContactLink.profileId)
+    String? senderContactId, // Contact ID (from ContactLink.contactId)
     required RoomEventType type,
     required Map<String, dynamic> content,
     String? parentId,

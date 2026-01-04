@@ -29,7 +29,8 @@ class RoomService {
     required String type,
     String? description,
     bool isPrivate = false,
-    List<String> contactIds = const [], // All member contact IDs - server handles routing
+    List<String> contactIds =
+        const [], // All member contact IDs - server handles routing
     Map<String, dynamic>? metadata,
   }) async {
     final roomId = Xid().toString();
@@ -59,12 +60,15 @@ class RoomService {
       'metadata': metadata,
     });
 
-    AppLogger.info('Room created locally and queued for sync', data: {
-      'roomId': roomId,
-      'name': name,
-      'type': type,
-      'memberCount': contactIds.length,
-    });
+    AppLogger.info(
+      'Room created locally and queued for sync',
+      data: {
+        'roomId': roomId,
+        'name': name,
+        'type': type,
+        'memberCount': contactIds.length,
+      },
+    );
 
     return room;
   }
@@ -107,9 +111,10 @@ class RoomService {
       'metadata': metadata,
     });
 
-    AppLogger.info('Room updated locally and queued for sync', data: {
-      'roomId': roomId,
-    });
+    AppLogger.info(
+      'Room updated locally and queued for sync',
+      data: {'roomId': roomId},
+    );
 
     return updatedRoom;
   }
@@ -131,9 +136,7 @@ class RoomService {
     }
 
     // Queue for server sync
-    await _jobRepo.addJob(JobType.deleteRoom, {
-      'id': roomId,
-    });
+    await _jobRepo.addJob(JobType.deleteRoom, {'id': roomId});
 
     AppLogger.info('Room deletion queued for sync', data: {'roomId': roomId});
   }
@@ -150,10 +153,10 @@ class RoomService {
       'profileIds': profileIds,
     });
 
-    AppLogger.info('Add members queued for sync', data: {
-      'roomId': roomId,
-      'memberCount': profileIds.length,
-    });
+    AppLogger.info(
+      'Add members queued for sync',
+      data: {'roomId': roomId, 'memberCount': profileIds.length},
+    );
   }
 
   /// Remove members from a room
@@ -168,10 +171,10 @@ class RoomService {
       'profileIds': profileIds,
     });
 
-    AppLogger.info('Remove members queued for sync', data: {
-      'roomId': roomId,
-      'memberCount': profileIds.length,
-    });
+    AppLogger.info(
+      'Remove members queued for sync',
+      data: {'roomId': roomId, 'memberCount': profileIds.length},
+    );
   }
 
   /// Get all rooms (from local database)
@@ -193,6 +196,28 @@ class RoomService {
   /// Check if a room has pending sync
   bool hasPendingSync(domain.Room room) {
     return room.metadata?['pendingSync'] == true;
+  }
+
+  /// Leave a room (current user exits the group)
+  /// Marks as left locally, then queues for server sync
+  Future<void> leaveRoom(String roomId) async {
+    // Mark room as left in metadata (soft delete for user)
+    final existingRoom = await _roomRepo.getRoomById(roomId);
+    if (existingRoom != null) {
+      final updatedRoom = existingRoom.copyWith(
+        metadata: {
+          ...?existingRoom.metadata,
+          'left': true,
+          'pendingSync': true,
+        },
+      );
+      await _roomRepo.insertRoom(updatedRoom);
+    }
+
+    // Queue for server sync
+    await _jobRepo.addJob(JobType.leaveRoom, {'roomId': roomId});
+
+    AppLogger.info('Leave room queued for sync', data: {'roomId': roomId});
   }
 }
 

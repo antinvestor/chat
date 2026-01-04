@@ -4,7 +4,6 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../messages/ui/off_platform_warning_dialog.dart';
 import '../data/contact_sync_repository.dart';
 import '../services/contact_service.dart';
 import 'contact_sync_sheet.dart';
@@ -404,8 +403,6 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
 
   void _showContactOptions(Contact contact) {
     final name = contact.displayName;
-    final hasPhone = contact.phones.isNotEmpty;
-    final hasEmail = contact.emails.isNotEmpty;
 
     showModalBottomSheet(
       context: context,
@@ -413,43 +410,6 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (hasPhone || hasEmail)
-              ListTile(
-                leading: Icon(hasPhone ? Icons.sms : Icons.email),
-                title: Text('Send Message via ${hasPhone ? "SMS" : "Email"}'),
-                subtitle: Text(hasPhone ? 'Standard rates may apply' : 'Via email'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final deliveryMethod = hasPhone ? 'SMS' : 'Email';
-
-                  // Show warning dialog
-                  final confirmed = await OffPlatformWarningDialog.show(
-                    context: context,
-                    contactName: name,
-                    deliveryMethod: deliveryMethod,
-                  );
-
-                  if (confirmed && mounted) {
-                    // TODO: Implement actual message sending via SMS/Email
-                    // final contactDetail = hasPhone
-                    //     ? contact.phones.first.number
-                    //     : contact.emails.first.address;
-                    // await messageSendingService.sendOffPlatformMessage(
-                    //   contactDetail: contactDetail,
-                    //   contactType: hasPhone ? 'msisdn' : 'email',
-                    //   message: messageText,
-                    // );
-
-                    // For now, show a snackbar
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Message to $name via $deliveryMethod (feature coming soon)'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-              ),
             ListTile(
               leading: const Icon(Icons.share),
               title: const Text('Invite to App'),

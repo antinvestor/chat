@@ -107,3 +107,9 @@ AuthRepository authRepository(Ref ref) {
 
   return AuthRepository(authService);
 }
+
+@riverpod
+Future<String?> currentUserId(Ref ref) async {
+  final authRepo = ref.watch(authRepositoryProvider);
+  return await authRepo.getCurrentUserId();
+}

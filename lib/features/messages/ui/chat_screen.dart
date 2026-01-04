@@ -7,6 +7,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../advanced/ui/motion_bubble.dart';
+import '../../advanced/ui/transaction_bubble.dart';
 import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
 import '../data/message_providers.dart';
@@ -332,11 +334,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         messages[reversedIndex + 1].senderId !=
                             message.senderId;
 
-                    return MessageBubble(
-                      message: message,
-                      isMe: isMe,
-                      showAvatar: showAvatar,
-                    );
+                    return _buildMessageWidget(message, isMe, showAvatar);
                   },
                 );
               },
@@ -424,5 +422,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildMessageWidget(RoomEvent message, bool isMe, bool showAvatar) {
+    switch (message.type) {
+      case RoomEventType.motion:
+        return MotionBubble(event: message, isMe: isMe);
+
+      case RoomEventType.transaction:
+        return TransactionBubble(event: message, isMe: isMe);
+
+      default:
+        return MessageBubble(
+          message: message,
+          isMe: isMe,
+          showAvatar: showAvatar,
+        );
+    }
   }
 }

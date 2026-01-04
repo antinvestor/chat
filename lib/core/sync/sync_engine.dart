@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
 import 'package:antinvestor_api_common/antinvestor_api_common.dart' as common;
-import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenManager;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenManager;
 import 'package:fixnum/fixnum.dart' as fixnum;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -44,10 +45,13 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
         // Use the robust token refresh with retry logic
         final result = await authRepo.ensureValidAccessTokenWithStatus();
         final newToken = result.token;
-        AppLogger.debug('SyncEngine: Token refresh result', data: {
-          'hasToken': newToken != null,
-          'needsRelogin': result.needsRelogin,
-        });
+        AppLogger.debug(
+          'SyncEngine: Token refresh result',
+          data: {
+            'hasToken': newToken != null,
+            'needsRelogin': result.needsRelogin,
+          },
+        );
         // Update TokenManager's in-memory cache so subsequent requests use the new token
         if (newToken != null) {
           await tokenManager.setAccessToken(newToken);
@@ -55,8 +59,11 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
         }
         return newToken;
       } catch (e, st) {
-        AppLogger.error('SyncEngine: Token refresh failed with exception', 
-            error: e, stackTrace: st);
+        AppLogger.error(
+          'SyncEngine: Token refresh failed with exception',
+          error: e,
+          stackTrace: st,
+        );
         rethrow;
       }
     },
@@ -65,7 +72,9 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
 
 enum SyncConnectionState { disconnected, connecting, connected }
 
-final connectionStateProvider = StreamProvider<SyncConnectionState>((ref) async* {
+final connectionStateProvider = StreamProvider<SyncConnectionState>((
+  ref,
+) async* {
   final syncEngine = await ref.watch(syncEngineProvider.future);
   yield* syncEngine.connectionState;
 });
@@ -90,15 +99,17 @@ class SyncEngine {
   int _reconnectAttempts = 0;
   int _authErrorCount = 0; // Track consecutive auth errors
   final Set<String> _processedEventIds = {}; // For event deduplication
-  
+
   // Configuration
   static const _maxAuthErrors = 3; // Max auth errors before giving up
 
   final _typingEventsController = StreamController<pb.TypingEvent>.broadcast();
   Stream<pb.TypingEvent> get typingEvents => _typingEventsController.stream;
 
-  final _signalingEventsController = StreamController<domain.RoomEvent>.broadcast();
-  Stream<domain.RoomEvent> get signalingEvents => _signalingEventsController.stream;
+  final _signalingEventsController =
+      StreamController<domain.RoomEvent>.broadcast();
+  Stream<domain.RoomEvent> get signalingEvents =>
+      _signalingEventsController.stream;
 
   final _connectionStateController =
       StreamController<SyncConnectionState>.broadcast();
@@ -145,18 +156,19 @@ class SyncEngine {
   }) async {
     try {
       // Don't pass manual headers - let the interceptor handle authorization
+      final pageCursor = common.PageCursor(limit: limit, page: cursor);
+
       final request = pb.GetHistoryRequest(
         roomId: roomId,
-        cursor: cursor,
-        limit: limit,
+        cursor: pageCursor,
         forward: false, // Get newer->older by default
       );
 
       final response = await _chatClient.getHistory(request);
 
       // Process each event in the response
-      for (final connectResponse in response.events) {
-        await _handleConnectResponse(connectResponse);
+      for (final roomEvent in response.events) {
+        await _processPbRoomEvent(roomEvent);
       }
 
       return response.events.length;
@@ -196,8 +208,11 @@ class SyncEngine {
 
     while (true) {
       try {
-        final deviceId = await _keyManager.getDeviceId();
-        final request = pb.StreamRequest(deviceId: deviceId);
+        final hello = pb.StreamHello(
+          capabilities: {}, // Add capabilities as needed
+          clientTime: common.Timestamp.fromDateTime(DateTime.now()),
+        );
+        final request = pb.StreamRequest(hello: hello);
 
         // Don't pass manual headers - let the interceptor handle authorization
         // This ensures token refresh works correctly on 401
@@ -214,7 +229,7 @@ class SyncEngine {
         final errorStr = e.toString().toLowerCase();
         final isAuthError = _isAuthenticationError(errorStr);
         final isNormalDisconnect = _isNormalDisconnect(errorStr);
-        
+
         // Log appropriately based on error type
         if (isNormalDisconnect) {
           // Normal server disconnection - just log as debug, will auto-reconnect
@@ -231,38 +246,49 @@ class SyncEngine {
             },
           );
         }
-        
+
         // If it's an auth error, try to refresh token before reconnecting
         if (isAuthError) {
           _authErrorCount++;
-          
+
           if (_authErrorCount > _maxAuthErrors) {
-            AppLogger.error('Max auth errors reached, stopping sync until re-login');
+            AppLogger.error(
+              'Max auth errors reached, stopping sync until re-login',
+            );
             _connectionStateController.add(SyncConnectionState.disconnected);
             return; // Exit the loop - user needs to re-login
           }
-          
+
           final refreshCallback = _onTokenRefresh;
           if (refreshCallback != null) {
-            AppLogger.info('Authentication error detected, attempting token refresh', 
-                data: {'attempt': _authErrorCount, 'maxAttempts': _maxAuthErrors});
+            AppLogger.info(
+              'Authentication error detected, attempting token refresh',
+              data: {'attempt': _authErrorCount, 'maxAttempts': _maxAuthErrors},
+            );
             try {
               final newToken = await refreshCallback();
               if (newToken != null) {
-                AppLogger.info('Token refreshed after auth error, will retry connection');
-                _reconnectAttempts = 0; // Reset reconnect attempts on successful refresh
+                AppLogger.info(
+                  'Token refreshed after auth error, will retry connection',
+                );
+                _reconnectAttempts =
+                    0; // Reset reconnect attempts on successful refresh
                 // Small delay to prevent tight loop if refresh succeeds but connection still fails
                 await Future.delayed(const Duration(milliseconds: 500));
                 continue; // Retry with the new token
               } else {
                 // Refresh returned null - either failed or in progress
                 // Wait before retrying to avoid busy loop
-                AppLogger.debug('Token refresh returned null, waiting before retry');
+                AppLogger.debug(
+                  'Token refresh returned null, waiting before retry',
+                );
                 await Future.delayed(const Duration(seconds: 2));
               }
             } catch (refreshError) {
-              AppLogger.warning('Token refresh failed after auth error', 
-                  data: {'error': refreshError.toString()});
+              AppLogger.warning(
+                'Token refresh failed after auth error',
+                data: {'error': refreshError.toString()},
+              );
               // Don't immediately retry on refresh failure - let the backoff handle it
             }
           }
@@ -288,7 +314,7 @@ class SyncEngine {
       }
     }
   }
-  
+
   /// Check if this is a normal/expected disconnection (not a real error)
   bool _isNormalDisconnect(String errorStr) {
     return errorStr.contains('connection closed') ||
@@ -308,7 +334,7 @@ class SyncEngine {
         errorStr.contains('sqlite')) {
       return false;
     }
-    
+
     return errorStr.contains('unauthenticated') ||
         errorStr.contains('unauthorized') ||
         errorStr.contains('invalid authorization') ||
@@ -349,10 +375,10 @@ class SyncEngine {
       return;
     }
     if (event.roomId.isEmpty) {
-      AppLogger.debug('Skipping system event with no room', data: {
-        'eventId': event.id,
-        'type': event.type.toString(),
-      });
+      AppLogger.debug(
+        'Skipping system event with no room',
+        data: {'eventId': event.id, 'type': event.type.toString()},
+      );
       return;
     }
 
@@ -368,25 +394,41 @@ class SyncEngine {
       _processedEventIds.removeAll(toRemove);
     }
 
-    // Decrypt if needed
+    // Extract content from typed payload fields
     Map<String, dynamic> content = {};
-    if (event.type == pb.RoomEventType.ROOM_EVENT_TYPE_ENCRYPTED) {
-      // Encryption temporarily disabled - parse payload directly
-      // TODO: Implement decryption using vodozemac when enabling E2EE
-      AppLogger.warning('Encrypted message received but encryption disabled');
-      if (event.hasPayload()) {
-        content = _structToMap(event.payload);
-      } else {
-        content = {'text': '[Encrypted message - no payload]'};
+    if (event.hasPayload()) {
+      final payload = event.payload;
+      if (payload.hasText()) {
+        content = {'text': payload.text.body};
+      } else if (payload.hasAttachment()) {
+        content = {
+          'attachmentId': payload.attachment.attachmentId,
+          'fileName': payload.attachment.filename,
+          'mimeType': payload.attachment.mimeType,
+          'size': payload.attachment.sizeBytes.toInt(),
+        };
+      } else if (payload.hasEncrypted()) {
+        // Encryption temporarily disabled
+        AppLogger.warning('Encrypted message received but encryption disabled');
+        content = {'text': '[Encrypted message]'};
+      } else if (payload.hasCall()) {
+        // Extract call data
+        content = {
+          'callId': payload.call.callId,
+          'callType': payload.call.action.toString(),
+        };
       }
-    } else if (event.hasPayload()) {
-    content = _structToMap(event.payload);
     }
+
+    // Extract sender info from ContactLink
+    final senderId = event.hasSource() ? event.source.profileId : '';
+    final senderContactId = event.hasSource() ? event.source.contactId : null;
 
     final roomEvent = domain.RoomEvent(
       id: event.id,
       roomId: event.roomId,
-      senderId: event.senderId,
+      senderId: senderId,
+      senderContactId: senderContactId,
       type: _mapProtoEventType(event.type),
       content: content,
       parentId: event.hasParentId() ? event.parentId : null,
@@ -412,6 +454,7 @@ class SyncEngine {
   }
 
   bool _isCallEvent(domain.RoomEventType type) {
+    // All call events are now handled as a single type in the new API
     return type == domain.RoomEventType.callOffer ||
         type == domain.RoomEventType.callAnswer ||
         type == domain.RoomEventType.callIce ||
@@ -422,7 +465,8 @@ class SyncEngine {
     // Update status for received read receipts
     // Skip if it's from ourselves (already marked as read locally)
     final currentUserId = await _authRepository.getCurrentUserId();
-    if (currentUserId != null && event.profileId == currentUserId) return;
+    final sourceProfileId = event.hasSource() ? event.source.profileId : '';
+    if (currentUserId != null && sourceProfileId == currentUserId) return;
 
     // Mark messages as delivered (other user received them)
     await _messageRepo.updateMessagesStatus(
@@ -481,8 +525,11 @@ class SyncEngine {
         case domain_job.JobType.removeRoomMembers:
           await _processRemoveRoomMembers(job);
           break;
+        case domain_job.JobType.leaveRoom:
+          await _processLeaveRoom(job);
+          break;
         case domain_job.JobType.vote:
-          // TODO: Implement voting
+          await _processVote(job);
           break;
         case domain_job.JobType.syncContacts:
           // Contact sync is handled by ContactSyncRepository
@@ -507,12 +554,19 @@ class SyncEngine {
   Future<void> _processCreateRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
 
+    // Convert member profile IDs to ContactLink objects
+    final memberIds =
+        (payload['members'] as List<dynamic>?)?.cast<String>() ?? [];
+    final memberLinks = memberIds
+        .map((id) => common.ContactLink(profileId: id))
+        .toList();
+
     final request = pb.CreateRoomRequest(
       id: payload['id'] as String,
       name: payload['name'] as String? ?? '',
       description: payload['description'] as String? ?? '',
       isPrivate: payload['isPrivate'] as bool? ?? false,
-      members: (payload['members'] as List<dynamic>?)?.cast<String>() ?? [],
+      members: memberLinks,
     );
 
     if (payload['metadata'] != null) {
@@ -524,15 +578,16 @@ class SyncEngine {
     final response = await _chatClient.createRoom(request);
 
     if (response.hasRoom()) {
-      AppLogger.info('Room created on server', data: {
-        'localId': payload['id'],
-        'serverId': response.room.id,
-      });
+      AppLogger.info(
+        'Room created on server',
+        data: {'localId': payload['id'], 'serverId': response.room.id},
+      );
       // Room is already saved locally, server confirmed creation
     } else if (response.hasError()) {
-      AppLogger.error('Server rejected room creation', data: {
-        'error': response.error.message,
-      });
+      AppLogger.error(
+        'Server rejected room creation',
+        data: {'error': response.error.message},
+      );
       throw Exception('Room creation failed: ${response.error.message}');
     }
   }
@@ -559,9 +614,7 @@ class SyncEngine {
   Future<void> _processDeleteRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
 
-    final request = pb.DeleteRoomRequest(
-      roomId: payload['id'] as String,
-    );
+    final request = pb.DeleteRoomRequest(roomId: payload['id'] as String);
 
     await _chatClient.deleteRoom(request);
     AppLogger.info('Room deleted on server', data: {'roomId': payload['id']});
@@ -572,11 +625,15 @@ class SyncEngine {
     final roomId = payload['roomId'] as String;
     final profileIds = (payload['profileIds'] as List<dynamic>).cast<String>();
 
-    // Convert profileIds to RoomSubscription objects
-    final members = profileIds.map((profileId) => pb.RoomSubscription(
-      roomId: roomId,
-      profileId: profileId,
-    )).toList();
+    // Convert profileIds to RoomSubscription objects with ContactLink
+    final members = profileIds
+        .map(
+          (profileId) => pb.RoomSubscription(
+            roomId: roomId,
+            member: common.ContactLink(profileId: profileId),
+          ),
+        )
+        .toList();
 
     final request = pb.AddRoomSubscriptionsRequest(
       roomId: roomId,
@@ -584,34 +641,56 @@ class SyncEngine {
     );
 
     await _chatClient.addRoomSubscriptions(request);
-    AppLogger.info('Members added to room on server', data: {
-      'roomId': roomId,
-      'memberCount': profileIds.length,
-    });
+    AppLogger.info(
+      'Members added to room on server',
+      data: {'roomId': roomId, 'memberCount': profileIds.length},
+    );
   }
 
   Future<void> _processRemoveRoomMembers(domain_job.PendingJob job) async {
     final payload = job.payload;
 
+    // Note: The API now expects subscription_id instead of profileIds
+    // For now, we'll use profileIds as subscription IDs (they should match)
+    final subscriptionIds = (payload['profileIds'] as List<dynamic>)
+        .cast<String>();
+
     final request = pb.RemoveRoomSubscriptionsRequest(
       roomId: payload['roomId'] as String,
-      profileIds: (payload['profileIds'] as List<dynamic>).cast<String>(),
+      subscriptionId: subscriptionIds,
     );
 
     await _chatClient.removeRoomSubscriptions(request);
-    AppLogger.info('Members removed from room on server', data: {
-      'roomId': payload['roomId'],
-      'memberCount': (payload['profileIds'] as List).length,
-    });
+    AppLogger.info(
+      'Members removed from room on server',
+      data: {
+        'roomId': payload['roomId'],
+        'memberCount': subscriptionIds.length,
+      },
+    );
+  }
+
+  Future<void> _processLeaveRoom(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final roomId = payload['roomId'] as String;
+
+    // Get current user's profile ID to remove their subscription
+    final currentUserId = await _authRepository.getCurrentUserId();
+    if (currentUserId == null) {
+      throw Exception('Cannot leave room: User not authenticated');
+    }
+
+    final request = pb.RemoveRoomSubscriptionsRequest(
+      roomId: roomId,
+      subscriptionId: [currentUserId], // Remove current user's subscription
+    );
+
+    await _chatClient.removeRoomSubscriptions(request);
+    AppLogger.info('Left room on server', data: {'roomId': roomId});
   }
 
   Future<void> _processSendMessage(domain_job.PendingJob job) async {
     final payload = job.payload;
-
-    // Convert content Map to Struct
-    final contentStruct = _mapToStruct(
-      payload['content'] as Map<String, dynamic>,
-    );
 
     // Create timestamp
     final now = DateTime.now();
@@ -621,19 +700,39 @@ class SyncEngine {
     );
 
     final currentUserId = await _authRepository.getCurrentUserId();
+    final source = common.ContactLink(profileId: currentUserId ?? 'unknown');
+
+    // Extract content and type
+    final content = payload['content'] as Map<String, dynamic>;
+    final localType = domain.RoomEventType.values.firstWhere(
+      (t) => t.toString() == payload['type'],
+      orElse: () => domain.RoomEventType.text,
+    );
+    final protoType = _mapLocalEventTypeToProto(localType);
+
+    // Build event with payload-based content
+    final pbPayload = pb.Payload();
+    if (localType == domain.RoomEventType.text) {
+      pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+    } else if (localType == domain.RoomEventType.image ||
+        localType == domain.RoomEventType.video ||
+        localType == domain.RoomEventType.audio ||
+        localType == domain.RoomEventType.file) {
+      pbPayload.attachment = pb.AttachmentContent(
+        attachmentId: content['attachmentId'] as String? ?? '',
+        filename: content['fileName'] as String? ?? '',
+        mimeType: content['mimeType'] as String? ?? '',
+        sizeBytes: fixnum.Int64(content['size'] as int? ?? 0),
+      );
+    }
 
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
       roomId: payload['roomId'] as String,
-      senderId: currentUserId ?? 'unknown',
-      type: _mapLocalEventTypeToProto(
-        domain.RoomEventType.values.firstWhere(
-          (t) => t.toString() == payload['type'],
-          orElse: () => domain.RoomEventType.text,
-        ),
-      ),
-      payload: contentStruct,
+      source: source,
+      type: protoType,
       sentAt: timestamp,
+      payload: pbPayload,
     );
 
     final request = pb.SendEventRequest(event: [event]);
@@ -658,6 +757,70 @@ class SyncEngine {
       );
       await _messageRepo.insertMessage(updatedEvent);
     }
+  }
+
+  Future<void> _processVote(domain_job.PendingJob job) async {
+    final payload = job.payload;
+
+    // Create timestamp
+    final now = DateTime.now();
+    final timestamp = common.Timestamp(
+      seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
+      nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
+    );
+
+    final currentUserId = await _authRepository.getCurrentUserId();
+    final source = common.ContactLink(profileId: currentUserId ?? 'unknown');
+
+    // Build vote payload - use text content since VoteContent doesn't exist yet
+    final pbPayload = pb.Payload();
+    final voteData = {
+      'motionId': payload['motionId'],
+      'option': payload['option'],
+      'type': 'vote',
+    };
+    pbPayload.text = pb.TextContent(body: voteData.toString());
+
+    final event = pb.RoomEvent(
+      id: payload['localId'] as String? ?? '',
+      roomId: payload['roomId'] as String,
+      source: source,
+      type: pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE, // Vote not in protobuf yet
+      sentAt: timestamp,
+      payload: pbPayload,
+    );
+
+    final request = pb.SendEventRequest(event: [event]);
+    await _chatClient.sendEvent(request);
+
+    // Update local motion event with the new vote
+    await _updateMotionVote(
+      payload['motionId'] as String,
+      currentUserId!,
+      payload['option'] as String,
+    );
+  }
+
+  Future<void> _updateMotionVote(
+    String motionId,
+    String userId,
+    String option,
+  ) async {
+    final motionEvent = await _messageRepo.getEventById(motionId);
+    if (motionEvent == null) return;
+
+    final votes = Map<String, dynamic>.from(
+      motionEvent.content['votes'] as Map<String, dynamic>? ?? {},
+    );
+
+    // Update or add the vote
+    votes[userId] = option;
+
+    final updatedContent = Map<String, dynamic>.from(motionEvent.content);
+    updatedContent['votes'] = votes;
+
+    final updatedEvent = motionEvent.copyWith(content: updatedContent);
+    await _messageRepo.insertMessage(updatedEvent);
   }
 
   // ignore: unused_element
@@ -695,21 +858,16 @@ class SyncEngine {
   // ignore: unused_element - kept for future use in reconnection logic
   domain.RoomEventType _mapProtoEventType(pb.RoomEventType type) {
     switch (type) {
-      case pb.RoomEventType.ROOM_EVENT_TYPE_TEXT:
+      case pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE:
         return domain.RoomEventType.text;
-      case pb.RoomEventType.ROOM_EVENT_TYPE_ATTACHMENT:
-        // Map ATTACHMENT to image for now, could detect type from content
-        return domain.RoomEventType.image;
       case pb.RoomEventType.ROOM_EVENT_TYPE_REACTION:
         return domain.RoomEventType.reaction;
-      case pb.RoomEventType.ROOM_EVENT_TYPE_CALL_OFFER:
+      case pb.RoomEventType.ROOM_EVENT_TYPE_CALL:
+        // Map the unified CALL type to callOffer by default
+        // The specific call action can be determined from the call content
         return domain.RoomEventType.callOffer;
-      case pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ANSWER:
-        return domain.RoomEventType.callAnswer;
-      case pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ICE:
-        return domain.RoomEventType.callIce;
-      case pb.RoomEventType.ROOM_EVENT_TYPE_CALL_END:
-        return domain.RoomEventType.callEnd;
+      case pb.RoomEventType.ROOM_EVENT_TYPE_MOTION:
+        return domain.RoomEventType.motion;
       default:
         return domain.RoomEventType.text;
     }
@@ -718,28 +876,27 @@ class SyncEngine {
   pb.RoomEventType _mapLocalEventTypeToProto(domain.RoomEventType type) {
     switch (type) {
       case domain.RoomEventType.text:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
       case domain.RoomEventType.image:
       case domain.RoomEventType.video:
       case domain.RoomEventType.audio:
       case domain.RoomEventType.file:
-        // All media types map to ATTACHMENT
-        return pb.RoomEventType.ROOM_EVENT_TYPE_ATTACHMENT;
+        // All media types map to MESSAGE with attachment payload
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
       case domain.RoomEventType.reaction:
         return pb.RoomEventType.ROOM_EVENT_TYPE_REACTION;
       case domain.RoomEventType.callOffer:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_OFFER;
       case domain.RoomEventType.callAnswer:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ANSWER;
       case domain.RoomEventType.callIce:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ICE;
       case domain.RoomEventType.callEnd:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_END;
+        // All call types now map to a single ROOM_EVENT_TYPE_CALL
+        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL;
       case domain.RoomEventType.motion:
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MOTION;
       case domain.RoomEventType.vote:
       case domain.RoomEventType.transaction:
-        // These might not be in protobuf yet, map to TEXT for now
-        return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
+        // These might not be in protobuf yet, map to MESSAGE for now
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
     }
   }
 

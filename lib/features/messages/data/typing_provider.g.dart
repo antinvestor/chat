@@ -10,10 +10,10 @@ part of 'typing_provider.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(Typing)
-const typingProvider = TypingFamily._();
+final typingProvider = TypingFamily._();
 
 final class TypingProvider extends $NotifierProvider<Typing, Set<String>> {
-  const TypingProvider._({
+  TypingProvider._({
     required TypingFamily super.from,
     required String super.argument,
   }) : super(
@@ -57,7 +57,7 @@ final class TypingProvider extends $NotifierProvider<Typing, Set<String>> {
   }
 }
 
-String _$typingHash() => r'5802b541a627ed0f76a5882e034d2561726448fc';
+String _$typingHash() => r'fee55fc67cff3184065c44ab59a98cf1c20a31e3';
 
 final class TypingFamily extends $Family
     with
@@ -68,7 +68,7 @@ final class TypingFamily extends $Family
           Set<String>,
           String
         > {
-  const TypingFamily._()
+  TypingFamily._()
     : super(
         retry: null,
         name: r'typingProvider',
@@ -92,7 +92,6 @@ abstract class _$Typing extends $Notifier<Set<String>> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(_$args);
     final ref = this.ref as $Ref<Set<String>, Set<String>>;
     final element =
         ref.element
@@ -102,6 +101,6 @@ abstract class _$Typing extends $Notifier<Set<String>> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, () => build(_$args));
   }
 }

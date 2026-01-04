@@ -11,7 +11,7 @@ part of 'token_refresh_service.dart';
 /// Provider for the token refresh service
 
 @ProviderFor(tokenRefreshService)
-const tokenRefreshServiceProvider = TokenRefreshServiceProvider._();
+final tokenRefreshServiceProvider = TokenRefreshServiceProvider._();
 
 /// Provider for the token refresh service
 
@@ -24,7 +24,7 @@ final class TokenRefreshServiceProvider
         >
     with $Provider<TokenRefreshService> {
   /// Provider for the token refresh service
-  const TokenRefreshServiceProvider._()
+  TokenRefreshServiceProvider._()
     : super(
         from: null,
         argument: null,

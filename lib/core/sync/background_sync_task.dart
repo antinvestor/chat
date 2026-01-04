@@ -198,12 +198,16 @@ class BackgroundSyncTask {
   ) async {
     final payload = job.payload;
 
+    // Convert member profile IDs to ContactLink objects
+    final memberIds = (payload['members'] as List<dynamic>?)?.cast<String>() ?? [];
+    final memberLinks = memberIds.map((id) => common.ContactLink(profileId: id)).toList();
+
     final request = pb.CreateRoomRequest(
       id: payload['id'] as String,
       name: payload['name'] as String? ?? '',
       description: payload['description'] as String? ?? '',
       isPrivate: payload['isPrivate'] as bool? ?? false,
-      members: (payload['members'] as List<dynamic>?)?.cast<String>() ?? [],
+      members: memberLinks,
     );
 
     if (payload['metadata'] != null) {
@@ -274,10 +278,10 @@ class BackgroundSyncTask {
     final roomId = payload['roomId'] as String;
     final profileIds = (payload['profileIds'] as List<dynamic>).cast<String>();
 
-    // Convert profileIds to RoomSubscription objects
+    // Convert profileIds to RoomSubscription objects with ContactLink
     final members = profileIds.map((profileId) => pb.RoomSubscription(
       roomId: roomId,
-      profileId: profileId,
+      member: common.ContactLink(profileId: profileId),
     )).toList();
 
     final request = pb.AddRoomSubscriptionsRequest(
@@ -300,9 +304,13 @@ class BackgroundSyncTask {
   ) async {
     final payload = job.payload;
 
+    // Note: The API now expects subscription_id instead of profileIds
+    // For now, we'll use profileIds as subscription IDs (they should match)
+    final subscriptionIds = (payload['profileIds'] as List<dynamic>).cast<String>();
+
     final request = pb.RemoveRoomSubscriptionsRequest(
       roomId: payload['roomId'] as String,
-      profileIds: (payload['profileIds'] as List<dynamic>).cast<String>(),
+      subscriptionId: subscriptionIds,
     );
 
     await chatClient.removeRoomSubscriptions(request, headers: authHeaders);
@@ -322,11 +330,6 @@ class BackgroundSyncTask {
   ) async {
     final payload = job.payload;
 
-    // Convert content Map to Struct
-    final contentStruct = _mapToStruct(
-      payload['content'] as Map<String, dynamic>,
-    );
-
     // Create timestamp
     final now = DateTime.now();
     final timestamp = common.Timestamp(
@@ -334,18 +337,39 @@ class BackgroundSyncTask {
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
 
+    final source = common.ContactLink(profileId: currentUserId ?? 'unknown');
+
+    // Extract content and type
+    final content = payload['content'] as Map<String, dynamic>;
+    final localType = domain.RoomEventType.values.firstWhere(
+      (t) => t.toString() == payload['type'],
+      orElse: () => domain.RoomEventType.text,
+    );
+    final protoType = _mapLocalEventTypeToProto(localType);
+
+    // Build event with payload-based content
+    final pbPayload = pb.Payload();
+    if (localType == domain.RoomEventType.text) {
+      pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+    } else if (localType == domain.RoomEventType.image ||
+        localType == domain.RoomEventType.video ||
+        localType == domain.RoomEventType.audio ||
+        localType == domain.RoomEventType.file) {
+      pbPayload.attachment = pb.AttachmentContent(
+        attachmentId: content['attachmentId'] as String? ?? '',
+        filename: content['fileName'] as String? ?? '',
+        mimeType: content['mimeType'] as String? ?? '',
+        sizeBytes: fixnum.Int64(content['size'] as int? ?? 0),
+      );
+    }
+
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
       roomId: payload['roomId'] as String,
-      senderId: currentUserId ?? 'unknown',
-      type: _mapLocalEventTypeToProto(
-        domain.RoomEventType.values.firstWhere(
-          (t) => t.toString() == payload['type'],
-          orElse: () => domain.RoomEventType.text,
-        ),
-      ),
-      payload: contentStruct,
+      source: source,
+      type: protoType,
       sentAt: timestamp,
+      payload: pbPayload,
     );
 
     final request = pb.SendEventRequest(event: [event]);
@@ -399,26 +423,27 @@ class BackgroundSyncTask {
   static pb.RoomEventType _mapLocalEventTypeToProto(domain.RoomEventType type) {
     switch (type) {
       case domain.RoomEventType.text:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
       case domain.RoomEventType.image:
       case domain.RoomEventType.video:
       case domain.RoomEventType.audio:
       case domain.RoomEventType.file:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_ATTACHMENT;
+        // All media types map to MESSAGE with attachment payload
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
       case domain.RoomEventType.reaction:
         return pb.RoomEventType.ROOM_EVENT_TYPE_REACTION;
       case domain.RoomEventType.callOffer:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_OFFER;
       case domain.RoomEventType.callAnswer:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ANSWER;
       case domain.RoomEventType.callIce:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_ICE;
       case domain.RoomEventType.callEnd:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL_END;
+        // All call types now map to a single ROOM_EVENT_TYPE_CALL
+        return pb.RoomEventType.ROOM_EVENT_TYPE_CALL;
       case domain.RoomEventType.motion:
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MOTION;
       case domain.RoomEventType.vote:
       case domain.RoomEventType.transaction:
-        return pb.RoomEventType.ROOM_EVENT_TYPE_TEXT;
+        // These might not be in protobuf yet, map to MESSAGE for now
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
     }
   }
 }

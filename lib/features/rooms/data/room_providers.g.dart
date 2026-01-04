@@ -10,11 +10,11 @@ part of 'room_providers.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(RoomList)
-const roomListProvider = RoomListProvider._();
+final roomListProvider = RoomListProvider._();
 
 final class RoomListProvider
     extends $AsyncNotifierProvider<RoomList, List<domain.Room>> {
-  const RoomListProvider._()
+  RoomListProvider._()
     : super(
         from: null,
         argument: null,
@@ -33,14 +33,13 @@ final class RoomListProvider
   RoomList create() => RoomList();
 }
 
-String _$roomListHash() => r'5fd2447a4b24d906c41e662b8998fbfcc9d8c67d';
+String _$roomListHash() => r'5201fece779454e434bdb02eb6b05fe72eca1f83';
 
 abstract class _$RoomList extends $AsyncNotifier<List<domain.Room>> {
   FutureOr<List<domain.Room>> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build();
     final ref =
         this.ref as $Ref<AsyncValue<List<domain.Room>>, List<domain.Room>>;
     final element =
@@ -51,12 +50,12 @@ abstract class _$RoomList extends $AsyncNotifier<List<domain.Room>> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, build);
   }
 }
 
 @ProviderFor(RoomListWithMessages)
-const roomListWithMessagesProvider = RoomListWithMessagesProvider._();
+final roomListWithMessagesProvider = RoomListWithMessagesProvider._();
 
 final class RoomListWithMessagesProvider
     extends
@@ -64,7 +63,7 @@ final class RoomListWithMessagesProvider
           RoomListWithMessages,
           List<RoomWithLastMessage>
         > {
-  const RoomListWithMessagesProvider._()
+  RoomListWithMessagesProvider._()
     : super(
         from: null,
         argument: null,
@@ -92,7 +91,6 @@ abstract class _$RoomListWithMessages
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build();
     final ref =
         this.ref
             as $Ref<
@@ -110,6 +108,6 @@ abstract class _$RoomListWithMessages
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, build);
   }
 }

@@ -50,10 +50,18 @@ class MessageRepository {
       .write(RoomEventsCompanion(status: Value(status.index)));
   }
 
+  Future<domain.RoomEvent?> getEventById(String eventId) async {
+    final query = _database.select(_database.roomEvents)
+      ..where((t) => t.id.equals(eventId));
+
+    final result = await query.getSingleOrNull();
+    return result != null ? _toRoomEvent(result) : null;
+  }
+
   Future<List<domain.RoomEvent>> getReactionsForEvent(String eventId) async {
     final query = _database.select(_database.roomEvents)
       ..where((t) => t.parentId.equals(eventId) & t.type.equals(domain.RoomEventType.reaction.index));
-    
+
     final results = await query.get();
     return results.map((row) => _toRoomEvent(row)).toList();
   }

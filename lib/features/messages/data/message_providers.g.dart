@@ -10,7 +10,7 @@ part of 'message_providers.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(messageRepository)
-const messageRepositoryProvider = MessageRepositoryProvider._();
+final messageRepositoryProvider = MessageRepositoryProvider._();
 
 final class MessageRepositoryProvider
     extends
@@ -20,7 +20,7 @@ final class MessageRepositoryProvider
           MessageRepository
         >
     with $Provider<MessageRepository> {
-  const MessageRepositoryProvider._()
+  MessageRepositoryProvider._()
     : super(
         from: null,
         argument: null,
@@ -57,11 +57,11 @@ final class MessageRepositoryProvider
 String _$messageRepositoryHash() => r'379b18468ad2ee5a14bf7317fc951e1cfbbb975d';
 
 @ProviderFor(MessageList)
-const messageListProvider = MessageListFamily._();
+final messageListProvider = MessageListFamily._();
 
 final class MessageListProvider
     extends $AsyncNotifierProvider<MessageList, List<domain.RoomEvent>> {
-  const MessageListProvider._({
+  MessageListProvider._({
     required MessageListFamily super.from,
     required String super.argument,
   }) : super(
@@ -108,7 +108,7 @@ final class MessageListFamily extends $Family
           FutureOr<List<domain.RoomEvent>>,
           String
         > {
-  const MessageListFamily._()
+  MessageListFamily._()
     : super(
         retry: null,
         name: r'messageListProvider',
@@ -132,7 +132,6 @@ abstract class _$MessageList extends $AsyncNotifier<List<domain.RoomEvent>> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(_$args);
     final ref =
         this.ref
             as $Ref<AsyncValue<List<domain.RoomEvent>>, List<domain.RoomEvent>>;
@@ -147,6 +146,6 @@ abstract class _$MessageList extends $AsyncNotifier<List<domain.RoomEvent>> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, () => build(_$args));
   }
 }
