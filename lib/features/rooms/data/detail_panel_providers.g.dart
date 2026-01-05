@@ -1,0 +1,363 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'detail_panel_providers.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+/// Provider for active motions in a room
+/// Returns motions that haven't expired yet
+
+@ProviderFor(activeMotions)
+final activeMotionsProvider = ActiveMotionsFamily._();
+
+/// Provider for active motions in a room
+/// Returns motions that haven't expired yet
+
+final class ActiveMotionsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<domain.RoomEvent>>,
+          List<domain.RoomEvent>,
+          Stream<List<domain.RoomEvent>>
+        >
+    with
+        $FutureModifier<List<domain.RoomEvent>>,
+        $StreamProvider<List<domain.RoomEvent>> {
+  /// Provider for active motions in a room
+  /// Returns motions that haven't expired yet
+  ActiveMotionsProvider._({
+    required ActiveMotionsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'activeMotionsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$activeMotionsHash();
+
+  @override
+  String toString() {
+    return r'activeMotionsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<List<domain.RoomEvent>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<domain.RoomEvent>> create(Ref ref) {
+    final argument = this.argument as String;
+    return activeMotions(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ActiveMotionsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$activeMotionsHash() => r'02709d8a16c9424385c61e378f8bfbdc99fa3dbc';
+
+/// Provider for active motions in a room
+/// Returns motions that haven't expired yet
+
+final class ActiveMotionsFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<List<domain.RoomEvent>>, String> {
+  ActiveMotionsFamily._()
+    : super(
+        retry: null,
+        name: r'activeMotionsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider for active motions in a room
+  /// Returns motions that haven't expired yet
+
+  ActiveMotionsProvider call(String roomId) =>
+      ActiveMotionsProvider._(argument: roomId, from: this);
+
+  @override
+  String toString() => r'activeMotionsProvider';
+}
+
+/// Provider for room members
+/// Returns list of members in a room with their profile info
+
+@ProviderFor(roomMembers)
+final roomMembersProvider = RoomMembersFamily._();
+
+/// Provider for room members
+/// Returns list of members in a room with their profile info
+
+final class RoomMembersProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<RoomMemberInfo>>,
+          List<RoomMemberInfo>,
+          FutureOr<List<RoomMemberInfo>>
+        >
+    with
+        $FutureModifier<List<RoomMemberInfo>>,
+        $FutureProvider<List<RoomMemberInfo>> {
+  /// Provider for room members
+  /// Returns list of members in a room with their profile info
+  RoomMembersProvider._({
+    required RoomMembersFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'roomMembersProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$roomMembersHash();
+
+  @override
+  String toString() {
+    return r'roomMembersProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<RoomMemberInfo>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<RoomMemberInfo>> create(Ref ref) {
+    final argument = this.argument as String;
+    return roomMembers(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RoomMembersProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$roomMembersHash() => r'09726a2ef36ffdd3e7c12e74b779d9c95f5bac31';
+
+/// Provider for room members
+/// Returns list of members in a room with their profile info
+
+final class RoomMembersFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<RoomMemberInfo>>, String> {
+  RoomMembersFamily._()
+    : super(
+        retry: null,
+        name: r'roomMembersProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider for room members
+  /// Returns list of members in a room with their profile info
+
+  RoomMembersProvider call(String roomId) =>
+      RoomMembersProvider._(argument: roomId, from: this);
+
+  @override
+  String toString() => r'roomMembersProvider';
+}
+
+/// Provider for shared media in a room (images and videos)
+
+@ProviderFor(roomMedia)
+final roomMediaProvider = RoomMediaFamily._();
+
+/// Provider for shared media in a room (images and videos)
+
+final class RoomMediaProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<domain.RoomEvent>>,
+          List<domain.RoomEvent>,
+          Stream<List<domain.RoomEvent>>
+        >
+    with
+        $FutureModifier<List<domain.RoomEvent>>,
+        $StreamProvider<List<domain.RoomEvent>> {
+  /// Provider for shared media in a room (images and videos)
+  RoomMediaProvider._({
+    required RoomMediaFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'roomMediaProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$roomMediaHash();
+
+  @override
+  String toString() {
+    return r'roomMediaProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<List<domain.RoomEvent>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<domain.RoomEvent>> create(Ref ref) {
+    final argument = this.argument as String;
+    return roomMedia(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RoomMediaProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$roomMediaHash() => r'b448c619af98eee2acd979a7155f5897dc403473';
+
+/// Provider for shared media in a room (images and videos)
+
+final class RoomMediaFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<List<domain.RoomEvent>>, String> {
+  RoomMediaFamily._()
+    : super(
+        retry: null,
+        name: r'roomMediaProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider for shared media in a room (images and videos)
+
+  RoomMediaProvider call(String roomId) =>
+      RoomMediaProvider._(argument: roomId, from: this);
+
+  @override
+  String toString() => r'roomMediaProvider';
+}
+
+/// Provider for recent transactions in a room
+
+@ProviderFor(roomTransactions)
+final roomTransactionsProvider = RoomTransactionsFamily._();
+
+/// Provider for recent transactions in a room
+
+final class RoomTransactionsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<domain.RoomEvent>>,
+          List<domain.RoomEvent>,
+          Stream<List<domain.RoomEvent>>
+        >
+    with
+        $FutureModifier<List<domain.RoomEvent>>,
+        $StreamProvider<List<domain.RoomEvent>> {
+  /// Provider for recent transactions in a room
+  RoomTransactionsProvider._({
+    required RoomTransactionsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'roomTransactionsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$roomTransactionsHash();
+
+  @override
+  String toString() {
+    return r'roomTransactionsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<List<domain.RoomEvent>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<domain.RoomEvent>> create(Ref ref) {
+    final argument = this.argument as String;
+    return roomTransactions(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RoomTransactionsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$roomTransactionsHash() => r'173653d3b0fc24e8b51ae3283c771b2a6c54b643';
+
+/// Provider for recent transactions in a room
+
+final class RoomTransactionsFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<List<domain.RoomEvent>>, String> {
+  RoomTransactionsFamily._()
+    : super(
+        retry: null,
+        name: r'roomTransactionsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider for recent transactions in a room
+
+  RoomTransactionsProvider call(String roomId) =>
+      RoomTransactionsProvider._(argument: roomId, from: this);
+
+  @override
+  String toString() => r'roomTransactionsProvider';
+}

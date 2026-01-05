@@ -8,7 +8,6 @@ class ApiConfig {
   static const String gatewayBaseUrl = 'https://gateway.antinvestor.com';
   static const String devicesBaseUrl = 'https://devices.antinvestor.com';
   static const String filesBaseUrl = 'https://files.antinvestor.com';
-  static const String notificationBaseUrl = 'https://notification.antinvestor.com';
   static const String profileBaseUrl = 'https://profile.antinvestor.com';
   
   // OAuth2 configuration

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/responsive/breakpoints.dart';
+import '../../../core/responsive/responsive_layout.dart';
+import '../../../core/responsive/three_panel_layout.dart';
 import '../../../widgets/app_drawer.dart';
 import '../../../widgets/empty_state.dart';
 import '../../../widgets/error_banner.dart';
@@ -18,6 +20,7 @@ import '../../onboarding/data/onboarding_repository.dart';
 import '../data/room_providers.dart';
 import '../domain/room_with_last_message.dart';
 import 'new_chat_screen.dart';
+import 'room_detail_panel.dart';
 import 'room_list_tile.dart';
 
 class RoomListScreen extends ConsumerStatefulWidget {
@@ -93,65 +96,34 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   Widget build(BuildContext context) {
     final roomsAsync = ref.watch(roomListWithMessagesProvider);
     final width = MediaQuery.of(context).size.width;
-    final isLargeScreen =
-        AppBreakpoints.isTablet(width) || AppBreakpoints.isDesktop(width);
+    final showDetailPanel = AppBreakpoints.showDetailPanel(width);
 
+    return ResponsiveLayout(
+      mobileLayout: _buildMobileLayout(roomsAsync),
+      tabletLayout: _buildTabletLayout(roomsAsync),
+      desktopLayout: _buildDesktopLayout(roomsAsync, showDetailPanel),
+    );
+  }
+
+  /// Mobile layout: Single-pane with stack navigation
+  Widget _buildMobileLayout(AsyncValue<List<RoomWithLastMessage>> roomsAsync) {
     return Scaffold(
-      appBar: isLargeScreen
-          ? null
-          : AppBar(
-              title: const Text('Chats'),
-            ),
-      drawer: isLargeScreen ? null : const AppDrawer(),
-      floatingActionButton: isLargeScreen
-          ? null
-          : FloatingActionButton(
-              onPressed: _navigateToNewChat,
-              tooltip: 'New Chat',
-              child: const Icon(Icons.chat_bubble_outline),
-            ),
+      appBar: AppBar(
+        title: const Text('Chats'),
+      ),
+      drawer: const AppDrawer(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToNewChat,
+        tooltip: 'New Chat',
+        child: const Icon(Icons.chat_bubble_outline),
+      ),
       body: Stack(
         children: [
           Column(
             children: [
               const IncomingCallBanner(),
               Expanded(
-                child: isLargeScreen
-                    ? Row(
-                        children: [
-                          SizedBox(
-                            width: 350,
-                            child: Scaffold(
-                              appBar: AppBar(
-                                title: const Text('Chats'),
-                              ),
-                              drawer: const AppDrawer(),
-                              floatingActionButton: FloatingActionButton(
-                                onPressed: _navigateToNewChat,
-                                tooltip: 'New Chat',
-                                child: const Icon(Icons.chat_bubble_outline),
-                              ),
-                              body: _buildRoomList(roomsAsync, isLargeScreen),
-                            ),
-                          ),
-                          const VerticalDivider(width: 1),
-                          Expanded(
-                            child: _selectedRoomId != null
-                                ? ChatScreen(
-                                    roomId: _selectedRoomId!,
-                                    roomName: _selectedRoomName ?? 'Chat',
-                                    key: ValueKey(_selectedRoomId),
-                                  )
-                                : const EmptyState(
-                                    icon: Icons.chat_bubble_outline,
-                                    title: 'Select a conversation',
-                                    message:
-                                        'Choose a room from the list to start chatting',
-                                  ),
-                          ),
-                        ],
-                      )
-                    : _buildRoomList(roomsAsync, isLargeScreen),
+                child: _buildRoomList(roomsAsync, isMobile: true),
               ),
             ],
           ),
@@ -160,10 +132,106 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     );
   }
 
-  Widget _buildRoomList(
+  /// Tablet layout: 2-panel (Rooms | Chat)
+  Widget _buildTabletLayout(AsyncValue<List<RoomWithLastMessage>> roomsAsync) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              const IncomingCallBanner(),
+              Expanded(
+                child: ThreePanelLayout(
+                  leftPanel: _buildRoomListPanel(roomsAsync),
+                  centerPanel: _buildChatPanel(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Desktop layout: 3-panel (Rooms | Chat | Details)
+  Widget _buildDesktopLayout(
     AsyncValue<List<RoomWithLastMessage>> roomsAsync,
-    bool isLargeScreen,
+    bool showDetailPanel,
   ) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              const IncomingCallBanner(),
+              Expanded(
+                child: ThreePanelLayout(
+                  leftPanel: _buildRoomListPanel(roomsAsync),
+                  centerPanel: _buildChatPanel(),
+                  rightPanel: showDetailPanel ? _buildDetailPanel() : null,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Room list panel for tablet/desktop layouts
+  Widget _buildRoomListPanel(AsyncValue<List<RoomWithLastMessage>> roomsAsync) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Chats'),
+      ),
+      drawer: const AppDrawer(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToNewChat,
+        tooltip: 'New Chat',
+        child: const Icon(Icons.chat_bubble_outline),
+      ),
+      body: _buildRoomList(roomsAsync, isMobile: false),
+    );
+  }
+
+  /// Chat panel for tablet/desktop layouts
+  Widget _buildChatPanel() {
+    if (_selectedRoomId != null) {
+      return ChatScreen(
+        roomId: _selectedRoomId!,
+        roomName: _selectedRoomName ?? 'Chat',
+        key: ValueKey(_selectedRoomId),
+      );
+    } else {
+      return const EmptyState(
+        icon: Icons.chat_bubble_outline,
+        title: 'Select a conversation',
+        message: 'Choose a room from the list to start chatting',
+      );
+    }
+  }
+
+  /// Detail panel for desktop layout (room info, motions, transactions)
+  Widget _buildDetailPanel() {
+    if (_selectedRoomId != null && _selectedRoomName != null) {
+      return RoomDetailPanel(
+        roomId: _selectedRoomId!,
+        roomName: _selectedRoomName!,
+        key: ValueKey(_selectedRoomId),
+      );
+    } else {
+      return const EmptyState(
+        icon: Icons.info_outline,
+        title: 'Room details',
+        message: 'Select a room to view details',
+      );
+    }
+  }
+
+  Widget _buildRoomList(
+    AsyncValue<List<RoomWithLastMessage>> roomsAsync, {
+    required bool isMobile,
+  }) {
     return Column(
       children: [
         Expanded(
@@ -183,7 +251,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                 itemBuilder: (context, index) {
                   final room = rooms[index];
                   final isSelected =
-                      isLargeScreen && room.id == _selectedRoomId;
+                      !isMobile && room.id == _selectedRoomId;
 
                   return Container(
                     color: isSelected
@@ -192,15 +260,17 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                     child: RoomListTile(
                       room: room,
                       onTap: () {
-                        if (isLargeScreen) {
+                        if (isMobile) {
+                          // Navigate to chat screen
+                          context.go(
+                            '/chat/${room.id}?name=${Uri.encodeComponent(room.name)}',
+                          );
+                        } else {
+                          // Update selected room for tablet/desktop
                           setState(() {
                             _selectedRoomId = room.id;
                             _selectedRoomName = room.name;
                           });
-                        } else {
-                          context.go(
-                            '/chat/${room.id}?name=${Uri.encodeComponent(room.name)}',
-                          );
                         }
                       },
                     ),

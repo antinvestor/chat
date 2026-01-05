@@ -12,6 +12,7 @@ enum JobType {
   deleteRoom,
   addRoomMembers,
   removeRoomMembers,
+  leaveRoom,
   vote,
   syncContacts,
 }
@@ -27,5 +28,6 @@ abstract class PendingJob with _$PendingJob {
     @Default('pending') String status,
   }) = _PendingJob;
 
-  factory PendingJob.fromJson(Map<String, dynamic> json) => _$PendingJobFromJson(json);
+  factory PendingJob.fromJson(Map<String, dynamic> json) =>
+      _$PendingJobFromJson(json);
 }

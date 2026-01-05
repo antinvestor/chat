@@ -1,30 +1,22 @@
-/// Responsive breakpoints for adaptive layouts
+/// Responsive breakpoints for the application
+///
+/// Defines screen size breakpoints and layout dimensions for:
+/// - Mobile: Single-pane stack navigation (< 600px)
+/// - Tablet: 2-panel layout (600-1200px): Rooms | Chat
+/// - Desktop: 3-panel layout (>= 1200px): Rooms | Chat | Details
 class AppBreakpoints {
-  // Prevent instantiation
-  AppBreakpoints._();
+  // Screen size breakpoints
+  static const double mobile = 600.0;      // < 600px: Single-pane
+  static const double tablet = 1200.0;     // 600-1200px: 2-panel
+  static const double desktop = 1200.0;    // >= 1200px: 3-panel
 
-  /// Mobile devices (< 600px)
-  static const double mobile = 600.0;
+  // Panel widths
+  static const double roomListWidth = 280.0;
+  static const double detailPanelWidth = 320.0;
 
-  /// Tablet devices (600-900px)
-  static const double tablet = 900.0;
-
-  /// Desktop devices (> 900px)
-  static const double desktop = 1200.0;
-
-  /// Check if current width is mobile
+  // Helper methods to determine layout mode
   static bool isMobile(double width) => width < mobile;
-
-  /// Check if current width is tablet
   static bool isTablet(double width) => width >= mobile && width < desktop;
-
-  /// Check if current width is desktop
   static bool isDesktop(double width) => width >= desktop;
-}
-
-/// Helper extension for BuildContext
-extension ResponsiveExtension on double {
-  bool get isMobile => AppBreakpoints.isMobile(this);
-  bool get isTablet => AppBreakpoints.isTablet(this);
-  bool get isDesktop => AppBreakpoints.isDesktop(this);
+  static bool showDetailPanel(double width) => width >= desktop;
 }

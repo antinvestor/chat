@@ -11,7 +11,7 @@ part of 'router.dart';
 /// Provider for the auth change notifier
 
 @ProviderFor(authChangeNotifier)
-const authChangeProvider = AuthChangeNotifierProvider._();
+final authChangeProvider = AuthChangeNotifierProvider._();
 
 /// Provider for the auth change notifier
 
@@ -24,7 +24,7 @@ final class AuthChangeNotifierProvider
         >
     with $Provider<AuthChangeNotifier> {
   /// Provider for the auth change notifier
-  const AuthChangeNotifierProvider._()
+  AuthChangeNotifierProvider._()
     : super(
         from: null,
         argument: null,
@@ -62,12 +62,12 @@ String _$authChangeNotifierHash() =>
     r'909b689b91d50d4b5a2ca08c721b201beae7b44b';
 
 @ProviderFor(router)
-const routerProvider = RouterProvider._();
+final routerProvider = RouterProvider._();
 
 final class RouterProvider
     extends $FunctionalProvider<GoRouter, GoRouter, GoRouter>
     with $Provider<GoRouter> {
-  const RouterProvider._()
+  RouterProvider._()
     : super(
         from: null,
         argument: null,

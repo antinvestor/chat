@@ -27,10 +27,13 @@ class Typing extends _$Typing {
     final syncEngine = await ref.read(syncEngineProvider.future);
     _subscription = syncEngine.typingEvents.listen((event) {
       if (event.roomId == roomId) {
-        if (event.typing) {
-          _addTypingUser(event.profileId);
-        } else {
-          _removeTypingUser(event.profileId);
+        final userId = event.hasSource() ? event.source.profileId : '';
+        if (userId.isNotEmpty) {
+          if (event.typing) {
+            _addTypingUser(userId);
+          } else {
+            _removeTypingUser(userId);
+          }
         }
       }
     });

@@ -10,7 +10,7 @@ part of 'user_info_provider.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(userInfo)
-const userInfoProvider = UserInfoProvider._();
+final userInfoProvider = UserInfoProvider._();
 
 final class UserInfoProvider
     extends
@@ -20,7 +20,7 @@ final class UserInfoProvider
           FutureOr<UserInfo?>
         >
     with $FutureModifier<UserInfo?>, $FutureProvider<UserInfo?> {
-  const UserInfoProvider._()
+  UserInfoProvider._()
     : super(
         from: null,
         argument: null,

@@ -11,13 +11,13 @@ part of 'auth_state_provider.dart';
 /// Authentication state notifier that watches auth status
 
 @ProviderFor(AuthStateNotifier)
-const authStateProvider = AuthStateNotifierProvider._();
+final authStateProvider = AuthStateNotifierProvider._();
 
 /// Authentication state notifier that watches auth status
 final class AuthStateNotifierProvider
     extends $AsyncNotifierProvider<AuthStateNotifier, AuthState> {
   /// Authentication state notifier that watches auth status
-  const AuthStateNotifierProvider._()
+  AuthStateNotifierProvider._()
     : super(
         from: null,
         argument: null,
@@ -45,7 +45,6 @@ abstract class _$AuthStateNotifier extends $AsyncNotifier<AuthState> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build();
     final ref = this.ref as $Ref<AsyncValue<AuthState>, AuthState>;
     final element =
         ref.element
@@ -55,6 +54,6 @@ abstract class _$AuthStateNotifier extends $AsyncNotifier<AuthState> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, build);
   }
 }
