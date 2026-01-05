@@ -15,12 +15,17 @@ class Profiles extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Roster table mirrors the server roster with minimal contact information.
-/// The contact detail (email/msisdn) is stored locally as-is for display.
+/// Roster table mirrors the server roster with contact information.
+/// - id: Unique roster entry identifier
+/// - profileId: Foreign key to profiles table (nullable - null if user hasn't logged in)
+/// - contactId: Contact's unique identifier from server (available after successful sync)
+/// - contactDetail: Email/phone number as stored locally for display
 class Roster extends Table {
   TextColumn get id => text()();
-  TextColumn get profileId => text()();
-  TextColumn get contactId => text().nullable()();
+  TextColumn get profileId =>
+      text().nullable()(); // Null if user hasn't logged in yet
+  TextColumn get contactId =>
+      text().nullable()(); // Contact's unique ID from server
   IntColumn get contactType => integer().withDefault(const Constant(0))();
   TextColumn get contactDetail => text()();
   BoolColumn get isVerified => boolean().withDefault(const Constant(false))();
@@ -64,7 +69,8 @@ class RoomEvents extends Table {
   TextColumn get id => text()();
   TextColumn get roomId => text().references(Rooms, #id)();
   TextColumn get senderId => text()(); // Profile ID from ContactLink
-  TextColumn get senderContactId => text().nullable()(); // Contact ID from ContactLink
+  TextColumn get senderContactId =>
+      text().nullable()(); // Contact ID from ContactLink
   IntColumn get type => integer()();
   TextColumn get content => text().nullable()();
   TextColumn get parentId => text().nullable()();
@@ -125,25 +131,27 @@ class SyncMetadata extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-@DriftDatabase(tables: [
-  Profiles,
-  Roster,
-  Rooms,
-  RoomMembers,
-  RoomEvents,
-  Sessions,
-  Prekeys,
-  PendingJobs,
-  Transactions,
-  SyncMetadata,
-])
+@DriftDatabase(
+  tables: [
+    Profiles,
+    Roster,
+    Rooms,
+    RoomMembers,
+    RoomEvents,
+    Sessions,
+    Prekeys,
+    PendingJobs,
+    Transactions,
+    SyncMetadata,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
 
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -158,6 +166,16 @@ class AppDatabase extends _$AppDatabase {
         if (from < 4) {
           // Drop old Contacts table and create new Roster table
           await m.deleteTable('contacts');
+          await m.createTable(roster);
+        }
+        if (from < 6) {
+          // Handle profileId nullable change and fix FK constraint
+          // First, update any empty profileId values to null
+          await customStatement(
+            'UPDATE roster SET profile_id = NULL WHERE profile_id = ""',
+          );
+          // Drop and recreate table with new schema
+          await m.deleteTable(roster.actualTableName);
           await m.createTable(roster);
         }
       },

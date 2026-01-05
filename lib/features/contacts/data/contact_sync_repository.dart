@@ -48,7 +48,7 @@ class SyncedContact {
   factory SyncedContact.fromRosterEntry(RosterEntry entry) {
     return SyncedContact(
       id: entry.id,
-      profileId: entry.profileId,
+      profileId: entry.profileId ?? '', // Handle nullable profileId
       displayName: entry.displayName ?? entry.contactDetail,
       contactType: entry.contactType,
       isVerified: entry.isVerified,
@@ -57,7 +57,9 @@ class SyncedContact {
 }
 
 /// @deprecated Use [rosterRepositoryProvider] instead.
-final contactSyncRepositoryProvider = FutureProvider<RosterRepository>((ref) async {
+final contactSyncRepositoryProvider = FutureProvider<RosterRepository>((
+  ref,
+) async {
   return await ref.watch(rosterRepositoryProvider.future);
 });
 
@@ -68,7 +70,9 @@ final syncedContactsProvider = FutureProvider<List<SyncedContact>>((ref) async {
 });
 
 /// @deprecated Use [rosterSyncTriggerProvider] instead.
-final contactSyncTriggerProvider = FutureProvider<List<SyncedContact>>((ref) async {
+final contactSyncTriggerProvider = FutureProvider<List<SyncedContact>>((
+  ref,
+) async {
   final entries = await ref.watch(rosterSyncTriggerProvider.future);
   return entries.map(SyncedContact.fromRosterEntry).toList();
 });
@@ -84,7 +88,9 @@ final contactSyncNeededProvider = FutureProvider<bool>((ref) async {
 });
 
 /// @deprecated Use [blockedRosterEntriesProvider] instead.
-final blockedContactsProvider = FutureProvider<List<SyncedContact>>((ref) async {
+final blockedContactsProvider = FutureProvider<List<SyncedContact>>((
+  ref,
+) async {
   final entries = await ref.watch(blockedRosterEntriesProvider.future);
   return entries.map(SyncedContact.fromRosterEntry).toList();
 });
