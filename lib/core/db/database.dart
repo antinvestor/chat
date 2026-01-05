@@ -46,14 +46,18 @@ class Rooms extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Room subscriptions table - represents a user's subscription to a room
+/// Uses subscription_id from API as primary key
 class RoomMembers extends Table {
+  TextColumn get subscriptionId => text()(); // Primary key from API
   TextColumn get roomId => text().references(Rooms, #id)();
-  TextColumn get profileId => text().references(Profiles, #id)();
+  TextColumn get profileId => text().nullable()(); // From ContactLink, nullable
+  TextColumn get contactId => text().nullable()(); // From ContactLink, nullable
   TextColumn get role => text().nullable()();
   IntColumn get joinedAt => integer().nullable()();
 
   @override
-  Set<Column> get primaryKey => {roomId, profileId};
+  Set<Column> get primaryKey => {subscriptionId};
 }
 
 class RoomEvents extends Table {

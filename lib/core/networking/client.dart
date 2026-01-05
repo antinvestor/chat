@@ -3,7 +3,6 @@ import 'dart:io' as io;
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
 import 'package:antinvestor_api_common/antinvestor_api_common.dart';
 import 'package:antinvestor_api_device/antinvestor_api_device.dart';
-// import 'package:antinvestor_api_notification/antinvestor_api_notification.dart';  // Temporarily disabled
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/io.dart' as connect_io;
@@ -105,7 +104,7 @@ connect.Transport createTransport(Uri baseUrl, List<connect.Interceptor> interce
     ..idleTimeout = ApiConfig.idleTimeout
     ..maxConnectionsPerHost = 4
     ..autoUncompress = true;
-  
+
   return connect_protocol.Transport(
     baseUrl: baseUrl.toString(),
     codec: const connect_protobuf.ProtoCodec(),
@@ -174,22 +173,6 @@ final deviceClientProvider = FutureProvider<DeviceClient>((ref) async {
   );
 });
 
-// /// Notification client provider - uses newNotificationClient with proper interceptors
-// /// Temporarily disabled due to package compatibility issues
-// final notificationClientProvider = FutureProvider<NotificationClient>((ref) async {
-//   final tokenManager = ref.watch(tokenManagerProvider);
-//   final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
-//
-//   // Initialize token manager if not already initialized
-//   await tokenManager.initialize();
-//
-//   return await newNotificationClient(
-//     createTransport: createTransport,
-//     tokenManager: tokenManager,
-//     onTokenRefresh: onTokenRefresh,
-//   );
-// });
-
 /// Profile client provider - uses newProfileClient with proper interceptors
 final profileClientProvider = FutureProvider<ProfileClient>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
@@ -220,11 +203,6 @@ final deviceServiceClientProvider = FutureProvider<DeviceServiceClient>((ref) as
   final client = await ref.watch(deviceClientProvider.future);
   return client.stub;
 });
-
-// final notificationServiceClientProvider = FutureProvider<NotificationServiceClient>((ref) async {
-//   final client = await ref.watch(notificationClientProvider.future);
-//   return client.stub;
-// });
 
 final profileServiceClientProvider = FutureProvider<ProfileServiceClient>((ref) async {
   final client = await ref.watch(profileClientProvider.future);

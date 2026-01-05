@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 
 import '../../../core/db/database.dart';
+import '../../../core/error/error_handler.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../../../features/auth/data/auth_repository.dart';
 import '../../messages/data/message_providers.dart';
@@ -16,22 +17,6 @@ final motionServiceProvider = FutureProvider<MotionService>((ref) async {
   final db = AppDatabase.instance;
   return MotionService(syncEngine, authRepo, messageRepo, db);
 });
-
-class ValidationException implements Exception {
-  final String message;
-  ValidationException(this.message);
-
-  @override
-  String toString() => message;
-}
-
-class PermissionDeniedException implements Exception {
-  final String message;
-  PermissionDeniedException(this.message);
-
-  @override
-  String toString() => message;
-}
 
 class MotionService {
   final SyncEngine _syncEngine;

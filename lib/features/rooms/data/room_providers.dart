@@ -10,14 +10,14 @@ part 'room_providers.g.dart';
 class RoomList extends _$RoomList {
   @override
   Future<List<domain.Room>> build() async {
-    final service = ref.watch(roomServiceProvider);
+    final service = await ref.watch(roomServiceProvider.future);
     return service.getAllRooms();
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final service = ref.read(roomServiceProvider);
+      final service = await ref.read(roomServiceProvider.future);
       return service.getAllRooms();
     });
   }
@@ -33,7 +33,7 @@ class RoomList extends _$RoomList {
     List<String> contactIds = const [], // Server determines routing
     Map<String, dynamic>? metadata,
   }) async {
-    final service = ref.read(roomServiceProvider);
+    final service = await ref.read(roomServiceProvider.future);
     final room = await service.createRoom(
       name: name,
       type: type,
@@ -53,7 +53,7 @@ class RoomList extends _$RoomList {
     String? description,
     Map<String, dynamic>? metadata,
   }) async {
-    final service = ref.read(roomServiceProvider);
+    final service = await ref.read(roomServiceProvider.future);
     final room = await service.updateRoom(
       roomId: roomId,
       name: name,
@@ -66,7 +66,7 @@ class RoomList extends _$RoomList {
 
   /// Delete a room (offline-first)
   Future<void> deleteRoom(String roomId) async {
-    final service = ref.read(roomServiceProvider);
+    final service = await ref.read(roomServiceProvider.future);
     await service.deleteRoom(roomId);
     await refresh();
   }
@@ -76,7 +76,7 @@ class RoomList extends _$RoomList {
     required String roomId,
     required List<String> profileIds,
   }) async {
-    final service = ref.read(roomServiceProvider);
+    final service = await ref.read(roomServiceProvider.future);
     await service.addMembers(roomId: roomId, profileIds: profileIds);
   }
 
@@ -85,7 +85,7 @@ class RoomList extends _$RoomList {
     required String roomId,
     required List<String> profileIds,
   }) async {
-    final service = ref.read(roomServiceProvider);
+    final service = await ref.read(roomServiceProvider.future);
     await service.removeMembers(roomId: roomId, profileIds: profileIds);
   }
 }

@@ -349,7 +349,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     setState(() => _isCreatingRoom = true);
 
     try {
-      final roomService = ref.read(roomServiceProvider);
+      final roomService = await ref.read(roomServiceProvider.future);
 
       // Get all contact identifiers using priority logic - server will handle routing
       final contactIds = _selectedContacts.map((c) => _getContactIdentifier(c)).toList();

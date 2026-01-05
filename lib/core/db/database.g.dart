@@ -1473,6 +1473,17 @@ class $RoomMembersTable extends RoomMembers
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $RoomMembersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _subscriptionIdMeta = const VerificationMeta(
+    'subscriptionId',
+  );
+  @override
+  late final GeneratedColumn<String> subscriptionId = GeneratedColumn<String>(
+    'subscription_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _roomIdMeta = const VerificationMeta('roomId');
   @override
   late final GeneratedColumn<String> roomId = GeneratedColumn<String>(
@@ -1492,12 +1503,20 @@ class $RoomMembersTable extends RoomMembers
   late final GeneratedColumn<String> profileId = GeneratedColumn<String>(
     'profile_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES profiles (id)',
-    ),
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _contactIdMeta = const VerificationMeta(
+    'contactId',
+  );
+  @override
+  late final GeneratedColumn<String> contactId = GeneratedColumn<String>(
+    'contact_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _roleMeta = const VerificationMeta('role');
   @override
@@ -1520,7 +1539,14 @@ class $RoomMembersTable extends RoomMembers
     requiredDuringInsert: false,
   );
   @override
-  List<GeneratedColumn> get $columns => [roomId, profileId, role, joinedAt];
+  List<GeneratedColumn> get $columns => [
+    subscriptionId,
+    roomId,
+    profileId,
+    contactId,
+    role,
+    joinedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1533,6 +1559,17 @@ class $RoomMembersTable extends RoomMembers
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('subscription_id')) {
+      context.handle(
+        _subscriptionIdMeta,
+        subscriptionId.isAcceptableOrUnknown(
+          data['subscription_id']!,
+          _subscriptionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_subscriptionIdMeta);
+    }
     if (data.containsKey('room_id')) {
       context.handle(
         _roomIdMeta,
@@ -1546,8 +1583,12 @@ class $RoomMembersTable extends RoomMembers
         _profileIdMeta,
         profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
       );
-    } else if (isInserting) {
-      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('contact_id')) {
+      context.handle(
+        _contactIdMeta,
+        contactId.isAcceptableOrUnknown(data['contact_id']!, _contactIdMeta),
+      );
     }
     if (data.containsKey('role')) {
       context.handle(
@@ -1565,11 +1606,15 @@ class $RoomMembersTable extends RoomMembers
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {roomId, profileId};
+  Set<GeneratedColumn> get $primaryKey => {subscriptionId};
   @override
   RoomMember map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return RoomMember(
+      subscriptionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subscription_id'],
+      )!,
       roomId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}room_id'],
@@ -1577,7 +1622,11 @@ class $RoomMembersTable extends RoomMembers
       profileId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}profile_id'],
-      )!,
+      ),
+      contactId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contact_id'],
+      ),
       role: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}role'],
@@ -1596,21 +1645,31 @@ class $RoomMembersTable extends RoomMembers
 }
 
 class RoomMember extends DataClass implements Insertable<RoomMember> {
+  final String subscriptionId;
   final String roomId;
-  final String profileId;
+  final String? profileId;
+  final String? contactId;
   final String? role;
   final int? joinedAt;
   const RoomMember({
+    required this.subscriptionId,
     required this.roomId,
-    required this.profileId,
+    this.profileId,
+    this.contactId,
     this.role,
     this.joinedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['subscription_id'] = Variable<String>(subscriptionId);
     map['room_id'] = Variable<String>(roomId);
-    map['profile_id'] = Variable<String>(profileId);
+    if (!nullToAbsent || profileId != null) {
+      map['profile_id'] = Variable<String>(profileId);
+    }
+    if (!nullToAbsent || contactId != null) {
+      map['contact_id'] = Variable<String>(contactId);
+    }
     if (!nullToAbsent || role != null) {
       map['role'] = Variable<String>(role);
     }
@@ -1622,8 +1681,14 @@ class RoomMember extends DataClass implements Insertable<RoomMember> {
 
   RoomMembersCompanion toCompanion(bool nullToAbsent) {
     return RoomMembersCompanion(
+      subscriptionId: Value(subscriptionId),
       roomId: Value(roomId),
-      profileId: Value(profileId),
+      profileId: profileId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(profileId),
+      contactId: contactId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contactId),
       role: role == null && nullToAbsent ? const Value.absent() : Value(role),
       joinedAt: joinedAt == null && nullToAbsent
           ? const Value.absent()
@@ -1637,8 +1702,10 @@ class RoomMember extends DataClass implements Insertable<RoomMember> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return RoomMember(
+      subscriptionId: serializer.fromJson<String>(json['subscriptionId']),
       roomId: serializer.fromJson<String>(json['roomId']),
-      profileId: serializer.fromJson<String>(json['profileId']),
+      profileId: serializer.fromJson<String?>(json['profileId']),
+      contactId: serializer.fromJson<String?>(json['contactId']),
       role: serializer.fromJson<String?>(json['role']),
       joinedAt: serializer.fromJson<int?>(json['joinedAt']),
     );
@@ -1647,28 +1714,38 @@ class RoomMember extends DataClass implements Insertable<RoomMember> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'subscriptionId': serializer.toJson<String>(subscriptionId),
       'roomId': serializer.toJson<String>(roomId),
-      'profileId': serializer.toJson<String>(profileId),
+      'profileId': serializer.toJson<String?>(profileId),
+      'contactId': serializer.toJson<String?>(contactId),
       'role': serializer.toJson<String?>(role),
       'joinedAt': serializer.toJson<int?>(joinedAt),
     };
   }
 
   RoomMember copyWith({
+    String? subscriptionId,
     String? roomId,
-    String? profileId,
+    Value<String?> profileId = const Value.absent(),
+    Value<String?> contactId = const Value.absent(),
     Value<String?> role = const Value.absent(),
     Value<int?> joinedAt = const Value.absent(),
   }) => RoomMember(
+    subscriptionId: subscriptionId ?? this.subscriptionId,
     roomId: roomId ?? this.roomId,
-    profileId: profileId ?? this.profileId,
+    profileId: profileId.present ? profileId.value : this.profileId,
+    contactId: contactId.present ? contactId.value : this.contactId,
     role: role.present ? role.value : this.role,
     joinedAt: joinedAt.present ? joinedAt.value : this.joinedAt,
   );
   RoomMember copyWithCompanion(RoomMembersCompanion data) {
     return RoomMember(
+      subscriptionId: data.subscriptionId.present
+          ? data.subscriptionId.value
+          : this.subscriptionId,
       roomId: data.roomId.present ? data.roomId.value : this.roomId,
       profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      contactId: data.contactId.present ? data.contactId.value : this.contactId,
       role: data.role.present ? data.role.value : this.role,
       joinedAt: data.joinedAt.present ? data.joinedAt.value : this.joinedAt,
     );
@@ -1677,8 +1754,10 @@ class RoomMember extends DataClass implements Insertable<RoomMember> {
   @override
   String toString() {
     return (StringBuffer('RoomMember(')
+          ..write('subscriptionId: $subscriptionId, ')
           ..write('roomId: $roomId, ')
           ..write('profileId: $profileId, ')
+          ..write('contactId: $contactId, ')
           ..write('role: $role, ')
           ..write('joinedAt: $joinedAt')
           ..write(')'))
@@ -1686,48 +1765,61 @@ class RoomMember extends DataClass implements Insertable<RoomMember> {
   }
 
   @override
-  int get hashCode => Object.hash(roomId, profileId, role, joinedAt);
+  int get hashCode =>
+      Object.hash(subscriptionId, roomId, profileId, contactId, role, joinedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RoomMember &&
+          other.subscriptionId == this.subscriptionId &&
           other.roomId == this.roomId &&
           other.profileId == this.profileId &&
+          other.contactId == this.contactId &&
           other.role == this.role &&
           other.joinedAt == this.joinedAt);
 }
 
 class RoomMembersCompanion extends UpdateCompanion<RoomMember> {
+  final Value<String> subscriptionId;
   final Value<String> roomId;
-  final Value<String> profileId;
+  final Value<String?> profileId;
+  final Value<String?> contactId;
   final Value<String?> role;
   final Value<int?> joinedAt;
   final Value<int> rowid;
   const RoomMembersCompanion({
+    this.subscriptionId = const Value.absent(),
     this.roomId = const Value.absent(),
     this.profileId = const Value.absent(),
+    this.contactId = const Value.absent(),
     this.role = const Value.absent(),
     this.joinedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomMembersCompanion.insert({
+    required String subscriptionId,
     required String roomId,
-    required String profileId,
+    this.profileId = const Value.absent(),
+    this.contactId = const Value.absent(),
     this.role = const Value.absent(),
     this.joinedAt = const Value.absent(),
     this.rowid = const Value.absent(),
-  }) : roomId = Value(roomId),
-       profileId = Value(profileId);
+  }) : subscriptionId = Value(subscriptionId),
+       roomId = Value(roomId);
   static Insertable<RoomMember> custom({
+    Expression<String>? subscriptionId,
     Expression<String>? roomId,
     Expression<String>? profileId,
+    Expression<String>? contactId,
     Expression<String>? role,
     Expression<int>? joinedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (subscriptionId != null) 'subscription_id': subscriptionId,
       if (roomId != null) 'room_id': roomId,
       if (profileId != null) 'profile_id': profileId,
+      if (contactId != null) 'contact_id': contactId,
       if (role != null) 'role': role,
       if (joinedAt != null) 'joined_at': joinedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1735,15 +1827,19 @@ class RoomMembersCompanion extends UpdateCompanion<RoomMember> {
   }
 
   RoomMembersCompanion copyWith({
+    Value<String>? subscriptionId,
     Value<String>? roomId,
-    Value<String>? profileId,
+    Value<String?>? profileId,
+    Value<String?>? contactId,
     Value<String?>? role,
     Value<int?>? joinedAt,
     Value<int>? rowid,
   }) {
     return RoomMembersCompanion(
+      subscriptionId: subscriptionId ?? this.subscriptionId,
       roomId: roomId ?? this.roomId,
       profileId: profileId ?? this.profileId,
+      contactId: contactId ?? this.contactId,
       role: role ?? this.role,
       joinedAt: joinedAt ?? this.joinedAt,
       rowid: rowid ?? this.rowid,
@@ -1753,11 +1849,17 @@ class RoomMembersCompanion extends UpdateCompanion<RoomMember> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (subscriptionId.present) {
+      map['subscription_id'] = Variable<String>(subscriptionId.value);
+    }
     if (roomId.present) {
       map['room_id'] = Variable<String>(roomId.value);
     }
     if (profileId.present) {
       map['profile_id'] = Variable<String>(profileId.value);
+    }
+    if (contactId.present) {
+      map['contact_id'] = Variable<String>(contactId.value);
     }
     if (role.present) {
       map['role'] = Variable<String>(role.value);
@@ -1774,8 +1876,10 @@ class RoomMembersCompanion extends UpdateCompanion<RoomMember> {
   @override
   String toString() {
     return (StringBuffer('RoomMembersCompanion(')
+          ..write('subscriptionId: $subscriptionId, ')
           ..write('roomId: $roomId, ')
           ..write('profileId: $profileId, ')
+          ..write('contactId: $contactId, ')
           ..write('role: $role, ')
           ..write('joinedAt: $joinedAt, ')
           ..write('rowid: $rowid')
@@ -4259,29 +4363,6 @@ typedef $$ProfilesTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$ProfilesTableReferences
-    extends BaseReferences<_$AppDatabase, $ProfilesTable, Profile> {
-  $$ProfilesTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static MultiTypedResultKey<$RoomMembersTable, List<RoomMember>>
-  _roomMembersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.roomMembers,
-    aliasName: $_aliasNameGenerator(db.profiles.id, db.roomMembers.profileId),
-  );
-
-  $$RoomMembersTableProcessedTableManager get roomMembersRefs {
-    final manager = $$RoomMembersTableTableManager(
-      $_db,
-      $_db.roomMembers,
-    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_roomMembersRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-}
-
 class $$ProfilesTableFilterComposer
     extends Composer<_$AppDatabase, $ProfilesTable> {
   $$ProfilesTableFilterComposer({
@@ -4315,31 +4396,6 @@ class $$ProfilesTableFilterComposer
     column: $table.metadata,
     builder: (column) => ColumnFilters(column),
   );
-
-  Expression<bool> roomMembersRefs(
-    Expression<bool> Function($$RoomMembersTableFilterComposer f) f,
-  ) {
-    final $$RoomMembersTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.roomMembers,
-      getReferencedColumn: (t) => t.profileId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$RoomMembersTableFilterComposer(
-            $db: $db,
-            $table: $db.roomMembers,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$ProfilesTableOrderingComposer
@@ -4400,31 +4456,6 @@ class $$ProfilesTableAnnotationComposer
 
   GeneratedColumn<String> get metadata =>
       $composableBuilder(column: $table.metadata, builder: (column) => column);
-
-  Expression<T> roomMembersRefs<T extends Object>(
-    Expression<T> Function($$RoomMembersTableAnnotationComposer a) f,
-  ) {
-    final $$RoomMembersTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.roomMembers,
-      getReferencedColumn: (t) => t.profileId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$RoomMembersTableAnnotationComposer(
-            $db: $db,
-            $table: $db.roomMembers,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$ProfilesTableTableManager
@@ -4438,9 +4469,9 @@ class $$ProfilesTableTableManager
           $$ProfilesTableAnnotationComposer,
           $$ProfilesTableCreateCompanionBuilder,
           $$ProfilesTableUpdateCompanionBuilder,
-          (Profile, $$ProfilesTableReferences),
+          (Profile, BaseReferences<_$AppDatabase, $ProfilesTable, Profile>),
           Profile,
-          PrefetchHooks Function({bool roomMembersRefs})
+          PrefetchHooks Function()
         > {
   $$ProfilesTableTableManager(_$AppDatabase db, $ProfilesTable table)
     : super(
@@ -4486,42 +4517,9 @@ class $$ProfilesTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$ProfilesTableReferences(db, table, e),
-                ),
-              )
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({roomMembersRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (roomMembersRefs) db.roomMembers],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (roomMembersRefs)
-                    await $_getPrefetchedData<
-                      Profile,
-                      $ProfilesTable,
-                      RoomMember
-                    >(
-                      currentTable: table,
-                      referencedTable: $$ProfilesTableReferences
-                          ._roomMembersRefsTable(db),
-                      managerFromTypedResult: (p0) => $$ProfilesTableReferences(
-                        db,
-                        table,
-                        p0,
-                      ).roomMembersRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.profileId == item.id),
-                      typedResults: items,
-                    ),
-                ];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ),
       );
 }
@@ -4536,9 +4534,9 @@ typedef $$ProfilesTableProcessedTableManager =
       $$ProfilesTableAnnotationComposer,
       $$ProfilesTableCreateCompanionBuilder,
       $$ProfilesTableUpdateCompanionBuilder,
-      (Profile, $$ProfilesTableReferences),
+      (Profile, BaseReferences<_$AppDatabase, $ProfilesTable, Profile>),
       Profile,
-      PrefetchHooks Function({bool roomMembersRefs})
+      PrefetchHooks Function()
     >;
 typedef $$RosterTableCreateCompanionBuilder =
     RosterCompanion Function({
@@ -5374,16 +5372,20 @@ typedef $$RoomsTableProcessedTableManager =
     >;
 typedef $$RoomMembersTableCreateCompanionBuilder =
     RoomMembersCompanion Function({
+      required String subscriptionId,
       required String roomId,
-      required String profileId,
+      Value<String?> profileId,
+      Value<String?> contactId,
       Value<String?> role,
       Value<int?> joinedAt,
       Value<int> rowid,
     });
 typedef $$RoomMembersTableUpdateCompanionBuilder =
     RoomMembersCompanion Function({
+      Value<String> subscriptionId,
       Value<String> roomId,
-      Value<String> profileId,
+      Value<String?> profileId,
+      Value<String?> contactId,
       Value<String?> role,
       Value<int?> joinedAt,
       Value<int> rowid,
@@ -5410,25 +5412,6 @@ final class $$RoomMembersTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
-
-  static $ProfilesTable _profileIdTable(_$AppDatabase db) =>
-      db.profiles.createAlias(
-        $_aliasNameGenerator(db.roomMembers.profileId, db.profiles.id),
-      );
-
-  $$ProfilesTableProcessedTableManager get profileId {
-    final $_column = $_itemColumn<String>('profile_id')!;
-
-    final manager = $$ProfilesTableTableManager(
-      $_db,
-      $_db.profiles,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
 }
 
 class $$RoomMembersTableFilterComposer
@@ -5440,6 +5423,21 @@ class $$RoomMembersTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get subscriptionId => $composableBuilder(
+    column: $table.subscriptionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contactId => $composableBuilder(
+    column: $table.contactId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get role => $composableBuilder(
     column: $table.role,
     builder: (column) => ColumnFilters(column),
@@ -5472,29 +5470,6 @@ class $$RoomMembersTableFilterComposer
     );
     return composer;
   }
-
-  $$ProfilesTableFilterComposer get profileId {
-    final $$ProfilesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.profiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ProfilesTableFilterComposer(
-            $db: $db,
-            $table: $db.profiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$RoomMembersTableOrderingComposer
@@ -5506,6 +5481,21 @@ class $$RoomMembersTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get subscriptionId => $composableBuilder(
+    column: $table.subscriptionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contactId => $composableBuilder(
+    column: $table.contactId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get role => $composableBuilder(
     column: $table.role,
     builder: (column) => ColumnOrderings(column),
@@ -5538,29 +5528,6 @@ class $$RoomMembersTableOrderingComposer
     );
     return composer;
   }
-
-  $$ProfilesTableOrderingComposer get profileId {
-    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.profiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ProfilesTableOrderingComposer(
-            $db: $db,
-            $table: $db.profiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$RoomMembersTableAnnotationComposer
@@ -5572,6 +5539,17 @@ class $$RoomMembersTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get subscriptionId => $composableBuilder(
+    column: $table.subscriptionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => column);
+
   GeneratedColumn<String> get role =>
       $composableBuilder(column: $table.role, builder: (column) => column);
 
@@ -5600,29 +5578,6 @@ class $$RoomMembersTableAnnotationComposer
     );
     return composer;
   }
-
-  $$ProfilesTableAnnotationComposer get profileId {
-    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.profiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ProfilesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.profiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$RoomMembersTableTableManager
@@ -5638,7 +5593,7 @@ class $$RoomMembersTableTableManager
           $$RoomMembersTableUpdateCompanionBuilder,
           (RoomMember, $$RoomMembersTableReferences),
           RoomMember,
-          PrefetchHooks Function({bool roomId, bool profileId})
+          PrefetchHooks Function({bool roomId})
         > {
   $$RoomMembersTableTableManager(_$AppDatabase db, $RoomMembersTable table)
     : super(
@@ -5653,28 +5608,36 @@ class $$RoomMembersTableTableManager
               $$RoomMembersTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String> subscriptionId = const Value.absent(),
                 Value<String> roomId = const Value.absent(),
-                Value<String> profileId = const Value.absent(),
+                Value<String?> profileId = const Value.absent(),
+                Value<String?> contactId = const Value.absent(),
                 Value<String?> role = const Value.absent(),
                 Value<int?> joinedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomMembersCompanion(
+                subscriptionId: subscriptionId,
                 roomId: roomId,
                 profileId: profileId,
+                contactId: contactId,
                 role: role,
                 joinedAt: joinedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
+                required String subscriptionId,
                 required String roomId,
-                required String profileId,
+                Value<String?> profileId = const Value.absent(),
+                Value<String?> contactId = const Value.absent(),
                 Value<String?> role = const Value.absent(),
                 Value<int?> joinedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomMembersCompanion.insert(
+                subscriptionId: subscriptionId,
                 roomId: roomId,
                 profileId: profileId,
+                contactId: contactId,
                 role: role,
                 joinedAt: joinedAt,
                 rowid: rowid,
@@ -5687,7 +5650,7 @@ class $$RoomMembersTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({roomId = false, profileId = false}) {
+          prefetchHooksCallback: ({roomId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -5720,19 +5683,6 @@ class $$RoomMembersTableTableManager
                               )
                               as T;
                     }
-                    if (profileId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.profileId,
-                                referencedTable: $$RoomMembersTableReferences
-                                    ._profileIdTable(db),
-                                referencedColumn: $$RoomMembersTableReferences
-                                    ._profileIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
 
                     return state;
                   },
@@ -5757,7 +5707,7 @@ typedef $$RoomMembersTableProcessedTableManager =
       $$RoomMembersTableUpdateCompanionBuilder,
       (RoomMember, $$RoomMembersTableReferences),
       RoomMember,
-      PrefetchHooks Function({bool roomId, bool profileId})
+      PrefetchHooks Function({bool roomId})
     >;
 typedef $$RoomEventsTableCreateCompanionBuilder =
     RoomEventsCompanion Function({

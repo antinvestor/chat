@@ -208,8 +208,15 @@ class SyncEngine {
 
     while (true) {
       try {
+        // Add client capabilities for server-side feature detection
         final hello = pb.StreamHello(
-          capabilities: {}, // Add capabilities as needed
+          capabilities: {
+            'version': '1.0.0',
+            'platform': 'flutter',
+            'e2ee': 'vodozemac-0.4',
+            'calls': 'webrtc',
+            'offline': 'true',
+          },
           clientTime: common.Timestamp.fromDateTime(DateTime.now()),
         );
         final request = pb.StreamRequest(hello: hello);

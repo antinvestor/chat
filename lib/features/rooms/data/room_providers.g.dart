@@ -33,7 +33,7 @@ final class RoomListProvider
   RoomList create() => RoomList();
 }
 
-String _$roomListHash() => r'5201fece779454e434bdb02eb6b05fe72eca1f83';
+String _$roomListHash() => r'53d5f60fe6daf5658285f4724d77e975507567ab';
 
 abstract class _$RoomList extends $AsyncNotifier<List<domain.Room>> {
   FutureOr<List<domain.Room>> build();

@@ -1,8 +1,11 @@
+import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb_chat;
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../../core/networking/client.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
@@ -15,8 +18,10 @@ import 'room_repository.dart';
 class RoomService {
   final RoomRepository _roomRepo;
   final PendingJobRepository _jobRepo;
+  final pb_chat.ChatServiceClient _chatClient;
+  final AppDatabase _database;
 
-  RoomService(this._roomRepo, this._jobRepo);
+  RoomService(this._roomRepo, this._jobRepo, this._chatClient, this._database);
 
   /// Create a new room (group or direct chat)
   /// Saves locally first, then queues for server sync
@@ -219,13 +224,81 @@ class RoomService {
 
     AppLogger.info('Leave room queued for sync', data: {'roomId': roomId});
   }
+
+  /// Sync room members from server
+  /// Fetches room member subscriptions and stores them locally using the searchRoomSubscriptions API
+  Future<void> syncRoomMembers(String roomId) async {
+    try {
+      // Create request to search room subscriptions
+      final request = pb_chat.SearchRoomSubscriptionsRequest(
+        roomId: roomId,
+      );
+
+      // Fetch subscriptions from API (unary call returns single response)
+      final response = await _chatClient.searchRoomSubscriptions(request);
+
+      int memberCount = 0;
+
+      // Process each subscription from the response
+      for (final subscription in response.members) {
+        // Extract subscription ID from API response
+        final subscriptionId = subscription.id;
+
+        // Extract profileId and contactId from ContactLink
+        final profileId = subscription.hasMember() && subscription.member.hasProfileId()
+            ? subscription.member.profileId
+            : null;
+        final contactId = subscription.hasMember() && subscription.member.hasContactId()
+            ? subscription.member.contactId
+            : null;
+
+        // Extract role (use first role if multiple, or null)
+        final role = subscription.roles.isNotEmpty ? subscription.roles.first : null;
+
+        // Extract joined timestamp
+        final joinedAt = subscription.hasJoinedAt()
+            ? subscription.joinedAt.seconds.toInt() * 1000 +
+                subscription.joinedAt.nanos ~/ 1000000
+            : null;
+
+        // Insert or update room member
+        await _database.into(_database.roomMembers).insertOnConflictUpdate(
+          RoomMembersCompanion.insert(
+            subscriptionId: subscriptionId,
+            roomId: subscription.roomId,
+            profileId: Value(profileId),
+            contactId: Value(contactId),
+            role: Value(role),
+            joinedAt: Value(joinedAt),
+          ),
+        );
+
+        memberCount++;
+      }
+
+      AppLogger.info(
+        'Room members synced',
+        data: {'roomId': roomId, 'memberCount': memberCount},
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to sync room members',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'roomId': roomId},
+      );
+      rethrow;
+    }
+  }
 }
 
 /// Provider for RoomService
-final roomServiceProvider = Provider<RoomService>((ref) {
+final roomServiceProvider = FutureProvider<RoomService>((ref) async {
   final roomRepo = ref.watch(roomRepositoryProvider);
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
-  return RoomService(roomRepo, jobRepo);
+  final chatClient = await ref.watch(chatServiceClientProvider.future);
+  final database = AppDatabase.instance;
+  return RoomService(roomRepo, jobRepo, chatClient, database);
 });
 
 /// Provider for RoomRepository
