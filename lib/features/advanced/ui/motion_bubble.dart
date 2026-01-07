@@ -11,11 +11,7 @@ class MotionBubble extends ConsumerStatefulWidget {
   final RoomEvent event;
   final bool isMe;
 
-  const MotionBubble({
-    super.key,
-    required this.event,
-    required this.isMe,
-  });
+  const MotionBubble({super.key, required this.event, required this.isMe});
 
   @override
   ConsumerState<MotionBubble> createState() => _MotionBubbleState();
@@ -63,19 +59,24 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
     final content = event.content;
     final title = content['title'] as String? ?? 'Motion';
     final description = content['description'] as String? ?? '';
-    final options = (content['options'] as List<dynamic>?)?.cast<String>() ?? [];
+    final options =
+        (content['options'] as List<dynamic>?)?.cast<String>() ?? [];
     final votes = (content['votes'] as Map<String, dynamic>?) ?? {};
-    final deadline = DateTime.fromMillisecondsSinceEpoch(content['deadline'] as int? ?? 0);
+    final deadline = DateTime.fromMillisecondsSinceEpoch(
+      content['deadline'] as int? ?? 0,
+    );
     final isExpired = DateTime.now().isAfter(deadline);
 
-    // Get current user ID and their vote
-    final currentUserIdAsync = ref.watch(currentUserIdProvider);
-    final currentUserId = currentUserIdAsync.when(
+    // Get current profile ID and their vote
+    final currentProfileIdAsync = ref.watch(currentProfileIdProvider);
+    final currentProfileId = currentProfileIdAsync.when(
       data: (id) => id,
       loading: () => null,
-      error: (_, __) => null,
+      error: (_, _) => null,
     );
-    final userVote = currentUserId != null ? votes[currentUserId] as String? : null;
+    final userVote = currentProfileId != null
+        ? votes[currentProfileId] as String?
+        : null;
 
     // Calculate votes
     final voteCounts = <String, int>{};
@@ -113,9 +114,7 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant,
-            ),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,13 +124,13 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                   Icon(Icons.how_to_vote, color: theme.colorScheme.primary),
                   const SizedBox(width: 8),
                   Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    child: Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-              ),
                 ],
               ),
               if (description.isNotEmpty) ...[
@@ -197,7 +196,9 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                             Text(
                               option,
                               style: TextStyle(
-                                fontWeight: isWinner ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: isWinner
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                             Text(
@@ -209,8 +210,11 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                         const SizedBox(height: 4),
                         LinearProgressIndicator(
                           value: percentage,
-                          backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                          color: isWinner ? Colors.green : theme.colorScheme.primary,
+                          backgroundColor:
+                              theme.colorScheme.surfaceContainerHighest,
+                          color: isWinner
+                              ? Colors.green
+                              : theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ],
@@ -233,10 +237,14 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outline,
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.outline,
                           ),
                           borderRadius: BorderRadius.circular(8),
-                          color: isSelected ? theme.colorScheme.primaryContainer : null,
+                          color: isSelected
+                              ? theme.colorScheme.primaryContainer
+                              : null,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,7 +265,9 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                                     Text(
                                       option,
                                       style: TextStyle(
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
                                       ),
                                     ),
                                   ],
@@ -268,7 +278,8 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                             const SizedBox(height: 4),
                             LinearProgressIndicator(
                               value: percentage,
-                              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                              backgroundColor:
+                                  theme.colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ],
@@ -295,12 +306,10 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
           ),
       ],

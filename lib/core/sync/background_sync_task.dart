@@ -40,25 +40,24 @@ class BackgroundSyncTask {
         return true; // Not a failure, just nothing to do
       }
 
-      // Get user ID from ID token
+      // Get profile ID from ID token
       final idToken = await storage.read(key: 'id_token');
-      String? currentUserId;
+      String? currentProfileId;
       if (idToken != null) {
         try {
           final parts = idToken.split('.');
-          if (parts.length == 3) {
-            var payload = parts[1];
-            // Add padding if needed for base64 decoding
-            while (payload.length % 4 != 0) {
-              payload += '=';
-            }
-            final decoded = utf8.decode(base64.decode(payload));
+          if (parts.length >= 3) {
+            final payload = parts[1];
+            // Pad base64 string if needed
+            final padding = (4 - payload.length % 4) % 4;
+            final paddedPayload = payload + '=' * padding;
+            final decoded = utf8.decode(base64.decode(paddedPayload));
             final claims = json.decode(decoded) as Map<String, dynamic>;
-            currentUserId = claims['sub'] as String?;
+            currentProfileId = claims['sub'] as String?;
           }
         } catch (e) {
           AppLogger.error(
-            'Failed to decode ID token in background task',
+            'Failed to decode ID token for background sync',
             error: e,
           );
         }
@@ -87,7 +86,7 @@ class BackgroundSyncTask {
         messageRepo,
         chatClient,
         authHeaders,
-        currentUserId,
+        currentProfileId,
       );
 
       AppLogger.info('Background sync completed', data: {'success': success});
@@ -108,7 +107,7 @@ class BackgroundSyncTask {
     MessageRepository messageRepo,
     ChatServiceClient chatClient,
     connect.Headers authHeaders,
-    String? currentUserId,
+    String? currentProfileId,
   ) async {
     try {
       final jobs = await jobRepo.getPendingJobs();
@@ -131,7 +130,7 @@ class BackgroundSyncTask {
             messageRepo,
             jobRepo,
             authHeaders,
-            currentUserId,
+            currentProfileId,
           );
         } catch (e, stackTrace) {
           AppLogger.error(
@@ -162,7 +161,7 @@ class BackgroundSyncTask {
     MessageRepository messageRepo,
     PendingJobRepository jobRepo,
     connect.Headers authHeaders,
-    String? currentUserId,
+    String? currentProfileId,
   ) async {
     switch (job.type) {
       case domain_job.JobType.sendMessage:
@@ -172,7 +171,7 @@ class BackgroundSyncTask {
           chatClient,
           messageRepo,
           authHeaders,
-          currentUserId,
+          currentProfileId,
         );
         break;
       case domain_job.JobType.createRoom:
@@ -357,7 +356,7 @@ class BackgroundSyncTask {
     ChatServiceClient chatClient,
     MessageRepository messageRepo,
     connect.Headers authHeaders,
-    String? currentUserId,
+    String? currentProfileId,
   ) async {
     final payload = job.payload;
 
@@ -368,7 +367,7 @@ class BackgroundSyncTask {
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
 
-    // currentUserId is already available as a parameter
+    // currentProfileId is already available as a parameter
     // Source is no longer used in new API
 
     // Extract content and type

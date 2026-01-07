@@ -1,7 +1,6 @@
 import 'dart:io' show Platform;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,10 +47,7 @@ void main() async {
   // Initialize workmanager (only supported on Android and iOS)
   final isMobile = Platform.isAndroid || Platform.isIOS;
   if (isMobile) {
-    await Workmanager().initialize(
-      callbackDispatcher,
-      isInDebugMode: kDebugMode,
-    );
+    await Workmanager().initialize(callbackDispatcher);
 
     // Register periodic background sync (15 minutes)
     await Workmanager().registerPeriodicTask(

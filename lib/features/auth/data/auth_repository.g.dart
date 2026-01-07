@@ -50,25 +50,25 @@ final class AuthRepositoryProvider
 
 String _$authRepositoryHash() => r'f2965a3fda8846f63b2feff9c79a53794dcb9b5f';
 
-@ProviderFor(currentUserId)
-final currentUserIdProvider = CurrentUserIdProvider._();
+@ProviderFor(currentProfileId)
+final currentProfileIdProvider = CurrentProfileIdProvider._();
 
-final class CurrentUserIdProvider
+final class CurrentProfileIdProvider
     extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
     with $FutureModifier<String?>, $FutureProvider<String?> {
-  CurrentUserIdProvider._()
+  CurrentProfileIdProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'currentUserIdProvider',
+        name: r'currentProfileIdProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$currentUserIdHash();
+  String debugGetCreateSourceHash() => _$currentProfileIdHash();
 
   @$internal
   @override
@@ -77,8 +77,8 @@ final class CurrentUserIdProvider
 
   @override
   FutureOr<String?> create(Ref ref) {
-    return currentUserId(ref);
+    return currentProfileId(ref);
   }
 }
 
-String _$currentUserIdHash() => r'9113132c7c3967bc1c821f82f546d44bf69b5b47';
+String _$currentProfileIdHash() => r'a4d0b534c881e8865df52c94f67f0f9aec8acdf0';

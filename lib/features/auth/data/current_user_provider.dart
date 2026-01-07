@@ -9,7 +9,7 @@ part 'current_user_provider.g.dart';
 /// NOT to be confused with contact ID or subscription ID
 /// Returns null if the user is not authenticated or no profile info is available
 @riverpod
-Future<String?> currentUserId(Ref ref) async {
+Future<String?> currentProfileId(Ref ref) async {
   final userInfo = await ref.watch(userInfoProvider.future);
   return userInfo?.id;
 }
@@ -18,7 +18,7 @@ Future<String?> currentUserId(Ref ref) async {
 /// Use this in contexts where authentication is required
 @riverpod
 Future<String> currentProfileIdOrThrow(Ref ref) async {
-  final profileId = await ref.watch(currentUserIdProvider.future);
+  final profileId = await ref.watch(currentProfileIdProvider.future);
   if (profileId == null) {
     throw Exception('Profile not authenticated - no profile ID available');
   }

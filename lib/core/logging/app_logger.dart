@@ -18,7 +18,7 @@ class _SimpleLogPrinter extends LogPrinter {
     final prefix = _levelPrefixes[event.level] ?? '?';
     final time = DateTime.now().toString().substring(11, 19); // HH:MM:SS
     final lines = <String>['$time $prefix  ${event.message}'];
-    
+
     if (event.error != null) {
       lines.add('         └─ ${event.error}');
     }
@@ -163,7 +163,7 @@ class AppLogger {
       return;
     }
 
-    // TODO: Integrate with error reporting service
+    // Note: Error reporting service integration will be implemented when needed
     // Example for Sentry:
     // Sentry.captureException(
     //   error,

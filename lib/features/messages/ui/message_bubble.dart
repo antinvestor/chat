@@ -228,31 +228,36 @@ class MessageBubble extends ConsumerWidget {
                       Image.file(
                         File(localPath),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildMediaPlaceholder(Icons.image),
+                        errorBuilder: (_, _, _) =>
+                            _buildMediaPlaceholder(Icons.image),
                       ),
                       Container(
                         color: Colors.black45,
-                        child: const CircularProgressIndicator(color: Colors.white),
+                        child: const CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
                       ),
                     ],
                   )
                 : url != null
-                    ? Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return _buildMediaPlaceholder(Icons.image);
-                        },
-                        errorBuilder: (_, __, ___) => _buildMediaPlaceholder(Icons.broken_image),
-                      )
-                    : localPath != null
-                        ? Image.file(
-                            File(localPath),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildMediaPlaceholder(Icons.image),
-                          )
-                        : _buildMediaPlaceholder(Icons.image),
+                ? Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return _buildMediaPlaceholder(Icons.image);
+                    },
+                    errorBuilder: (_, _, _) =>
+                        _buildMediaPlaceholder(Icons.broken_image),
+                  )
+                : localPath != null
+                ? Image.file(
+                    File(localPath),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) =>
+                        _buildMediaPlaceholder(Icons.image),
+                  )
+                : _buildMediaPlaceholder(Icons.image),
           ),
         ),
         if (caption != null && caption.isNotEmpty) ...[
@@ -291,14 +296,17 @@ class MessageBubble extends ConsumerWidget {
                     Image.network(
                       thumbnailUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildMediaPlaceholder(Icons.videocam),
+                      errorBuilder: (_, _, _) =>
+                          _buildMediaPlaceholder(Icons.videocam),
                     )
                   else
                     _buildMediaPlaceholder(Icons.videocam),
                   if (isUploading)
                     Container(
                       color: Colors.black45,
-                      child: const CircularProgressIndicator(color: Colors.white),
+                      child: const CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
                     )
                   else
                     Container(
@@ -307,7 +315,11 @@ class MessageBubble extends ConsumerWidget {
                         color: Colors.black54,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
+                      child: const Icon(
+                        Icons.play_arrow,
+                        color: Colors.white,
+                        size: 32,
+                      ),
                     ),
                 ],
               ),
@@ -316,7 +328,13 @@ class MessageBubble extends ConsumerWidget {
         ),
         if (caption != null && caption.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text(caption, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSecondaryContainer)),
+          Text(
+            caption,
+            style: TextStyle(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            ),
+          ),
         ],
       ],
     );
@@ -332,7 +350,7 @@ class MessageBubble extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: isUploading
@@ -341,7 +359,10 @@ class MessageBubble extends ConsumerWidget {
                   height: 24,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Icon(Icons.play_arrow, color: Theme.of(context).colorScheme.primary),
+              : Icon(
+                  Icons.play_arrow,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
         ),
         const SizedBox(width: 12),
         Column(
@@ -351,7 +372,10 @@ class MessageBubble extends ConsumerWidget {
             if (duration != null)
               Text(
                 _formatDuration(duration),
-                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
           ],
         ),
@@ -373,7 +397,9 @@ class MessageBubble extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: isUploading
@@ -382,7 +408,10 @@ class MessageBubble extends ConsumerWidget {
                     height: 24,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Icon(Icons.insert_drive_file, color: Theme.of(context).colorScheme.primary),
+                : Icon(
+                    Icons.insert_drive_file,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
           ),
           const SizedBox(width: 12),
           Flexible(
@@ -391,14 +420,20 @@ class MessageBubble extends ConsumerWidget {
               children: [
                 Text(
                   fileName,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (fileSize != null)
                   Text(
                     _formatFileSize(fileSize),
-                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
               ],
             ),
@@ -480,7 +515,9 @@ class MessageBubble extends ConsumerWidget {
     return profilesAsync.when(
       data: (profiles) {
         // Find profile matching sender ID
-        final senderProfile = profiles.where((p) => p.profile.id == message.senderId).firstOrNull;
+        final senderProfile = profiles
+            .where((p) => p.profile.id == message.senderId)
+            .firstOrNull;
         if (senderProfile != null) {
           return senderProfile.displayName;
         }
@@ -488,7 +525,7 @@ class MessageBubble extends ConsumerWidget {
         return message.senderId;
       },
       loading: () => message.senderId,
-      error: (_, __) => message.senderId,
+      error: (_, _) => message.senderId,
     );
   }
 

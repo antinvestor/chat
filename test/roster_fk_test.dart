@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart' hide isNull;
-import '../lib/core/db/database.dart';
+import 'package:chat/core/db/database.dart';
 
 void main() {
   group('Roster Foreign Key Constraint Tests', () {

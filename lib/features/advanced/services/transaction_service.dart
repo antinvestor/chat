@@ -5,7 +5,9 @@ import '../../../core/sync/sync_engine.dart';
 import '../../../features/auth/data/auth_repository.dart';
 import '../../messages/domain/room_event.dart';
 
-final transactionServiceProvider = FutureProvider<TransactionService>((ref) async {
+final transactionServiceProvider = FutureProvider<TransactionService>((
+  ref,
+) async {
   final syncEngine = await ref.watch(syncEngineProvider.future);
   final authRepo = ref.watch(authRepositoryProvider);
   return TransactionService(syncEngine, authRepo);
@@ -32,12 +34,12 @@ class TransactionService {
       'status': 'pending', // pending, completed, failed
     };
 
-    final currentUserId = await _authRepository.getCurrentUserId();
+    final currentProfileId = await _authRepository.getCurrentProfileId();
 
     final event = RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
-      senderId: currentUserId ?? 'unknown',
+      senderId: currentProfileId ?? 'unknown',
       type: RoomEventType.transaction,
       content: content,
       createdAt: DateTime.now().millisecondsSinceEpoch,

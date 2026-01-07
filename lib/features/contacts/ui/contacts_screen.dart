@@ -34,14 +34,14 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
 
   Future<void> _syncContacts() async {
     if (_isSyncing) return;
-    
+
     setState(() => _isSyncing = true);
-    
+
     try {
       final repo = await ref.read(rosterRepositoryProvider.future);
-      
+
       if (!mounted) return;
-      
+
       await showContactSyncSheet(
         context: context,
         repository: repo,
@@ -87,10 +87,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildSyncedContactsList(),
-          _buildDeviceContactsList(),
-        ],
+        children: [_buildSyncedContactsList(), _buildDeviceContactsList()],
       ),
     );
   }
@@ -198,7 +195,10 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                         Padding(
                           padding: const EdgeInsets.only(left: 4),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.green.shade50,
                               borderRadius: BorderRadius.circular(8),
@@ -239,7 +239,8 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                       ),
                     ),
                     // Show contact details if multiple
-                    if (contacts.length > 1) ..._buildContactChips(contacts, theme),
+                    if (contacts.length > 1)
+                      ..._buildContactChips(contacts, theme),
                   ],
                 ),
               ),
@@ -257,13 +258,15 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   Widget _buildAvatar(String displayName, String? avatarUrl, ThemeData theme) {
-    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
-    
+    final initials = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : '?';
+
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       return CircleAvatar(
         radius: 24,
         backgroundImage: NetworkImage(avatarUrl),
-        onBackgroundImageError: (_, __) {},
+        onBackgroundImageError: (_, _) {},
         backgroundColor: theme.colorScheme.primaryContainer,
         child: Text(
           initials,
@@ -379,8 +382,8 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
               subtitle: contact.phones.isNotEmpty
                   ? Text(contact.phones.first.number)
                   : contact.emails.isNotEmpty
-                      ? Text(contact.emails.first.address)
-                      : null,
+                  ? Text(contact.emails.first.address)
+                  : null,
               onTap: () {
                 // Show options to message, invite or view details
                 _showContactOptions(contact);
@@ -415,9 +418,9 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
               title: const Text('Invite to App'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Invite sent to $name')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Invite sent to $name')));
               },
             ),
             ListTile(

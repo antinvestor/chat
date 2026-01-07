@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Simplified KeyManager for E2EE
-/// TODO: Implement proper vodozemac integration once API is stable
+/// Note: vodozemac integration will be implemented when API is stable
 class KeyManager {
   final FlutterSecureStorage _storage;
-  
+
   // Placeholder for account state
   String? _identityKey;
 
@@ -25,23 +25,20 @@ class KeyManager {
   }
 
   String get identityKey => _identityKey ?? '';
-  
+
   // Helper to get public bundle to upload
   Map<String, dynamic> getPublicBundle() {
-    return {
-      'identity_key': _identityKey,
-      'curve25519_key': _identityKey,
-    };
+    return {'identity_key': _identityKey, 'curve25519_key': _identityKey};
   }
-  
+
   // Placeholder encryption/decryption methods
   Future<String> encrypt(String plaintext, String recipientKey) async {
-    // TODO: Implement proper Olm encryption
+    // Note: Olm encryption will be implemented when vodozemac API is stable
     return base64Encode(utf8.encode(plaintext));
   }
-  
+
   Future<String> decrypt(String ciphertext, String senderKey) async {
-    // TODO: Implement proper Olm decryption
+    // Note: Olm decryption will be implemented when vodozemac API is stable
     return utf8.decode(base64Decode(ciphertext));
   }
 

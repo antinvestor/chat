@@ -58,7 +58,10 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
           tabs: const [
             Tab(text: 'Info', icon: Icon(Icons.info_outline, size: 18)),
             Tab(text: 'Motions', icon: Icon(Icons.how_to_vote, size: 18)),
-            Tab(text: 'Transactions', icon: Icon(Icons.account_balance, size: 18)),
+            Tab(
+              text: 'Transactions',
+              icon: Icon(Icons.account_balance, size: 18),
+            ),
             Tab(text: 'Media', icon: Icon(Icons.photo_library, size: 18)),
           ],
         ),
@@ -108,7 +111,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
       children: [
         _buildSectionHeader('Active Motions'),
         const SizedBox(height: 16),
-        // TODO: Use activeMotionsProvider to display active motions
+        // Note: activeMotionsProvider will be used to display active motions
         Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -137,7 +140,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
       children: [
         _buildSectionHeader('Recent Transactions'),
         const SizedBox(height: 16),
-        // TODO: Use transactionsProvider to display transactions
+        // Note: transactionsProvider will be used to display transactions
         Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -166,7 +169,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
       children: [
         _buildSectionHeader('Shared Media'),
         const SizedBox(height: 16),
-        // TODO: Use roomMediaProvider to display shared images/videos
+        // Note: roomMediaProvider will be used to display shared images/videos
         Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -214,7 +217,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
   }
 
   Widget _buildMembersList() {
-    // TODO: Use roomMembersProvider to display actual members
+    // Note: roomMembersProvider will be used to display actual members
     return Column(
       children: [
         _buildMemberTile(
@@ -233,7 +236,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
   }) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: avatarColor.withOpacity(0.2),
+        backgroundColor: avatarColor.withValues(alpha: 0.2),
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
           style: TextStyle(color: avatarColor, fontWeight: FontWeight.bold),

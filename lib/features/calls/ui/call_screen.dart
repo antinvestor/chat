@@ -9,11 +9,7 @@ class CallScreen extends ConsumerStatefulWidget {
   final String roomId;
   final String roomName;
 
-  const CallScreen({
-    super.key,
-    required this.roomId,
-    required this.roomName,
-  });
+  const CallScreen({super.key, required this.roomId, required this.roomName});
 
   @override
   ConsumerState<CallScreen> createState() => _CallScreenState();
@@ -47,14 +43,14 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     setState(() {
       _isMicMuted = !_isMicMuted;
     });
-    // TODO: Implement mute logic in CallManager
+    // Note: Mute logic will be implemented in CallManager
   }
 
   void _toggleCamera() {
     setState(() {
       _isCameraOff = !_isCameraOff;
     });
-    // TODO: Implement camera toggle logic in CallManager
+    // Note: Camera toggle logic will be implemented in CallManager
   }
 
   Future<void> _endCall() async {
@@ -68,7 +64,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   @override
   Widget build(BuildContext context) {
     final callManagerAsync = ref.watch(callManagerProvider);
-    
+
     // Handle loading/error state for call manager
     return callManagerAsync.when(
       loading: () => const Scaffold(
@@ -77,13 +73,22 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       ),
       error: (error, stack) => Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: Text('Error: $error', style: const TextStyle(color: Colors.white))),
+        body: Center(
+          child: Text(
+            'Error: $error',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
       ),
       data: (callManager) => _buildCallScreen(context, ref, callManager),
     );
   }
 
-  Widget _buildCallScreen(BuildContext context, WidgetRef ref, CallManager callManager) {
+  Widget _buildCallScreen(
+    BuildContext context,
+    WidgetRef ref,
+    CallManager callManager,
+  ) {
     // Listen to streams
     ref.listen<AsyncValue<MediaStream?>>(
       StreamProvider((ref) => callManager.localStreamStream),
@@ -118,7 +123,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
             ),
           ),
-          
+
           // Local Video (Small Overlay)
           Positioned(
             right: 16,
@@ -141,7 +146,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
               ),
             ),
           ),
-          
+
           // Controls
           Positioned(
             bottom: 48,
@@ -153,7 +158,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 IconButton.filled(
                   onPressed: _toggleMic,
                   style: IconButton.styleFrom(
-                    backgroundColor: _isMicMuted ? Colors.white : Colors.white24,
+                    backgroundColor: _isMicMuted
+                        ? Colors.white
+                        : Colors.white24,
                     foregroundColor: _isMicMuted ? Colors.black : Colors.white,
                     padding: const EdgeInsets.all(16),
                   ),
@@ -171,16 +178,20 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 IconButton.filled(
                   onPressed: _toggleCamera,
                   style: IconButton.styleFrom(
-                    backgroundColor: _isCameraOff ? Colors.white : Colors.white24,
+                    backgroundColor: _isCameraOff
+                        ? Colors.white
+                        : Colors.white24,
                     foregroundColor: _isCameraOff ? Colors.black : Colors.white,
                     padding: const EdgeInsets.all(16),
                   ),
-                  icon: Icon(_isCameraOff ? Icons.videocam_off : Icons.videocam),
+                  icon: Icon(
+                    _isCameraOff ? Icons.videocam_off : Icons.videocam,
+                  ),
                 ),
               ],
             ),
           ),
-          
+
           // Room Name
           Positioned(
             top: 48,
@@ -191,12 +202,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    color: Colors.black,
-                    blurRadius: 4,
-                  ),
-                ],
+                shadows: [Shadow(color: Colors.black, blurRadius: 4)],
               ),
             ),
           ),

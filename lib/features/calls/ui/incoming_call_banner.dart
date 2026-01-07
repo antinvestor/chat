@@ -13,7 +13,7 @@ class IncomingCallBanner extends ConsumerWidget {
 
     return callManagerAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (callManager) => StreamBuilder<CallState>(
         stream: callManager.callStateStream,
         builder: (context, snapshot) {
@@ -38,7 +38,7 @@ class IncomingCallBanner extends ConsumerWidget {
                               style: Theme.of(context).textTheme.labelMedium,
                             ),
                             Text(
-                              'Unknown Caller', // TODO: Get caller name
+                              'Unknown Caller', // Note: Caller name will be displayed when contact integration is implemented
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ],

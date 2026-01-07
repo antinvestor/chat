@@ -119,7 +119,7 @@ AuthRepository authRepository(Ref ref) {
 }
 
 @riverpod
-Future<String?> currentUserId(Ref ref) async {
+Future<String?> currentProfileId(Ref ref) async {
   final authRepo = ref.watch(authRepositoryProvider);
   return await authRepo.getCurrentProfileId();
 }

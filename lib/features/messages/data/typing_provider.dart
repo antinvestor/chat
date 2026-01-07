@@ -74,25 +74,25 @@ class Typing extends _$Typing {
     }
   }
 
-  void _addTypingUser(String userId) {
-    if (state.contains(userId)) {
+  void _addTypingUser(String profileId) {
+    if (state.contains(profileId)) {
       // Reset timer
-      _typingTimers[userId]?.cancel();
+      _typingTimers[profileId]?.cancel();
     } else {
-      state = {...state, userId};
+      state = {...state, profileId};
     }
 
     // Auto-remove after 5 seconds of no updates
-    _typingTimers[userId] = Timer(const Duration(seconds: 5), () {
-      _removeTypingUser(userId);
+    _typingTimers[profileId] = Timer(const Duration(seconds: 5), () {
+      _removeTypingUser(profileId);
     });
   }
 
-  void _removeTypingUser(String userId) {
-    _typingTimers[userId]?.cancel();
-    _typingTimers.remove(userId);
-    if (state.contains(userId)) {
-      state = state.where((id) => id != userId).toSet();
+  void _removeTypingUser(String profileId) {
+    _typingTimers[profileId]?.cancel();
+    _typingTimers.remove(profileId);
+    if (state.contains(profileId)) {
+      state = state.where((id) => id != profileId).toSet();
     }
   }
 

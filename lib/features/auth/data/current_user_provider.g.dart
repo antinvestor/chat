@@ -13,34 +13,34 @@ part of 'current_user_provider.dart';
 /// NOT to be confused with contact ID or subscription ID
 /// Returns null if the user is not authenticated or no profile info is available
 
-@ProviderFor(currentUserId)
-final currentUserIdProvider = CurrentUserIdProvider._();
+@ProviderFor(currentProfileId)
+final currentProfileIdProvider = CurrentProfileIdProvider._();
 
 /// Provider for the current user's PROFILE ID (from JWT 'sub' claim)
 /// This represents the entity (person/organization) identity
 /// NOT to be confused with contact ID or subscription ID
 /// Returns null if the user is not authenticated or no profile info is available
 
-final class CurrentUserIdProvider
+final class CurrentProfileIdProvider
     extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
     with $FutureModifier<String?>, $FutureProvider<String?> {
   /// Provider for the current user's PROFILE ID (from JWT 'sub' claim)
   /// This represents the entity (person/organization) identity
   /// NOT to be confused with contact ID or subscription ID
   /// Returns null if the user is not authenticated or no profile info is available
-  CurrentUserIdProvider._()
+  CurrentProfileIdProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'currentUserIdProvider',
+        name: r'currentProfileIdProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$currentUserIdHash();
+  String debugGetCreateSourceHash() => _$currentProfileIdHash();
 
   @$internal
   @override
@@ -49,39 +49,39 @@ final class CurrentUserIdProvider
 
   @override
   FutureOr<String?> create(Ref ref) {
-    return currentUserId(ref);
+    return currentProfileId(ref);
   }
 }
 
-String _$currentUserIdHash() => r'14ab779e061d5b9a2bf25e93b779b95e65020e97';
+String _$currentProfileIdHash() => r'd0baf85ca2059f938b8b3a4e8147f41ab9513f8c';
 
 /// Non-null version that throws if profile ID is not available
 /// Use this in contexts where authentication is required
 
-@ProviderFor(currentUserIdOrThrow)
-final currentUserIdOrThrowProvider = CurrentUserIdOrThrowProvider._();
+@ProviderFor(currentProfileIdOrThrow)
+final currentProfileIdOrThrowProvider = CurrentProfileIdOrThrowProvider._();
 
 /// Non-null version that throws if profile ID is not available
 /// Use this in contexts where authentication is required
 
-final class CurrentUserIdOrThrowProvider
+final class CurrentProfileIdOrThrowProvider
     extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
     with $FutureModifier<String>, $FutureProvider<String> {
   /// Non-null version that throws if profile ID is not available
   /// Use this in contexts where authentication is required
-  CurrentUserIdOrThrowProvider._()
+  CurrentProfileIdOrThrowProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'currentUserIdOrThrowProvider',
+        name: r'currentProfileIdOrThrowProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$currentUserIdOrThrowHash();
+  String debugGetCreateSourceHash() => _$currentProfileIdOrThrowHash();
 
   @$internal
   @override
@@ -90,9 +90,9 @@ final class CurrentUserIdOrThrowProvider
 
   @override
   FutureOr<String> create(Ref ref) {
-    return currentUserIdOrThrow(ref);
+    return currentProfileIdOrThrow(ref);
   }
 }
 
-String _$currentUserIdOrThrowHash() =>
-    r'11e186065db5618fe13075035d5f8abb1d923cd9';
+String _$currentProfileIdOrThrowHash() =>
+    r'0725a0d41e7cae441b04332a5f466173d9969f66';

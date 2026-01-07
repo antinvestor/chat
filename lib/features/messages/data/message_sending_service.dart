@@ -403,8 +403,8 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
     fileUploadService,
     encryptionService,
     () async {
-      final userId = await authRepo.getCurrentProfileId();
-      return userId ?? 'unknown_user';
+      final profileId = await authRepo.getCurrentProfileId();
+      return profileId ?? 'unknown_user';
     },
   );
 });

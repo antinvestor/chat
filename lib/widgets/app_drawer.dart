@@ -17,9 +17,9 @@ class AppDrawer extends ConsumerWidget {
         children: [
           // Header with user profile
           _buildHeader(context, theme, userInfoAsync),
-          
+
           const Divider(height: 1),
-          
+
           // Menu items
           Expanded(
             child: ListView(
@@ -30,7 +30,7 @@ class AppDrawer extends ConsumerWidget {
                   title: const Text('Settings'),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Navigate to settings
+                    // Note: Settings navigation will be implemented
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Settings coming soon')),
                     );
@@ -41,7 +41,7 @@ class AppDrawer extends ConsumerWidget {
                   title: const Text('Help & Support'),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Navigate to help
+                    // Note: Help navigation will be implemented
                   },
                 ),
                 ListTile(
@@ -55,7 +55,7 @@ class AppDrawer extends ConsumerWidget {
               ],
             ),
           ),
-          
+
           // Bottom section with logout
           const Divider(height: 1),
           _buildBottomSection(context, ref, theme, userInfoAsync),
@@ -77,9 +77,7 @@ class AppDrawer extends ConsumerWidget {
         left: 20,
         right: 20,
       ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-      ),
+      decoration: BoxDecoration(color: theme.colorScheme.primaryContainer),
       child: userInfoAsync.when(
         data: (userInfo) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +101,7 @@ class AppDrawer extends ConsumerWidget {
                   : null,
             ),
             const SizedBox(height: 16),
-            
+
             // User name
             Text(
               userInfo?.displayName ?? 'User',
@@ -112,22 +110,22 @@ class AppDrawer extends ConsumerWidget {
                 color: theme.colorScheme.onPrimaryContainer,
               ),
             ),
-            
+
             // User email/phone
             if (userInfo?.email != null || userInfo?.phone != null) ...[
               const SizedBox(height: 4),
               Text(
                 userInfo?.email ?? userInfo?.phone ?? '',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+                  color: theme.colorScheme.onPrimaryContainer.withValues(
+                    alpha: 0.7,
+                  ),
                 ),
               ),
             ],
           ],
         ),
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -167,39 +165,40 @@ class AppDrawer extends ConsumerWidget {
           children: [
             // Logged in info
             userInfoAsync.whenData((userInfo) {
-              if (userInfo?.id != null) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.verified_user_outlined,
-                        size: 16,
-                        color: theme.colorScheme.outline,
+                  if (userInfo?.id != null) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Logged in as ${userInfo?.displayName ?? "User"}',
-                          style: theme.textTheme.bodySmall?.copyWith(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.verified_user_outlined,
+                            size: 16,
                             color: theme.colorScheme.outline,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Logged in as ${userInfo?.displayName ?? "User"}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            }).value ?? const SizedBox.shrink(),
-            
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }).value ??
+                const SizedBox.shrink(),
+
             // Logout button
             ListTile(
-              leading: Icon(
-                Icons.logout,
-                color: theme.colorScheme.error,
-              ),
+              leading: Icon(Icons.logout, color: theme.colorScheme.error),
               title: Text(
                 'Logout',
                 style: TextStyle(
@@ -249,9 +248,7 @@ class AppDrawer extends ConsumerWidget {
       applicationName: 'Chat',
       applicationVersion: '1.0.0',
       applicationIcon: const FlutterLogo(size: 48),
-      children: [
-        const Text('A secure messaging application.'),
-      ],
+      children: [const Text('A secure messaging application.')],
     );
   }
 }

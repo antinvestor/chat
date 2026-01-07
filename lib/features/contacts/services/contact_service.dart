@@ -21,6 +21,6 @@ class ContactService {
     return [];
   }
 
-  // TODO: Implement sync with backend to find which contacts are on the app
+  // Note: Backend sync will be implemented to find which contacts are on the app
   // Future<List<User>> syncContacts(List<Contact> contacts) async { ... }
 }

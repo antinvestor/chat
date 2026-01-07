@@ -56,23 +56,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     _readReceiptDebounce = Timer(const Duration(milliseconds: 500), () async {
       try {
-        final currentUserIdAsync = ref.read(currentUserIdProvider);
-        final currentUserId = currentUserIdAsync.value;
-        if (currentUserId == null || currentUserId.isEmpty) return;
+        final currentProfileIdAsync = ref.read(currentProfileIdProvider);
+        final currentProfileId = currentProfileIdAsync.value ?? '';
+        if (currentProfileId.isEmpty) return;
 
         final unreadIds = messages
             .where(
               (m) =>
-                  m.senderId != currentUserId && m.status != EventStatus.read,
+                  m.senderId != currentProfileId &&
+                  m.status != EventStatus.read,
             )
             .map((m) => m.id)
             .toList();
 
         if (unreadIds.isNotEmpty) {
           final syncEngine = await ref.read(syncEngineProvider.future);
-          if (syncEngine != null) {
-            await syncEngine.sendReadReceipts(widget.roomId, unreadIds);
-          }
+          await syncEngine.sendReadReceipts(widget.roomId, unreadIds);
         }
       } catch (e) {
         // Silently fail for read receipts - they're not critical
@@ -338,9 +337,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     final reversedIndex = messages.length - 1 - index;
                     final message = messages[reversedIndex];
 
-                    // Get current user ID for proper message positioning
-                    final currentUserId = ref.watch(currentUserIdProvider);
-                    final isMe = message.senderId == (currentUserId ?? '');
+                    // Get current profile ID for proper message positioning
+                    final currentProfileId = ref.watch(
+                      currentProfileIdProvider,
+                    );
+                    final isMe = message.senderId == currentProfileId.value;
 
                     // Show avatar only for first message in a group
                     final showAvatar =

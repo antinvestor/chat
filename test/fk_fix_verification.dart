@@ -1,10 +1,10 @@
 // Simple verification script to test the foreign key constraint fix
 import 'dart:io';
-import 'package:drift/drift.dart';
-import '../lib/core/db/database.dart';
+import 'package:chat/core/db/database.dart';
+import 'package:chat/core/logging/app_logger.dart';
 
 void main() async {
-  print('🧪 Testing Roster Foreign Key Constraint Fix...\n');
+  AppLogger.info('🧪 Testing Roster Foreign Key Constraint Fix...\n');
 
   // Use the existing database instance
   final database = AppDatabase.instance;
@@ -19,7 +19,7 @@ void main() async {
         .get();
 
     // Test 1: Insert roster entry with null profileId (this was causing the FK error)
-    print('📝 Test 1: Inserting roster entry with null profileId...');
+    AppLogger.info('📝 Test 1: Inserting roster entry with null profileId...');
     await database.customSelect('''
       INSERT INTO roster (
         id, profile_id, contact_id, contact_type, contact_detail, 
@@ -30,12 +30,14 @@ void main() async {
       )
     ''').get();
 
-    print(
+    AppLogger.info(
       '✅ SUCCESS: Roster entry with null profileId inserted without FK violation',
     );
 
     // Test 2: Insert roster entry with valid profileId
-    print('\n📝 Test 2: Inserting roster entry with valid profileId...');
+    AppLogger.info(
+      '\n📝 Test 2: Inserting roster entry with valid profileId...',
+    );
 
     // First insert a profile
     await database.customSelect('''
@@ -54,31 +56,35 @@ void main() async {
       )
     ''').get();
 
-    print('✅ SUCCESS: Roster entry with valid profileId inserted successfully');
+    AppLogger.info(
+      '✅ SUCCESS: Roster entry with valid profileId inserted successfully',
+    );
 
     // Test 3: Verify both entries exist
-    print('\n📝 Test 3: Verifying entries exist...');
+    AppLogger.info('\n📝 Test 3: Verifying entries exist...');
     final allRosterEntries = await database.customSelect('''
       SELECT id, profile_id, contact_detail FROM roster WHERE id LIKE 'test-%'
     ''').get();
 
-    print('✅ SUCCESS: Found ${allRosterEntries.length} roster entries');
+    AppLogger.info(
+      '✅ SUCCESS: Found ${allRosterEntries.length} roster entries',
+    );
 
     for (final entry in allRosterEntries) {
       final id = entry.read<String>('id');
       final profileId = entry.read<String?>('profile_id');
       final contact = entry.read<String>('contact_detail');
-      print('   - ID: $id, ProfileId: $profileId, Contact: $contact');
+      AppLogger.info('   - ID: $id, ProfileId: $profileId, Contact: $contact');
     }
 
     // Test 4: Count entries with null profileId
-    print('\n📝 Test 4: Testing null profileId handling...');
+    AppLogger.info('\n📝 Test 4: Testing null profileId handling...');
     final nullProfileCount = await database.customSelect('''
       SELECT COUNT(*) as count FROM roster WHERE profile_id IS NULL AND id LIKE 'test-%'
     ''').getSingle();
 
     final count = nullProfileCount.read<int>('count');
-    print('✅ SUCCESS: Found $count entries with null profileId');
+    AppLogger.info('✅ SUCCESS: Found $count entries with null profileId');
 
     // Clean up test data
     await database
@@ -88,20 +94,26 @@ void main() async {
         .customSelect('DELETE FROM profiles WHERE id LIKE "test-%"')
         .get();
 
-    print(
+    AppLogger.info(
       '\n🎉 ALL TESTS PASSED! The foreign key constraint fix is working correctly.',
     );
-    print('\n📋 Summary:');
-    print(
+    AppLogger.info('\n📋 Summary:');
+    AppLogger.info(
       '   • Roster entries can now have null profileId without FK violations',
     );
-    print('   • Roster entries with valid profileId still work correctly');
-    print('   • The database schema properly handles both cases');
-    print('   • Contact sync should no longer fail with FK constraint errors');
-    print('   • The original error "fk_rosters_contact" has been resolved');
+    AppLogger.info(
+      '   • Roster entries with valid profileId still work correctly',
+    );
+    AppLogger.info('   • The database schema properly handles both cases');
+    AppLogger.info(
+      '   • Contact sync should no longer fail with FK constraint errors',
+    );
+    AppLogger.info(
+      '   • The original error "fk_rosters_contact" has been resolved',
+    );
   } catch (e, stackTrace) {
-    print('❌ FAILED: $e');
-    print('Stack trace: $stackTrace');
+    AppLogger.error('❌ FAILED: $e');
+    AppLogger.error('Stack trace: $stackTrace');
     exit(1);
   }
 }

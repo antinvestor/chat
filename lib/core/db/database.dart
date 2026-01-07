@@ -15,13 +15,16 @@ class Profiles extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Roster table mirrors the server roster with contact information.
-/// - id: Unique roster entry identifier
+/// Roster table stores contact information with stable local IDs and separate server roster IDs.
+/// - id: Stable local UUID identifier (never changes)
+/// - rosterId: Server roster entry identifier (synced from server, nullable)
 /// - profileId: Foreign key to profiles table (nullable - null if user hasn't logged in)
 /// - contactId: Contact's unique identifier from server (available after successful sync)
 /// - contactDetail: Email/phone number as stored locally for display
 class Roster extends Table {
-  TextColumn get id => text()();
+  TextColumn get id => text()(); // Stable local UUID
+  TextColumn get rosterId =>
+      text().nullable()(); // Server roster entry ID (synced)
   TextColumn get profileId =>
       text().nullable()(); // Null if user hasn't logged in yet
   TextColumn get contactId =>
@@ -161,7 +164,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -170,32 +173,47 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        if (from < 3) {
-          await m.createTable(syncMetadata);
-        }
-        if (from < 4) {
-          // Drop old Contacts table and create new Roster table
-          await m.deleteTable('contacts');
-          await m.createTable(roster);
-        }
-        if (from < 6) {
-          // Handle profileId nullable change and fix FK constraint
-          // First, update any empty profileId values to null
-          await customStatement(
-            'UPDATE roster SET profile_id = NULL WHERE profile_id = ""',
-          );
-          // Drop and recreate table with new schema
-          await m.deleteTable(roster.actualTableName);
-          await m.createTable(roster);
+        if (from <= 1) {
+          // Migration from v1 to v2: Add rosterId column and convert existing IDs to stable local UUIDs
+          // For now, we'll handle this in beforeOpen instead
         }
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
+
+        // Handle data migration after schema changes
+        if (details.hadUpgrade) {
+          final currentVersion = await customSelect(
+            'SELECT user_version FROM pragma_user_version()',
+          ).getSingle();
+          if (currentVersion.data['user_version'] == 2) {
+            // Add rosterId column if it doesn't exist
+            await customStatement('''
+              ALTER TABLE roster ADD COLUMN rosterId TEXT
+            ''');
+
+            // Copy existing IDs to rosterId column (they were server IDs)
+            await customStatement('''
+              UPDATE roster SET rosterId = id WHERE rosterId IS NULL
+            ''');
+
+            // Generate new stable UUIDs for local id column using xid
+            await customStatement('''
+              UPDATE roster SET id = substr(lower(hex(randomblob(8))), 1, 8) || '-' ||
+                                 substr(lower(hex(randomblob(4))), 1, 4) || '-4' ||
+                                 substr(lower(hex(randomblob(4))), 1, 4) || '-' ||
+                                 substr('89ab', (abs(random()) % 4) + 1, 1) ||
+                                 substr(lower(hex(randomblob(4))), 1, 4) || '-' ||
+                                 substr(lower(hex(randomblob(12))), 1, 12)
+              WHERE id NOT LIKE '%-%-%-%-%'
+            ''');
+          }
+        }
       },
     );
   }
 
   static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'chat_v2.db');
+    return driftDatabase(name: 'chat_v1.db');
   }
 }

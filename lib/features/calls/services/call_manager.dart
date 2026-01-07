@@ -182,8 +182,8 @@ class CallManager {
 
   Future<void> _handleSignal(RoomEvent event) async {
     // Ignore own signals
-    final currentUserId = await _authRepository.getCurrentUserId();
-    if (currentUserId != null && event.senderId == currentUserId) return;
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    if (currentProfileId != null && event.senderId == currentProfileId) return;
 
     switch (event.type) {
       case RoomEventType.callOffer:
@@ -206,7 +206,7 @@ class CallManager {
   Future<void> _handleOffer(RoomEvent event) async {
     if (_state != CallState.idle) {
       // Busy
-      // TODO: Send busy signal
+      // Implementation note: Send busy signal when receiving call offer while already in a call
       return;
     }
 

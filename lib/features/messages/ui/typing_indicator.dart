@@ -7,10 +7,7 @@ import '../data/typing_provider.dart';
 class TypingIndicator extends ConsumerWidget {
   final String roomId;
 
-  const TypingIndicator({
-    super.key,
-    required this.roomId,
-  });
+  const TypingIndicator({super.key, required this.roomId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,22 +39,18 @@ class TypingIndicator extends ConsumerWidget {
     );
   }
 
-  String _getTypingText(Set<String> userIds) {
-    if (userIds.length == 1) {
-      return '${userIds.first} is typing...';
-    } else if (userIds.length == 2) {
-      return '${userIds.first} and ${userIds.last} are typing...';
+  String _getTypingText(Set<String> profileIds) {
+    if (profileIds.length == 1) {
+      return '${profileIds.first} is typing...';
+    } else if (profileIds.length == 2) {
+      return '${profileIds.first} and ${profileIds.last} are typing...';
     } else {
-      return '${userIds.length} people are typing...';
+      return '${profileIds.length} people are typing...';
     }
   }
 
   Widget _buildDots(BuildContext context) {
-    return SizedBox(
-      width: 24,
-      height: 12,
-      child: _TypingDotsAnimation(),
-    );
+    return SizedBox(width: 24, height: 12, child: _TypingDotsAnimation());
   }
 }
 
@@ -96,12 +89,14 @@ class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
             final offset = index * 0.2;
             final value = (_controller.value + offset) % 1.0;
             final opacity = (value < 0.5) ? value * 2 : (1.0 - value) * 2;
-            
+
             return Container(
               width: 4,
               height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6 + (opacity * 0.4)),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.6 + (opacity * 0.4)),
                 shape: BoxShape.circle,
               ),
             );

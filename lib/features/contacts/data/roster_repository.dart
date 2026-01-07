@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenManager;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart' as pb;
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
@@ -12,6 +11,7 @@ import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:libphonenumber_plugin/libphonenumber_plugin.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:xid/xid.dart';
 
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
@@ -42,8 +42,9 @@ bool isValidEmail(String email) {
 
   // Local part validation
   final localPart = normalized.substring(0, atIndex);
-  if (localPart.isEmpty || localPart.length > 64)
+  if (localPart.isEmpty || localPart.length > 64) {
     return false; // RFC 5321 limit
+  }
 
   // Domain part validation
   final domainPart = normalized.substring(atIndex + 1);
@@ -171,48 +172,127 @@ String? _normalizePhoneNumber(String phone, String regionCode) {
   }
 }
 
-/// Get country code for a given region code
+/// Get country calling code for a given ISO 3166-1 alpha-2 region code
 String? _getCountryCodeForRegion(String regionCode) {
-  // Common country codes mapping
   const countryCodes = {
+    // North America
     'US': '1',
     'CA': '1',
+    'MX': '52',
+
+    // Europe
     'GB': '44',
     'UK': '44',
+    'IE': '353',
     'DE': '49',
     'FR': '33',
     'IT': '39',
     'ES': '34',
+    'PT': '351',
     'NL': '31',
     'BE': '32',
+    'LU': '352',
     'CH': '41',
     'AT': '43',
-    'AU': '61',
-    'NZ': '64',
-    'JP': '81',
-    'CN': '86',
-    'IN': '91',
-    'BR': '55',
-    'MX': '52',
+    'SE': '46',
+    'NO': '47',
+    'DK': '45',
+    'FI': '358',
+    'IS': '354',
+    'PL': '48',
+    'CZ': '420',
+    'SK': '421',
+    'HU': '36',
+    'RO': '40',
+    'BG': '359',
+    'GR': '30',
+    'HR': '385',
+    'SI': '386',
+    'RS': '381',
+    'UA': '380',
     'RU': '7',
+    'EE': '372',
+    'LV': '371',
+    'LT': '370',
+
+    // Africa
     'ZA': '27',
     'NG': '234',
     'KE': '254',
+    'UG': '256',
+    'TZ': '255',
+    'RW': '250',
+    'BI': '257',
+    'ET': '251',
     'EG': '20',
+    'GH': '233',
+    'CI': '225',
+    'SN': '221',
+    'CM': '237',
+    'DZ': '213',
+    'MA': '212',
+    'TN': '216',
+    'LY': '218',
+    'SD': '249',
+
+    // Middle East
     'IL': '972',
     'SA': '966',
     'AE': '971',
+    'QA': '974',
+    'KW': '965',
+    'BH': '973',
+    'OM': '968',
+    'JO': '962',
+    'LB': '961',
+    'TR': '90',
+    'IR': '98',
+    'IQ': '964',
+
+    // Asia
+    'CN': '86',
+    'JP': '81',
     'KR': '82',
-    'TH': '66',
-    'SG': '65',
-    'MY': '60',
-    'PH': '63',
-    'ID': '62',
+    'IN': '91',
     'PK': '92',
     'BD': '880',
     'LK': '94',
     'NP': '977',
-    // Add more as needed
+    'TH': '66',
+    'VN': '84',
+    'MY': '60',
+    'SG': '65',
+    'PH': '63',
+    'ID': '62',
+    'MM': '95',
+    'KH': '855',
+    'LA': '856',
+    'HK': '852',
+    'TW': '886',
+
+    // Oceania
+    'AU': '61',
+    'NZ': '64',
+    'PG': '675',
+
+    // South America
+    'BR': '55',
+    'AR': '54',
+    'CL': '56',
+    'CO': '57',
+    'PE': '51',
+    'VE': '58',
+    'UY': '598',
+    'PY': '595',
+    'BO': '591',
+    'EC': '593',
+
+    // Caribbean
+    'JM': '1',
+    'TT': '1',
+    'BB': '1',
+    'BS': '1',
+    'DO': '1',
   };
 
   return countryCodes[regionCode.toUpperCase()];
@@ -307,12 +387,14 @@ class ProfileData {
 }
 
 /// Local roster entry model representing a contact link
-/// - id: Unique roster entry identifier
+/// - id: Stable local UUID identifier (never changes)
+/// - rosterId: Server roster entry ID (synced from server, nullable)
 /// - profileId: Profile ID (null if contact hasn't logged in yet)
 /// - contactId: Contact's unique ID from server (available after successful sync)
 /// - contactDetail: Email/phone number for display and local reference
 class RosterEntry {
-  final String id; // Roster entry unique ID
+  final String id; // Stable local UUID
+  final String? rosterId; // Server roster entry ID (synced)
   final String? profileId; // Profile ID (null if user hasn't logged in)
   final String? contactId; // Contact's unique ID from server
   final RosterContactType contactType;
@@ -325,6 +407,7 @@ class RosterEntry {
 
   RosterEntry({
     required this.id,
+    this.rosterId,
     this.profileId,
     this.contactId,
     required this.contactType,
@@ -339,6 +422,7 @@ class RosterEntry {
   factory RosterEntry.fromDbRow(RosterData row) {
     return RosterEntry(
       id: row.id,
+      rosterId: row.rosterId, // Server roster ID
       profileId: row.profileId, // Now nullable
       contactId: row.contactId,
       contactType: RosterContactType.fromValue(row.contactType),
@@ -358,10 +442,14 @@ class RosterEntry {
   factory RosterEntry.fromProto(
     pb.RosterObject roster, {
     String? localDisplayName,
+    String? localId, // Stable local UUID
   }) {
     final contact = roster.hasContact() ? roster.contact : null;
     return RosterEntry(
-      id: roster.id, // This is the roster entry ID
+      id:
+          localId ??
+          _generateLocalUuid(), // Use provided local ID or generate new one
+      rosterId: roster.id, // Server roster entry ID
       profileId: roster.hasProfileId()
           ? roster.profileId
           : null, // Null if user hasn't logged in
@@ -379,6 +467,7 @@ class RosterEntry {
   RosterCompanion toCompanion() {
     return RosterCompanion(
       id: Value(id),
+      rosterId: Value(rosterId), // Server roster ID
       profileId: Value(profileId), // Now nullable
       contactId: Value(contactId),
       contactType: Value(contactType.value),
@@ -392,6 +481,11 @@ class RosterEntry {
             DateTime.now().millisecondsSinceEpoch,
       ),
     );
+  }
+
+  /// Generate a stable local UUID for new roster entries
+  static String _generateLocalUuid() {
+    return Xid().toString();
   }
 }
 
@@ -492,7 +586,6 @@ enum SyncState {
 class RosterRepository {
   final ProfileServiceClient _profileClient;
   final AppDatabase _database;
-  final TokenManager _tokenManager; // Keep for potential future use
 
   // Mutex for sync operations
   Completer<void>? _syncCompleter;
@@ -501,7 +594,7 @@ class RosterRepository {
   // Configuration
   static const _batchSize = 20;
 
-  RosterRepository(this._profileClient, this._database, this._tokenManager);
+  RosterRepository(this._profileClient, this._database);
 
   // ============================================================================
   // Sync Metadata Management
@@ -1119,6 +1212,9 @@ class RosterRepository {
         return RosterEntry.fromProto(
           roster,
           localDisplayName: localDisplayName,
+          localId: contactLookup.containsKey(roster.contact.detail)
+              ? _generateLocalId(roster.contact.detail)
+              : null,
         );
       }).toList();
     } catch (e, stackTrace) {
@@ -1453,6 +1549,7 @@ class RosterRepository {
             dbBatch.update(
               _database.roster,
               RosterCompanion(
+                rosterId: Value(roster.id), // Server roster entry ID
                 contactId: Value(
                   roster.hasContact() ? roster.contact.id : null,
                 ), // Contact's unique ID
@@ -1471,6 +1568,7 @@ class RosterRepository {
               RosterEntry.fromProto(
                 roster,
                 localDisplayName: localRow.displayName,
+                localId: localRow.id, // Use existing local ID
               ),
             );
           }
@@ -1530,11 +1628,22 @@ class RosterRepository {
     }
   }
 
-  /// Generate a stable local ID for a contact detail
+  /// Generate a stable, contact-book-friendly local ID for a contact detail
+  /// Creates predictable IDs that are easy to identify and search locally
   String _generateLocalId(String contactDetail) {
+    // Create a predictable prefix based on contact type
+    final prefix = contactDetail.contains('@') ? 'email_' : 'phone_';
+
+    // Create a short, readable hash of the contact detail
     final bytes = utf8.encode(contactDetail);
     final hash = sha256.convert(bytes);
-    return hash.toString();
+    final shortHash = hash.toString().substring(
+      0,
+      8,
+    ); // First 8 chars of SHA256
+
+    // Combine prefix with short hash for a stable, searchable ID
+    return '$prefix$shortHash';
   }
 
   /// Store roster entries in local database efficiently
@@ -1550,6 +1659,177 @@ class RosterRepository {
         );
       }
     });
+  }
+
+  // ============================================================================
+  // Offline-First Operations
+  // ============================================================================
+
+  /// Create or update a roster entry locally (works offline)
+  /// Returns the created/updated entry
+  Future<RosterEntry> createOrUpdateRosterEntry({
+    required String contactDetail,
+    required RosterContactType contactType,
+    String? displayName,
+    String? profileId,
+    String? contactId,
+    bool isVerified = false,
+    bool isBlocked = false,
+  }) async {
+    // Generate stable local ID
+    final localId = _generateLocalId(contactDetail);
+
+    final entry = RosterEntry(
+      id: localId, // Stable local UUID
+      rosterId: null, // Server ID - will be set on sync
+      profileId: profileId,
+      contactId: contactId,
+      contactType: contactType,
+      contactDetail: contactDetail,
+      isVerified: isVerified,
+      displayName: displayName,
+      isBlocked: isBlocked,
+      syncedAt: null, // Not synced yet
+      createdAt: DateTime.now(),
+    );
+
+    // Save locally (works offline)
+    await _storeRosterEntries([entry]);
+
+    AppLogger.debug(
+      '[Roster] Created/updated entry locally',
+      data: {
+        'localId': localId,
+        'contactDetail': contactDetail,
+        'contactType': contactType.toString(),
+      },
+    );
+
+    return entry;
+  }
+
+  /// Get all local roster entries (works offline)
+  Future<List<RosterEntry>> getAllLocalRoster() async {
+    final db = AppDatabase.instance;
+    final query = db.select(db.roster)
+      ..orderBy([(t) => OrderingTerm.asc(t.contactDetail)]);
+
+    final results = await query.get();
+    return results.map((row) => RosterEntry.fromDbRow(row)).toList();
+  }
+
+  /// Search local roster by contact detail (works offline)
+  Future<List<RosterEntry>> searchLocalRoster(String query) async {
+    final db = AppDatabase.instance;
+    final searchQuery = query.toLowerCase();
+
+    final dbQuery = db.select(db.roster)
+      ..where(
+        (t) =>
+            t.contactDetail.lower().contains(searchQuery) |
+            t.displayName.lower().contains(searchQuery),
+      )
+      ..orderBy([(t) => OrderingTerm.asc(t.contactDetail)]);
+
+    final results = await dbQuery.get();
+    return results.map((row) => RosterEntry.fromDbRow(row)).toList();
+  }
+
+  /// Mark roster entry as needing sync (for when coming back online)
+  Future<void> markRosterEntryForSync(String localId) async {
+    final db = AppDatabase.instance;
+    await (db.update(db.roster)..where((t) => t.id.equals(localId))).write(
+      RosterCompanion(
+        syncedAt: Value(null), // Mark as needing sync
+      ),
+    );
+
+    AppLogger.debug(
+      '[Roster] Marked entry for sync',
+      data: {'localId': localId},
+    );
+  }
+
+  /// Simple background sync without progress callbacks
+  /// Runs silently in background without disturbing user
+  /// Enhanced for offline-first operation
+  Future<void> syncContactsInBackground() async {
+    try {
+      AppLogger.info('[BackgroundSync] Starting silent contact sync');
+
+      // Check connectivity first
+      final connectivity = await _checkConnectivity();
+      if (!connectivity) {
+        AppLogger.debug('[BackgroundSync] Offline - skipping server sync');
+        return;
+      }
+
+      // Check if we need to sync (hash-based change detection)
+      final syncNeeded = await needsSync();
+      if (!syncNeeded) {
+        AppLogger.debug('[BackgroundSync] No sync needed');
+        return;
+      }
+
+      // Phase 1: Local sync (immediate, no UI) - always works
+      await syncContactsLocal();
+
+      // Phase 2: Server sync (background, best effort) - only if online
+      if (connectivity) {
+        await syncContactsToServer();
+      }
+
+      AppLogger.info('[BackgroundSync] Background sync completed successfully');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[BackgroundSync] Background sync failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      // Silently fail - don't disturb user
+    }
+  }
+
+  /// Check current connectivity status
+  Future<bool> _checkConnectivity() async {
+    try {
+      final connectivity = Connectivity();
+      final results = await connectivity.checkConnectivity();
+      return results.any(
+        (result) =>
+            result == ConnectivityResult.wifi ||
+            result == ConnectivityResult.mobile ||
+            result == ConnectivityResult.ethernet,
+      );
+    } catch (e) {
+      AppLogger.warning(
+        '[Connectivity] Failed to check connectivity',
+        error: e,
+      );
+      return true; // Assume online if check fails
+    }
+  }
+
+  /// Initialize contacts on app startup
+  /// Fast local-first approach, syncs in background
+  Future<void> initializeContacts() async {
+    try {
+      AppLogger.info('[ContactInit] Initializing contacts');
+
+      // Always do local sync first (fast, makes contacts available immediately)
+      await syncContactsLocal();
+
+      // Then start background server sync without blocking
+      syncContactsInBackground();
+
+      AppLogger.info('[ContactInit] Contacts initialized');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[ContactInit] Failed to initialize contacts',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   // ============================================================================
@@ -1592,7 +1872,7 @@ class RosterRepository {
       final serverIds = serverEntries.map((e) => e.id).toSet();
 
       // Get local roster
-      final localEntries = await getLocalRoster();
+      final localEntries = await getAllLocalRoster();
       final localIds = localEntries.map((e) => e.id).toSet();
 
       // Entries to add locally (on server but not local)
@@ -2024,9 +2304,8 @@ class RosterRepository {
 
 final rosterRepositoryProvider = FutureProvider<RosterRepository>((ref) async {
   final profileClient = await ref.watch(profileServiceClientProvider.future);
-  final tokenManager = ref.watch(tokenManagerProvider);
 
-  return RosterRepository(profileClient, AppDatabase.instance, tokenManager);
+  return RosterRepository(profileClient, AppDatabase.instance);
 });
 
 /// Provider for roster entries - uses two-phase sync

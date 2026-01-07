@@ -32,9 +32,9 @@ class MotionService {
   );
 
   /// Helper method to check if user has admin/owner role in room
-  Future<String?> _getRoomRole(String roomId, String userId) async {
+  Future<String?> _getRoomRole(String roomId, String profileId) async {
     final query = _database.select(_database.roomMembers)
-      ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(userId));
+      ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(profileId));
 
     final member = await query.getSingleOrNull();
     return member?.role;
@@ -47,6 +47,18 @@ class MotionService {
     required List<String> options,
     required DateTime deadline,
   }) async {
+    // Get current profile ID and check authentication
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    if (currentProfileId == null) {
+      throw Exception('Not authenticated');
+    }
+
+    // Check if user has permission to create motions
+    final role = await _getRoomRole(roomId, currentProfileId);
+    if (role != 'admin' && role != 'owner') {
+      throw PermissionDeniedException('Only room admins can create motions');
+    }
+
     // Input validation
     if (title.trim().isEmpty) {
       throw ValidationException('Motion title cannot be empty');
@@ -66,26 +78,12 @@ class MotionService {
       throw ValidationException('Deadline must be in the future');
     }
 
-    // Admin role enforcement
-    final currentProfileId = await _authRepository.getCurrentProfileId();
-    if (currentProfileId == null) {
-      throw ValidationException('Profile not authenticated');
-    }
-
-    final role = await _getRoomRole(roomId, currentProfileId);
-    if (role == null) {
-      throw ValidationException('Profile not found in room');
-    }
-    if (role != 'admin' && role != 'owner') {
-      throw PermissionDeniedException('Only room admins can create motions');
-    }
-
     final content = {
       'title': title.trim(),
       'description': description.trim(),
       'options': options,
       'deadline': deadline.millisecondsSinceEpoch,
-      'votes': <String, String>{}, // userId -> option
+      'votes': <String, String>{}, // profileId -> option
       'status': 'active',
     };
 

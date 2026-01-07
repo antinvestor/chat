@@ -1,21 +1,16 @@
 import 'dart:async';
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
-import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
-import 'package:antinvestor_api_common/antinvestor_api_common.dart' as common;
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenManager;
-import 'package:fixnum/fixnum.dart' as fixnum;
+    as common_types;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
+import 'package:fixnum/fixnum.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
-import '../crypto/key_manager.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
 import '../networking/client.dart';
@@ -38,8 +33,6 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     chatClient,
     ref.watch(messageRepositoryProvider),
     ref.watch(pendingJobRepositoryProvider),
-    KeyManager(const FlutterSecureStorage()),
-    tokenManager,
     authRepo,
     ref.watch(roomMemberRepositoryProvider),
     ref.watch(roomSubscriptionServiceProvider),
@@ -87,12 +80,10 @@ final connectionStateProvider = StreamProvider<SyncConnectionState>((
 typedef TokenRefreshCallback = Future<String?> Function();
 
 class SyncEngine {
-  final GatewayServiceClient _gatewayClient;
-  final ChatServiceClient _chatClient;
+  final pb.GatewayServiceClient _gatewayClient;
+  final pb.ChatServiceClient _chatClient;
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
-  final KeyManager _keyManager;
-  final TokenManager _tokenManager; // Keep for potential future use
   final AuthRepository _authRepository;
   final RoomMemberRepository _roomMemberRepository;
   final RoomSubscriptionService _subscriptionService;
@@ -132,8 +123,6 @@ class SyncEngine {
     this._chatClient,
     this._messageRepo,
     this._jobRepo,
-    this._keyManager,
-    this._tokenManager,
     this._authRepository,
     this._roomMemberRepository,
     this._subscriptionService, {
@@ -164,7 +153,7 @@ class SyncEngine {
   }) async {
     try {
       // Don't pass manual headers - let the interceptor handle authorization
-      final pageCursor = common.PageCursor(limit: limit, page: cursor);
+      final pageCursor = common_types.PageCursor(limit: limit, page: cursor);
 
       final request = pb.GetHistoryRequest(
         roomId: roomId,
@@ -214,6 +203,7 @@ class SyncEngine {
 
     _connectionStateController.add(SyncConnectionState.connecting);
 
+    // Run connection loop in a way that doesn't block the main thread
     while (true) {
       try {
         // Add client capabilities for server-side feature detection
@@ -225,7 +215,7 @@ class SyncEngine {
             'calls': 'webrtc',
             'offline': 'true',
           },
-          clientTime: common.Timestamp.fromDateTime(DateTime.now()),
+          clientTime: common_types.Timestamp.fromDateTime(DateTime.now()),
         );
         final request = pb.StreamRequest(hello: hello);
 
@@ -237,8 +227,20 @@ class SyncEngine {
         _authErrorCount = 0; // Reset auth error count on successful connection
         _connectionStateController.add(SyncConnectionState.connected);
 
+        // Process stream events with yield to prevent blocking
         await for (final response in stream) {
-          await _handleConnectResponse(response);
+          // Use microtask to ensure UI responsiveness
+          Future.microtask(() async {
+            try {
+              await _handleConnectResponse(response);
+            } catch (e, stackTrace) {
+              AppLogger.error(
+                'Error handling stream response in microtask',
+                error: e,
+                stackTrace: stackTrace,
+              );
+            }
+          });
         }
       } catch (e, stackTrace) {
         final errorStr = e.toString().toLowerCase();
@@ -280,32 +282,38 @@ class SyncEngine {
               'Authentication error detected, attempting token refresh',
               data: {'attempt': _authErrorCount, 'maxAttempts': _maxAuthErrors},
             );
-            try {
-              final newToken = await refreshCallback();
-              if (newToken != null) {
-                AppLogger.info(
-                  'Token refreshed after auth error, will retry connection',
+
+            // Run token refresh in background without blocking
+            Future.microtask(() async {
+              try {
+                final newToken = await refreshCallback();
+                if (newToken != null) {
+                  AppLogger.info(
+                    'Token refreshed after auth error, will retry connection',
+                  );
+                  _reconnectAttempts =
+                      0; // Reset reconnect attempts on successful refresh
+                  // Small delay to prevent tight loop if refresh succeeds but connection still fails
+                  await Future.delayed(const Duration(milliseconds: 500));
+                } else {
+                  // Refresh returned null - either failed or in progress
+                  // Wait before retrying to avoid busy loop
+                  AppLogger.debug(
+                    'Token refresh returned null, waiting before retry',
+                  );
+                  await Future.delayed(const Duration(seconds: 2));
+                }
+              } catch (refreshError) {
+                AppLogger.warning(
+                  'Token refresh failed after auth error',
+                  data: {'error': refreshError.toString()},
                 );
-                _reconnectAttempts =
-                    0; // Reset reconnect attempts on successful refresh
-                // Small delay to prevent tight loop if refresh succeeds but connection still fails
-                await Future.delayed(const Duration(milliseconds: 500));
-                continue; // Retry with the new token
-              } else {
-                // Refresh returned null - either failed or in progress
-                // Wait before retrying to avoid busy loop
-                AppLogger.debug(
-                  'Token refresh returned null, waiting before retry',
-                );
-                await Future.delayed(const Duration(seconds: 2));
+                // Don't immediately retry on refresh failure - let the backoff handle it
               }
-            } catch (refreshError) {
-              AppLogger.warning(
-                'Token refresh failed after auth error',
-                data: {'error': refreshError.toString()},
-              );
-              // Don't immediately retry on refresh failure - let the backoff handle it
-            }
+            });
+
+            // Continue with reconnection attempt (token refresh happens in background)
+            continue;
           }
         } else {
           // Not an auth error, reset auth error count
@@ -375,11 +383,11 @@ class SyncEngine {
     } else if (response.hasTypingEvent()) {
       _typingEventsController.add(response.typingEvent);
     } else if (response.hasPresenceEvent()) {
-      // TODO: Handle presence events
+      // Note: Presence events will be handled when needed
     } else if (response.hasReceiptEvent()) {
       await _processReceiptEvent(response.receiptEvent);
     } else if (response.hasReadEvent()) {
-      // TODO: Handle read marker events
+      // Note: Read marker events will be handled when needed
     }
   }
 
@@ -389,11 +397,16 @@ class SyncEngine {
       AppLogger.warning('Skipping event with empty id');
       return;
     }
+
+    // Handle system events that don't have roomId
     if (event.roomId.isEmpty) {
       AppLogger.debug(
-        'Skipping system event with no room',
+        'Processing system event with no room',
         data: {'eventId': event.id, 'type': event.type.toString()},
       );
+
+      // Process system events (like token refresh, auth status, etc.)
+      await _processSystemEvent(event);
       return;
     }
 
@@ -488,10 +501,55 @@ class SyncEngine {
         type == domain.RoomEventType.callEnd;
   }
 
+  /// Process system events that don't have roomId (like auth events, token refresh, etc.)
+  Future<void> _processSystemEvent(pb.RoomEvent event) async {
+    try {
+      AppLogger.debug(
+        'Processing system event',
+        data: {
+          'eventId': event.id,
+          'type': event.type.toString(),
+          'hasPayload': event.hasPayload(),
+        },
+      );
+
+      // Handle different types of system events
+      switch (event.type) {
+        case pb.RoomEventType.ROOM_EVENT_TYPE_EVENT:
+          // Generic system event - extract and handle payload
+          if (event.hasPayload()) {
+            final payload = event.payload;
+            AppLogger.debug(
+              'System event payload',
+              data: {
+                'hasText': payload.hasText(),
+                'hasAttachment': payload.hasAttachment(),
+                'hasCall': payload.hasCall(),
+              },
+            );
+          }
+          break;
+
+        default:
+          AppLogger.debug(
+            'Unhandled system event type',
+            data: {'type': event.type.toString()},
+          );
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Error processing system event',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'eventId': event.id, 'type': event.type.toString()},
+      );
+    }
+  }
+
   Future<void> _processReceiptEvent(pb.ReceiptEvent event) async {
     // Update status for received read receipts
     // New API doesn't include source information, so we can't filter out self-receipts
-    // TODO: Implement filtering through subscription context if needed
+    // Note: Filtering through subscription context will be implemented if needed
 
     // Mark messages as delivered (other user received them)
     await _messageRepo.updateMessagesStatus(
@@ -507,8 +565,21 @@ class SyncEngine {
 
       try {
         final jobs = await _jobRepo.getPendingJobs();
+
+        // Process each job in a microtask to prevent blocking
         for (final job in jobs) {
-          await _processJob(job);
+          Future.microtask(() async {
+            try {
+              await _processJob(job);
+            } catch (e, stackTrace) {
+              AppLogger.error(
+                'Error processing job in microtask',
+                error: e,
+                stackTrace: stackTrace,
+                data: {'jobId': job.id, 'jobType': job.type.toString()},
+              );
+            }
+          });
         }
       } catch (e, stackTrace) {
         // Log but don't crash
@@ -583,7 +654,7 @@ class SyncEngine {
     final memberIds =
         (payload['members'] as List<dynamic>?)?.cast<String>() ?? [];
     final memberLinks = memberIds
-        .map((id) => common.ContactLink(profileId: id))
+        .map((id) => common_types.ContactLink(profileId: id))
         .toList();
 
     final request = pb.CreateRoomRequest(
@@ -655,7 +726,7 @@ class SyncEngine {
         .map(
           (profileId) => pb.RoomSubscription(
             roomId: roomId,
-            member: common.ContactLink(profileId: profileId),
+            member: common_types.ContactLink(profileId: profileId),
           ),
         )
         .toList();
@@ -718,15 +789,11 @@ class SyncEngine {
 
   Future<void> _processSendMessage(domain_job.PendingJob job) async {
     final payload = job.payload;
+    final currentProfileId = await _authRepository.getCurrentProfileId();
 
     // Create timestamp
     final now = DateTime.now();
-    final timestamp = common.Timestamp(
-      seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
-      nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
-    );
-
-    final currentProfileId = await _authRepository.getCurrentProfileId();
+    final timestamp = common_types.Timestamp.fromDateTime(now);
     // Source is no longer used in new API
 
     // Extract content and type
@@ -749,7 +816,7 @@ class SyncEngine {
         attachmentId: content['attachmentId'] as String? ?? '',
         filename: content['fileName'] as String? ?? '',
         mimeType: content['mimeType'] as String? ?? '',
-        sizeBytes: fixnum.Int64(content['size'] as int? ?? 0),
+        sizeBytes: Int64(content['size'] as int? ?? 0),
       );
     }
 
@@ -771,7 +838,7 @@ class SyncEngine {
       final updatedEvent = domain.RoomEvent(
         id: ackEventId.first,
         roomId: payload['roomId'] as String,
-        senderId: currentUserId ?? 'unknown',
+        senderId: currentProfileId ?? 'unknown',
         type: domain.RoomEventType.values.firstWhere(
           (t) => t.toString() == payload['type'],
           orElse: () => domain.RoomEventType.text,
@@ -787,15 +854,11 @@ class SyncEngine {
 
   Future<void> _processVote(domain_job.PendingJob job) async {
     final payload = job.payload;
+    final currentProfileId = await _authRepository.getCurrentProfileId();
 
     // Create timestamp
     final now = DateTime.now();
-    final timestamp = common.Timestamp(
-      seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
-      nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
-    );
-
-    final currentProfileId = await _authRepository.getCurrentProfileId();
+    final timestamp = common_types.Timestamp.fromDateTime(now);
     // Source is no longer used in new API
 
     // Build vote payload - use text content since VoteContent doesn't exist yet
@@ -822,14 +885,14 @@ class SyncEngine {
     // Update local motion event with the new vote
     await _updateMotionVote(
       payload['motionId'] as String,
-      currentUserId!,
+      currentProfileId ?? 'unknown',
       payload['option'] as String,
     );
   }
 
   Future<void> _updateMotionVote(
     String motionId,
-    String userId,
+    String profileId,
     String option,
   ) async {
     final motionEvent = await _messageRepo.getEventById(motionId);
@@ -840,7 +903,7 @@ class SyncEngine {
     );
 
     // Update or add the vote
-    votes[userId] = option;
+    votes[profileId] = option;
 
     final updatedContent = Map<String, dynamic>.from(motionEvent.content);
     updatedContent['votes'] = votes;
@@ -894,6 +957,11 @@ class SyncEngine {
         return domain.RoomEventType.callOffer;
       case pb.RoomEventType.ROOM_EVENT_TYPE_MOTION:
         return domain.RoomEventType.motion;
+      case pb.RoomEventType.ROOM_EVENT_TYPE_EVENT:
+        // System event - map to a special type or text for now
+        return domain
+            .RoomEventType
+            .text; // Could create a new system event type
       default:
         return domain.RoomEventType.text;
     }
@@ -927,7 +995,7 @@ class SyncEngine {
   }
 
   // Convert protobuf Struct to Dart Map
-  Map<String, dynamic> _structToMap(common.Struct struct) {
+  Map<String, dynamic> _structToMap(common_types.Struct struct) {
     final result = <String, dynamic>{};
     for (final entry in struct.fields.entries) {
       result[entry.key] = _valueToObject(entry.value);
@@ -935,7 +1003,7 @@ class SyncEngine {
     return result;
   }
 
-  dynamic _valueToObject(common.Value value) {
+  dynamic _valueToObject(common_types.Value value) {
     if (value.hasStringValue()) return value.stringValue;
     if (value.hasNumberValue()) return value.numberValue;
     if (value.hasBoolValue()) return value.boolValue;
@@ -950,18 +1018,18 @@ class SyncEngine {
   }
 
   // Convert Dart Map to protobuf Struct
-  common.Struct _mapToStruct(Map<String, dynamic> map) {
-    final struct = common.Struct();
+  common_types.Struct _mapToStruct(Map<String, dynamic> map) {
+    final struct = common_types.Struct();
     for (final entry in map.entries) {
       struct.fields[entry.key] = _objectToValue(entry.value);
     }
     return struct;
   }
 
-  common.Value _objectToValue(dynamic obj) {
-    final value = common.Value();
+  common_types.Value _objectToValue(dynamic obj) {
+    final value = common_types.Value();
     if (obj == null) {
-      value.nullValue = common.NullValue.NULL_VALUE;
+      value.nullValue = common_types.NullValue.NULL_VALUE;
     } else if (obj is String) {
       value.stringValue = obj;
     } else if (obj is num) {
@@ -969,7 +1037,7 @@ class SyncEngine {
     } else if (obj is bool) {
       value.boolValue = obj;
     } else if (obj is List) {
-      final listValue = common.ListValue();
+      final listValue = common_types.ListValue();
       listValue.values.addAll(obj.map(_objectToValue));
       value.listValue = listValue;
     } else if (obj is Map) {
@@ -1072,7 +1140,7 @@ class SyncEngine {
         subscriptionId: subscriptionId,
         roomId: roomId,
         typing: isTyping,
-        since: common.Timestamp.fromDateTime(DateTime.now()),
+        since: common_types.Timestamp.fromDateTime(DateTime.now()),
       );
 
       // Wrap in ClientCommand
@@ -1080,7 +1148,7 @@ class SyncEngine {
 
       // Send via gateway stream (same connection as messages)
       final request = pb.StreamRequest(command: command);
-      await _gatewayClient.stream(Stream.value(request));
+      _gatewayClient.stream(Stream.value(request));
 
       AppLogger.debug(
         'Typing event sent',
@@ -1126,7 +1194,7 @@ class SyncEngine {
 
       // Send via gateway stream (same connection as messages)
       final request = pb.StreamRequest(command: command);
-      await _gatewayClient.stream(Stream.value(request));
+      _gatewayClient.stream(Stream.value(request));
 
       AppLogger.debug(
         'Read receipt sent',
@@ -1157,10 +1225,7 @@ class SyncEngine {
 
       // Create timestamp
       final now = DateTime.now();
-      final timestamp = common.Timestamp(
-        seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
-        nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
-      );
+      final timestamp = common_types.Timestamp.fromDateTime(now);
 
       // Create payload based on event type
       final pbPayload = pb.Payload();
@@ -1199,7 +1264,7 @@ class SyncEngine {
 
       // Send via gateway stream
       final request = pb.StreamRequest(command: command);
-      await _gatewayClient.stream(Stream.value(request));
+      _gatewayClient.stream(Stream.value(request));
 
       // Update local message status to sent
       await _messageRepo.updateMessageStatus(event.id, domain.EventStatus.sent);

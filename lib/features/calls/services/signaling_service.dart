@@ -29,7 +29,10 @@ class SignalingService {
     await _sendSignal(roomId, domain.RoomEventType.callAnswer, answer);
   }
 
-  Future<void> sendCandidate(String roomId, Map<String, dynamic> candidate) async {
+  Future<void> sendCandidate(
+    String roomId,
+    Map<String, dynamic> candidate,
+  ) async {
     await _sendSignal(roomId, domain.RoomEventType.callIce, candidate);
   }
 
@@ -42,12 +45,12 @@ class SignalingService {
     domain.RoomEventType type,
     Map<String, dynamic> content,
   ) async {
-    final currentUserId = await _authRepository.getCurrentUserId();
+    final currentProfileId = await _authRepository.getCurrentProfileId();
 
     final message = domain.RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
-      senderId: currentUserId ?? 'unknown',
+      senderId: currentProfileId ?? 'unknown',
       type: type,
       content: content,
       createdAt: DateTime.now().millisecondsSinceEpoch,
@@ -60,7 +63,7 @@ class SignalingService {
     // For now, we'll use the standard flow which ensures reliability.
     // Ideally, we should have a "sendImmediate" for signaling if latency is an issue with the queue.
     // Given the current architecture, we'll create a pending job.
-    
+
     // We need to access the message repository or pending job repository to send.
     // Since SignalingService doesn't have access to those directly, we can use a provider or
     // add a method to SyncEngine.
@@ -71,7 +74,7 @@ class SignalingService {
     // Let's check how `sendMessage` is implemented in `MessageNotifier`.
     // It calls `_repo.insertMessage` and `_jobRepo.addJob`.
     //
-    // To keep it simple and consistent, we'll add a `sendSignal` method to `SyncEngine` 
+    // To keep it simple and consistent, we'll add a `sendSignal` method to `SyncEngine`
     // or just use the repositories if we can access them.
     //
     // But `SignalingService` only has `SyncEngine`.

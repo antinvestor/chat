@@ -378,6 +378,17 @@ class $RosterTable extends Roster with TableInfo<$RosterTable, RosterData> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _rosterIdMeta = const VerificationMeta(
+    'rosterId',
+  );
+  @override
+  late final GeneratedColumn<String> rosterId = GeneratedColumn<String>(
+    'roster_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _profileIdMeta = const VerificationMeta(
     'profileId',
   );
@@ -489,6 +500,7 @@ class $RosterTable extends Roster with TableInfo<$RosterTable, RosterData> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    rosterId,
     profileId,
     contactId,
     contactType,
@@ -515,6 +527,12 @@ class $RosterTable extends Roster with TableInfo<$RosterTable, RosterData> {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('roster_id')) {
+      context.handle(
+        _rosterIdMeta,
+        rosterId.isAcceptableOrUnknown(data['roster_id']!, _rosterIdMeta),
+      );
     }
     if (data.containsKey('profile_id')) {
       context.handle(
@@ -594,6 +612,10 @@ class $RosterTable extends Roster with TableInfo<$RosterTable, RosterData> {
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
+      rosterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}roster_id'],
+      ),
       profileId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}profile_id'],
@@ -641,6 +663,7 @@ class $RosterTable extends Roster with TableInfo<$RosterTable, RosterData> {
 
 class RosterData extends DataClass implements Insertable<RosterData> {
   final String id;
+  final String? rosterId;
   final String? profileId;
   final String? contactId;
   final int contactType;
@@ -652,6 +675,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
   final int? createdAt;
   const RosterData({
     required this.id,
+    this.rosterId,
     this.profileId,
     this.contactId,
     required this.contactType,
@@ -666,6 +690,9 @@ class RosterData extends DataClass implements Insertable<RosterData> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    if (!nullToAbsent || rosterId != null) {
+      map['roster_id'] = Variable<String>(rosterId);
+    }
     if (!nullToAbsent || profileId != null) {
       map['profile_id'] = Variable<String>(profileId);
     }
@@ -691,6 +718,9 @@ class RosterData extends DataClass implements Insertable<RosterData> {
   RosterCompanion toCompanion(bool nullToAbsent) {
     return RosterCompanion(
       id: Value(id),
+      rosterId: rosterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rosterId),
       profileId: profileId == null && nullToAbsent
           ? const Value.absent()
           : Value(profileId),
@@ -720,6 +750,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return RosterData(
       id: serializer.fromJson<String>(json['id']),
+      rosterId: serializer.fromJson<String?>(json['rosterId']),
       profileId: serializer.fromJson<String?>(json['profileId']),
       contactId: serializer.fromJson<String?>(json['contactId']),
       contactType: serializer.fromJson<int>(json['contactType']),
@@ -736,6 +767,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'rosterId': serializer.toJson<String?>(rosterId),
       'profileId': serializer.toJson<String?>(profileId),
       'contactId': serializer.toJson<String?>(contactId),
       'contactType': serializer.toJson<int>(contactType),
@@ -750,6 +782,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
 
   RosterData copyWith({
     String? id,
+    Value<String?> rosterId = const Value.absent(),
     Value<String?> profileId = const Value.absent(),
     Value<String?> contactId = const Value.absent(),
     int? contactType,
@@ -761,6 +794,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
     Value<int?> createdAt = const Value.absent(),
   }) => RosterData(
     id: id ?? this.id,
+    rosterId: rosterId.present ? rosterId.value : this.rosterId,
     profileId: profileId.present ? profileId.value : this.profileId,
     contactId: contactId.present ? contactId.value : this.contactId,
     contactType: contactType ?? this.contactType,
@@ -774,6 +808,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
   RosterData copyWithCompanion(RosterCompanion data) {
     return RosterData(
       id: data.id.present ? data.id.value : this.id,
+      rosterId: data.rosterId.present ? data.rosterId.value : this.rosterId,
       profileId: data.profileId.present ? data.profileId.value : this.profileId,
       contactId: data.contactId.present ? data.contactId.value : this.contactId,
       contactType: data.contactType.present
@@ -798,6 +833,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
   String toString() {
     return (StringBuffer('RosterData(')
           ..write('id: $id, ')
+          ..write('rosterId: $rosterId, ')
           ..write('profileId: $profileId, ')
           ..write('contactId: $contactId, ')
           ..write('contactType: $contactType, ')
@@ -814,6 +850,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
   @override
   int get hashCode => Object.hash(
     id,
+    rosterId,
     profileId,
     contactId,
     contactType,
@@ -829,6 +866,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
       identical(this, other) ||
       (other is RosterData &&
           other.id == this.id &&
+          other.rosterId == this.rosterId &&
           other.profileId == this.profileId &&
           other.contactId == this.contactId &&
           other.contactType == this.contactType &&
@@ -842,6 +880,7 @@ class RosterData extends DataClass implements Insertable<RosterData> {
 
 class RosterCompanion extends UpdateCompanion<RosterData> {
   final Value<String> id;
+  final Value<String?> rosterId;
   final Value<String?> profileId;
   final Value<String?> contactId;
   final Value<int> contactType;
@@ -854,6 +893,7 @@ class RosterCompanion extends UpdateCompanion<RosterData> {
   final Value<int> rowid;
   const RosterCompanion({
     this.id = const Value.absent(),
+    this.rosterId = const Value.absent(),
     this.profileId = const Value.absent(),
     this.contactId = const Value.absent(),
     this.contactType = const Value.absent(),
@@ -867,6 +907,7 @@ class RosterCompanion extends UpdateCompanion<RosterData> {
   });
   RosterCompanion.insert({
     required String id,
+    this.rosterId = const Value.absent(),
     this.profileId = const Value.absent(),
     this.contactId = const Value.absent(),
     this.contactType = const Value.absent(),
@@ -881,6 +922,7 @@ class RosterCompanion extends UpdateCompanion<RosterData> {
        contactDetail = Value(contactDetail);
   static Insertable<RosterData> custom({
     Expression<String>? id,
+    Expression<String>? rosterId,
     Expression<String>? profileId,
     Expression<String>? contactId,
     Expression<int>? contactType,
@@ -894,6 +936,7 @@ class RosterCompanion extends UpdateCompanion<RosterData> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (rosterId != null) 'roster_id': rosterId,
       if (profileId != null) 'profile_id': profileId,
       if (contactId != null) 'contact_id': contactId,
       if (contactType != null) 'contact_type': contactType,
@@ -909,6 +952,7 @@ class RosterCompanion extends UpdateCompanion<RosterData> {
 
   RosterCompanion copyWith({
     Value<String>? id,
+    Value<String?>? rosterId,
     Value<String?>? profileId,
     Value<String?>? contactId,
     Value<int>? contactType,
@@ -922,6 +966,7 @@ class RosterCompanion extends UpdateCompanion<RosterData> {
   }) {
     return RosterCompanion(
       id: id ?? this.id,
+      rosterId: rosterId ?? this.rosterId,
       profileId: profileId ?? this.profileId,
       contactId: contactId ?? this.contactId,
       contactType: contactType ?? this.contactType,
@@ -940,6 +985,9 @@ class RosterCompanion extends UpdateCompanion<RosterData> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (rosterId.present) {
+      map['roster_id'] = Variable<String>(rosterId.value);
     }
     if (profileId.present) {
       map['profile_id'] = Variable<String>(profileId.value);
@@ -978,6 +1026,7 @@ class RosterCompanion extends UpdateCompanion<RosterData> {
   String toString() {
     return (StringBuffer('RosterCompanion(')
           ..write('id: $id, ')
+          ..write('rosterId: $rosterId, ')
           ..write('profileId: $profileId, ')
           ..write('contactId: $contactId, ')
           ..write('contactType: $contactType, ')
@@ -4542,6 +4591,7 @@ typedef $$ProfilesTableProcessedTableManager =
 typedef $$RosterTableCreateCompanionBuilder =
     RosterCompanion Function({
       required String id,
+      Value<String?> rosterId,
       Value<String?> profileId,
       Value<String?> contactId,
       Value<int> contactType,
@@ -4556,6 +4606,7 @@ typedef $$RosterTableCreateCompanionBuilder =
 typedef $$RosterTableUpdateCompanionBuilder =
     RosterCompanion Function({
       Value<String> id,
+      Value<String?> rosterId,
       Value<String?> profileId,
       Value<String?> contactId,
       Value<int> contactType,
@@ -4579,6 +4630,11 @@ class $$RosterTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rosterId => $composableBuilder(
+    column: $table.rosterId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4642,6 +4698,11 @@ class $$RosterTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get rosterId => $composableBuilder(
+    column: $table.rosterId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get profileId => $composableBuilder(
     column: $table.profileId,
     builder: (column) => ColumnOrderings(column),
@@ -4699,6 +4760,9 @@ class $$RosterTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get rosterId =>
+      $composableBuilder(column: $table.rosterId, builder: (column) => column);
 
   GeneratedColumn<String> get profileId =>
       $composableBuilder(column: $table.profileId, builder: (column) => column);
@@ -4765,6 +4829,7 @@ class $$RosterTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
+                Value<String?> rosterId = const Value.absent(),
                 Value<String?> profileId = const Value.absent(),
                 Value<String?> contactId = const Value.absent(),
                 Value<int> contactType = const Value.absent(),
@@ -4777,6 +4842,7 @@ class $$RosterTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => RosterCompanion(
                 id: id,
+                rosterId: rosterId,
                 profileId: profileId,
                 contactId: contactId,
                 contactType: contactType,
@@ -4791,6 +4857,7 @@ class $$RosterTableTableManager
           createCompanionCallback:
               ({
                 required String id,
+                Value<String?> rosterId = const Value.absent(),
                 Value<String?> profileId = const Value.absent(),
                 Value<String?> contactId = const Value.absent(),
                 Value<int> contactType = const Value.absent(),
@@ -4803,6 +4870,7 @@ class $$RosterTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => RosterCompanion.insert(
                 id: id,
+                rosterId: rosterId,
                 profileId: profileId,
                 contactId: contactId,
                 contactType: contactType,

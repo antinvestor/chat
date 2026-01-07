@@ -40,17 +40,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       AppLogger.debug('Starting login process...');
       await ref.read(authStateProvider.notifier).login();
-      
+
       // Check if login was successful
       final authState = ref.read(authStateProvider);
       final isAuthenticated = authState.when(
         data: (state) => state == AuthState.authenticated,
         loading: () => false,
-        error: (_, __) => false,
+        error: (_, _) => false,
       );
-      
+
       if (isAuthenticated) {
-        AppLogger.info('Login successful, navigation will be handled by router');
+        AppLogger.info(
+          'Login successful, navigation will be handled by router',
+        );
         // Navigation will be handled by router redirect
       } else {
         AppLogger.warning('Login completed but state is not authenticated');
@@ -72,7 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       String errorMessage = 'Authentication failed. Please try again.';
 
       final errorStr = e.toString().toLowerCase();
-      
+
       // Check for common network-related errors
       if (e is SocketException ||
           errorStr.contains('socketexception') ||
@@ -93,17 +95,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else if (errorStr.contains('oauth error')) {
         // Extract the actual OAuth error message
         final match = RegExp(r'oauth error: (.+)').firstMatch(errorStr);
-        errorMessage = match != null 
+        errorMessage = match != null
             ? 'Authentication error: ${match.group(1)}'
             : 'Authentication was denied. Please try again.';
-      } else if (errorStr.contains('cancelled') || errorStr.contains('canceled')) {
+      } else if (errorStr.contains('cancelled') ||
+          errorStr.contains('canceled')) {
         errorMessage = 'Authentication was cancelled.';
       } else if (errorStr.contains('code exchange failed')) {
         errorMessage = 'Failed to complete authentication. Please try again.';
       } else if (errorStr.contains('no access token')) {
-        errorMessage = 'Authentication server did not return a valid token. Please try again.';
+        errorMessage =
+            'Authentication server did not return a valid token. Please try again.';
       } else if (errorStr.contains('could not save credentials')) {
-        errorMessage = 'Failed to save login credentials. Please check app permissions.';
+        errorMessage =
+            'Failed to save login credentials. Please check app permissions.';
       }
 
       if (mounted) {

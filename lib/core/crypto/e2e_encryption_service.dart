@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,7 @@ import '../logging/app_logger.dart';
 
 /// End-to-End Encryption service
 /// Uses AES-like encryption for messages and files
-/// TODO: Integrate with vodozemac when stable API is available
+/// Note: vodozemac integration will be implemented when stable API is available
 class E2EEncryptionService {
   final FlutterSecureStorage _storage;
   final AppDatabase _database;
@@ -19,7 +18,7 @@ class E2EEncryptionService {
 
   String? _identityKey;
   final Map<String, _SessionState> _sessions = {};
-  final Map<String, _GroupSessionState> _groupSessions = {};
+  final Map<String, GroupSessionState> _groupSessions = {};
 
   bool _isInitialized = false;
 
@@ -88,7 +87,8 @@ class E2EEncryptionService {
   ) async {
     _ensureInitialized();
 
-    final sessionId = '${_identityKey!.substring(0, 8)}_${theirIdentityKey.substring(0, 8)}';
+    final sessionId =
+        '${_identityKey!.substring(0, 8)}_${theirIdentityKey.substring(0, 8)}';
     final sharedKey = _deriveSharedKey(_identityKey!, theirIdentityKey);
 
     _sessions[sessionId] = _SessionState(
@@ -103,10 +103,7 @@ class E2EEncryptionService {
   }
 
   /// Encrypt a message using session
-  Future<EncryptedMessage> encrypt(
-    String sessionId,
-    String plaintext,
-  ) async {
+  Future<EncryptedMessage> encrypt(String sessionId, String plaintext) async {
     _ensureInitialized();
 
     final session = _sessions[sessionId];
@@ -126,10 +123,7 @@ class E2EEncryptionService {
   }
 
   /// Decrypt a message using session
-  Future<String> decrypt(
-    String sessionId,
-    String ciphertext,
-  ) async {
+  Future<String> decrypt(String sessionId, String ciphertext) async {
     _ensureInitialized();
 
     final session = _sessions[sessionId];
@@ -147,19 +141,22 @@ class E2EEncryptionService {
     final sessionKey = _generateKey(32);
     final sessionId = _generateKey(16);
 
-    _groupSessions[roomId] = _GroupSessionState(
+    _groupSessions[roomId] = GroupSessionState(
       sessionId: sessionId,
       sessionKey: sessionKey,
       messageIndex: 0,
     );
 
     await _saveGroupSession(roomId);
-    AppLogger.debug('Created group session', data: {'roomId': roomId, 'sessionId': sessionId});
+    AppLogger.debug(
+      'Created group session',
+      data: {'roomId': roomId, 'sessionId': sessionId},
+    );
     return sessionId;
   }
 
   /// Get or create group session for a room
-  Future<_GroupSessionState> getOrCreateGroupSession(String roomId) async {
+  Future<GroupSessionState> getOrCreateGroupSession(String roomId) async {
     if (_groupSessions.containsKey(roomId)) {
       return _groupSessions[roomId]!;
     }
@@ -175,7 +172,7 @@ class E2EEncryptionService {
   ) async {
     _ensureInitialized();
 
-    _groupSessions[roomId] = _GroupSessionState(
+    _groupSessions[roomId] = GroupSessionState(
       sessionId: sessionId,
       sessionKey: sessionKey,
       messageIndex: 0,
@@ -205,10 +202,7 @@ class E2EEncryptionService {
   }
 
   /// Decrypt a group message
-  Future<String> decryptGroup(
-    String roomId,
-    String ciphertext,
-  ) async {
+  Future<String> decryptGroup(String roomId, String ciphertext) async {
     _ensureInitialized();
 
     final session = _groupSessions[roomId];
@@ -236,11 +230,7 @@ class E2EEncryptionService {
 
     final encrypted = _xorEncrypt(data, utf8.encode(key));
 
-    return EncryptedData(
-      data: encrypted,
-      key: key,
-      iv: iv,
-    );
+    return EncryptedData(data: encrypted, key: key, iv: iv);
   }
 
   /// Decrypt arbitrary data
@@ -298,18 +288,26 @@ class E2EEncryptionService {
     final session = _sessions[sessionId];
     if (session == null) return;
 
-    await _database.into(_database.sessions).insertOnConflictUpdate(
-      SessionsCompanion.insert(
-        sessionId: sessionId,
-        profileId: '',
-        deviceId: '',
-        ratchetState: Value(Uint8List.fromList(utf8.encode(jsonEncode({
-          'sharedKey': session.sharedKey,
-          'messageIndex': session.messageIndex,
-        })))),
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
-      ),
-    );
+    await _database
+        .into(_database.sessions)
+        .insertOnConflictUpdate(
+          SessionsCompanion.insert(
+            sessionId: sessionId,
+            profileId: '',
+            deviceId: '',
+            ratchetState: Value(
+              Uint8List.fromList(
+                utf8.encode(
+                  jsonEncode({
+                    'sharedKey': session.sharedKey,
+                    'messageIndex': session.messageIndex,
+                  }),
+                ),
+              ),
+            ),
+            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
   }
 
   Future<void> _saveGroupSession(String roomId) async {
@@ -343,14 +341,21 @@ class E2EEncryptionService {
               messageIndex: state['messageIndex'] as int? ?? 0,
             );
           } catch (e) {
-            AppLogger.warning('Failed to load session', data: {'sessionId': sessionId});
+            AppLogger.warning(
+              'Failed to load session',
+              data: {'sessionId': sessionId},
+            );
           }
         }
       }
 
       AppLogger.debug('Loaded E2E sessions', data: {'count': _sessions.length});
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to load sessions', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to load sessions',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -373,12 +378,12 @@ class _SessionState {
   });
 }
 
-class _GroupSessionState {
+class GroupSessionState {
   final String sessionId;
   final String sessionKey;
   int messageIndex;
 
-  _GroupSessionState({
+  GroupSessionState({
     required this.sessionId,
     required this.sessionKey,
     required this.messageIndex,
@@ -398,10 +403,10 @@ class EncryptedMessage {
   });
 
   Map<String, dynamic> toJson() => {
-        'ciphertext': ciphertext,
-        'messageType': messageType,
-        'sessionId': sessionId,
-      };
+    'ciphertext': ciphertext,
+    'messageType': messageType,
+    'sessionId': sessionId,
+  };
 
   factory EncryptedMessage.fromJson(Map<String, dynamic> json) {
     return EncryptedMessage(
@@ -425,10 +430,10 @@ class GroupEncryptedMessage {
   });
 
   Map<String, dynamic> toJson() => {
-        'ciphertext': ciphertext,
-        'sessionId': sessionId,
-        'messageIndex': messageIndex,
-      };
+    'ciphertext': ciphertext,
+    'sessionId': sessionId,
+    'messageIndex': messageIndex,
+  };
 
   factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) {
     return GroupEncryptedMessage(
@@ -445,11 +450,7 @@ class EncryptedData {
   final String key;
   final String iv;
 
-  EncryptedData({
-    required this.data,
-    required this.key,
-    required this.iv,
-  });
+  EncryptedData({required this.data, required this.key, required this.iv});
 }
 
 // Provider
