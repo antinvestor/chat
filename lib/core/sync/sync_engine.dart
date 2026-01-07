@@ -13,6 +13,8 @@ import '../../features/auth/data/auth_repository.dart';
 import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
+import '../../features/rooms/data/room_member_repository.dart';
+import '../../features/rooms/data/room_subscription_service.dart';
 import '../crypto/key_manager.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
@@ -39,6 +41,8 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     KeyManager(const FlutterSecureStorage()),
     tokenManager,
     authRepo,
+    ref.watch(roomMemberRepositoryProvider),
+    ref.watch(roomSubscriptionServiceProvider),
     onTokenRefresh: () async {
       AppLogger.debug('SyncEngine: Starting token refresh via authRepo');
       try {
@@ -90,6 +94,8 @@ class SyncEngine {
   final KeyManager _keyManager;
   final TokenManager _tokenManager; // Keep for potential future use
   final AuthRepository _authRepository;
+  final RoomMemberRepository _roomMemberRepository;
+  final RoomSubscriptionService _subscriptionService;
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
@@ -128,7 +134,9 @@ class SyncEngine {
     this._jobRepo,
     this._keyManager,
     this._tokenManager,
-    this._authRepository, {
+    this._authRepository,
+    this._roomMemberRepository,
+    this._subscriptionService, {
     TokenRefreshCallback? onTokenRefresh,
   }) : _onTokenRefresh = onTokenRefresh;
 
@@ -427,14 +435,26 @@ class SyncEngine {
       }
     }
 
-    // Extract sender info from ContactLink
-    final senderId = event.hasSource() ? event.source.profileId : '';
-    final senderContactId = event.hasSource() ? event.source.contactId : null;
+    // Extract sender info using subscription ID
+    final subscriptionId = event.hasSubscriptionId()
+        ? event.subscriptionId
+        : '';
+
+    // Get profile info for the subscription
+    String? senderId;
+    String? senderContactId;
+    if (subscriptionId.isNotEmpty) {
+      final member = await _roomMemberRepository.getSubscription(
+        subscriptionId,
+      );
+      senderId = member?.profileId;
+      senderContactId = member?.contactId;
+    }
 
     final roomEvent = domain.RoomEvent(
       id: event.id,
       roomId: event.roomId,
-      senderId: senderId,
+      senderId: senderId ?? '',
       senderContactId: senderContactId,
       type: _mapProtoEventType(event.type),
       content: content,
@@ -470,10 +490,8 @@ class SyncEngine {
 
   Future<void> _processReceiptEvent(pb.ReceiptEvent event) async {
     // Update status for received read receipts
-    // Skip if it's from ourselves (already marked as read locally)
-    final currentUserId = await _authRepository.getCurrentUserId();
-    final sourceProfileId = event.hasSource() ? event.source.profileId : '';
-    if (currentUserId != null && sourceProfileId == currentUserId) return;
+    // New API doesn't include source information, so we can't filter out self-receipts
+    // TODO: Implement filtering through subscription context if needed
 
     // Mark messages as delivered (other user received them)
     await _messageRepo.updateMessagesStatus(
@@ -681,15 +699,17 @@ class SyncEngine {
     final payload = job.payload;
     final roomId = payload['roomId'] as String;
 
-    // Get current user's profile ID to remove their subscription
-    final currentUserId = await _authRepository.getCurrentUserId();
-    if (currentUserId == null) {
-      throw Exception('Cannot leave room: User not authenticated');
+    // Get current profile's profile ID to remove their subscription
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    if (currentProfileId == null) {
+      throw Exception('Cannot leave room: Profile not authenticated');
     }
 
     final request = pb.RemoveRoomSubscriptionsRequest(
       roomId: roomId,
-      subscriptionId: [currentUserId], // Remove current user's subscription
+      subscriptionId: [
+        currentProfileId,
+      ], // Remove current profile's subscription
     );
 
     await _chatClient.removeRoomSubscriptions(request);
@@ -706,8 +726,8 @@ class SyncEngine {
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
 
-    final currentUserId = await _authRepository.getCurrentUserId();
-    final source = common.ContactLink(profileId: currentUserId ?? 'unknown');
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    // Source is no longer used in new API
 
     // Extract content and type
     final content = payload['content'] as Map<String, dynamic>;
@@ -736,7 +756,6 @@ class SyncEngine {
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
       roomId: payload['roomId'] as String,
-      source: source,
       type: protoType,
       sentAt: timestamp,
       payload: pbPayload,
@@ -750,7 +769,7 @@ class SyncEngine {
       final ackEventId = response.ack.first.eventId;
       // Update the message with server ID
       final updatedEvent = domain.RoomEvent(
-        id: ackEventId,
+        id: ackEventId.first,
         roomId: payload['roomId'] as String,
         senderId: currentUserId ?? 'unknown',
         type: domain.RoomEventType.values.firstWhere(
@@ -776,8 +795,8 @@ class SyncEngine {
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
 
-    final currentUserId = await _authRepository.getCurrentUserId();
-    final source = common.ContactLink(profileId: currentUserId ?? 'unknown');
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    // Source is no longer used in new API
 
     // Build vote payload - use text content since VoteContent doesn't exist yet
     final pbPayload = pb.Payload();
@@ -791,8 +810,8 @@ class SyncEngine {
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
       roomId: payload['roomId'] as String,
-      source: source,
-      type: pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE, // Vote not in protobuf yet
+      type:
+          pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE, // Vote not in protobuf yet
       sentAt: timestamp,
       payload: pbPayload,
     );
@@ -957,5 +976,245 @@ class SyncEngine {
       value.structValue = _mapToStruct(obj.cast<String, dynamic>());
     }
     return value;
+  }
+
+  /// Get the current profile's SUBSCRIPTION ID for a specific room
+  /// Returns null if the profile is not a member of the room
+  ///
+  /// IMPORTANT: This returns a SUBSCRIPTION ID (room-specific presence),
+  /// not a PROFILE ID (global identity). Use this for room operations.
+  ///
+  /// Note: This method works for both authenticated and anonymous subscriptions
+  /// The subscription ID is independent of profile ID.
+  Future<String?> getCurrentSubscriptionId(String roomId) async {
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    final currentContactId = await _authRepository.getCurrentContactId();
+    if (currentContactId == null) return null;
+
+    // Use repository to find the subscription ID for the current profile
+    // Pass empty string for profileId if null to handle anonymous subscriptions
+    return await _roomMemberRepository.getCurrentSubscriptionId(
+      roomId,
+      currentProfileId ?? '', // Empty string for anonymous subscriptions
+      currentContactId,
+    );
+  }
+
+  /// Check if a SUBSCRIPTION ID belongs to the current profile's contact
+  /// Used to verify if incoming events are from the current profile
+  ///
+  /// @param roomId The room context
+  /// @param subscriptionId The subscription ID to check (room-specific)
+  /// @return true if this subscription belongs to current profile's contact
+  ///
+  /// Note: This method will return false for anonymous subscriptions (no contact ID)
+  Future<bool> isCurrentUserSubscription(
+    String roomId,
+    String subscriptionId,
+  ) async {
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    final currentContactId = await _authRepository.getCurrentContactId();
+    if (currentContactId == null) return false;
+
+    // Use repository to check if this subscription belongs to current profile's contact
+    // Pass empty string for profileId if null to handle anonymous subscriptions
+    return await _roomMemberRepository.isCurrentUserSubscription(
+      roomId,
+      subscriptionId,
+      currentProfileId ?? '', // Empty string for anonymous subscriptions
+      currentContactId,
+    );
+  }
+
+  /// Update profile ID for an existing subscription
+  /// Used when a user authenticates and their profile ID becomes known
+  ///
+  /// @param subscriptionId The room subscription to update
+  /// @param profileId The profile ID to associate with this subscription
+  /// @param contactId Optional contact ID used for this subscription
+  /// @return true if update was successful, false if subscription not found
+  Future<bool> updateSubscriptionProfile({
+    required String subscriptionId,
+    required String profileId,
+    String? contactId,
+  }) async {
+    return await _subscriptionService.updateSubscriptionProfile(
+      subscriptionId: subscriptionId,
+      profileId: profileId,
+      contactId: contactId,
+    );
+  }
+
+  /// Get all subscriptions without a profile ID (anonymous subscriptions)
+  /// Useful for finding subscriptions that need profile assignment
+  ///
+  /// @param roomId Optional room filter
+  /// @return List of anonymous subscriptions
+  Future<List<RoomMember>> getAnonymousSubscriptions({String? roomId}) async {
+    return await _subscriptionService.getAnonymousSubscriptions(roomId: roomId);
+  }
+
+  /// Send typing event to server
+  Future<void> sendTyping(String roomId, bool isTyping) async {
+    try {
+      // Get current profile's subscription ID for this room
+      final subscriptionId = await getCurrentSubscriptionId(roomId);
+      if (subscriptionId == null) {
+        AppLogger.warning(
+          'Cannot send typing event: profile not in room',
+          data: {'roomId': roomId},
+        );
+        return;
+      }
+
+      // Create typing event
+      final typingEvent = pb.TypingEvent(
+        subscriptionId: subscriptionId,
+        roomId: roomId,
+        typing: isTyping,
+        since: common.Timestamp.fromDateTime(DateTime.now()),
+      );
+
+      // Wrap in ClientCommand
+      final command = pb.ClientCommand(typing: typingEvent);
+
+      // Send via gateway stream (same connection as messages)
+      final request = pb.StreamRequest(command: command);
+      await _gatewayClient.stream(Stream.value(request));
+
+      AppLogger.debug(
+        'Typing event sent',
+        data: {'roomId': roomId, 'typing': isTyping},
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to send typing event',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Send read receipts for messages
+  Future<void> sendReadReceipts(String roomId, List<String> messageIds) async {
+    try {
+      // Get current profile's subscription ID for this room
+      final subscriptionId = await getCurrentSubscriptionId(roomId);
+      if (subscriptionId == null) {
+        AppLogger.warning(
+          'Cannot send read receipts: profile not in room',
+          data: {'roomId': roomId},
+        );
+        return;
+      }
+
+      // For read receipts, we send the latest message ID as upToEventId
+      // This marks all messages up to and including this one as read
+      if (messageIds.isEmpty) return;
+
+      final latestMessageId = messageIds.last; // Assuming messages are ordered
+
+      // Create read marker event
+      final readEvent = pb.ReadMarker(
+        subscriptionId: subscriptionId,
+        roomId: roomId,
+        upToEventId: latestMessageId,
+      );
+
+      // Wrap in ClientCommand
+      final command = pb.ClientCommand(readMarker: readEvent);
+
+      // Send via gateway stream (same connection as messages)
+      final request = pb.StreamRequest(command: command);
+      await _gatewayClient.stream(Stream.value(request));
+
+      AppLogger.debug(
+        'Read receipt sent',
+        data: {'roomId': roomId, 'upToEventId': latestMessageId},
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to send read receipts',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Send message immediately through live connection
+  /// Falls back to job queue if connection is not available
+  Future<void> sendMessageDirect(domain.RoomEvent event) async {
+    if (!_isConnected) {
+      throw Exception('Not connected to server');
+    }
+
+    try {
+      // Get current profile's subscription ID for this room
+      final subscriptionId = await getCurrentSubscriptionId(event.roomId);
+      if (subscriptionId == null) {
+        throw Exception('Profile not in room');
+      }
+
+      // Create timestamp
+      final now = DateTime.now();
+      final timestamp = common.Timestamp(
+        seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
+        nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
+      );
+
+      // Create payload based on event type
+      final pbPayload = pb.Payload();
+      switch (event.type) {
+        case domain.RoomEventType.text:
+          final textContent = event.content['text'] as String? ?? '';
+          pbPayload.text = pb.TextContent(body: textContent);
+          break;
+        case domain.RoomEventType.image:
+          final imageUrl = event.content['url'] as String? ?? '';
+          final imageData = {'url': imageUrl, 'type': 'image'};
+          pbPayload.text = pb.TextContent(body: imageData.toString());
+          break;
+        case domain.RoomEventType.file:
+          final fileUrl = event.content['url'] as String? ?? '';
+          final fileName = event.content['name'] as String? ?? '';
+          final fileData = {'url': fileUrl, 'name': fileName, 'type': 'file'};
+          pbPayload.text = pb.TextContent(body: fileData.toString());
+          break;
+        default:
+          throw Exception('Unsupported event type: ${event.type}');
+      }
+
+      // Create room event
+      final roomEvent = pb.RoomEvent(
+        id: event.localId ?? event.id,
+        roomId: event.roomId,
+        subscriptionId: subscriptionId,
+        type: _mapLocalEventTypeToProto(event.type),
+        sentAt: timestamp,
+        payload: pbPayload,
+      );
+
+      // Wrap in ClientCommand
+      final command = pb.ClientCommand(event: roomEvent);
+
+      // Send via gateway stream
+      final request = pb.StreamRequest(command: command);
+      await _gatewayClient.stream(Stream.value(request));
+
+      // Update local message status to sent
+      await _messageRepo.updateMessageStatus(event.id, domain.EventStatus.sent);
+
+      AppLogger.debug(
+        'Message sent via live connection',
+        data: {'eventId': event.id, 'roomId': event.roomId},
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to send message via live connection',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow; // Re-throw so caller can handle fallback
+    }
   }
 }

@@ -26,14 +26,14 @@ class MessageSendingService {
   final PendingJobRepository _jobRepo;
   final FileUploadService _fileUploadService;
   final E2EEncryptionService _encryptionService;
-  final Future<String> Function() _getCurrentUserId;
+  final Future<String> Function() _getCurrentProfileId;
 
   MessageSendingService(
     this._messageRepo,
     this._jobRepo,
     this._fileUploadService,
     this._encryptionService,
-    this._getCurrentUserId,
+    this._getCurrentProfileId,
   );
 
   /// Send a text message
@@ -45,7 +45,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getCurrentUserId();
+    final senderId = await _getCurrentProfileId();
 
     Map<String, dynamic> content = {'text': text};
 
@@ -60,7 +60,10 @@ class MessageSendingService {
           'messageIndex': encrypted.messageIndex,
         };
       } catch (e) {
-        AppLogger.warning('Encryption failed, sending unencrypted', data: {'error': e.toString()});
+        AppLogger.warning(
+          'Encryption failed, sending unencrypted',
+          data: {'error': e.toString()},
+        );
       }
     }
 
@@ -88,7 +91,10 @@ class MessageSendingService {
       'parentId': replyToId,
     });
 
-    AppLogger.debug('Text message queued', data: {'localId': localId, 'roomId': roomId});
+    AppLogger.debug(
+      'Text message queued',
+      data: {'localId': localId, 'roomId': roomId},
+    );
     return event;
   }
 
@@ -183,7 +189,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getCurrentUserId();
+    final senderId = await _getCurrentProfileId();
     final fileName = file.path.split('/').last;
     final fileSize = await file.length();
 
@@ -213,7 +219,10 @@ class MessageSendingService {
     await _messageRepo.insertMessage(event);
 
     // Upload file
-    AppLogger.info('Uploading media file', data: {'fileName': fileName, 'size': fileSize});
+    AppLogger.info(
+      'Uploading media file',
+      data: {'fileName': fileName, 'size': fileSize},
+    );
 
     final uploadResult = await _fileUploadService.uploadFile(
       file,
@@ -228,7 +237,8 @@ class MessageSendingService {
         'fileName': fileName,
         'fileSize': fileSize,
         'mimeType': uploadResult.mimeType,
-        if (uploadResult.thumbnailUrl != null) 'thumbnailUrl': uploadResult.thumbnailUrl,
+        if (uploadResult.thumbnailUrl != null)
+          'thumbnailUrl': uploadResult.thumbnailUrl,
         if (caption != null) 'caption': caption,
         ...?extraContent,
       };
@@ -247,7 +257,10 @@ class MessageSendingService {
             'originalType': type.toString(),
           };
         } catch (e) {
-          AppLogger.warning('Media encryption failed', data: {'error': e.toString()});
+          AppLogger.warning(
+            'Media encryption failed',
+            data: {'error': e.toString()},
+          );
         }
       }
 
@@ -264,7 +277,10 @@ class MessageSendingService {
         'parentId': replyToId,
       });
 
-      AppLogger.info('Media message queued', data: {'localId': localId, 'fileUrl': uploadResult.fileUrl});
+      AppLogger.info(
+        'Media message queued',
+        data: {'localId': localId, 'fileUrl': uploadResult.fileUrl},
+      );
       return updatedEvent;
     } else {
       // Mark as failed
@@ -274,7 +290,10 @@ class MessageSendingService {
       );
       await _messageRepo.insertMessage(failedEvent);
 
-      AppLogger.error('Media upload failed', data: {'error': uploadResult.errorMessage});
+      AppLogger.error(
+        'Media upload failed',
+        data: {'error': uploadResult.errorMessage},
+      );
       return failedEvent;
     }
   }
@@ -287,7 +306,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getCurrentUserId();
+    final senderId = await _getCurrentProfileId();
 
     final event = domain.RoomEvent(
       id: localId,
@@ -322,7 +341,10 @@ class MessageSendingService {
     final results = await query.get();
 
     if (results.isEmpty) {
-      AppLogger.warning('Message not found for retry', data: {'localId': localId});
+      AppLogger.warning(
+        'Message not found for retry',
+        data: {'localId': localId},
+      );
       return;
     }
 
@@ -330,7 +352,9 @@ class MessageSendingService {
     final type = domain.RoomEventType.values[row.type];
 
     // Re-queue the job
-    final jobType = _isMediaType(type) ? JobType.sendMediaMessage : JobType.sendMessage;
+    final jobType = _isMediaType(type)
+        ? JobType.sendMediaMessage
+        : JobType.sendMessage;
 
     await _jobRepo.addJob(jobType, {
       'roomId': row.roomId,
@@ -349,9 +373,12 @@ class MessageSendingService {
   /// Delete a local message (before it's sent)
   Future<void> deleteLocalMessage(String localId) async {
     final db = AppDatabase.instance;
-    await (db.delete(db.roomEvents)
-      ..where((t) => t.localId.equals(localId) & t.status.equals(domain.EventStatus.pending.index)))
-      .go();
+    await (db.delete(db.roomEvents)..where(
+          (t) =>
+              t.localId.equals(localId) &
+              t.status.equals(domain.EventStatus.pending.index),
+        ))
+        .go();
   }
 
   bool _isMediaType(domain.RoomEventType type) {
@@ -376,7 +403,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
     fileUploadService,
     encryptionService,
     () async {
-      final userId = await authRepo.getCurrentUserId();
+      final userId = await authRepo.getCurrentProfileId();
       return userId ?? 'unknown_user';
     },
   );

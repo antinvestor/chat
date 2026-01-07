@@ -51,13 +51,23 @@ class Rooms extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Room subscriptions table - represents a user's subscription to a room
-/// Uses subscription_id from API as primary key
+/// Room subscriptions table - represents a profile's presence in a room
+/// Uses subscription_id from API as primary key (room-specific presence)
+///
+/// ID Types Clarified:
+/// - subscriptionId: Room-specific presence ID (primary key) - UNIQUE per room per profile
+/// - profileId: Global profile identity (from JWT 'sub' claim) - SAME across all rooms for user
+///           - Can be null initially for anonymous/provisional subscriptions
+///           - Can be updated later when user identity is established
+/// - contactId: Contact method used (phone, email, etc.) - HOW the profile was reached
+/// - roomId: Room identifier - WHICH room the subscription belongs to
 class RoomMembers extends Table {
   TextColumn get subscriptionId => text()(); // Primary key from API
   TextColumn get roomId => text().references(Rooms, #id)();
-  TextColumn get profileId => text().nullable()(); // From ContactLink, nullable
-  TextColumn get contactId => text().nullable()(); // From ContactLink, nullable
+  TextColumn get profileId => text()
+      .nullable()(); // Global profile identity (from JWT) - nullable for anonymous subscriptions
+  TextColumn get contactId =>
+      text().nullable()(); // Contact method (phone/email/etc)
   TextColumn get role => text().nullable()();
   IntColumn get joinedAt => integer().nullable()();
 

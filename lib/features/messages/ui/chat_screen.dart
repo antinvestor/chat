@@ -9,10 +9,14 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../advanced/ui/motion_bubble.dart';
 import '../../advanced/ui/transaction_bubble.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
+import '../../../core/logging/app_logger.dart';
+import '../../../core/sync/sync_engine.dart';
 import '../data/message_providers.dart';
 import '../data/message_sending_service.dart';
+import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
 import 'message_bubble.dart';
 import 'typing_indicator.dart';
@@ -50,32 +54,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Cancel previous debounce
     _readReceiptDebounce?.cancel();
 
-    // TODO: Re-implement receipts through Connect stream
-    // Temporary disabled until Connect stream is available
-    /*
-    _readReceiptDebounce = Timer(const Duration(milliseconds: 500), () {
-      final unreadIds = messages
-          .where((m) => 
-              m.senderId != 'current_user_id' && 
-              m.status != EventStatus.read)
-          .map((m) => m.id)
-          .toList();
-      
-      if (unreadIds.isNotEmpty) {
-        // Send through Connect stream
+    _readReceiptDebounce = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final currentUserIdAsync = ref.read(currentUserIdProvider);
+        final currentUserId = currentUserIdAsync.value;
+        if (currentUserId == null || currentUserId.isEmpty) return;
+
+        final unreadIds = messages
+            .where(
+              (m) =>
+                  m.senderId != currentUserId && m.status != EventStatus.read,
+            )
+            .map((m) => m.id)
+            .toList();
+
+        if (unreadIds.isNotEmpty) {
+          final syncEngine = await ref.read(syncEngineProvider.future);
+          if (syncEngine != null) {
+            await syncEngine.sendReadReceipts(widget.roomId, unreadIds);
+          }
+        }
+      } catch (e) {
+        // Silently fail for read receipts - they're not critical
+        AppLogger.error('Failed to send read receipts', error: e);
       }
     });
-    */
   }
 
   void _onTextChanged(String text) {
     if (_typingDebounce?.isActive ?? false) _typingDebounce!.cancel();
 
-    // TODO: Re-implement typing through Connect stream
-    // ref.read(typingProvider(widget.roomId).notifier).sendTyping(true);
+    // Send typing event when user starts typing
+    if (text.isNotEmpty) {
+      ref.read(typingProvider(widget.roomId).notifier).sendTyping(true);
+    }
 
     _typingDebounce = Timer(const Duration(seconds: 2), () {
-      // ref.read(typingProvider(widget.roomId).notifier).sendTyping(false);
+      // Send typing stopped event
+      ref.read(typingProvider(widget.roomId).notifier).sendTyping(false);
     });
   }
 
@@ -124,10 +140,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _pickAndSendFile() async {
     final result = await FilePicker.platform.pickFiles();
     if (result != null && result.files.single.path != null) {
-      await _sendMediaFile(
-        File(result.files.single.path!),
-        RoomEventType.file,
-      );
+      await _sendMediaFile(File(result.files.single.path!), RoomEventType.file);
     }
   }
 
@@ -139,7 +152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       final messagingService = ref.read(messageSendingServiceProvider);
-      
+
       switch (type) {
         case RoomEventType.image:
           await messagingService.sendImageMessage(
@@ -176,15 +189,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File sent successfully')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('File sent successfully')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send file: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to send file: $e')));
       }
     } finally {
       if (mounted) {
@@ -324,9 +337,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     // Reverse index since we're using reverse: true
                     final reversedIndex = messages.length - 1 - index;
                     final message = messages[reversedIndex];
-                    final isMe =
-                        message.senderId ==
-                        'current_user_id'; // TODO: Check against real user
+
+                    // Get current user ID for proper message positioning
+                    final currentUserId = ref.watch(currentUserIdProvider);
+                    final isMe = message.senderId == (currentUserId ?? '');
 
                     // Show avatar only for first message in a group
                     final showAvatar =
@@ -401,7 +415,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             vertical: 10,
                           ),
                           prefixIcon: _isEncryptionEnabled
-                              ? const Icon(Icons.lock, size: 18, color: Colors.green)
+                              ? const Icon(
+                                  Icons.lock,
+                                  size: 18,
+                                  color: Colors.green,
+                                )
                               : null,
                         ),
                         onChanged: _onTextChanged,

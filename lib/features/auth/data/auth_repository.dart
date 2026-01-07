@@ -1,4 +1,5 @@
-import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenRefreshResult;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -35,19 +36,20 @@ class AuthRepository {
   Future<void> refreshToken() async {
     await _authService.refreshToken();
   }
-  
+
   /// Refresh token with detailed result information
   /// Returns result type, token if successful, and error message if failed
-  Future<({TokenRefreshResult result, dynamic token, String? error})> refreshTokenWithResult() async {
+  Future<({TokenRefreshResult result, dynamic token, String? error})>
+  refreshTokenWithResult() async {
     return await _authService.refreshTokenWithResult();
   }
-  
+
   /// Get the time until a token refresh is needed
   /// Returns null if no expiry info available
   Future<Duration?> getTimeUntilRefreshNeeded() async {
     return await _authService.getTimeUntilRefreshNeeded();
   }
-  
+
   /// Get the token expiry time
   Future<DateTime?> getTokenExpiryTime() async {
     return await _authService.getTokenExpiryTime();
@@ -57,11 +59,18 @@ class AuthRepository {
     return await _authService.getUserInfo();
   }
 
-  /// Get the current user ID from the JWT token ('sub' claim)
-  /// Returns the profile ID of the authenticated user, or null if not authenticated
-  Future<String?> getCurrentUserId() async {
+  /// Get the current profile ID from the JWT token ('sub' claim)
+  /// Returns the profile ID of the authenticated profile, or null if not authenticated
+  Future<String?> getCurrentProfileId() async {
     final claims = await getUserInfo();
     return claims?['sub'] as String?;
+  }
+
+  /// Get the current contact ID from the JWT token ('contact_id' claim)
+  /// Returns the contact ID of the authenticated user, or null if not authenticated
+  Future<String?> getCurrentContactId() async {
+    final claims = await getUserInfo();
+    return claims?['contact_id'] as String?;
   }
 
   Future<String?> getAccessToken() async {
@@ -73,10 +82,11 @@ class AuthRepository {
   Future<String?> ensureValidAccessToken() async {
     return await _authService.ensureValidAccessToken();
   }
-  
+
   /// Ensure valid access token with detailed status
   /// Returns token and whether re-login is needed
-  Future<({String? token, bool needsRelogin})> ensureValidAccessTokenWithStatus({
+  Future<({String? token, bool needsRelogin})>
+  ensureValidAccessTokenWithStatus({
     int maxRetries = 3,
     Duration retryDelay = const Duration(seconds: 2),
   }) async {
@@ -111,5 +121,5 @@ AuthRepository authRepository(Ref ref) {
 @riverpod
 Future<String?> currentUserId(Ref ref) async {
   final authRepo = ref.watch(authRepositoryProvider);
-  return await authRepo.getCurrentUserId();
+  return await authRepo.getCurrentProfileId();
 }

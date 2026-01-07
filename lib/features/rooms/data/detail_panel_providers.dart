@@ -1,11 +1,9 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/db/database.dart';
-import '../../messages/data/message_providers.dart';
 import '../../messages/domain/room_event.dart' as domain;
 
 part 'detail_panel_providers.g.dart';

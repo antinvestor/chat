@@ -57,7 +57,10 @@ class BackgroundSyncTask {
             currentUserId = claims['sub'] as String?;
           }
         } catch (e) {
-          AppLogger.error('Failed to decode ID token in background task', error: e);
+          AppLogger.error(
+            'Failed to decode ID token in background task',
+            error: e,
+          );
         }
       }
 
@@ -70,7 +73,7 @@ class BackgroundSyncTask {
       httpClient.connectionTimeout = ApiConfig.connectionTimeout;
       httpClient.idleTimeout = ApiConfig.idleTimeout;
       httpClient.maxConnectionsPerHost = 2; // Limit for background tasks
-      
+
       final transport = connect_protocol.Transport(
         baseUrl: ApiConfig.chatBaseUrl,
         codec: const connect_protobuf.ProtoCodec(),
@@ -122,7 +125,14 @@ class BackgroundSyncTask {
 
       for (final job in jobs) {
         try {
-          await _processJob(job, chatClient, messageRepo, jobRepo, authHeaders, currentUserId);
+          await _processJob(
+            job,
+            chatClient,
+            messageRepo,
+            jobRepo,
+            authHeaders,
+            currentUserId,
+          );
         } catch (e, stackTrace) {
           AppLogger.error(
             'Failed to process background job',
@@ -157,7 +167,13 @@ class BackgroundSyncTask {
     switch (job.type) {
       case domain_job.JobType.sendMessage:
       case domain_job.JobType.sendMediaMessage:
-        await _processSendMessage(job, chatClient, messageRepo, authHeaders, currentUserId);
+        await _processSendMessage(
+          job,
+          chatClient,
+          messageRepo,
+          authHeaders,
+          currentUserId,
+        );
         break;
       case domain_job.JobType.createRoom:
         await _processCreateRoom(job, chatClient, authHeaders);
@@ -199,8 +215,11 @@ class BackgroundSyncTask {
     final payload = job.payload;
 
     // Convert member profile IDs to ContactLink objects
-    final memberIds = (payload['members'] as List<dynamic>?)?.cast<String>() ?? [];
-    final memberLinks = memberIds.map((id) => common.ContactLink(profileId: id)).toList();
+    final memberIds =
+        (payload['members'] as List<dynamic>?)?.cast<String>() ?? [];
+    final memberLinks = memberIds
+        .map((id) => common.ContactLink(profileId: id))
+        .toList();
 
     final request = pb.CreateRoomRequest(
       id: payload['id'] as String,
@@ -219,10 +238,10 @@ class BackgroundSyncTask {
     final response = await chatClient.createRoom(request, headers: authHeaders);
 
     if (response.hasRoom()) {
-      AppLogger.debug('Room created in background', data: {
-        'localId': payload['id'],
-        'serverId': response.room.id,
-      });
+      AppLogger.debug(
+        'Room created in background',
+        data: {'localId': payload['id'], 'serverId': response.room.id},
+      );
     } else if (response.hasError()) {
       throw Exception('Room creation failed: ${response.error.message}');
     }
@@ -249,7 +268,10 @@ class BackgroundSyncTask {
     }
 
     await chatClient.updateRoom(request, headers: authHeaders);
-    AppLogger.debug('Room updated in background', data: {'roomId': payload['id']});
+    AppLogger.debug(
+      'Room updated in background',
+      data: {'roomId': payload['id']},
+    );
   }
 
   /// Delete a room
@@ -260,12 +282,13 @@ class BackgroundSyncTask {
   ) async {
     final payload = job.payload;
 
-    final request = pb.DeleteRoomRequest(
-      roomId: payload['id'] as String,
-    );
+    final request = pb.DeleteRoomRequest(roomId: payload['id'] as String);
 
     await chatClient.deleteRoom(request, headers: authHeaders);
-    AppLogger.debug('Room deleted in background', data: {'roomId': payload['id']});
+    AppLogger.debug(
+      'Room deleted in background',
+      data: {'roomId': payload['id']},
+    );
   }
 
   /// Add members to a room
@@ -279,10 +302,14 @@ class BackgroundSyncTask {
     final profileIds = (payload['profileIds'] as List<dynamic>).cast<String>();
 
     // Convert profileIds to RoomSubscription objects with ContactLink
-    final members = profileIds.map((profileId) => pb.RoomSubscription(
-      roomId: roomId,
-      member: common.ContactLink(profileId: profileId),
-    )).toList();
+    final members = profileIds
+        .map(
+          (profileId) => pb.RoomSubscription(
+            roomId: roomId,
+            member: common.ContactLink(profileId: profileId),
+          ),
+        )
+        .toList();
 
     final request = pb.AddRoomSubscriptionsRequest(
       roomId: roomId,
@@ -290,10 +317,10 @@ class BackgroundSyncTask {
     );
 
     await chatClient.addRoomSubscriptions(request, headers: authHeaders);
-    AppLogger.debug('Members added in background', data: {
-      'roomId': roomId,
-      'memberCount': profileIds.length,
-    });
+    AppLogger.debug(
+      'Members added in background',
+      data: {'roomId': roomId, 'memberCount': profileIds.length},
+    );
   }
 
   /// Remove members from a room
@@ -306,7 +333,8 @@ class BackgroundSyncTask {
 
     // Note: The API now expects subscription_id instead of profileIds
     // For now, we'll use profileIds as subscription IDs (they should match)
-    final subscriptionIds = (payload['profileIds'] as List<dynamic>).cast<String>();
+    final subscriptionIds = (payload['profileIds'] as List<dynamic>)
+        .cast<String>();
 
     final request = pb.RemoveRoomSubscriptionsRequest(
       roomId: payload['roomId'] as String,
@@ -314,10 +342,13 @@ class BackgroundSyncTask {
     );
 
     await chatClient.removeRoomSubscriptions(request, headers: authHeaders);
-    AppLogger.debug('Members removed in background', data: {
-      'roomId': payload['roomId'],
-      'memberCount': (payload['profileIds'] as List).length,
-    });
+    AppLogger.debug(
+      'Members removed in background',
+      data: {
+        'roomId': payload['roomId'],
+        'memberCount': (payload['profileIds'] as List).length,
+      },
+    );
   }
 
   /// Send a message
@@ -337,7 +368,8 @@ class BackgroundSyncTask {
       nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
 
-    final source = common.ContactLink(profileId: currentUserId ?? 'unknown');
+    // currentUserId is already available as a parameter
+    // Source is no longer used in new API
 
     // Extract content and type
     final content = payload['content'] as Map<String, dynamic>;
@@ -366,7 +398,6 @@ class BackgroundSyncTask {
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
       roomId: payload['roomId'] as String,
-      source: source,
       type: protoType,
       sentAt: timestamp,
       payload: pbPayload,
@@ -378,7 +409,10 @@ class BackgroundSyncTask {
     // Update local message status
     if (payload['localId'] != null && response.ack.isNotEmpty) {
       final ackEventId = response.ack.first.eventId;
-      await messageRepo.updateMessageStatus(ackEventId, domain.EventStatus.sent);
+      await messageRepo.updateMessageStatus(
+        ackEventId.first,
+        domain.EventStatus.sent,
+      );
       AppLogger.debug(
         'Message sent in background',
         data: {'localId': payload['localId'], 'serverId': ackEventId},

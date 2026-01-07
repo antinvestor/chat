@@ -24,7 +24,12 @@ class MotionService {
   final MessageRepository _messageRepository;
   final AppDatabase _database;
 
-  MotionService(this._syncEngine, this._authRepository, this._messageRepository, this._database);
+  MotionService(
+    this._syncEngine,
+    this._authRepository,
+    this._messageRepository,
+    this._database,
+  );
 
   /// Helper method to check if user has admin/owner role in room
   Future<String?> _getRoomRole(String roomId, String userId) async {
@@ -50,7 +55,9 @@ class MotionService {
       throw ValidationException('Motion title must be at least 5 characters');
     }
     if (title.trim().length > 100) {
-      throw ValidationException('Motion title must be less than 100 characters');
+      throw ValidationException(
+        'Motion title must be less than 100 characters',
+      );
     }
     if (options.length < 2) {
       throw ValidationException('Motion must have at least 2 options');
@@ -60,12 +67,15 @@ class MotionService {
     }
 
     // Admin role enforcement
-    final currentUserId = await _authRepository.getCurrentUserId();
-    if (currentUserId == null) {
-      throw ValidationException('User not authenticated');
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    if (currentProfileId == null) {
+      throw ValidationException('Profile not authenticated');
     }
 
-    final role = await _getRoomRole(roomId, currentUserId);
+    final role = await _getRoomRole(roomId, currentProfileId);
+    if (role == null) {
+      throw ValidationException('Profile not found in room');
+    }
     if (role != 'admin' && role != 'owner') {
       throw PermissionDeniedException('Only room admins can create motions');
     }
@@ -82,7 +92,7 @@ class MotionService {
     final event = domain.RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
-      senderId: currentUserId,
+      senderId: currentProfileId,
       type: domain.RoomEventType.motion,
       content: content,
       createdAt: DateTime.now().millisecondsSinceEpoch,
@@ -117,19 +127,20 @@ class MotionService {
     }
 
     // 4. Validate option
-    final options = (motionEvent.content['options'] as List<dynamic>).cast<String>();
+    final options = (motionEvent.content['options'] as List<dynamic>)
+        .cast<String>();
     if (!options.contains(option)) {
       throw ValidationException('Invalid voting option');
     }
 
     // 5. Check for existing vote (deduplication & change logic)
-    final currentUserId = await _authRepository.getCurrentUserId();
-    if (currentUserId == null) {
-      throw ValidationException('User not authenticated');
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+    if (currentProfileId == null) {
+      throw ValidationException('Profile not authenticated');
     }
 
     final votes = (motionEvent.content['votes'] as Map<String, dynamic>?) ?? {};
-    final existingVote = votes[currentUserId];
+    final existingVote = votes[currentProfileId];
 
     // If same vote, no-op (deduplication)
     if (existingVote == option) {
@@ -146,7 +157,7 @@ class MotionService {
     final event = domain.RoomEvent(
       id: Xid().toString(),
       roomId: roomId,
-      senderId: currentUserId,
+      senderId: currentProfileId,
       type: domain.RoomEventType.vote,
       content: content,
       createdAt: DateTime.now().millisecondsSinceEpoch,

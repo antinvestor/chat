@@ -48,7 +48,10 @@ void main() async {
   // Initialize workmanager (only supported on Android and iOS)
   final isMobile = Platform.isAndroid || Platform.isIOS;
   if (isMobile) {
-    await Workmanager().initialize(callbackDispatcher, isInDebugMode: kDebugMode);
+    await Workmanager().initialize(
+      callbackDispatcher,
+      isInDebugMode: kDebugMode,
+    );
 
     // Register periodic background sync (15 minutes)
     await Workmanager().registerPeriodicTask(
@@ -95,14 +98,18 @@ class _MyAppState extends ConsumerState<MyApp> {
 
       // Ensure we have a valid access token (will refresh if expired)
       final token = await authRepo.ensureValidAccessToken();
-      
+
       if (token == null) {
         // Token refresh failed, user needs to re-login
-        AppLogger.warning('Token refresh failed on app start, user needs to re-login');
+        AppLogger.warning(
+          'Token refresh failed on app start, user needs to re-login',
+        );
         return;
       }
 
-      AppLogger.info('Valid access token obtained, starting background services');
+      AppLogger.info(
+        'Valid access token obtained, starting background services',
+      );
 
       // Token refresh is now handled reactively by TokenManager on 401
 
@@ -114,10 +121,12 @@ class _MyAppState extends ConsumerState<MyApp> {
       syncEngine.start();
 
       // Start connectivity monitoring for auto-sync on reconnection (async)
-      final connectivityService = await ref.read(connectivityServiceProvider.future);
+      final connectivityService = await ref.read(
+        connectivityServiceProvider.future,
+      );
       connectivityService.start();
     } else {
-      AppLogger.debug('User not logged in, skipping service initialization');
+      AppLogger.debug('Profile not logged in, skipping service initialization');
     }
   }
 
@@ -125,28 +134,32 @@ class _MyAppState extends ConsumerState<MyApp> {
   Future<void> _waitForNetwork() async {
     final connectivity = Connectivity();
     var results = await connectivity.checkConnectivity();
-    
+
     // Check if we have a connection
-    bool hasConnection = results.any((r) =>
-        r == ConnectivityResult.wifi ||
-        r == ConnectivityResult.mobile ||
-        r == ConnectivityResult.ethernet);
-    
+    bool hasConnection = results.any(
+      (r) =>
+          r == ConnectivityResult.wifi ||
+          r == ConnectivityResult.mobile ||
+          r == ConnectivityResult.ethernet,
+    );
+
     if (!hasConnection) {
       AppLogger.info('Waiting for network connectivity...');
       // Wait for connectivity change
       await for (final results in connectivity.onConnectivityChanged) {
-        hasConnection = results.any((r) =>
-            r == ConnectivityResult.wifi ||
-            r == ConnectivityResult.mobile ||
-            r == ConnectivityResult.ethernet);
+        hasConnection = results.any(
+          (r) =>
+              r == ConnectivityResult.wifi ||
+              r == ConnectivityResult.mobile ||
+              r == ConnectivityResult.ethernet,
+        );
         if (hasConnection) {
           AppLogger.info('Network connectivity established');
           break;
         }
       }
     }
-    
+
     // Small delay to ensure DNS is ready
     await Future.delayed(const Duration(milliseconds: 500));
   }

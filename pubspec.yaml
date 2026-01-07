@@ -33,7 +33,7 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  antinvestor_api_chat: ^1.52.11
+  antinvestor_api_chat: ^1.52.24
   antinvestor_api_common: ^1.52.0
   antinvestor_api_device: ^1.52.1
   antinvestor_api_files: ^1.52.1
@@ -56,7 +56,7 @@ dependencies:
   freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
   xid: ^1.2.1
-  equatable: ^2.0.7
+  equatable: ^2.0.8
   intl: ^0.20.2
   url_launcher: ^6.3.2
   flutter_vodozemac: ^0.4.1

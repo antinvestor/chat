@@ -4,21 +4,23 @@ import 'user_info_provider.dart';
 
 part 'current_user_provider.g.dart';
 
-/// Provider for the current user ID (from JWT 'sub' claim)
-/// Returns null if the user is not authenticated or no user info is available
+/// Provider for the current user's PROFILE ID (from JWT 'sub' claim)
+/// This represents the entity (person/organization) identity
+/// NOT to be confused with contact ID or subscription ID
+/// Returns null if the user is not authenticated or no profile info is available
 @riverpod
 Future<String?> currentUserId(Ref ref) async {
   final userInfo = await ref.watch(userInfoProvider.future);
   return userInfo?.id;
 }
 
-/// Non-null version that throws if user ID is not available
+/// Non-null version that throws if profile ID is not available
 /// Use this in contexts where authentication is required
 @riverpod
-Future<String> currentUserIdOrThrow(Ref ref) async {
-  final userId = await ref.watch(currentUserIdProvider.future);
-  if (userId == null) {
-    throw Exception('User not authenticated - no user ID available');
+Future<String> currentProfileIdOrThrow(Ref ref) async {
+  final profileId = await ref.watch(currentUserIdProvider.future);
+  if (profileId == null) {
+    throw Exception('Profile not authenticated - no profile ID available');
   }
-  return userId;
+  return profileId;
 }

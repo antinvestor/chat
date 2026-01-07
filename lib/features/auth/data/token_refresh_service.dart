@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenRefreshResult;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/logging/app_logger.dart';
@@ -11,7 +12,7 @@ import 'auth_state_provider.dart';
 part 'token_refresh_service.g.dart';
 
 /// Service that handles automatic token refresh in the background
-/// 
+///
 /// This service implements a robust token refresh strategy:
 /// - Proactive refresh: Refreshes tokens before they expire (5 min buffer)
 /// - Smart scheduling: Schedules next refresh based on token expiry time
@@ -26,7 +27,7 @@ class TokenRefreshService {
   Timer? _scheduledRefreshTimer;
   bool _isRefreshing = false;
   int _consecutiveFailures = 0;
-  
+
   // Configuration
   static const _maxConsecutiveFailures = 5;
   static const _baseRetryDelay = Duration(seconds: 5);
@@ -34,7 +35,7 @@ class TokenRefreshService {
   static const _fallbackCheckInterval = Duration(seconds: 30);
 
   TokenRefreshService(
-    this._authRepository, 
+    this._authRepository,
     this._onLogoutNeeded, {
     Future<void> Function(String token)? onTokenRefreshed,
   }) : _onTokenRefreshed = onTokenRefreshed;
@@ -48,7 +49,7 @@ class TokenRefreshService {
 
     // Schedule based on token expiry, with fallback periodic check
     _scheduleNextRefresh();
-    
+
     // Fallback: periodic check every 30 seconds for edge cases
     _refreshTimer = Timer.periodic(
       _fallbackCheckInterval,
@@ -73,34 +74,41 @@ class TokenRefreshService {
   /// Schedule the next refresh based on token expiry time
   Future<void> _scheduleNextRefresh() async {
     _scheduledRefreshTimer?.cancel();
-    
+
     try {
-      final timeUntilRefresh = await _authRepository.getTimeUntilRefreshNeeded();
-      
+      final timeUntilRefresh = await _authRepository
+          .getTimeUntilRefreshNeeded();
+
       if (timeUntilRefresh == null) {
         // No expiry info, rely on fallback periodic check
         AppLogger.debug('No token expiry info, relying on fallback check');
         return;
       }
-      
+
       if (timeUntilRefresh <= Duration.zero) {
         // Need to refresh now
         AppLogger.debug('Token refresh needed immediately');
         _checkAndRefreshIfNeeded();
         return;
       }
-      
+
       // Schedule refresh for when token is about to expire
-      AppLogger.info('Scheduled proactive token refresh', data: {
-        'inSeconds': timeUntilRefresh.inSeconds,
-        'inMinutes': timeUntilRefresh.inMinutes,
-      });
-      
+      AppLogger.info(
+        'Scheduled proactive token refresh',
+        data: {
+          'inSeconds': timeUntilRefresh.inSeconds,
+          'inMinutes': timeUntilRefresh.inMinutes,
+        },
+      );
+
       _scheduledRefreshTimer = Timer(timeUntilRefresh, () {
         _checkAndRefreshIfNeeded();
       });
     } catch (e) {
-      AppLogger.warning('Failed to schedule token refresh', data: {'error': e.toString()});
+      AppLogger.warning(
+        'Failed to schedule token refresh',
+        data: {'error': e.toString()},
+      );
     }
   }
 
@@ -116,7 +124,9 @@ class TokenRefreshService {
 
       final isLoggedIn = await _authRepository.isLoggedIn();
       if (!isLoggedIn) {
-        AppLogger.debug('User not logged in, stopping token refresh service');
+        AppLogger.debug(
+          'Profile not logged in, stopping token refresh service',
+        );
         stop();
         return;
       }
@@ -130,7 +140,6 @@ class TokenRefreshService {
 
       AppLogger.info('Token expired or about to expire, refreshing...');
       await _performRefreshWithRetry();
-      
     } finally {
       _isRefreshing = false;
     }
@@ -139,12 +148,12 @@ class TokenRefreshService {
   /// Perform token refresh with retry logic for transient errors
   Future<void> _performRefreshWithRetry() async {
     final result = await _authRepository.refreshTokenWithResult();
-    
+
     switch (result.result) {
       case TokenRefreshResult.success:
         _consecutiveFailures = 0;
         AppLogger.info('Background token refresh successful');
-        
+
         // Update TokenManager's in-memory cache so Connect RPC clients use the new token
         if (_onTokenRefreshed != null) {
           final newToken = await _authRepository.getAccessToken();
@@ -153,11 +162,11 @@ class TokenRefreshService {
             AppLogger.debug('TokenManager updated with new token');
           }
         }
-        
+
         // Schedule next refresh based on new token expiry
         await _scheduleNextRefresh();
         break;
-        
+
       case TokenRefreshResult.permanentError:
         AppLogger.error(
           'Token refresh failed permanently - forcing re-login',
@@ -169,10 +178,10 @@ class TokenRefreshService {
         await _onLogoutNeeded();
         stop();
         break;
-        
+
       case TokenRefreshResult.transientError:
         _consecutiveFailures++;
-        
+
         if (_consecutiveFailures >= _maxConsecutiveFailures) {
           AppLogger.error(
             'Max consecutive refresh failures reached, prompting re-login',
@@ -182,7 +191,7 @@ class TokenRefreshService {
           stop();
           return;
         }
-        
+
         // Calculate retry delay with exponential backoff
         final retryDelay = _calculateRetryDelay(_consecutiveFailures);
         AppLogger.warning(
@@ -193,7 +202,7 @@ class TokenRefreshService {
             'error': result.error,
           },
         );
-        
+
         // Schedule retry
         _scheduledRefreshTimer?.cancel();
         _scheduledRefreshTimer = Timer(retryDelay, () {
@@ -207,11 +216,17 @@ class TokenRefreshService {
   Duration _calculateRetryDelay(int failureCount) {
     // Exponential backoff: 5s, 10s, 20s, 40s, 80s (capped at 2 min)
     final exponentialDelay = _baseRetryDelay * (1 << (failureCount - 1));
-    final cappedDelay = exponentialDelay > _maxRetryDelay ? _maxRetryDelay : exponentialDelay;
-    
+    final cappedDelay = exponentialDelay > _maxRetryDelay
+        ? _maxRetryDelay
+        : exponentialDelay;
+
     // Add jitter (±20%) to prevent thundering herd
-    final jitterMs = (cappedDelay.inMilliseconds * 0.2 * (DateTime.now().millisecond / 500 - 1)).toInt();
-    
+    final jitterMs =
+        (cappedDelay.inMilliseconds *
+                0.2 *
+                (DateTime.now().millisecond / 500 - 1))
+            .toInt();
+
     return Duration(milliseconds: cappedDelay.inMilliseconds + jitterMs);
   }
 
@@ -220,7 +235,7 @@ class TokenRefreshService {
     _consecutiveFailures = 0; // Reset on manual refresh
     await _checkAndRefreshIfNeeded();
   }
-  
+
   /// Get current health status
   ({bool isHealthy, int consecutiveFailures}) get healthStatus => (
     isHealthy: _consecutiveFailures < _maxConsecutiveFailures,
@@ -236,23 +251,25 @@ TokenRefreshService tokenRefreshService(Ref ref) {
 
   // Create service with logout callback and TokenManager sync
   final service = TokenRefreshService(
-    authRepository, 
+    authRepository,
     () async {
       AppLogger.warning('Token refresh service triggering re-login flow');
-      
+
       // Logout by clearing tokens
       await authRepository.logout();
-      
+
       // Invalidate the auth state notifier to trigger UI update
       // This ensures the user sees the login screen instead of hanging
       ref.invalidate(authStateProvider);
-      
+
       AppLogger.info('Auth state invalidated - user should see login screen');
     },
     onTokenRefreshed: (String newToken) async {
       // Update TokenManager's in-memory cache so Connect RPC clients use the new token
       await tokenManager.setAccessToken(newToken);
-      AppLogger.debug('TokenManager in-memory cache updated after background refresh');
+      AppLogger.debug(
+        'TokenManager in-memory cache updated after background refresh',
+      );
     },
   );
 
