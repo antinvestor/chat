@@ -12,5 +12,6 @@ abstract class RoomWithLastMessage with _$RoomWithLastMessage {
     String? lastMessageText,
     int? lastMessageTimestamp,
     String? lastMessageSenderId,
+    bool? isTyping,
   }) = _RoomWithLastMessage;
 }

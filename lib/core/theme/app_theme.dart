@@ -225,6 +225,12 @@ class AppTheme {
     return baseColor.withValues(alpha: 0.1);
   }
 
+  // Get text color based on theme
+  static Color getTextColor(BuildContext context) {
+    final brightness = MediaQuery.of(context).platformBrightness;
+    return brightness == Brightness.dark ? Colors.white : surfaceDark;
+  }
+
   // Get chat background color based on theme
   static Color getChatBackground(BuildContext context) {
     final brightness = MediaQuery.of(context).platformBrightness;

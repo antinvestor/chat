@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +7,7 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/responsive/breakpoints.dart';
 import '../../../core/responsive/responsive_layout.dart';
 import '../../../core/responsive/three_panel_layout.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../widgets/app_drawer.dart';
 import '../../../widgets/empty_state.dart';
 import '../../../widgets/error_banner.dart';
@@ -18,7 +18,9 @@ import '../../contacts/ui/contact_sync_sheet.dart';
 import '../../messages/ui/chat_screen.dart';
 import '../../onboarding/data/onboarding_repository.dart';
 import '../data/room_providers.dart';
+import '../data/room_service.dart';
 import '../domain/room_with_last_message.dart';
+import 'chat_list_item.dart';
 import 'new_chat_screen.dart';
 import 'room_detail_panel.dart';
 import 'room_list_tile.dart';
@@ -34,6 +36,11 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   String? _selectedRoomId;
   String? _selectedRoomName;
   bool _hasCheckedContactSync = false;
+  bool _isSearching = false;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  bool _isMultiSelectMode = false;
+  final Set<String> _selectedRoomIds = <String>{};
 
   @override
   void initState() {
@@ -50,23 +57,29 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
 
     final onboardingRepo = ref.read(onboardingRepositoryProvider);
     final hasContactsSynced = await onboardingRepo.hasContactsSynced();
-    
+
     // Also check if there are any profiles in the database
     final repo = await ref.read(rosterRepositoryProvider.future);
     final existingProfiles = await repo.getProfilesWithContacts();
     final hasProfiles = existingProfiles.isNotEmpty;
-    
-    AppLogger.debug('[RoomList] Contact sync check', data: {
-      'hasContactsSynced': hasContactsSynced,
-      'existingProfileCount': existingProfiles.length,
-    });
-    
+
+    AppLogger.debug(
+      '[RoomList] Contact sync check',
+      data: {
+        'hasContactsSynced': hasContactsSynced,
+        'existingProfileCount': existingProfiles.length,
+      },
+    );
+
     // Show sync sheet if never synced OR if there are no profiles to use
     if ((!hasContactsSynced || !hasProfiles) && mounted) {
-      AppLogger.info('[RoomList] Showing contact sync sheet', data: {
-        'reason': !hasContactsSynced ? 'never synced' : 'no profiles found',
-      });
-      
+      AppLogger.info(
+        '[RoomList] Showing contact sync sheet',
+        data: {
+          'reason': !hasContactsSynced ? 'never synced' : 'no profiles found',
+        },
+      );
+
       await showContactSyncSheet(
         context: context,
         repository: repo,
@@ -82,14 +95,125 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         },
       );
     } else {
-      AppLogger.debug('[RoomList] Contacts already synced with profiles available');
+      AppLogger.debug(
+        '[RoomList] Contacts already synced with profiles available',
+      );
     }
   }
 
-  void _navigateToNewChat() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const NewChatScreen()),
+  void _handleMenuAction(String action) {
+    switch (action) {
+      case 'settings':
+        context.go('/settings');
+        break;
+      case 'select_multiple':
+        _toggleMultiSelectMode();
+        break;
+      case 'mark_all_read':
+        _markAllAsRead();
+        break;
+    }
+  }
+
+  void _toggleMultiSelectMode() {
+    setState(() {
+      _isMultiSelectMode = !_isMultiSelectMode;
+      if (!_isMultiSelectMode) {
+        _selectedRoomIds.clear();
+      }
+    });
+  }
+
+  void _markAllAsRead() async {
+    final rooms = ref.read(roomListWithMessagesProvider).value ?? [];
+    final unreadRooms = rooms.where((room) => room.unreadCount > 0).toList();
+
+    if (unreadRooms.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No unread messages'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final roomRepo = ref.read(roomRepositoryProvider);
+
+      // Mark all rooms as read
+      for (final room in unreadRooms) {
+        await roomRepo.updateUnreadCount(room.id, 0);
+      }
+
+      // Refresh the room list to show updated counts
+      ref.read(roomListWithMessagesProvider.notifier).refresh();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Marked ${unreadRooms.length} conversation${unreadRooms.length == 1 ? '' : 's'} as read',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to mark messages as read: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _archiveRoom(RoomWithLastMessage room) {
+    // TODO: Implement actual archive logic when repository is available
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Archive functionality coming soon'),
+        duration: Duration(seconds: 2),
+      ),
     );
+  }
+
+  void _showMoreOptions(RoomWithLastMessage room) {
+    // TODO: Implement more options dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('More options coming soon'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchQuery = '';
+        _searchController.clear();
+      }
+    });
+  }
+
+  List<RoomWithLastMessage> _filterRooms(List<RoomWithLastMessage> rooms) {
+    if (_searchQuery.isEmpty) return rooms;
+
+    return rooms.where((room) {
+      return room.name.toLowerCase().contains(_searchQuery) ||
+          (room.lastMessageText?.toLowerCase().contains(_searchQuery) ?? false);
+    }).toList();
+  }
+
+  void _navigateToNewChat() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const NewChatScreen()));
   }
 
   @override
@@ -108,26 +232,169 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   /// Mobile layout: Single-pane with stack navigation
   Widget _buildMobileLayout(AsyncValue<List<RoomWithLastMessage>> roomsAsync) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chats'),
-      ),
-      drawer: const AppDrawer(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToNewChat,
-        tooltip: 'New Chat',
-        child: const Icon(Icons.chat_bubble_outline),
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              const IncomingCallBanner(),
-              Expanded(
-                child: _buildRoomList(roomsAsync, isMobile: true),
+      body: CustomScrollView(
+        slivers: [
+          // Floating app bar that hides on scroll
+          SliverAppBar(
+            floating: true,
+            snap: true,
+            pinned: true,
+            title: Text(
+              'Chats',
+              style: AppTheme.headerText.copyWith(
+                color: Theme.of(context).appBarTheme.foregroundColor,
               ),
+            ),
+            actions: [
+              // Search button or back button
+              IconButton(
+                icon: Icon(
+                  _isSearching ? Icons.arrow_back : Icons.search,
+                  color: Theme.of(context).appBarTheme.foregroundColor,
+                ),
+                onPressed: _toggleSearch,
+                tooltip: _isSearching ? 'Back' : 'Search',
+              ),
+              // Search field or more options
+              if (_isSearching)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Search conversations...',
+                        hintStyle: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).appBarTheme.foregroundColor?.withValues(alpha: 0.6),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      style: TextStyle(
+                        color: Theme.of(context).appBarTheme.foregroundColor,
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value.toLowerCase();
+                        });
+                      },
+                    ),
+                  ),
+                )
+              else
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: Theme.of(context).appBarTheme.foregroundColor,
+                  ),
+                  onSelected: _handleMenuAction,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem<String>(
+                      value: 'settings',
+                      child: Text('Settings'),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'select_multiple',
+                      child: Text('Select Multiple'),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'mark_all_read',
+                      child: Text('Mark All Read'),
+                    ),
+                  ],
+                ),
             ],
           ),
+
+          // Call banner
+          const SliverToBoxAdapter(child: IncomingCallBanner()),
+
+          // Chat list
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final rooms = roomsAsync.value;
+              if (rooms == null) {
+                return null;
+              }
+
+              final filteredRooms = _filterRooms(rooms);
+              if (index >= filteredRooms.length) {
+                return null;
+              }
+
+              final room = filteredRooms[index];
+              return Dismissible(
+                key: ValueKey(room.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: Colors.blue,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(left: 20),
+                  child: const Icon(Icons.archive, color: Colors.white),
+                ),
+                secondaryBackground: Container(
+                  color: Colors.grey,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  child: const Icon(Icons.more_horiz, color: Colors.white),
+                ),
+                onDismissed: (direction) {
+                  if (direction == DismissDirection.endToStart) {
+                    _archiveRoom(room);
+                  } else if (direction == DismissDirection.startToEnd) {
+                    _showMoreOptions(room);
+                  }
+                },
+                child: RepaintBoundary(
+                  key: ValueKey(room.id),
+                  child: ChatListItem(
+                    room: room,
+                    onTap: () {
+                      if (_isMultiSelectMode) {
+                        setState(() {
+                          if (_selectedRoomIds.contains(room.id)) {
+                            _selectedRoomIds.remove(room.id);
+                          } else {
+                            _selectedRoomIds.add(room.id);
+                          }
+                        });
+                      } else {
+                        // Navigate to chat screen for mobile layout
+                        context.go(
+                          '/chat/${room.id}?name=${Uri.encodeComponent(room.name)}',
+                        );
+                      }
+                    },
+                    isSelected: _selectedRoomIds.contains(room.id),
+                    isMultiSelectMode: _isMultiSelectMode,
+                    onLongPress: () {
+                      _toggleMultiSelectMode();
+                      setState(() {
+                        _selectedRoomIds.add(room.id);
+                      });
+                    },
+                    onSelectionChanged: (isSelected) {
+                      setState(() {
+                        if (isSelected) {
+                          _selectedRoomIds.add(room.id);
+                        } else {
+                          _selectedRoomIds.remove(room.id);
+                        }
+                      });
+                    },
+                  ),
+                ),
+              );
+            }, childCount: _filterRooms(roomsAsync.value ?? []).length),
+          ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToNewChat,
+        backgroundColor: AppTheme.primaryGreen,
+        child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
       ),
     );
   }
@@ -181,9 +448,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   /// Room list panel for tablet/desktop layouts
   Widget _buildRoomListPanel(AsyncValue<List<RoomWithLastMessage>> roomsAsync) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chats'),
-      ),
+      appBar: AppBar(title: const Text('Chats')),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToNewChat,
@@ -250,8 +515,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                 itemCount: rooms.length,
                 itemBuilder: (context, index) {
                   final room = rooms[index];
-                  final isSelected =
-                      !isMobile && room.id == _selectedRoomId;
+                  final isSelected = !isMobile && room.id == _selectedRoomId;
 
                   return Container(
                     color: isSelected
