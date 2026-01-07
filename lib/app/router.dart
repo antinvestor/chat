@@ -8,6 +8,7 @@ import '../features/auth/data/auth_state_provider.dart';
 import '../features/auth/ui/login_screen.dart';
 import '../features/messages/ui/chat_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
+import '../features/rooms/ui/room_detail_screen.dart';
 
 part 'router.g.dart';
 
@@ -60,6 +61,14 @@ GoRouter router(Ref ref) {
           final roomId = state.pathParameters['roomId']!;
           final roomName = state.uri.queryParameters['name'] ?? 'Chat';
           return ChatScreen(roomId: roomId, roomName: roomName);
+        },
+      ),
+      GoRoute(
+        path: '/room/:roomId/details',
+        builder: (context, state) {
+          final roomId = state.pathParameters['roomId']!;
+          final roomName = state.uri.queryParameters['name'] ?? 'Room Details';
+          return RoomDetailScreen(roomId: roomId, roomName: roomName);
         },
       ),
     ],

@@ -43,25 +43,19 @@ class MessageList extends _$MessageList {
       });
     }
 
-    // Refresh the list
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      return messageRepo.getMessagesForRoom(event.roomId);
-    });
+    // 3. Force refresh to trigger UI update
+    // The database change should automatically trigger a rebuild,
+    // but we ensure it by invalidating the provider
+    ref.invalidateSelf();
   }
 
   /// Fetch historical messages from server
   Future<void> fetchHistory(String roomId, {String? cursor}) async {
-    final messageRepo = ref.read(messageRepositoryProvider);
-
     // Fetch from server (wait for sync engine to be ready)
     final syncEngine = await ref.read(syncEngineProvider.future);
     await syncEngine.getHistory(roomId, cursor: cursor);
 
-    // Refresh local messages
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      return messageRepo.getMessagesForRoom(roomId);
-    });
+    // Force refresh to trigger UI update
+    ref.invalidateSelf();
   }
 }

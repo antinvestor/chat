@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../advanced/ui/motion_bubble.dart';
@@ -275,6 +275,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ],
               ),
           ],
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Navigate back to room list
+            context.go('/');
+          },
+          tooltip: 'Back to rooms',
         ),
         actions: [
           IconButton(
