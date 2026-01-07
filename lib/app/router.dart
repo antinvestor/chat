@@ -9,6 +9,7 @@ import '../features/auth/ui/login_screen.dart';
 import '../features/messages/ui/chat_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
 import '../features/rooms/ui/room_detail_screen.dart';
+import '../features/contacts/ui/contact_selection_screen.dart';
 
 part 'router.g.dart';
 
@@ -55,6 +56,10 @@ GoRouter router(Ref ref) {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/', builder: (context, state) => const RoomListScreen()),
+      GoRoute(
+        path: '/contacts/select',
+        builder: (context, state) => const ContactSelectionScreen(),
+      ),
       GoRoute(
         path: '/chat/:roomId',
         builder: (context, state) {

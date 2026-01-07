@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../features/contacts/data/contact_sync_repository.dart';
@@ -11,119 +10,208 @@ import '../domain/room_event.dart';
 class MessageBubble extends ConsumerWidget {
   final RoomEvent message;
   final bool isMe;
-  final bool showAvatar;
+  final bool shouldGroupWithPrevious;
+  final bool removeTail;
+  final Function(String messageId, String messageText)? onReply;
 
   const MessageBubble({
     super.key,
     required this.message,
     required this.isMe,
-    this.showAvatar = true,
+    this.shouldGroupWithPrevious = false,
+    this.removeTail = false,
+    this.onReply,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-
     final senderName = isMe ? 'Me' : _getSenderName(ref);
     final timestamp = _formatTimestamp(message.createdAt);
-    final status = isMe ? _getStatusLabel(message.status) : '';
     final text = message.content['text'] as String? ?? '';
+    final isDarkMode = theme.brightness == Brightness.dark;
 
-    return Semantics(
-      label: 'Message from $senderName at $timestamp',
-      value: '$text. $status',
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        child: Row(
-          mainAxisAlignment: isMe
-              ? MainAxisAlignment.end
-              : MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (!isMe && showAvatar) ...[
-              _buildAvatar(context, ref),
-              const SizedBox(width: 8),
-            ],
-            Flexible(
-              child: Column(
-                crossAxisAlignment: isMe
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.7,
-                    ),
+    return RepaintBoundary(
+      child: Semantics(
+        label: 'Message from $senderName at $timestamp',
+        value: text,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: shouldGroupWithPrevious ? 1 : 4,
+          ),
+          child: Row(
+            mainAxisAlignment: isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Avatar for received messages
+              if (!isMe && !shouldGroupWithPrevious) ...[
+                _buildAvatar(context, ref),
+                const SizedBox(width: 8),
+              ] else if (!isMe)
+                const SizedBox(width: 48), // Space for avatar
+              // Message bubble
+              Flexible(
+                child: Dismissible(
+                  key: ValueKey(message.id),
+                  direction: DismissDirection.startToEnd,
+                  dismissThresholds: const {DismissDirection.startToEnd: 0.3},
+                  onDismissed: (direction) {
+                    onReply?.call(message.id, text);
+                  },
+                  background: Container(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.only(left: 20),
                     decoration: BoxDecoration(
-                      color: isMe
-                          ? theme.colorScheme.primaryContainer
-                          : theme.colorScheme.secondaryContainer,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(isMe ? 16 : 4),
-                        bottomRight: Radius.circular(isMe ? 4 : 16),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (!isMe)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              _getSenderName(ref),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        _buildMessageContent(context),
+                        Icon(Icons.reply, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text('Reply', style: TextStyle(color: Colors.blue)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Column(
+                    crossAxisAlignment: isMe
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _formatTimestamp(message.createdAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(
-                            alpha: 0.6,
-                          ),
+                      Container(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getBubbleColor(isMe, isDarkMode),
+                          borderRadius: _getBubbleRadius(isMe, removeTail),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Sender name for group messages
+                            if (!isMe && !shouldGroupWithPrevious)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  12,
+                                  16,
+                                  4,
+                                ),
+                                child: Text(
+                                  _getSenderName(ref),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: _getSenderNameColor(
+                                      isMe,
+                                      isDarkMode,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            // Message content
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                (!isMe && !shouldGroupWithPrevious) ? 0 : 12,
+                                16,
+                                (!isMe && !shouldGroupWithPrevious) ? 12 : 8,
+                              ),
+                              child: _buildMessageContent(context),
+                            ),
+                          ],
                         ),
                       ),
-                      if (isMe) ...[
-                        const SizedBox(width: 4),
-                        _buildStatusIndicator(context),
-                      ],
+
+                      // Timestamp and status
+                      if (!shouldGroupWithPrevious)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                timestamp,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.7),
+                                ),
+                              ),
+                              if (isMe) ...[
+                                const SizedBox(width: 4),
+                                _buildStatusIndicator(context),
+                              ],
+                            ],
+                          ),
+                        ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-            if (isMe && showAvatar) ...[
-              const SizedBox(width: 8),
-              _buildAvatar(context, ref),
+
+              // Avatar for sent messages
+              if (isMe && !shouldGroupWithPrevious) ...[
+                const SizedBox(width: 8),
+                _buildAvatar(context, ref),
+              ] else if (isMe)
+                const SizedBox(width: 48), // Space for avatar
             ],
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Color _getBubbleColor(bool isMe, bool isDarkMode) {
+    if (isMe) {
+      return const Color(0xFFDCF8C6); // Pale Green for sent messages
+    } else {
+      return isDarkMode
+          ? const Color(0xFF2C2C2C) // Dark grey for received in dark mode
+          : Colors.white; // White for received in light mode
+    }
+  }
+
+  Color _getSenderNameColor(bool isMe, bool isDarkMode) {
+    if (isMe) {
+      return isDarkMode ? Colors.white70 : Colors.black54;
+    } else {
+      return isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700;
+    }
+  }
+
+  BorderRadius _getBubbleRadius(bool isMe, bool removeTail) {
+    const radius = Radius.circular(12);
+    const tailRadius = Radius.circular(4);
+
+    if (removeTail) {
+      return BorderRadius.only(
+        topLeft: radius,
+        topRight: radius,
+        bottomLeft: radius,
+        bottomRight: radius,
+      );
+    }
+
+    return BorderRadius.only(
+      topLeft: isMe ? radius : tailRadius,
+      topRight: isMe ? tailRadius : radius,
+      bottomLeft: isMe ? radius : tailRadius,
+      bottomRight: isMe ? tailRadius : radius,
     );
   }
 
@@ -198,14 +286,26 @@ class MessageBubble extends ConsumerWidget {
 
   Widget _buildTextContent(BuildContext context) {
     final text = message.content['text'] as String? ?? '';
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     return Text(
       text,
       style: TextStyle(
-        fontSize: 15,
-        height: 1.4,
-        color: Theme.of(context).colorScheme.onSecondaryContainer,
+        fontSize: 16,
+        height: 1.5,
+        color: _getTextColor(isMe, isDarkMode),
+        fontWeight: FontWeight.w400,
       ),
     );
+  }
+
+  Color _getTextColor(bool isMe, bool isDarkMode) {
+    if (isMe) {
+      return Colors.black87; // Dark text on light green background
+    } else {
+      return isDarkMode ? Colors.white : Colors.black87;
+    }
   }
 
   Widget _buildImageContent(BuildContext context) {
@@ -540,20 +640,5 @@ class MessageBubble extends ConsumerWidget {
     }
 
     return '${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _getStatusLabel(EventStatus status) {
-    switch (status) {
-      case EventStatus.pending:
-        return 'Sending';
-      case EventStatus.sent:
-        return 'Sent';
-      case EventStatus.delivered:
-        return 'Delivered';
-      case EventStatus.read:
-        return 'Read';
-      case EventStatus.failed:
-        return 'Failed to send';
-    }
   }
 }

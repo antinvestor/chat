@@ -14,12 +14,13 @@ import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/sync_engine.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/message_providers.dart';
 import '../data/message_sending_service.dart';
-import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
 import 'message_bubble.dart';
-import 'typing_indicator.dart';
+import 'input_bar.dart';
+import 'date_header.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -32,21 +33,33 @@ class ChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
-  final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
-  Timer? _typingDebounce;
   Timer? _readReceiptDebounce;
   bool _isEncryptionEnabled = false;
-  bool _isUploading = false;
-  double _uploadProgress = 0;
+  String? _replyingToMessageId;
+  String? _replyingToText;
+  bool _isVoiceRecording = false;
+  Timer? _voiceRecordingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Preload chat background patterns for better performance
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      precacheImage(const AssetImage('assets/chat_pattern.webp'), context);
+      precacheImage(
+        const AssetImage('assets/chat_pattern_black.webp'),
+        context,
+      );
+    });
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
     _scrollController.dispose();
-    _typingDebounce?.cancel();
     _readReceiptDebounce?.cancel();
+    _voiceRecordingTimer?.cancel();
     super.dispose();
   }
 
@@ -80,30 +93,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
-  void _onTextChanged(String text) {
-    if (_typingDebounce?.isActive ?? false) _typingDebounce!.cancel();
-
-    // Send typing event when user starts typing
-    if (text.isNotEmpty) {
-      ref.read(typingProvider(widget.roomId).notifier).sendTyping(true);
-    }
-
-    _typingDebounce = Timer(const Duration(seconds: 2), () {
-      // Send typing stopped event
-      ref.read(typingProvider(widget.roomId).notifier).sendTyping(false);
-    });
-  }
-
-  Future<void> _sendMessage() async {
-    if (_controller.text.trim().isEmpty) return;
+  void _sendMessage(String text, {String? replyToMessageId}) async {
+    if (text.trim().isEmpty) return;
 
     final messagingService = ref.read(messageSendingServiceProvider);
     await messagingService.sendTextMessage(
       roomId: widget.roomId,
-      text: _controller.text.trim(),
+      text: text.trim(),
       encrypt: _isEncryptionEnabled,
     );
-    _controller.clear();
+
+    // Clear reply state after sending
+    if (replyToMessageId != null) {
+      setState(() {
+        _replyingToMessageId = null;
+        _replyingToText = null;
+      });
+    }
+  }
+
+  void _onReplyToMessage(String messageId, String messageText) {
+    setState(() {
+      _replyingToMessageId = messageId;
+      _replyingToText = messageText;
+    });
+  }
+
+  void _cancelReply() {
+    setState(() {
+      _replyingToMessageId = null;
+      _replyingToText = null;
+    });
   }
 
   Future<void> _pickAndSendImage() async {
@@ -144,11 +164,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _sendMediaFile(File file, RoomEventType type) async {
-    setState(() {
-      _isUploading = true;
-      _uploadProgress = 0;
-    });
-
     try {
       final messagingService = ref.read(messageSendingServiceProvider);
 
@@ -158,9 +173,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             roomId: widget.roomId,
             imageFile: file,
             encrypt: _isEncryptionEnabled,
-            onProgress: (progress) {
-              setState(() => _uploadProgress = progress);
-            },
           );
           break;
         case RoomEventType.video:
@@ -168,9 +180,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             roomId: widget.roomId,
             videoFile: file,
             encrypt: _isEncryptionEnabled,
-            onProgress: (progress) {
-              setState(() => _uploadProgress = progress);
-            },
           );
           break;
         case RoomEventType.file:
@@ -178,9 +187,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             roomId: widget.roomId,
             file: file,
             encrypt: _isEncryptionEnabled,
-            onProgress: (progress) {
-              setState(() => _uploadProgress = progress);
-            },
           );
           break;
         default:
@@ -197,13 +203,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to send file: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-          _uploadProgress = 0;
-        });
       }
     }
   }
@@ -258,192 +257,49 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final messagesAsync = ref.watch(messageListProvider(widget.roomId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.roomName),
-            if (_isEncryptionEnabled)
-              const Row(
-                children: [
-                  Icon(Icons.lock, size: 12, color: Colors.green),
-                  SizedBox(width: 4),
-                  Text(
-                    'Encrypted',
-                    style: TextStyle(fontSize: 12, color: Colors.green),
-                  ),
-                ],
-              ),
-          ],
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            // Navigate back to room list
-            context.go('/');
-          },
-          tooltip: 'Back to rooms',
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isEncryptionEnabled ? Icons.lock : Icons.lock_open,
-              color: _isEncryptionEnabled ? Colors.green : null,
-            ),
-            onPressed: () {
-              setState(() => _isEncryptionEnabled = !_isEncryptionEnabled);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    _isEncryptionEnabled
-                        ? 'End-to-end encryption enabled'
-                        : 'End-to-end encryption disabled',
-                  ),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            tooltip: 'Toggle encryption',
-          ),
-          IconButton(
-            icon: const Icon(Icons.video_call),
-            onPressed: () async {
-              final callManager = await ref.read(callManagerProvider.future);
-              await callManager.startCall(widget.roomId);
-              if (context.mounted) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => CallScreen(
-                      roomId: widget.roomId,
-                      roomName: widget.roomName,
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: _buildAppBar(context),
       body: Column(
         children: [
           Expanded(
-            child: messagesAsync.when(
-              data: (messages) {
-                if (messages.isEmpty) {
-                  return const Center(child: Text('No messages yet'));
-                }
-
-                // Send read receipts for messages being viewed
-                _sendReadReceipts(messages);
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  reverse: true, // Start from bottom
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    // Reverse index since we're using reverse: true
-                    final reversedIndex = messages.length - 1 - index;
-                    final message = messages[reversedIndex];
-
-                    // Get current profile ID for proper message positioning
-                    final currentProfileId = ref.watch(
-                      currentProfileIdProvider,
-                    );
-                    final isMe = message.senderId == currentProfileId.value;
-
-                    // Show avatar only for first message in a group
-                    final showAvatar =
-                        reversedIndex == messages.length - 1 ||
-                        messages[reversedIndex + 1].senderId !=
-                            message.senderId;
-
-                    return _buildMessageWidget(message, isMe, showAvatar);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error: $error')),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF121212) // Optimized dark background
+                    : Theme.of(context).colorScheme.surface,
+                image: _isEncryptionEnabled
+                    ? null
+                    : DecorationImage(
+                        image: AssetImage(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 'assets/chat_pattern_black.webp'
+                              : 'assets/chat_pattern.webp',
+                        ),
+                        repeat: ImageRepeat.repeat,
+                        fit: BoxFit.none,
+                        opacity: Theme.of(context).brightness == Brightness.dark
+                            ? 0.08 // 8% for dark theme (6-10% range)
+                            : 0.05, // 5% for light theme
+                      ),
+              ),
+              child: messagesAsync.when(
+                data: (messages) => _buildMessageList(messages),
+                loading: () => _buildLoadingState(),
+                error: (error, stack) => _buildErrorState(error, stack),
+              ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Upload progress indicator
-                if (_isUploading)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: LinearProgressIndicator(
-                            value: _uploadProgress > 0 ? _uploadProgress : null,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _uploadProgress > 0
-                              ? '${(_uploadProgress * 100).toInt()}%'
-                              : 'Uploading...',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                TypingIndicator(roomId: widget.roomId),
-                Row(
-                  children: [
-                    // Attachment button
-                    IconButton(
-                      icon: const Icon(Icons.attach_file),
-                      onPressed: _isUploading ? null : _showAttachmentOptions,
-                      tooltip: 'Attach file',
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        decoration: InputDecoration(
-                          hintText: _isEncryptionEnabled
-                              ? 'Type an encrypted message...'
-                              : 'Type a message...',
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          prefixIcon: _isEncryptionEnabled
-                              ? const Icon(
-                                  Icons.lock,
-                                  size: 18,
-                                  color: Colors.green,
-                                )
-                              : null,
-                        ),
-                        onChanged: _onTextChanged,
-                        onSubmitted: (_) => _sendMessage(),
-                        enabled: !_isUploading,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
-                      icon: const Icon(Icons.send),
-                      onPressed: _isUploading ? null : _sendMessage,
-                    ),
-                  ],
-                ),
-              ],
+          SafeArea(
+            child: InputBar(
+              roomId: widget.roomId,
+              onSendMessage: _sendMessage,
+              onAttachment: _showAttachmentOptions,
+              onCamera: _takeAndSendPhoto,
+              onVoiceRecord: _onVoiceRecord,
+              isEncryptionEnabled: _isEncryptionEnabled,
+              replyingToMessageId: _replyingToMessageId,
+              replyingToText: _replyingToText,
+              onCancelReply: _cancelReply,
             ),
           ),
         ],
@@ -451,19 +307,372 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildMessageWidget(RoomEvent message, bool isMe, bool showAvatar) {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      title: GestureDetector(
+        onTap: () => _openContactInfo(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppTheme.primaryGreen,
+                  child: Text(
+                    widget.roomName.isNotEmpty
+                        ? widget.roomName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.roomName,
+                        style: AppTheme.bodyText.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).appBarTheme.foregroundColor,
+                        ),
+                      ),
+                      Text(
+                        'Last seen recently',
+                        style: AppTheme.metadataText.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).appBarTheme.foregroundColor?.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => context.go('/'),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(
+            _isEncryptionEnabled ? Icons.lock : Icons.lock_open,
+            color: _isEncryptionEnabled ? Colors.green : null,
+          ),
+          onPressed: _toggleEncryption,
+        ),
+        IconButton(icon: const Icon(Icons.video_call), onPressed: _startCall),
+      ],
+    );
+  }
+
+  Widget _buildMessageList(List<RoomEvent> messages) {
+    if (messages.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    // Send read receipts for messages being viewed
+    _sendReadReceipts(messages);
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        // Auto-scroll to bottom when new messages arrive
+        if (scrollInfo is ScrollEndNotification &&
+            scrollInfo.metrics.extentAfter == 0) {
+          // User is at the bottom, keep them there
+        }
+        return false;
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        reverse: true,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: messages.length,
+        // Performance optimization: cache extent
+        cacheExtent: 500,
+        itemBuilder: (context, index) {
+          final reversedIndex = messages.length - 1 - index;
+          final message = messages[reversedIndex];
+          final currentProfileId = ref.watch(currentProfileIdProvider);
+          final isMe = message.senderId == currentProfileId.value;
+
+          // Check if we should show date header
+          bool showDateHeader = false;
+          if (reversedIndex < messages.length - 1) {
+            final nextMessage = messages[reversedIndex + 1];
+            final currentDate = DateTime.fromMillisecondsSinceEpoch(
+              message.createdAt,
+            );
+            final nextDate = DateTime.fromMillisecondsSinceEpoch(
+              nextMessage.createdAt,
+            );
+            showDateHeader = !_isSameDay(currentDate, nextDate);
+          } else {
+            showDateHeader = true;
+          }
+
+          // Check message grouping for bubble styling
+          bool shouldGroupWithPrevious = false;
+          bool removeTail = false;
+
+          if (reversedIndex < messages.length - 1) {
+            final nextMessage = messages[reversedIndex + 1];
+            final timeDiff = message.createdAt - nextMessage.createdAt;
+            shouldGroupWithPrevious =
+                nextMessage.senderId == message.senderId &&
+                timeDiff < 120000; // 2 minutes
+            removeTail = shouldGroupWithPrevious;
+          }
+
+          return Column(
+            children: [
+              if (showDateHeader) DateHeader(timestamp: message.createdAt),
+              _buildMessageWidget(
+                message,
+                isMe,
+                shouldGroupWithPrevious,
+                removeTail,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.chat_bubble_outline,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Start the conversation',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Send a message to begin chatting with ${widget.roomName}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Text(
+              'Say Hello!',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary,
+              strokeWidth: 3,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Loading messages...',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Please wait while we fetch your conversation',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Object error, StackTrace stack) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.error_outline, size: 64, color: Colors.red),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Something went wrong',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Unable to load messages. Please try again.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => ref.refresh(messageListProvider(widget.roomId)),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Try Again'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.day == date2.day &&
+        date1.month == date2.month &&
+        date1.year == date2.year;
+  }
+
+  void _toggleEncryption() {
+    setState(() => _isEncryptionEnabled = !_isEncryptionEnabled);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isEncryptionEnabled
+              ? 'End-to-end encryption enabled'
+              : 'End-to-end encryption disabled',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _startCall() async {
+    final callManager = await ref.read(callManagerProvider.future);
+    await callManager.startCall(widget.roomId);
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) =>
+              CallScreen(roomId: widget.roomId, roomName: widget.roomName),
+        ),
+      );
+    }
+  }
+
+  void _openContactInfo() {
+    // Navigate to contact info screen
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Contact info coming soon')));
+  }
+
+  void _onVoiceRecord() {
+    setState(() {
+      _isVoiceRecording = !_isVoiceRecording;
+    });
+
+    if (_isVoiceRecording) {
+      _voiceRecordingTimer = Timer(const Duration(seconds: 30), () {
+        if (mounted) {
+          setState(() {
+            _isVoiceRecording = false;
+          });
+        }
+      });
+    } else {
+      _voiceRecordingTimer?.cancel();
+    }
+  }
+
+  Widget _buildMessageWidget(
+    RoomEvent message,
+    bool isMe,
+    bool shouldGroupWithPrevious,
+    bool removeTail,
+  ) {
     switch (message.type) {
       case RoomEventType.motion:
         return MotionBubble(event: message, isMe: isMe);
-
       case RoomEventType.transaction:
         return TransactionBubble(event: message, isMe: isMe);
-
       default:
         return MessageBubble(
           message: message,
           isMe: isMe,
-          showAvatar: showAvatar,
+          shouldGroupWithPrevious: shouldGroupWithPrevious,
+          removeTail: removeTail,
+          onReply: _onReplyToMessage,
         );
     }
   }

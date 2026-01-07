@@ -1,31 +1,102 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
-
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chat/main.dart';
+import 'package:chat/features/messages/ui/chat_input_bar.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('Chat input bar smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const ProviderScope(child: MyApp()));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Wait for app to load
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // The app should load without crashing
+    expect(find.byType(MaterialApp), findsOneWidget);
+  });
+
+  testWidgets('Chat input bar widget test', (WidgetTester tester) async {
+    // Build just the chat input bar widget
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(home: Scaffold(body: ChatInputBar())),
+      ),
+    );
+
+    // Verify input bar components exist
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.byIcon(Icons.emoji_emotions_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.attach_file), findsOneWidget);
+    expect(find.byIcon(Icons.camera_alt), findsOneWidget);
+    expect(find.byIcon(Icons.mic), findsOneWidget);
+
+    // Test typing in text field
+    await tester.enterText(find.byType(TextField), 'Hello world');
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify mic button changes to send button when text is entered
+    expect(find.byIcon(Icons.send), findsOneWidget);
+    expect(find.byIcon(Icons.mic), findsNothing);
+
+    // Test sending message
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pump();
+
+    // Verify text field is cleared after sending
+    expect(find.text('Hello world'), findsNothing);
+    expect(find.byIcon(Icons.mic), findsOneWidget);
+    expect(find.byIcon(Icons.send), findsNothing);
+  });
+
+  testWidgets('Chat input bar attachment options', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(home: Scaffold(body: ChatInputBar())),
+      ),
+    );
+
+    // Tap attachment button
+    await tester.tap(find.byIcon(Icons.attach_file));
+    await tester.pumpAndSettle();
+
+    // Verify attachment options appear
+    expect(find.text('Camera'), findsOneWidget);
+    expect(find.text('Gallery'), findsOneWidget);
+    expect(find.text('Document'), findsOneWidget);
+
+    // Close the modal
+    await tester.tap(find.text('Gallery'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Chat input bar voice recording toggle', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(home: Scaffold(body: ChatInputBar())),
+      ),
+    );
+
+    // Verify mic button is visible initially
+    expect(find.byIcon(Icons.mic), findsOneWidget);
+
+    // Tap mic button to start recording
+    await tester.tap(find.byIcon(Icons.mic));
+    await tester.pump();
+
+    // Verify stop button appears during recording
+    expect(find.byIcon(Icons.stop), findsOneWidget);
+    expect(find.byIcon(Icons.mic), findsNothing);
+
+    // Tap stop button to end recording
+    await tester.tap(find.byIcon(Icons.stop));
+    await tester.pump();
+
+    // Verify mic button returns after stopping
+    expect(find.byIcon(Icons.mic), findsOneWidget);
+    expect(find.byIcon(Icons.stop), findsNothing);
   });
 }
