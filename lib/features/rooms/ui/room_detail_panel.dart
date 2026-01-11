@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/detail_panel_providers.dart';
+import '../data/room_providers.dart';
+import '../../messages/domain/room_event.dart';
+import '../../../core/navigation/navigation_helper.dart';
+
 /// Room detail panel showing room information, motions, transactions, and media
 /// Displayed in the right panel on desktop layouts
 class RoomDetailPanel extends ConsumerStatefulWidget {
@@ -52,6 +57,13 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => _showSettingsMenu(context),
+            tooltip: 'Room Settings',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -78,10 +90,150 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
     );
   }
 
+  void _showSettingsMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit Room Info'),
+              onTap: () {
+                Navigator.pop(context);
+                // Navigate to edit room screen
+                context.navigateToSettings();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Edit room functionality coming soon'),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add),
+              title: const Text('Add Members'),
+              onTap: () {
+                Navigator.pop(context);
+                // Navigate to add members screen
+                context.navigateToContactSelection();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Add members functionality coming soon'),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications),
+              title: const Text('Notification Settings'),
+              onTap: () {
+                Navigator.pop(context);
+                // Navigate to notification settings
+                context.navigateToNotificationSettings();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Notification settings for this room coming soon',
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.exit_to_app, color: Colors.red.shade600),
+              title: Text(
+                'Leave Room',
+                style: TextStyle(color: Colors.red.shade600),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmLeaveRoom(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmLeaveRoom(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave Room'),
+        content: Text('Are you sure you want to leave "${widget.roomName}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Implement leave room functionality
+              _leaveRoom(context, ref);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInfoTab() {
+    final membersAsync = ref.watch(roomMembersProvider(widget.roomId));
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Room avatar and name header
+        Center(
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 48,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.2),
+                child: Text(
+                  widget.roomName.isNotEmpty
+                      ? widget.roomName[0].toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                widget.roomName,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              membersAsync.when(
+                data: (members) => Text(
+                  '${members.length} ${members.length == 1 ? 'member' : 'members'}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
         // Room info section
         _buildSectionHeader('Room Information'),
         const SizedBox(height: 8),
@@ -100,95 +252,242 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
         // Members section
         _buildSectionHeader('Members'),
         const SizedBox(height: 8),
-        _buildMembersList(),
+        _buildMembersList(membersAsync),
       ],
     );
   }
 
   Widget _buildMotionsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildSectionHeader('Active Motions'),
-        const SizedBox(height: 16),
-        // Note: activeMotionsProvider will be used to display active motions
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.how_to_vote, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No active motions',
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+    final motionsAsync = ref.watch(activeMotionsProvider(widget.roomId));
+
+    return motionsAsync.when(
+      data: (motions) {
+        if (motions.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.how_to_vote,
+            title: 'No active motions',
+            subtitle: 'Admins can create motions for voting',
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: motions.length,
+          itemBuilder: (context, index) {
+            final motion = motions[index];
+            final content = motion.content;
+            final title = content['title'] ?? 'Motion';
+            final description = content['description'] ?? '';
+            final deadline = content['deadline'] != null
+                ? DateTime.fromMillisecondsSinceEpoch(
+                    content['deadline'] as int,
+                  )
+                : null;
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: const CircleAvatar(child: Icon(Icons.how_to_vote)),
+                title: Text(title.toString()),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (description.toString().isNotEmpty)
+                      Text(
+                        description.toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (deadline != null)
+                      Text(
+                        'Ends: ${_formatDate(deadline)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                  ],
+                ),
+                isThreeLine: description.toString().isNotEmpty,
+                onTap: () {
+                  // Navigate to motion details
+                  _showMotionDetails(context, motion.content);
+                },
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Admins can create motions for voting',
-                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-              ),
-            ],
-          ),
-        ),
-      ],
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error loading motions: $e')),
     );
   }
 
   Widget _buildTransactionsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildSectionHeader('Recent Transactions'),
-        const SizedBox(height: 16),
-        // Note: transactionsProvider will be used to display transactions
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.account_balance, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No transactions yet',
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+    final transactionsAsync = ref.watch(
+      roomTransactionsProvider(widget.roomId),
+    );
+
+    return transactionsAsync.when(
+      data: (transactions) {
+        if (transactions.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.account_balance,
+            title: 'No transactions yet',
+            subtitle: 'Group transactions will appear here',
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: transactions.length,
+          itemBuilder: (context, index) {
+            final transaction = transactions[index];
+            final content = transaction.content;
+            final amount = content['amount'] ?? 0;
+            final currency = content['currency'] ?? 'KES';
+            final description = content['description'] ?? 'Transaction';
+            final transactionType = content['type'] ?? 'payment';
+
+            final isCredit =
+                transactionType == 'deposit' || transactionType == 'credit';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: isCredit
+                      ? Colors.green.shade100
+                      : Colors.red.shade100,
+                  child: Icon(
+                    isCredit ? Icons.arrow_downward : Icons.arrow_upward,
+                    color: isCredit ? Colors.green : Colors.red,
+                  ),
+                ),
+                title: Text(description.toString()),
+                subtitle: Text(
+                  _formatDate(
+                    DateTime.fromMillisecondsSinceEpoch(transaction.createdAt),
+                  ),
+                ),
+                trailing: Text(
+                  '${isCredit ? '+' : '-'}$currency $amount',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isCredit ? Colors.green : Colors.red,
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Group transactions will appear here',
-                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-              ),
-            ],
-          ),
-        ),
-      ],
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error loading transactions: $e')),
     );
   }
 
   Widget _buildMediaTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildSectionHeader('Shared Media'),
-        const SizedBox(height: 16),
-        // Note: roomMediaProvider will be used to display shared images/videos
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.photo_library, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No shared media',
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Photos and videos shared in chat will appear here',
-                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-              ),
-            ],
+    final mediaAsync = ref.watch(roomMediaProvider(widget.roomId));
+
+    return mediaAsync.when(
+      data: (mediaList) {
+        if (mediaList.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.photo_library,
+            title: 'No shared media',
+            subtitle: 'Photos and videos shared in chat will appear here',
+          );
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(8),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 4,
+            mainAxisSpacing: 4,
           ),
+          itemCount: mediaList.length,
+          itemBuilder: (context, index) {
+            final media = mediaList[index];
+            final content = media.content;
+            final isVideo = media.type == RoomEventType.video;
+            final thumbnailUrl =
+                content['thumbnailUrl'] as String? ?? content['url'] as String?;
+
+            return GestureDetector(
+              onTap: () => _openMediaViewer(context, mediaList, index),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Thumbnail
+                    if (thumbnailUrl != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: Image.network(
+                          thumbnailUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Icon(
+                            isVideo ? Icons.videocam : Icons.image,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      )
+                    else
+                      Icon(
+                        isVideo ? Icons.videocam : Icons.image,
+                        color: Colors.grey,
+                      ),
+                    // Video indicator
+                    if (isVideo)
+                      Positioned(
+                        right: 4,
+                        bottom: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error loading media: $e')),
+    );
+  }
+
+  void _openMediaViewer(
+    BuildContext context,
+    List<RoomEvent> mediaList,
+    int initialIndex,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _MediaViewerScreen(
+          mediaList: mediaList,
+          initialIndex: initialIndex,
         ),
-      ],
+      ),
     );
   }
 
@@ -216,35 +515,320 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
     );
   }
 
-  Widget _buildMembersList() {
-    // Note: roomMembersProvider will be used to display actual members
-    return Column(
-      children: [
-        _buildMemberTile(
-          name: 'Loading members...',
-          role: 'Please wait',
-          avatarColor: Colors.grey,
+  Widget _buildMembersList(AsyncValue<List<RoomMemberInfo>> membersAsync) {
+    return membersAsync.when(
+      data: (members) {
+        if (members.isEmpty) {
+          return const Text('No members found');
+        }
+
+        return Column(
+          children: members.map((member) {
+            final color = _getColorForName(member.name);
+            final isAdmin = member.role.toLowerCase() == 'admin';
+
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: color.withValues(alpha: 0.2),
+                child: Text(
+                  member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      member.name,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isAdmin) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Admin',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              subtitle: Text(member.role, style: const TextStyle(fontSize: 12)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              onTap: () => _openMemberProfile(context, member),
+            );
+          }).toList(),
+        );
+      },
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
         ),
-      ],
+      ),
+      error: (e, _) => Text('Error loading members: $e'),
     );
   }
 
-  Widget _buildMemberTile({
-    required String name,
-    required String role,
-    required Color avatarColor,
+  void _openMemberProfile(BuildContext context, RoomMemberInfo member) {
+    if (member.profileId != null) {
+      // Use navigation helper for smoother navigation animation
+      context.navigateToProfile(profileId: member.profileId!);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Profile for ${member.name} not available'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
   }) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: avatarColor.withValues(alpha: 0.2),
-        child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: TextStyle(color: avatarColor, fontWeight: FontWeight.bold),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
-      title: Text(name, style: const TextStyle(fontSize: 14)),
-      subtitle: Text(role, style: const TextStyle(fontSize: 12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
+  }
+
+  Color _getColorForName(String name) {
+    final colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.pink,
+      Colors.indigo,
+      Colors.amber,
+    ];
+    final index = name.isEmpty ? 0 : name.codeUnitAt(0) % colors.length;
+    return colors[index];
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays == 0) {
+      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return days[date.weekday - 1];
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+  void _leaveRoom(BuildContext context, WidgetRef ref) async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Leaving room...')));
+
+      // Implement leave room logic
+      final roomListNotifier = ref.read(roomListProvider.notifier);
+      await roomListNotifier.deleteRoom(widget.roomId);
+
+      // Navigate back to room list
+      if (context.mounted) {
+        context.navigateBack('/');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to leave room: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showMotionDetails(BuildContext context, Map<String, dynamic> motion) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Motion Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Title: ${motion['title'] ?? 'N/A'}'),
+            const SizedBox(height: 8),
+            Text('Description: ${motion['description'] ?? 'N/A'}'),
+            const SizedBox(height: 8),
+            Text('Created: ${_formatDate(motion['createdAt'])}'),
+            if (motion['deadline'] != null) ...[
+              const SizedBox(height: 8),
+              Text('Deadline: ${_formatDate(motion['deadline'])}'),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-screen media viewer with swipe navigation
+class _MediaViewerScreen extends StatefulWidget {
+  final List<RoomEvent> mediaList;
+  final int initialIndex;
+
+  const _MediaViewerScreen({
+    required this.mediaList,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_MediaViewerScreen> createState() => _MediaViewerScreenState();
+}
+
+class _MediaViewerScreenState extends State<_MediaViewerScreen> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text('${_currentIndex + 1} of ${widget.mediaList.length}'),
+      ),
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.mediaList.length,
+        onPageChanged: (index) {
+          setState(() => _currentIndex = index);
+        },
+        itemBuilder: (context, index) {
+          final media = widget.mediaList[index];
+          final content = media.content;
+          final url = content['url'] as String?;
+          final isVideo = media.type == RoomEventType.video;
+
+          if (url == null) {
+            return const Center(
+              child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
+            );
+          }
+
+          if (isVideo) {
+            // Show video placeholder with play button
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.play_circle_outline,
+                    color: Colors.white,
+                    size: 64,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Video playback',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Center(
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                          : null,
+                      color: Colors.white,
+                    ),
+                  );
+                },
+                errorBuilder: (_, _, _) =>
+                    const Icon(Icons.broken_image, color: Colors.white54),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

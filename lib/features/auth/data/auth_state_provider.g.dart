@@ -36,7 +36,7 @@ final class AuthStateNotifierProvider
   AuthStateNotifier create() => AuthStateNotifier();
 }
 
-String _$authStateNotifierHash() => r'5668a3a8a3d4b339d1a3b131290d075a5b999be7';
+String _$authStateNotifierHash() => r'cdbd5ec15f7f27fb369c999259c0e5013bd1c814';
 
 /// Authentication state notifier that watches auth status
 

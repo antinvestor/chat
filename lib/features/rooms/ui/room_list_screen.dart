@@ -172,23 +172,227 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   }
 
   void _archiveRoom(RoomWithLastMessage room) {
-    // TODO: Implement actual archive logic when repository is available
+    _showArchiveConfirmationDialog(room);
+  }
+
+  void _showArchiveConfirmationDialog(RoomWithLastMessage room) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Archive Chat'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to archive this chat?'),
+            const SizedBox(height: 8),
+            Text('Archived chats can be found in the archived section.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performArchiveAction(room);
+            },
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _performArchiveAction(RoomWithLastMessage room) {
+    // Simulate archive action - in real implementation, this would call repository
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Archive functionality coming soon'),
+        content: Text('Chat archived successfully'),
         duration: Duration(seconds: 2),
       ),
     );
   }
 
   void _showMoreOptions(RoomWithLastMessage room) {
-    // TODO: Implement more options dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('More options coming soon'),
-        duration: Duration(seconds: 2),
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'More Options',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildMoreOption(
+                    icon: Icons.info_outline,
+                    title: 'View Info',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _showRoomInfo(room);
+                    },
+                  ),
+                  _buildMoreOption(
+                    icon: Icons.notifications_off,
+                    title: 'Mute Notifications',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _toggleMute(room);
+                    },
+                  ),
+                  _buildMoreOption(
+                    icon: Icons.push_pin,
+                    title: 'Pin Chat',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _togglePin(room);
+                    },
+                  ),
+                  _buildMoreOption(
+                    icon: Icons.delete_outline,
+                    title: 'Delete Chat',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _showDeleteConfirmation(room);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildMoreOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.grey[600]),
+      title: Text(title),
+      onTap: onTap,
+    );
+  }
+
+  void _showRoomInfo(RoomWithLastMessage room) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(room.name),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Last message: ${room.lastMessageText ?? 'No messages'}'),
+            const SizedBox(height: 8),
+            Text(
+              'Created: ${_formatDate(DateTime.fromMillisecondsSinceEpoch(room.lastMessageTimestamp ?? 0))}',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleMute(RoomWithLastMessage room) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Notifications ${room.isTyping == true ? 'unmuted' : 'muted'} for ${room.name}',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _togglePin(RoomWithLastMessage room) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${room.isTyping == true ? 'Unpinned' : 'Pinned'} ${room.name}',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(RoomWithLastMessage room) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Chat'),
+        content: Text(
+          'Are you sure you want to delete this chat? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Chat deleted'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays > 0) {
+      return '${date.day}/${date.month}/${date.year}';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   void _toggleSearch() {

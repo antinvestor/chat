@@ -19,16 +19,27 @@ class AuthStateNotifier extends _$AuthStateNotifier {
 
     if (isLoggedIn) {
       // Ensure we have a valid access token (will refresh if expired)
-      final token = await authRepo.ensureValidAccessToken();
-      
-      if (token != null) {
+      // Use the status-returning version to distinguish between transient and permanent errors
+      final result = await authRepo.ensureValidAccessTokenWithStatus(
+        maxRetries: 3,
+        retryDelay: const Duration(seconds: 2),
+      );
+
+      if (result.token != null) {
         AppLogger.info('Authentication state: authenticated');
         return AuthState.authenticated;
       }
-      
-      // Token refresh failed, user needs to login again
-      AppLogger.info('Authentication state: unauthenticated (no valid token)');
-      return AuthState.unauthenticated;
+
+      // Token is null - check if this is a permanent failure requiring re-login
+      if (result.needsRelogin) {
+        AppLogger.info('Authentication state: unauthenticated (permanent token failure)');
+        return AuthState.unauthenticated;
+      }
+
+      // Transient error (network issues, etc.) - user is still authenticated
+      // They have valid credentials, just can't refresh right now
+      AppLogger.info('Authentication state: authenticated (transient refresh error, keeping session)');
+      return AuthState.authenticated;
     }
 
     AppLogger.info('Authentication state: unauthenticated');
@@ -100,6 +111,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   }
 
   /// Refresh authentication state
+  /// This will attempt to refresh the token and update state accordingly
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -107,6 +119,18 @@ class AuthStateNotifier extends _$AuthStateNotifier {
       final isLoggedIn = await authRepo.isLoggedIn();
 
       if (isLoggedIn) {
+        // Try to refresh the token and check if re-login is needed
+        final result = await authRepo.ensureValidAccessTokenWithStatus(
+          maxRetries: 2, // Fewer retries for manual refresh
+          retryDelay: const Duration(seconds: 1),
+        );
+
+        if (result.needsRelogin) {
+          AppLogger.info('Refresh: permanent failure, user needs to re-login');
+          return AuthState.unauthenticated;
+        }
+
+        // Either we have a token, or it's a transient error - keep authenticated
         return AuthState.authenticated;
       }
       return AuthState.unauthenticated;

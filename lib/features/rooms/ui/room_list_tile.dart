@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../domain/room_with_last_message.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/navigation/navigation_helper.dart';
 
 class RoomListTile extends StatelessWidget {
   final RoomWithLastMessage room;
@@ -33,9 +33,10 @@ class RoomListTile extends StatelessWidget {
                 // Avatar
                 GestureDetector(
                   onTap: () {
-                    // Navigate to room details when avatar is tapped
-                    context.go(
-                      '/room/${room.id}/details?name=${Uri.encodeComponent(room.name)}',
+                    // Navigate to room details when avatar is tapped with smooth animation
+                    context.navigateToRoomDetails(
+                      roomId: room.id,
+                      roomName: room.name,
                     );
                   },
                   child: Container(

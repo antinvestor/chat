@@ -342,21 +342,69 @@ class AuthService {
   }
   
   /// Check if an error indicates permanent refresh failure
-  /// Note: We must be careful not to flag access token expiry as permanent.
-  /// Only refresh token issues should be considered permanent.
+  /// We are VERY conservative here - only truly permanent errors cause logout.
+  /// Network issues, timeouts, and ambiguous errors are treated as transient.
+  ///
+  /// Permanent errors (user must re-authenticate):
+  /// - invalid_grant: Refresh token is invalid or expired (OAuth2 standard)
+  /// - invalid_client: Client credentials are wrong
+  /// - unauthorized_client: Client not authorized for this grant type
+  /// - access_denied: User explicitly denied access
+  /// - Explicit refresh token revocation messages
+  ///
+  /// Transient errors (retry later):
+  /// - Network errors, timeouts
+  /// - Server errors (5xx)
+  /// - Rate limiting
+  /// - Ambiguous "expired" or "invalid" without context
   bool _isPermanentRefreshError(String errorStr) {
-    // These indicate the refresh token itself is invalid/expired
-    return errorStr.contains('invalid_grant') ||
-        errorStr.contains('invalid_client') ||
-        errorStr.contains('unauthorized_client') ||
-        errorStr.contains('access_denied') ||
-        errorStr.contains('invalid refresh token') ||
-        errorStr.contains('refresh token expired') ||
-        errorStr.contains('refresh token is invalid') ||
-        errorStr.contains('refresh token has been revoked') ||
-        errorStr.contains('token has been revoked');
-    // Note: Removed 'expired' and 'invalid_token' and 'revoked' as standalone
-    // because these can refer to the access token, not the refresh token
+    // OAuth2 standard error codes that indicate permanent failure
+    const permanentOAuthErrors = [
+      'invalid_grant',      // Refresh token expired/invalid
+      'invalid_client',     // Wrong client credentials
+      'unauthorized_client', // Client not allowed
+      'access_denied',      // User denied access
+    ];
+
+    // Check for OAuth2 standard errors
+    for (final error in permanentOAuthErrors) {
+      if (errorStr.contains(error)) {
+        AppLogger.debug('Permanent OAuth2 error detected: $error');
+        return true;
+      }
+    }
+
+    // Check for explicit refresh token revocation messages
+    // Be very specific to avoid false positives
+    const permanentMessages = [
+      'refresh token expired',
+      'refresh token is invalid',
+      'refresh token has been revoked',
+      'refresh_token is invalid',
+      'refresh_token has expired',
+      'the refresh token is no longer valid',
+    ];
+
+    for (final message in permanentMessages) {
+      if (errorStr.contains(message)) {
+        AppLogger.debug('Permanent refresh token error detected: $message');
+        return true;
+      }
+    }
+
+    // If error contains both "refresh" and specific failure indicators
+    if (errorStr.contains('refresh') &&
+        (errorStr.contains('revoked') ||
+         errorStr.contains('invalid') ||
+         errorStr.contains('expired'))) {
+      AppLogger.debug('Permanent error: refresh token specific failure');
+      return true;
+    }
+
+    // All other errors are transient - be conservative to avoid unnecessary logouts
+    // This includes: network errors, timeouts, 5xx errors, rate limiting,
+    // and any ambiguous error messages
+    return false;
   }
 
   /// Legacy refresh method for backward compatibility

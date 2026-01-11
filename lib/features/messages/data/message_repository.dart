@@ -15,9 +15,56 @@ class MessageRepository {
       ..where((t) => t.roomId.equals(roomId))
       ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
       ..limit(limit);
-    
+
     final results = await query.get();
     return results.map((row) => _toRoomEvent(row)).toList().reversed.toList();
+  }
+
+  /// Get messages for a room before a specific timestamp (for pagination)
+  /// Returns messages ordered from oldest to newest
+  Future<List<domain.RoomEvent>> getMessagesBeforeTimestamp(
+    String roomId, {
+    required int beforeTimestamp,
+    int limit = 50,
+  }) async {
+    final query = _database.select(_database.roomEvents)
+      ..where((t) => t.roomId.equals(roomId) & t.createdAt.isSmallerThanValue(beforeTimestamp))
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..limit(limit);
+
+    final results = await query.get();
+    return results.map((row) => _toRoomEvent(row)).toList().reversed.toList();
+  }
+
+  /// Get the oldest message timestamp for a room (for pagination cursor)
+  Future<int?> getOldestMessageTimestamp(String roomId) async {
+    final query = _database.select(_database.roomEvents)
+      ..where((t) => t.roomId.equals(roomId))
+      ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
+      ..limit(1);
+
+    final result = await query.getSingleOrNull();
+    return result?.createdAt;
+  }
+
+  /// Get total message count for a room
+  Future<int> getMessageCount(String roomId) async {
+    final query = _database.select(_database.roomEvents)
+      ..where((t) => t.roomId.equals(roomId));
+    final results = await query.get();
+    return results.length;
+  }
+
+  /// Watch messages for a room - provides reactive updates for instant UI refresh
+  Stream<List<domain.RoomEvent>> watchMessagesForRoom(String roomId, {int limit = 50}) {
+    final query = _database.select(_database.roomEvents)
+      ..where((t) => t.roomId.equals(roomId))
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..limit(limit);
+
+    return query.watch().map((results) {
+      return results.map((row) => _toRoomEvent(row)).toList().reversed.toList();
+    });
   }
 
   Future<void> insertMessage(domain.RoomEvent event) async {

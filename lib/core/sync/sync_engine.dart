@@ -21,6 +21,15 @@ final pendingJobRepositoryProvider = Provider<PendingJobRepository>((ref) {
   return PendingJobRepository(AppDatabase.instance);
 });
 
+/// Exception thrown when token refresh fails permanently and user must re-authenticate
+class TokenRefreshPermanentError implements Exception {
+  final String message;
+  TokenRefreshPermanentError(this.message);
+
+  @override
+  String toString() => 'TokenRefreshPermanentError: $message';
+}
+
 /// Async provider for SyncEngine since it depends on async client providers
 final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final gatewayClient = await ref.watch(gatewayServiceClientProvider.future);
@@ -49,6 +58,13 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
             'needsRelogin': result.needsRelogin,
           },
         );
+
+        // If re-login is required, throw a specific exception to signal permanent failure
+        if (result.needsRelogin) {
+          AppLogger.warning('SyncEngine: Token refresh requires re-login');
+          throw TokenRefreshPermanentError('User must re-authenticate');
+        }
+
         // Update TokenManager's in-memory cache so subsequent requests use the new token
         if (newToken != null) {
           await tokenManager.setAccessToken(newToken);
@@ -93,6 +109,7 @@ class SyncEngine {
   Timer? _uploadTimer;
   bool _isUploading = false;
   bool _isConnected = false;
+  bool _shouldStop = false; // Flag to stop the download loop
   int _reconnectAttempts = 0;
   int _authErrorCount = 0; // Track consecutive auth errors
   final Set<String> _processedEventIds = {}; // For event deduplication
@@ -130,18 +147,28 @@ class SyncEngine {
   }) : _onTokenRefresh = onTokenRefresh;
 
   void start() {
+    _shouldStop = false;
     _startDownloadLoop();
     _startUploadLoop();
   }
 
   void stop() {
+    _shouldStop = true; // Signal download loop to stop
     _connectSubscription?.cancel();
+    _connectSubscription = null;
     _uploadTimer?.cancel();
-    _connectSubscription?.cancel();
-    _uploadTimer?.cancel();
+    _uploadTimer = null;
+    _isConnected = false;
+    // Note: Don't close stream controllers here as they may be reused
+    // They will be closed when the engine is disposed
+  }
+
+  /// Permanently dispose of the sync engine (call only when no longer needed)
+  void dispose() {
+    stop();
     _typingEventsController.close();
     _signalingEventsController.close();
-    _isConnected = false;
+    _connectionStateController.close();
   }
 
   /// Fetch historical messages for a room
@@ -199,12 +226,12 @@ class SyncEngine {
   }
 
   Future<void> _startDownloadLoop() async {
-    if (_isConnected) return;
+    if (_isConnected || _shouldStop) return;
 
     _connectionStateController.add(SyncConnectionState.connecting);
 
     // Run connection loop in a way that doesn't block the main thread
-    while (true) {
+    while (!_shouldStop) {
       try {
         // Add client capabilities for server-side feature detection
         final hello = pb.StreamHello(
@@ -283,36 +310,41 @@ class SyncEngine {
               data: {'attempt': _authErrorCount, 'maxAttempts': _maxAuthErrors},
             );
 
-            // Run token refresh in background without blocking
-            Future.microtask(() async {
-              try {
-                final newToken = await refreshCallback();
-                if (newToken != null) {
-                  AppLogger.info(
-                    'Token refreshed after auth error, will retry connection',
-                  );
-                  _reconnectAttempts =
-                      0; // Reset reconnect attempts on successful refresh
-                  // Small delay to prevent tight loop if refresh succeeds but connection still fails
-                  await Future.delayed(const Duration(milliseconds: 500));
-                } else {
-                  // Refresh returned null - either failed or in progress
-                  // Wait before retrying to avoid busy loop
-                  AppLogger.debug(
-                    'Token refresh returned null, waiting before retry',
-                  );
-                  await Future.delayed(const Duration(seconds: 2));
-                }
-              } catch (refreshError) {
-                AppLogger.warning(
-                  'Token refresh failed after auth error',
-                  data: {'error': refreshError.toString()},
+            try {
+              final newToken = await refreshCallback();
+              if (newToken != null) {
+                AppLogger.info(
+                  'Token refreshed after auth error, will retry connection',
                 );
-                // Don't immediately retry on refresh failure - let the backoff handle it
+                _reconnectAttempts =
+                    0; // Reset reconnect attempts on successful refresh
+                // Small delay to prevent tight loop if refresh succeeds but connection still fails
+                await Future.delayed(const Duration(milliseconds: 500));
+              } else {
+                // Refresh returned null - transient error, wait before retrying
+                AppLogger.debug(
+                  'Token refresh returned null (transient), waiting before retry',
+                );
+                await Future.delayed(const Duration(seconds: 2));
               }
-            });
+            } on TokenRefreshPermanentError catch (e) {
+              // Permanent token failure - user must re-authenticate
+              // Stop the sync engine entirely
+              AppLogger.error(
+                'Permanent token refresh failure, stopping sync engine',
+                data: {'error': e.message},
+              );
+              _connectionStateController.add(SyncConnectionState.disconnected);
+              return; // Exit the loop - user needs to re-login
+            } catch (refreshError) {
+              AppLogger.warning(
+                'Token refresh failed with transient error',
+                data: {'error': refreshError.toString()},
+              );
+              // Transient error - continue with backoff and retry
+            }
 
-            // Continue with reconnection attempt (token refresh happens in background)
+            // Continue with reconnection attempt
             continue;
           }
         } else {
@@ -322,19 +354,32 @@ class SyncEngine {
       } finally {
         _isConnected = false;
         _connectionStateController.add(SyncConnectionState.disconnected);
-
-        // Exponential backoff
-        final delay = _getBackoffDelay();
-        AppLogger.info(
-          'Reconnecting to sync',
-          data: {
-            'delaySeconds': delay.inSeconds,
-            'attempt': _reconnectAttempts + 1,
-          },
-        );
-        await Future.delayed(delay);
-        _reconnectAttempts++;
       }
+
+      // Check if we should stop before waiting
+      if (_shouldStop) {
+        AppLogger.debug('Sync engine stopped, exiting download loop');
+        break;
+      }
+
+      // Exponential backoff
+      final delay = _getBackoffDelay();
+      AppLogger.info(
+        'Reconnecting to sync',
+        data: {
+          'delaySeconds': delay.inSeconds,
+          'attempt': _reconnectAttempts + 1,
+        },
+      );
+      await Future.delayed(delay);
+
+      // Check again after delay in case stop was called during wait
+      if (_shouldStop) {
+        AppLogger.debug('Sync engine stopped during backoff, exiting');
+        break;
+      }
+
+      _reconnectAttempts++;
     }
   }
 
@@ -559,8 +604,13 @@ class SyncEngine {
   }
 
   void _startUploadLoop() {
+    // Cancel existing timer to prevent multiple timers running
+    _uploadTimer?.cancel();
+
+    if (_shouldStop) return;
+
     _uploadTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-      if (_isUploading || !_isConnected) return;
+      if (_isUploading || !_isConnected || _shouldStop) return;
       _isUploading = true;
 
       try {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../features/auth/data/auth_state_provider.dart';
 import '../features/auth/data/user_info_provider.dart';
@@ -30,10 +31,7 @@ class AppDrawer extends ConsumerWidget {
                   title: const Text('Settings'),
                   onTap: () {
                     Navigator.pop(context);
-                    // Note: Settings navigation will be implemented
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Settings coming soon')),
-                    );
+                    context.go('/settings');
                   },
                 ),
                 ListTile(

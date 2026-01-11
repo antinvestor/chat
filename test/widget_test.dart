@@ -21,7 +21,11 @@ void main() {
     // Build just the chat input bar widget
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(home: Scaffold(body: ChatInputBar())),
+        child: MaterialApp(
+          home: Scaffold(
+            body: ChatInputBar(roomId: 'test-room-123', roomName: 'Test Room'),
+          ),
+        ),
       ),
     );
 
@@ -53,7 +57,11 @@ void main() {
   testWidgets('Chat input bar attachment options', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(home: Scaffold(body: ChatInputBar())),
+        child: MaterialApp(
+          home: Scaffold(
+            body: ChatInputBar(roomId: 'test-room-456', roomName: 'Test Room'),
+          ),
+        ),
       ),
     );
 
@@ -76,7 +84,11 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(home: Scaffold(body: ChatInputBar())),
+        child: MaterialApp(
+          home: Scaffold(
+            body: ChatInputBar(roomId: 'test-room-789', roomName: 'Test Room'),
+          ),
+        ),
       ),
     );
 

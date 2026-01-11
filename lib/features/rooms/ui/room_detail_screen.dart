@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/responsive/responsive_layout.dart';
+import '../../../core/navigation/navigation_helper.dart';
 import 'room_detail_panel.dart';
 
 /// Room detail screen showing full room information
@@ -33,11 +33,21 @@ class RoomDetailScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Navigate back to room list
-            context.go('/');
+            // Navigate back using navigation helper
+            context.navigateBack();
           },
-          tooltip: 'Back to rooms',
+          tooltip: 'Back',
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat),
+            onPressed: () {
+              // Navigate to chat screen using navigation helper
+              context.navigateToChat(roomId: roomId, roomName: roomName);
+            },
+            tooltip: 'Open chat',
+          ),
+        ],
       ),
       body: RoomDetailPanel(roomId: roomId, roomName: roomName),
     );
@@ -51,11 +61,21 @@ class RoomDetailScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Navigate back to room list
-            context.go('/');
+            // Navigate back using navigation helper
+            context.navigateBack();
           },
-          tooltip: 'Back to rooms',
+          tooltip: 'Back',
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat),
+            onPressed: () {
+              // Navigate to chat screen using navigation helper
+              context.navigateToChat(roomId: roomId, roomName: roomName);
+            },
+            tooltip: 'Open chat',
+          ),
+        ],
       ),
       body: Row(
         children: [
@@ -92,11 +112,21 @@ class RoomDetailScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Navigate back to room list
-            context.go('/');
+            // Navigate back using navigation helper
+            context.navigateBack();
           },
-          tooltip: 'Back to rooms',
+          tooltip: 'Back',
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat),
+            onPressed: () {
+              // Navigate to chat screen using navigation helper
+              context.navigateToChat(roomId: roomId, roomName: roomName);
+            },
+            tooltip: 'Open chat',
+          ),
+        ],
       ),
       body: Row(
         children: [

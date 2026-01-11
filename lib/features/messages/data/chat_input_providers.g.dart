@@ -134,7 +134,7 @@ final class TypingNotifierProvider
   }
 }
 
-String _$typingNotifierHash() => r'350ba77741760eb46445046dc4a1693b3b6ce2c4';
+String _$typingNotifierHash() => r'ca15370a1e2b071b15be3cc5ac414b697c002f02';
 
 abstract class _$TypingNotifier extends $Notifier<bool> {
   bool build();

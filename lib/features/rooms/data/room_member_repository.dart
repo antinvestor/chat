@@ -284,6 +284,60 @@ class RoomMemberRepository {
     }
   }
 
+  /// Get all members for a room
+  /// Returns all room members ordered by join date
+  ///
+  /// @param roomId The room ID
+  /// @return List of room members
+  Future<List<RoomMember>> getMembersForRoom(String roomId) async {
+    try {
+      final query = _database.select(_database.roomMembers)
+        ..where((t) => t.roomId.equals(roomId))
+        ..orderBy([(t) => OrderingTerm.asc(t.joinedAt)]);
+
+      return await query.get();
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to get room members',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return [];
+    }
+  }
+
+  /// Watch members for a room - provides reactive updates
+  ///
+  /// @param roomId The room ID
+  /// @return Stream of room members
+  Stream<List<RoomMember>> watchMembersForRoom(String roomId) {
+    final query = _database.select(_database.roomMembers)
+      ..where((t) => t.roomId.equals(roomId))
+      ..orderBy([(t) => OrderingTerm.asc(t.joinedAt)]);
+
+    return query.watch();
+  }
+
+  /// Get member count for a room
+  ///
+  /// @param roomId The room ID
+  /// @return Number of members in the room
+  Future<int> getMemberCount(String roomId) async {
+    try {
+      final query = _database.select(_database.roomMembers)
+        ..where((t) => t.roomId.equals(roomId));
+      final members = await query.get();
+      return members.length;
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to get member count',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return 0;
+    }
+  }
+
   /// Check if a subscription ID belongs to the current profile's contact
   ///
   /// @param roomId The room context

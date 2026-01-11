@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:xid/xid.dart';
 
 import '../../advanced/ui/motion_bubble.dart';
+import '../services/voice_recording_service.dart';
 import '../../advanced/ui/transaction_bubble.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../calls/services/call_manager.dart';
@@ -16,11 +18,13 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/message_providers.dart';
+import '../data/typing_provider.dart';
 import '../data/message_sending_service.dart';
 import '../domain/room_event.dart';
 import 'message_bubble.dart';
 import 'input_bar.dart';
 import 'date_header.dart';
+import '../../../core/navigation/navigation_helper.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -39,12 +43,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _isEncryptionEnabled = false;
   String? _replyingToMessageId;
   String? _replyingToText;
-  bool _isVoiceRecording = false;
-  Timer? _voiceRecordingTimer;
+  bool _showScrollToBottom = false;
+  int _newMessageCount = 0;
+  final bool _shouldAutoScroll = true;
 
   @override
   void initState() {
     super.initState();
+    // Add scroll listener for scroll-to-bottom FAB
+    _scrollController.addListener(_onScroll);
     // Preload chat background patterns for better performance
     WidgetsBinding.instance.addPostFrameCallback((_) {
       precacheImage(const AssetImage('assets/chat_pattern.webp'), context);
@@ -55,11 +62,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  void _onScroll() {
+    // Show scroll-to-bottom FAB when scrolled up more than 200 pixels
+    final showButton = _scrollController.offset > 200;
+    if (showButton != _showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = showButton;
+        // Reset new message count when scrolling to bottom
+        if (!showButton) {
+          _newMessageCount = 0;
+        }
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+    setState(() {
+      _newMessageCount = 0;
+    });
+  }
+
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _readReceiptDebounce?.cancel();
-    _voiceRecordingTimer?.cancel();
     super.dispose();
   }
 
@@ -97,19 +129,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (text.trim().isEmpty) return;
 
     final messagingService = ref.read(messageSendingServiceProvider);
-    await messagingService.sendTextMessage(
+
+    // Send message - the service handles optimistic updates internally
+    // by inserting into the local DB which triggers the stream update
+    messagingService.sendTextMessage(
       roomId: widget.roomId,
       text: text.trim(),
       encrypt: _isEncryptionEnabled,
     );
 
-    // Clear reply state after sending
+    // Clear reply state immediately for better UX
     if (replyToMessageId != null) {
       setState(() {
         _replyingToMessageId = null;
         _replyingToText = null;
       });
     }
+
+    // Scroll to bottom to see the new message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _onReplyToMessage(String messageId, String messageText) {
@@ -117,6 +163,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _replyingToMessageId = messageId;
       _replyingToText = messageText;
     });
+  }
+
+  Future<void> _retryMessage(RoomEvent message) async {
+    try {
+      final messagingService = ref.read(messageSendingServiceProvider);
+      await messagingService.retryMessage(message.localId ?? message.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Retrying message...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to retry: $e')));
+      }
+    }
   }
 
   void _cancelReply() {
@@ -254,55 +321,135 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final messagesAsync = ref.watch(messageListProvider(widget.roomId));
+    final messagesAsync = ref.watch(messagesStreamProvider(widget.roomId));
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: _buildAppBar(context),
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF121212) // Optimized dark background
-                    : Theme.of(context).colorScheme.surface,
-                image: _isEncryptionEnabled
-                    ? null
-                    : DecorationImage(
-                        image: AssetImage(
-                          Theme.of(context).brightness == Brightness.dark
-                              ? 'assets/chat_pattern_black.webp'
-                              : 'assets/chat_pattern.webp',
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF121212) // Optimized dark background
+                      : Theme.of(context).colorScheme.surface,
+                  image: _isEncryptionEnabled
+                      ? null
+                      : DecorationImage(
+                          image: AssetImage(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 'assets/chat_pattern_black.webp'
+                                : 'assets/chat_pattern.webp',
+                          ),
+                          repeat: ImageRepeat.repeat,
+                          fit: BoxFit.none,
+                          opacity:
+                              Theme.of(context).brightness == Brightness.dark
+                              ? 0.08 // 8% for dark theme (6-10% range)
+                              : 0.05, // 5% for light theme
                         ),
-                        repeat: ImageRepeat.repeat,
-                        fit: BoxFit.none,
-                        opacity: Theme.of(context).brightness == Brightness.dark
-                            ? 0.08 // 8% for dark theme (6-10% range)
-                            : 0.05, // 5% for light theme
+                ),
+                child: Stack(
+                  children: [
+                    messagesAsync.when(
+                      data: (messages) => _buildMessageList(messages),
+                      loading: () => _buildLoadingState(),
+                      error: (error, stack) => _buildErrorState(error, stack),
+                    ),
+                    // Enhanced typing indicator overlay
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final typingUsers = ref.watch(
+                          typingProvider(widget.roomId),
+                        );
+                        final isAnyoneTyping = typingUsers.isNotEmpty;
+
+                        return isAnyoneTyping
+                            ? Positioned(
+                                bottom: 80,
+                                left: 16,
+                                right: 16,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color?>(
+                                                AppTheme.primaryGreen,
+                                              ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          'Someone is typing...',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurfaceVariant,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink();
+                      },
+                    ),
+                    // Scroll-to-bottom FAB with new message count
+                    if (_showScrollToBottom)
+                      Positioned(
+                        bottom: 16,
+                        right: 16,
+                        child: _buildScrollToBottomButton(),
                       ),
-              ),
-              child: messagesAsync.when(
-                data: (messages) => _buildMessageList(messages),
-                loading: () => _buildLoadingState(),
-                error: (error, stack) => _buildErrorState(error, stack),
+                  ],
+                ),
               ),
             ),
-          ),
-          SafeArea(
-            child: InputBar(
+            InputBar(
               roomId: widget.roomId,
               onSendMessage: _sendMessage,
               onAttachment: _showAttachmentOptions,
               onCamera: _takeAndSendPhoto,
-              onVoiceRecord: _onVoiceRecord,
+              onVoiceRecordingComplete: _onVoiceRecordingComplete,
               isEncryptionEnabled: _isEncryptionEnabled,
               replyingToMessageId: _replyingToMessageId,
               replyingToText: _replyingToText,
               onCancelReply: _cancelReply,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -386,10 +533,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
-        // Auto-scroll to bottom when new messages arrive
+        // Enhanced auto-scroll with better performance
         if (scrollInfo is ScrollEndNotification &&
             scrollInfo.metrics.extentAfter == 0) {
-          // User is at the bottom, keep them there
+          // User is at bottom, keep them there
+        } else if (scrollInfo is ScrollUpdateNotification) {
+          // Auto-scroll to bottom when new messages arrive
+          if (_shouldAutoScroll) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
         }
         return false;
       },
@@ -398,30 +554,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         reverse: true,
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: messages.length,
-        // Performance optimization: cache extent
-        cacheExtent: 500,
+        // Performance optimizations for smooth scrolling
+        cacheExtent: MediaQuery.of(context).size.height * 2, // Cache 2 screens
+        addAutomaticKeepAlives: false, // Reduce memory for off-screen items
+        addRepaintBoundaries: true, // Isolate repaints
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         itemBuilder: (context, index) {
           final reversedIndex = messages.length - 1 - index;
           final message = messages[reversedIndex];
           final currentProfileId = ref.watch(currentProfileIdProvider);
           final isMe = message.senderId == currentProfileId.value;
 
-          // Check if we should show date header
+          // Enhanced message grouping with better performance
           bool showDateHeader = false;
-          if (reversedIndex < messages.length - 1) {
-            final nextMessage = messages[reversedIndex + 1];
-            final currentDate = DateTime.fromMillisecondsSinceEpoch(
-              message.createdAt,
-            );
-            final nextDate = DateTime.fromMillisecondsSinceEpoch(
-              nextMessage.createdAt,
-            );
-            showDateHeader = !_isSameDay(currentDate, nextDate);
-          } else {
-            showDateHeader = true;
-          }
-
-          // Check message grouping for bubble styling
           bool shouldGroupWithPrevious = false;
           bool removeTail = false;
 
@@ -432,6 +580,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 nextMessage.senderId == message.senderId &&
                 timeDiff < 120000; // 2 minutes
             removeTail = shouldGroupWithPrevious;
+          } else {
+            showDateHeader = true;
           }
 
           return Column(
@@ -597,12 +747,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.day == date2.day &&
-        date1.month == date2.month &&
-        date1.year == date2.year;
-  }
-
   void _toggleEncryption() {
     setState(() => _isEncryptionEnabled = !_isEncryptionEnabled);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -631,27 +775,63 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _openContactInfo() {
-    // Navigate to contact info screen
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Contact info coming soon')));
+    // Navigate to room details screen with fluid animation
+    context.navigateToRoomDetails(
+      roomId: widget.roomId,
+      roomName: widget.roomName,
+    );
   }
 
-  void _onVoiceRecord() {
-    setState(() {
-      _isVoiceRecording = !_isVoiceRecording;
-    });
+  void _onVoiceRecordingComplete(VoiceRecordingResult result) {
+    // Voice recording completed, send as audio message
+    _sendAudioMessage(result);
+  }
 
-    if (_isVoiceRecording) {
-      _voiceRecordingTimer = Timer(const Duration(seconds: 30), () {
-        if (mounted) {
-          setState(() {
-            _isVoiceRecording = false;
-          });
-        }
-      });
-    } else {
-      _voiceRecordingTimer?.cancel();
+  Future<void> _sendAudioMessage(VoiceRecordingResult recording) async {
+    try {
+      // Create audio message event
+      final event = RoomEvent(
+        id: Xid().toString(),
+        roomId: widget.roomId,
+        senderId: '', // Will be set by the provider
+        type: RoomEventType.audio,
+        content: {
+          'path': recording.path,
+          'duration': recording.duration.inSeconds,
+          'size': recording.sizeBytes,
+          'mimeType': recording.mimeType,
+          'fileName': recording.fileName,
+        },
+        status: EventStatus.pending,
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+        localId: Xid().toString(),
+      );
+
+      // Send the message through the provider
+      // Note: The actual file upload will be handled by the file upload service
+      await ref
+          .read(messageListProvider(widget.roomId).notifier)
+          .sendMessage(event);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Voice message sent (${recording.formattedDuration})',
+            ),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send voice message: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -673,7 +853,66 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           shouldGroupWithPrevious: shouldGroupWithPrevious,
           removeTail: removeTail,
           onReply: _onReplyToMessage,
+          onRetry: message.status == EventStatus.failed
+              ? () => _retryMessage(message)
+              : null,
         );
     }
+  }
+
+  Widget _buildScrollToBottomButton() {
+    return GestureDetector(
+      onTap: _scrollToBottom,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              Icons.keyboard_arrow_down,
+              color: Theme.of(context).colorScheme.onSurface,
+              size: 28,
+            ),
+            if (_newMessageCount > 0)
+              Positioned(
+                top: 2,
+                right: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    _newMessageCount > 99 ? '99+' : '$_newMessageCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

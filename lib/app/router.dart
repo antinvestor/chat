@@ -10,6 +10,13 @@ import '../features/messages/ui/chat_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
 import '../features/rooms/ui/room_detail_screen.dart';
 import '../features/contacts/ui/contact_selection_screen.dart';
+import '../features/profile/ui/profile_screen.dart';
+import '../features/settings/ui/settings_screen.dart';
+import '../features/settings/ui/privacy_settings_screen.dart';
+import '../features/settings/ui/account_settings_screen.dart';
+import '../features/settings/ui/chat_settings_screen.dart';
+import '../features/settings/ui/notification_settings_screen.dart';
+import '../features/settings/ui/storage_settings_screen.dart';
 
 part 'router.g.dart';
 
@@ -61,6 +68,30 @@ GoRouter router(Ref ref) {
         builder: (context, state) => const ContactSelectionScreen(),
       ),
       GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/account',
+        builder: (context, state) => const AccountSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/privacy',
+        builder: (context, state) => const PrivacySettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/chats',
+        builder: (context, state) => const ChatSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/notifications',
+        builder: (context, state) => const NotificationSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/storage',
+        builder: (context, state) => const StorageSettingsScreen(),
+      ),
+      GoRoute(
         path: '/chat/:roomId',
         builder: (context, state) {
           final roomId = state.pathParameters['roomId']!;
@@ -74,6 +105,13 @@ GoRouter router(Ref ref) {
           final roomId = state.pathParameters['roomId']!;
           final roomName = state.uri.queryParameters['name'] ?? 'Room Details';
           return RoomDetailScreen(roomId: roomId, roomName: roomName);
+        },
+      ),
+      GoRoute(
+        path: '/profile/:profileId',
+        builder: (context, state) {
+          final profileId = state.pathParameters['profileId']!;
+          return ProfileScreen(profileId: profileId);
         },
       ),
     ],

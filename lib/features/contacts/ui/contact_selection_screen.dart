@@ -55,17 +55,13 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
   }
 
   void _startNewChat() {
-    // TODO: Implement new chat creation
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('New chat feature coming soon')),
-    );
+    // Navigate to group creation screen
+    context.go('/contacts/select');
   }
 
   void _addNewContact() {
-    // TODO: Implement add new contact
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Add contact feature coming soon')),
-    );
+    // Navigate to contacts screen for adding new contact
+    context.go('/contacts');
   }
 
   @override
@@ -80,10 +76,10 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        tooltip: 'Select Contact',
         onPressed: () => context.go('/contacts/select'),
         backgroundColor: AppTheme.primaryGreen,
         child: const Icon(Icons.person_add, color: Colors.white),
-        tooltip: 'Select Contact',
       ),
     );
   }

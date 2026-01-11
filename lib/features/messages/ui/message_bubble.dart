@@ -13,6 +13,7 @@ class MessageBubble extends ConsumerWidget {
   final bool shouldGroupWithPrevious;
   final bool removeTail;
   final Function(String messageId, String messageText)? onReply;
+  final VoidCallback? onRetry;
 
   const MessageBubble({
     super.key,
@@ -21,148 +22,122 @@ class MessageBubble extends ConsumerWidget {
     this.shouldGroupWithPrevious = false,
     this.removeTail = false,
     this.onReply,
+    this.onRetry,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final senderName = isMe ? 'Me' : _getSenderName(ref);
     final timestamp = _formatTimestamp(message.createdAt);
     final text = message.content['text'] as String? ?? '';
     final isDarkMode = theme.brightness == Brightness.dark;
 
     return RepaintBoundary(
-      child: Semantics(
-        label: 'Message from $senderName at $timestamp',
-        value: text,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: shouldGroupWithPrevious ? 1 : 4,
-          ),
+      key: ValueKey(
+        message.id,
+      ), // Performance: Only rebuild when message changes
+      child: Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
           child: Row(
             mainAxisAlignment: isMe
                 ? MainAxisAlignment.end
                 : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Avatar for received messages
+              // Avatar for received messages (performance: only build when needed)
               if (!isMe && !shouldGroupWithPrevious) ...[
                 _buildAvatar(context, ref),
                 const SizedBox(width: 8),
               ] else if (!isMe)
                 const SizedBox(width: 48), // Space for avatar
-              // Message bubble
+              // Message bubble with enhanced performance
               Flexible(
                 child: Dismissible(
-                  key: ValueKey(message.id),
+                  key: ValueKey(
+                    message.id,
+                  ), // Performance: Stable key for ListView
                   direction: DismissDirection.startToEnd,
                   dismissThresholds: const {DismissDirection.startToEnd: 0.3},
-                  onDismissed: (direction) {
+                  // Use confirmDismiss instead of onDismissed to prevent actual dismissal
+                  // We just want to trigger the reply action, not remove the message
+                  confirmDismiss: (direction) async {
                     onReply?.call(message.id, text);
+                    return false; // Never actually dismiss - just trigger reply
                   },
                   background: Container(
                     alignment: Alignment.centerLeft,
                     padding: const EdgeInsets.only(left: 20),
                     decoration: BoxDecoration(
                       color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: _getBubbleRadius(isMe, removeTail),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: const Icon(Icons.reply, color: Colors.blue),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: _getBubbleColor(isMe, isDarkMode),
+                      borderRadius: _getBubbleRadius(isMe, removeTail),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.reply, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text('Reply', style: TextStyle(color: Colors.blue)),
+                        // Sender name for group messages (performance: conditional)
+                        if (!isMe && !shouldGroupWithPrevious)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+                            child: Text(
+                              _getSenderName(ref),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _getSenderNameColor(isMe, isDarkMode),
+                              ),
+                            ),
+                          ),
+                        // Message content with inline timestamp (WhatsApp style)
+                        Stack(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                12,
+                                (!isMe && !shouldGroupWithPrevious) ? 0 : 8,
+                                12,
+                                6,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildMessageContent(context),
+                                  // Spacer for timestamp+status
+                                  const SizedBox(height: 16),
+                                ],
+                              ),
+                            ),
+                            // WhatsApp-style inline timestamp and status at bottom-right
+                            Positioned(
+                              bottom: 4,
+                              right: 8,
+                              child: _buildTimestampAndStatus(context, timestamp),
+                            ),
+                          ],
+                        ),
+                        // Failed message retry button
+                        if (isMe && message.status == EventStatus.failed)
+                          _buildRetryButton(context),
                       ],
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: isMe
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getBubbleColor(isMe, isDarkMode),
-                          borderRadius: _getBubbleRadius(isMe, removeTail),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Sender name for group messages
-                            if (!isMe && !shouldGroupWithPrevious)
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  12,
-                                  16,
-                                  4,
-                                ),
-                                child: Text(
-                                  _getSenderName(ref),
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: _getSenderNameColor(
-                                      isMe,
-                                      isDarkMode,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            // Message content
-                            Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                16,
-                                (!isMe && !shouldGroupWithPrevious) ? 0 : 12,
-                                16,
-                                (!isMe && !shouldGroupWithPrevious) ? 12 : 8,
-                              ),
-                              child: _buildMessageContent(context),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Timestamp and status
-                      if (!shouldGroupWithPrevious)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                timestamp,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: theme.colorScheme.onSurfaceVariant
-                                      .withValues(alpha: 0.7),
-                                ),
-                              ),
-                              if (isMe) ...[
-                                const SizedBox(width: 4),
-                                _buildStatusIndicator(context),
-                              ],
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
                 ),
               ),
-
               // Avatar for sent messages
               if (isMe && !shouldGroupWithPrevious) ...[
                 const SizedBox(width: 8),
@@ -577,35 +552,127 @@ class MessageBubble extends ConsumerWidget {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
+  /// WhatsApp-style timestamp and status row
+  Widget _buildTimestampAndStatus(BuildContext context, String timestamp) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isMe
+        ? Colors.black.withValues(alpha: 0.5)
+        : (isDarkMode ? Colors.white60 : Colors.black54);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            timestamp,
+            style: TextStyle(
+              fontSize: 11,
+              color: textColor,
+            ),
+          ),
+          if (isMe) ...[
+            const SizedBox(width: 3),
+            _buildStatusIndicator(context),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Retry button for failed messages
+  Widget _buildRetryButton(BuildContext context) {
+    return GestureDetector(
+      onTap: onRetry,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(12),
+            bottomRight: Radius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 14,
+              color: Colors.red.shade600,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Not sent. Tap to retry',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.red.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.refresh,
+              size: 14,
+              color: Colors.red.shade600,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// WhatsApp-style status indicator with ticks
   Widget _buildStatusIndicator(BuildContext context) {
-    final theme = Theme.of(context);
-    IconData iconData;
-    Color iconColor;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     switch (message.status) {
       case EventStatus.pending:
-        iconData = Icons.schedule;
-        iconColor = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4);
-        break;
+        // Clock icon for pending
+        return Icon(
+          Icons.schedule,
+          size: 14,
+          color: isMe
+              ? Colors.black.withValues(alpha: 0.4)
+              : (isDarkMode ? Colors.white38 : Colors.black38),
+        );
       case EventStatus.sent:
-        iconData = Icons.check;
-        iconColor = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6);
-        break;
+        // Single check for sent
+        return Icon(
+          Icons.check,
+          size: 16,
+          color: isMe
+              ? Colors.black.withValues(alpha: 0.5)
+              : (isDarkMode ? Colors.white54 : Colors.black54),
+        );
       case EventStatus.delivered:
-        iconData = Icons.done_all;
-        iconColor = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6);
-        break;
+        // Double check for delivered (grey)
+        return Icon(
+          Icons.done_all,
+          size: 16,
+          color: isMe
+              ? Colors.black.withValues(alpha: 0.5)
+              : (isDarkMode ? Colors.white54 : Colors.black54),
+        );
       case EventStatus.read:
-        iconData = Icons.done_all;
-        iconColor = theme.colorScheme.primary;
-        break;
+        // Double check for read (blue/green)
+        return Icon(
+          Icons.done_all,
+          size: 16,
+          color: const Color(0xFF53BDEB), // WhatsApp blue
+        );
       case EventStatus.failed:
-        iconData = Icons.error_outline;
-        iconColor = theme.colorScheme.error;
-        break;
+        // Error icon for failed
+        return Icon(
+          Icons.error_outline,
+          size: 14,
+          color: Colors.red.shade600,
+        );
     }
-
-    return Icon(iconData, size: 14, color: iconColor);
   }
 
   String _getSenderName(WidgetRef ref) {
