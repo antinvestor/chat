@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-"""
-Flutter Security Audit Script
-Performs security checks on Flutter/Dart projects
-"""
+# Flutter Security Audit Script
+# Performs security checks on Flutter/Dart projects
 
 echo "🔒 Starting Flutter Security Audit..."
 echo "=================================="
