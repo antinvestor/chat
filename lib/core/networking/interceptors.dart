@@ -11,6 +11,7 @@ class AuthInterceptor {
   DateTime? _cacheTime;
   static const _cacheValidDuration = Duration(seconds: 30);
 
+  /// Creates an auth interceptor
   AuthInterceptor(this._storage);
 
   /// Get auth headers with token caching for performance

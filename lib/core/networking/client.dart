@@ -15,9 +15,7 @@ import '../../features/auth/data/auth_repository.dart';
 import 'api_config.dart';
 
 /// Secure storage provider for token access
-final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
-  return const FlutterSecureStorage();
-});
+final secureStorageProvider = Provider<FlutterSecureStorage>((ref) => const FlutterSecureStorage());
 
 /// Token manager provider using antinvestor_api_common TokenManager
 /// 

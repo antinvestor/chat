@@ -73,12 +73,25 @@ class Roster extends Table {
 }
 
 class Rooms extends Table {
+  /// Room ID
   TextColumn get id => text()();
+  
+  /// Room name
   TextColumn get name => text().nullable()();
+  
+  /// Room type
   TextColumn get type => text().nullable()();
+  
+  /// Last event ID
   TextColumn get lastEventId => text().nullable()();
+  
+  /// Last event index
   IntColumn get lastEventIndex => integer().nullable()();
+  
+  /// Unread message count
   IntColumn get unreadCount => integer().withDefault(const Constant(0))();
+  
+  /// Room metadata
   TextColumn get metadata => text().nullable()();
 
   @override
@@ -96,13 +109,23 @@ class Rooms extends Table {
 /// - contactId: Contact method used (phone, email, etc.) - HOW the profile was reached
 /// - roomId: Room identifier - WHICH room the subscription belongs to
 class RoomMembers extends Table {
-  TextColumn get subscriptionId => text()(); // Primary key from API
+  /// Primary key from API
+  TextColumn get subscriptionId => text()();
+  
+  /// Room identifier reference
   TextColumn get roomId => text().references(Rooms, #id)();
-  TextColumn get profileId => text()
-      .nullable()(); // Global profile identity (from JWT) - nullable for anonymous subscriptions
+  
+  /// Global profile identity (from JWT) - nullable for anonymous subscriptions
+  TextColumn get profileId => text().nullable()();
+  
+  /// Contact method (phone/email/etc)
   TextColumn get contactId =>
-      text().nullable()(); // Contact method (phone/email/etc)
+      text().nullable()();
+  
+  /// Member role
   TextColumn get role => text().nullable()();
+  
+  /// Join timestamp
   IntColumn get joinedAt => integer().nullable()();
 
   @override
@@ -110,17 +133,38 @@ class RoomMembers extends Table {
 }
 
 class RoomEvents extends Table {
+  /// Event ID
   TextColumn get id => text()();
+  
+  /// Room identifier reference
   TextColumn get roomId => text().references(Rooms, #id)();
-  TextColumn get senderId => text()(); // Profile ID from ContactLink
+  
+  /// Profile ID from ContactLink
+  TextColumn get senderId => text()();
+  
+  /// Contact ID from ContactLink
   TextColumn get senderContactId =>
-      text().nullable()(); // Contact ID from ContactLink
+      text().nullable()();
+  
+  /// Event type
   IntColumn get type => integer()();
+  
+  /// Event content
   TextColumn get content => text().nullable()();
+  
+  /// Parent event ID
   TextColumn get parentId => text().nullable()();
+  
+  /// Event status
   IntColumn get status => integer().withDefault(const Constant(0))();
+  
+  /// Creation timestamp
   IntColumn get createdAt => integer().nullable()();
+  
+  /// Server timestamp
   IntColumn get serverTs => integer().nullable()();
+  
+  /// Local event ID
   TextColumn get localId => text().nullable()();
 
   @override
@@ -241,7 +285,5 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'chat_v1.db');
-  }
+  static QueryExecutor _openConnection() => driftDatabase(name: 'chat_v1.db');
 }

@@ -40,6 +40,7 @@ class KeyManager {
       utf8.decode(base64Decode(ciphertext));
 
   /// Gets the device ID for this installation
+  Future<String> getDeviceId() async {
     var deviceId = await _storage.read(key: 'device_id');
     if (deviceId == null) {
       deviceId = 'flutter_device_${DateTime.now().millisecondsSinceEpoch}';
