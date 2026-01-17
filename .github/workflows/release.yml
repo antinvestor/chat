@@ -169,13 +169,13 @@ jobs:
           ${{ matrix.platform == 'linux' && 'build/linux/x64/release/bundle/chat-linux.tar.gz' }}
           ${{ matrix.platform == 'macos' && 'build/macos/Build/Products/Release/chat-macos.zip' }}
         asset_name: |
-          ${{ matrix.platform == 'android' && 'chat-v${{ github.ref_name }}-android.apk' }}
-          ${{ matrix.platform == 'android' && 'chat-v${{ github.ref_name }}-android.aab' }}
-          ${{ matrix.platform == 'ios' && 'chat-v${{ github.ref_name }}-ios.ipa' }}
-          ${{ matrix.platform == 'web' && 'chat-v${{ github.ref_name }}-web.zip' }}
-          ${{ matrix.platform == 'windows' && 'chat-v${{ github.ref_name }}-windows.zip' }}
-          ${{ matrix.platform == 'linux' && 'chat-v${{ github.ref_name }}-linux.tar.gz' }}
-          ${{ matrix.platform == 'macos' && 'chat-v${{ github.ref_name }}-macos.zip' }}
+          ${{ matrix.platform == 'android' && 'chat-v${{ steps.version.outputs.version }}-android.apk' }}
+          ${{ matrix.platform == 'android' && 'chat-v${{ steps.version.outputs.version }}-android.aab' }}
+          ${{ matrix.platform == 'ios' && 'chat-v${{ steps.version.outputs.version }}-ios.ipa' }}
+          ${{ matrix.platform == 'web' && 'chat-v${{ steps.version.outputs.version }}-web.zip' }}
+          ${{ matrix.platform == 'windows' && 'chat-v${{ steps.version.outputs.version }}-windows.zip' }}
+          ${{ matrix.platform == 'linux' && 'chat-v${{ steps.version.outputs.version }}-linux.tar.gz' }}
+          ${{ matrix.platform == 'macos' && 'chat-v${{ steps.version.outputs.version }}-macos.zip' }}
         asset_content_type: |
           ${{ matrix.platform == 'android' && 'application/vnd.android.package-archive' }}
           ${{ matrix.platform == 'android' && 'application/octet-stream' }}
@@ -266,7 +266,7 @@ jobs:
         curl -X POST "https://docs.antinvestor.com/api/update" \
           -H "Authorization: Bearer ${{ secrets.DOCS_API_TOKEN }}" \
           -H "Content-Type: application/json" \
-          -d '{"version": "${{ github.ref_name }}", "app": "chat"}'
+          -d '{"version": "${{ steps.version.outputs.version }}", "app": "chat"}'
 
   # Notify Teams
   notify_teams:
@@ -282,14 +282,14 @@ jobs:
         status: ${{ job.status }}
         channel: '#releases'
         text: |
-          🚀 Chat App v${{ github.ref_name }} has been released!
+          🚀 Chat App v${{ steps.version.outputs.version }} has been released!
           
           📱 Downloads:
           - Android: Available on Google Play
           - iOS: Available on App Store
           - Web: Live at https://chat.antinvestor.com
           
-          📋 Release Notes: https://github.com/${{ github.repository }}/releases/tag/v${{ github.ref_name }}
+          📋 Release Notes: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         
@@ -297,14 +297,14 @@ jobs:
       uses: Ilshidur/action-discord@master
       with:
         args: |
-          🚀 **Chat App v${{ github.ref_name }} Released!**
+          🚀 **Chat App v${{ steps.version.outputs.version }} Released!**
           
           📱 **Available on:**
           - Google Play Store
           - Apple App Store  
           - Web: https://chat.antinvestor.com
           
-          📋 [Release Notes](https://github.com/${{ github.repository }}/releases/tag/v${{ github.ref_name }})
+          📋 [Release Notes](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }})
           🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -316,11 +316,11 @@ jobs:
         server_port: 587
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "Chat App v${{ github.ref_name }} Released"
+        subject: "Chat App v${{ steps.version.outputs.version }} Released"
         body: |
           Hello,
           
-          Chat App v${{ github.ref_name }} has been successfully released!
+          Chat App v${{ steps.version.outputs.version }} has been successfully released!
           
           What's new:
           - Check the release notes for details

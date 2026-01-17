@@ -80,7 +80,7 @@ jobs:
         flutter packages pub run build_runner build --delete-conflicting-outputs
         
     - name: Run unit tests
-      run: flutter test --coverage --test-randomization-ordering-seed random
+      run: flutter test --coverage --test-randomization-ordering-seed=random
       
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -114,7 +114,7 @@ jobs:
         flutter packages pub run build_runner build --delete-conflicting-outputs
         
     - name: Run widget tests
-      run: flutter test --coverage integration_test/widget_test/
+      run: flutter test --coverage test/widget_test/
 
   # Integration Tests
   integration_test:
@@ -142,7 +142,7 @@ jobs:
         
     - name: Run integration tests
       run: |
-        flutter test --coverage integration_test/
+        flutter test --coverage test/integration_test/
         
     - name: Upload integration coverage
       uses: codecov/codecov-action@v4
@@ -342,7 +342,7 @@ jobs:
         flutter packages pub run build_runner build --delete-conflicting-outputs
         
     - name: Run performance tests
-      run: flutter test --profile integration_test/performance_test/
+      run: flutter test --profile test/performance_test/
       
     - name: Upload performance results
       uses: actions/upload-artifact@v4
