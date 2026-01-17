@@ -179,8 +179,14 @@ jobs:
       
     - name: Run dependency audit
       run: |
-        flutter pub deps --style=tree > deps.txt
-        npx audit-ci --moderate
+        echo "🔒 Running Flutter security audit..."
+        ./scripts/security_audit.sh
+        
+    - name: Upload security audit reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-audit-reports
+        path: security_reports/
 
   # Bundle Size Analysis
   bundle_size_analysis:
