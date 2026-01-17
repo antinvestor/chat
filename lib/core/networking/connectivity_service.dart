@@ -36,7 +36,7 @@ class ConnectivityService {
         'hasConnection': !_wasOffline,
         'results': results.map((r) => r.name).toList(),
       });
-    } on Exception catch (e) {
+    } catch (e) {
       AppLogger.error('Failed to check initial connectivity', error: e);
     }
   }
@@ -59,10 +59,12 @@ class ConnectivityService {
     _wasOffline = !hasConnection;
   }
 
-  bool _hasConnection(List<ConnectivityResult> results) => results.any((result) =>
+  bool _hasConnection(List<ConnectivityResult> results) {
+    return results.any((result) =>
         result == ConnectivityResult.wifi ||
         result == ConnectivityResult.mobile ||
         result == ConnectivityResult.ethernet);
+  }
 
   void _triggerSync() {
     // Restart the sync engine to process pending jobs
@@ -75,7 +77,7 @@ class ConnectivityService {
     try {
       final results = await _connectivity.checkConnectivity();
       return _hasConnection(results);
-    } on Exception catch (e) {
+    } catch (e) {
       AppLogger.error('Failed to check connectivity', error: e);
       return false;
     }
@@ -110,8 +112,10 @@ final isConnectedProvider = FutureProvider<bool>((ref) async {
 final connectivityStreamProvider = StreamProvider<bool>((ref) {
   final connectivity = Connectivity();
   
-  return connectivity.onConnectivityChanged.map((results) => results.any((result) =>
+  return connectivity.onConnectivityChanged.map((results) {
+    return results.any((result) =>
         result == ConnectivityResult.wifi ||
         result == ConnectivityResult.mobile ||
-        result == ConnectivityResult.ethernet));
+        result == ConnectivityResult.ethernet);
+  });
 });

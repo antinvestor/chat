@@ -31,7 +31,9 @@ class SecureStorageTokenProvider implements TokenProvider {
         _ensureValidToken = ensureValidToken;
 
   @override
-  Future<String?> getAccessToken() async => _storage.read(key: 'access_token');
+  Future<String?> getAccessToken() async {
+    return _storage.read(key: 'access_token');
+  }
 
   @override
   Future<void> onTokenExpired() async {
@@ -110,7 +112,8 @@ class TransportFactory {
   }
 
   /// Create or get cached transport for a service
-  connect.Transport getTransport(String baseUrl) => _transports.putIfAbsent(baseUrl, () {
+  connect.Transport getTransport(String baseUrl) {
+    return _transports.putIfAbsent(baseUrl, () {
       AppLogger.debug('Creating transport for $baseUrl');
       return connect_protocol.Transport(
         baseUrl: baseUrl,
@@ -118,6 +121,7 @@ class TransportFactory {
         httpClient: connect_io.createHttpClient(httpClient.httpClient),
       );
     });
+  }
 
   /// Get transport for Chat service
   connect.Transport get chatTransport => getTransport(ApiConfig.chatBaseUrl);

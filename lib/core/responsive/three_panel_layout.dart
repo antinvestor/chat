@@ -24,7 +24,8 @@ class ThreePanelLayout extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) {
+    return Row(
       children: [
         // Left panel (room list)
         SizedBox(
