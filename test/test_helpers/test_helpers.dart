@@ -9,7 +9,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:chat/features/auth/data/auth_repository.dart';
 import 'package:chat/features/auth/data/auth_service.dart';
-import 'package:chat/features/auth/data/auth_state_provider.dart';
 
 /// Mock AuthService for testing
 class MockAuthService extends AuthService {
@@ -28,11 +27,6 @@ class MockAuthService extends AuthService {
 
   void setShouldThrowError(bool shouldThrow) {
     _shouldThrowError = shouldThrow;
-  }
-
-  @override
-  Future<void> _ensureInitialized() async {
-    // Mock implementation - no network calls
   }
 
   @override
@@ -89,7 +83,6 @@ class MockAuthService extends AuthService {
     return (token: _isAuthenticated ? 'mock-token' : null, needsRelogin: false);
   }
 
-  @override
   Future<String?> getCurrentProfileId() async {
     return _isAuthenticated ? 'mock-profile-id' : null;
   }

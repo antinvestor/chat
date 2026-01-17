@@ -77,7 +77,9 @@ Future<String?> validateAndFormatPhoneNumber(
   String phone, {
   String? regionCode,
 }) async {
-  if (phone.isEmpty) return null;
+  if (phone.isEmpty) {
+    return null;
+  }
 
   try {
     // Use provided region, or get from device locale

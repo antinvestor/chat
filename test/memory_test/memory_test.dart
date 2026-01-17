@@ -2,7 +2,6 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
@@ -16,7 +15,7 @@ void main() {
 
   group('Memory Tests', () {
     testWidgets('Memory usage test for chat input bar', (WidgetTester tester) async {
-      // TODO: Implement comprehensive memory testing
+      // TODO(developer): Implement comprehensive memory testing
       // This should test:
       // 1. Memory allocation during widget creation
       // 2. Memory cleanup after widget disposal
@@ -24,7 +23,7 @@ void main() {
       // 4. Memory usage during long-running operations
       
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -43,7 +42,7 @@ void main() {
     });
 
     testWidgets('Memory leak detection for timers and streams', (WidgetTester tester) async {
-      // TODO: Implement timer and stream memory leak detection
+      // TODO(developer): Implement timer and stream memory leak detection
       // This should test:
       // 1. Timer cleanup in dispose methods
       // 2. Stream subscription cancellation
@@ -51,7 +50,7 @@ void main() {
       // 4. Animation controller disposal
       
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -70,7 +69,7 @@ void main() {
     });
 
     testWidgets('Memory usage test for large message lists', (WidgetTester tester) async {
-      // TODO: Implement memory testing for large data sets
+      // TODO(developer): Implement memory testing for large data sets
       // This should test:
       // 1. Memory usage with large message lists
       // 2. Lazy loading effectiveness
@@ -88,7 +87,7 @@ void main() {
     });
 
     testWidgets('Memory usage test for image handling', (WidgetTester tester) async {
-      // TODO: Implement image memory testing
+      // TODO(developer): Implement image memory testing
       // This should test:
       // 1. Image memory allocation
       // 2. Image cache management
@@ -96,7 +95,7 @@ void main() {
       // 4. Large image handling
       
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -111,7 +110,7 @@ void main() {
     });
 
     testWidgets('Memory usage test for database operations', (WidgetTester tester) async {
-      // TODO: Implement database memory testing
+      // TODO(developer): Implement database memory testing
       // This should test:
       // 1. Database connection memory usage
       // 2. Query result memory management
@@ -129,7 +128,7 @@ void main() {
     });
 
     testWidgets('Memory usage test for provider state management', (WidgetTester tester) async {
-      // TODO: Implement provider memory testing
+      // TODO(developer): Implement provider memory testing
       // This should test:
       // 1. Provider memory allocation
       // 2. State cleanup
@@ -137,7 +136,7 @@ void main() {
       // 4. Memory leaks from long-lived providers
       
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -156,7 +155,7 @@ void main() {
     });
 
     testWidgets('Memory usage test for long-running app session', (WidgetTester tester) async {
-      // TODO: Implement long-running session memory test
+      // TODO(developer): Implement long-running session memory test
       // This should test:
       // 1. Memory growth over time
       // 2. Garbage collection effectiveness

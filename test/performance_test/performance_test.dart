@@ -2,7 +2,6 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
@@ -16,7 +15,7 @@ void main() {
 
   group('Performance Tests', () {
     testWidgets('Performance test for chat input bar rendering', (WidgetTester tester) async {
-      // TODO: Implement rendering performance test
+      // TODO(developer): Implement rendering performance test
       // This should test:
       // 1. Widget build time
       // 2. Frame rate during interactions
@@ -26,7 +25,7 @@ void main() {
       final stopwatch = Stopwatch()..start();
       
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -41,7 +40,7 @@ void main() {
     });
 
     testWidgets('Performance test for text input responsiveness', (WidgetTester tester) async {
-      // TODO: Implement text input performance test
+      // TODO(developer): Implement text input performance test
       // This should test:
       // 1. Text input latency
       // 2. Typing performance
@@ -49,7 +48,7 @@ void main() {
       // 4. State change responsiveness
       
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -72,7 +71,7 @@ void main() {
     });
 
     testWidgets('Performance test for large message list scrolling', (WidgetTester tester) async {
-      // TODO: Implement scrolling performance test
+      // TODO(developer): Implement scrolling performance test
       // This should test:
       // 1. Scroll frame rate
       // 2. List view performance
@@ -85,7 +84,7 @@ void main() {
       final stopwatch = Stopwatch()..start();
       
       // Placeholder scrolling test
-      // TODO: Implement actual scrolling performance test with large message list
+      // TODO(developer): Implement actual scrolling performance test with large message list
       await tester.pump();
       
       stopwatch.stop();
@@ -96,7 +95,7 @@ void main() {
     });
 
     testWidgets('Performance test for image loading and caching', (WidgetTester tester) async {
-      // TODO: Implement image performance test
+      // TODO(developer): Implement image performance test
       // This should test:
       // 1. Image loading time
       // 2. Cache hit/miss performance
@@ -104,7 +103,7 @@ void main() {
       // 4. Image rendering performance
       
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -114,7 +113,7 @@ void main() {
       final stopwatch = Stopwatch()..start();
       
       // Placeholder image loading test
-      // TODO: Implement actual image loading performance test
+      // TODO(developer): Implement actual image loading performance test
       await tester.pump();
       
       stopwatch.stop();
@@ -125,7 +124,7 @@ void main() {
     });
 
     testWidgets('Performance test for database operations', (WidgetTester tester) async {
-      // TODO: Implement database performance test
+      // TODO(developer): Implement database performance test
       // This should test:
       // 1. Database query performance
       // 2. Insert/update/delete performance
@@ -138,7 +137,7 @@ void main() {
       final stopwatch = Stopwatch()..start();
       
       // Placeholder database performance test
-      // TODO: Implement actual database performance test
+      // TODO(developer): Implement actual database performance test
       await tester.pump();
       
       stopwatch.stop();
@@ -149,7 +148,7 @@ void main() {
     });
 
     testWidgets('Performance test for network operations', (WidgetTester tester) async {
-      // TODO: Implement network performance test
+      // TODO(developer): Implement network performance test
       // This should test:
       // 1. API response times
       // 2. WebSocket message latency
@@ -162,7 +161,7 @@ void main() {
       final stopwatch = Stopwatch()..start();
       
       // Placeholder network performance test
-      // TODO: Implement actual network performance test
+      // TODO(developer): Implement actual network performance test
       await tester.pump();
       
       stopwatch.stop();
@@ -173,7 +172,7 @@ void main() {
     });
 
     testWidgets('Performance test for provider state updates', (WidgetTester tester) async {
-      // TODO: Implement provider performance test
+      // TODO(developer): Implement provider performance test
       // This should test:
       // 1. Provider rebuild performance
       // 2. State update latency
@@ -181,7 +180,7 @@ void main() {
       // 4. Provider dependency resolution
       
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -204,7 +203,7 @@ void main() {
     });
 
     testWidgets('Performance test for app startup time', (WidgetTester tester) async {
-      // TODO: Implement startup performance test
+      // TODO(developer): Implement startup performance test
       // This should test:
       // 1. App initialization time
       // 2. First frame render time

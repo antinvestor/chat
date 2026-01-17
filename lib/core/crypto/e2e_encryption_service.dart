@@ -26,7 +26,9 @@ class E2EEncryptionService {
 
   /// Initialize the encryption service
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      return;
+    }
 
     try {
       AppLogger.info('Initializing E2E encryption service');
@@ -286,7 +288,9 @@ class E2EEncryptionService {
 
   Future<void> _saveSession(String sessionId) async {
     final session = _sessions[sessionId];
-    if (session == null) return;
+    if (session == null) {
+      return;
+    }
 
     await _database
         .into(_database.sessions)

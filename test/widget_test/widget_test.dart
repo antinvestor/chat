@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,7 +25,7 @@ void main() {
   testWidgets('Chat input bar widget test', (WidgetTester tester) async {
     // Build just the chat input bar widget with mocked providers
     await tester.pumpWidgetWithMocks(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: ChatInputBar(roomId: 'test-room-123', roomName: 'Test Room'),
         ),
@@ -59,7 +58,7 @@ void main() {
 
   testWidgets('Chat input bar attachment options', (WidgetTester tester) async {
     await tester.pumpWidgetWithMocks(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: ChatInputBar(roomId: 'test-room-456', roomName: 'Test Room'),
         ),
@@ -84,7 +83,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidgetWithMocks(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: ChatInputBar(roomId: 'test-room-789', roomName: 'Test Room'),
         ),

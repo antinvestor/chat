@@ -32,9 +32,7 @@ class AuthChangeNotifier extends ChangeNotifier {
 
 /// Provider for the auth change notifier
 @riverpod
-AuthChangeNotifier authChangeNotifier(Ref ref) {
-  return AuthChangeNotifier(ref);
-}
+AuthChangeNotifier authChangeNotifier(Ref ref) => AuthChangeNotifier(ref);
 
 @riverpod
 GoRouter router(Ref ref) {

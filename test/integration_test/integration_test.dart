@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chat/main.dart';
@@ -13,7 +12,7 @@ void main() {
 
   group('Integration Tests', () {
     testWidgets('Complete message flow integration test', (WidgetTester tester) async {
-      // TODO: Implement complete message flow test
+      // TODO(developer): Implement complete message flow test
       // This should test the entire flow from:
       // 1. App startup
       // 2. Authentication (if needed)
@@ -30,7 +29,7 @@ void main() {
     });
 
     testWidgets('Authentication flow integration test', (WidgetTester tester) async {
-      // TODO: Implement authentication flow test
+      // TODO(developer): Implement authentication flow test
       // This should test:
       // 1. Login screen
       // 2. OAuth integration
@@ -46,7 +45,7 @@ void main() {
     });
 
     testWidgets('Real-time messaging integration test', (WidgetTester tester) async {
-      // TODO: Implement real-time messaging test
+      // TODO(developer): Implement real-time messaging test
       // This should test:
       // 1. WebSocket connection
       // 2. Message broadcasting
@@ -62,7 +61,7 @@ void main() {
     });
 
     testWidgets('File sharing integration test', (WidgetTester tester) async {
-      // TODO: Implement file sharing test
+      // TODO(developer): Implement file sharing test
       // This should test:
       // 1. Image capture from camera
       // 2. Image selection from gallery
@@ -79,7 +78,7 @@ void main() {
     });
 
     testWidgets('Database integration test', (WidgetTester tester) async {
-      // TODO: Implement database integration test
+      // TODO(developer): Implement database integration test
       // This should test:
       // 1. Local database initialization
       // 2. Message persistence
@@ -95,7 +94,7 @@ void main() {
     });
 
     testWidgets('Push notifications integration test', (WidgetTester tester) async {
-      // TODO: Implement push notifications test
+      // TODO(developer): Implement push notifications test
       // This should test:
       // 1. Permission handling
       // 2. Token registration
@@ -111,7 +110,7 @@ void main() {
     });
 
     testWidgets('Cross-platform integration test', (WidgetTester tester) async {
-      // TODO: Implement cross-platform test
+      // TODO(developer): Implement cross-platform test
       // This should test:
       // 1. Platform-specific features
       // 2. File system access
@@ -127,7 +126,7 @@ void main() {
     });
 
     testWidgets('Error handling integration test', (WidgetTester tester) async {
-      // TODO: Implement error handling test
+      // TODO(developer): Implement error handling test
       // This should test:
       // 1. Network connectivity issues
       // 2. Server errors

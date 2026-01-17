@@ -32,7 +32,7 @@ class SecureStorageTokenProvider implements TokenProvider {
 
   @override
   Future<String?> getAccessToken() async {
-    return await _storage.read(key: 'access_token');
+    return _storage.read(key: 'access_token');
   }
 
   @override
@@ -47,10 +47,10 @@ class SecureStorageTokenProvider implements TokenProvider {
   Future<String?> ensureValidAccessToken() async {
     final callback = _ensureValidToken;
     if (callback != null) {
-      return await callback();
+      return callback();
     }
     // Fallback: just return current token
-    return await getAccessToken();
+    return getAccessToken();
   }
 }
 

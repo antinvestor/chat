@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
-import 'package:chat/main.dart';
 import '../test_helpers/test_helpers.dart';
 
 void main() {
@@ -16,7 +13,7 @@ void main() {
   group('Accessibility Tests', () {
     testWidgets('Chat input bar has proper semantic labels', (WidgetTester tester) async {
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -61,7 +58,7 @@ void main() {
 
     testWidgets('Chat input bar supports accessibility navigation', (WidgetTester tester) async {
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
@@ -81,62 +78,62 @@ void main() {
       expect(textField, findsOneWidget);
       expect(micButton, findsOneWidget);
 
-      // TODO: Add actual accessibility navigation tests
+      // TODO(developer): Add actual accessibility navigation tests
       // This is a placeholder for comprehensive accessibility testing
     });
 
     testWidgets('Chat input bar has proper contrast ratios', (WidgetTester tester) async {
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
         ),
       );
 
-      // TODO: Add contrast ratio testing
+      // TODO(developer): Add contrast ratio testing
       // This is a placeholder for contrast ratio accessibility tests
       // Should verify that text and background colors meet WCAG AA standards
     });
 
     testWidgets('Chat input bar works with screen readers', (WidgetTester tester) async {
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
         ),
       );
 
-      // TODO: Add screen reader compatibility tests
+      // TODO(developer): Add screen reader compatibility tests
       // This is a placeholder for screen reader testing
       // Should verify that all interactive elements announce their purpose
     });
 
     testWidgets('Chat input bar supports keyboard navigation', (WidgetTester tester) async {
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
         ),
       );
 
-      // TODO: Add keyboard navigation tests
+      // TODO(developer): Add keyboard navigation tests
       // This is a placeholder for keyboard accessibility testing
       // Should verify that all interactive elements can be accessed via keyboard
     });
 
     testWidgets('Chat input bar has proper touch target sizes', (WidgetTester tester) async {
       await tester.pumpWidgetWithMocks(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
           ),
         ),
       );
 
-      // TODO: Add touch target size testing
+      // TODO(developer): Add touch target size testing
       // This is a placeholder for touch target accessibility tests
       // Should verify that all touch targets meet minimum size requirements (44x44 points)
     });
