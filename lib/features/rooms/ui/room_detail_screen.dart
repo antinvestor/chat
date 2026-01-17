@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/responsive/responsive_layout.dart';
 import '../../../core/navigation/navigation_helper.dart';
+import '../../../core/responsive/responsive_layout.dart';
 import 'room_detail_panel.dart';
 
 /// Room detail screen showing full room information

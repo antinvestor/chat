@@ -1,10 +1,9 @@
 import 'dart:async';
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    as common_types;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/data/message_repository.dart';
@@ -16,6 +15,9 @@ import '../logging/app_logger.dart';
 import '../networking/client.dart';
 import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
+
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    as common_types;
 
 final pendingJobRepositoryProvider = Provider<PendingJobRepository>((ref) {
   return PendingJobRepository(AppDatabase.instance);

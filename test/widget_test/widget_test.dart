@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/widgets.dart';
 
-import 'package:chat/main.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
+import 'package:chat/main.dart';
 import '../test_helpers/test_helpers.dart';
 
 void main() {

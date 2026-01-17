@@ -1,14 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../messages/domain/room_event.dart' as domain;
 import '../data/chat_input_providers.dart';
 import '../data/message_providers.dart';
-import '../../messages/domain/room_event.dart' as domain;
 
 /// WhatsApp-style chat input bar with proper Riverpod/state separation
 class ChatInputBar extends ConsumerStatefulWidget {

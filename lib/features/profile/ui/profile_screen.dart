@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/database.dart';
-import '../data/profile_providers.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../rooms/data/room_providers.dart';
+import '../data/profile_providers.dart';
 
 /// Profile details screen showing user information
 class ProfileScreen extends ConsumerWidget {

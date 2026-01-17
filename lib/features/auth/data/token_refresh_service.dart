@@ -1,13 +1,15 @@
 import 'dart:async';
 
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenRefreshResult;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
 import 'auth_repository.dart';
 import 'auth_state_provider.dart';
+
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
+
 
 part 'token_refresh_service.g.dart';
 

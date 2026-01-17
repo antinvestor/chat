@@ -1,5 +1,7 @@
 // Simple verification script to test the foreign key constraint fix
+
 import 'dart:io';
+
 import 'package:chat/core/db/database.dart';
 import 'package:chat/core/logging/app_logger.dart';
 

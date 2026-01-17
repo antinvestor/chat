@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/navigation/navigation_helper.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/settings_providers.dart';
 
 class ChatSettingsScreen extends ConsumerStatefulWidget {

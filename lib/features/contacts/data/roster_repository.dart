@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
+
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart' as pb;
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;

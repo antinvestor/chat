@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../domain/room_with_last_message.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/navigation/navigation_helper.dart';
+import '../../../core/theme/app_theme.dart';
+import '../domain/room_with_last_message.dart';
 
 class RoomListTile extends StatelessWidget {
   final RoomWithLastMessage room;

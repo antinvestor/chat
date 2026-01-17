@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/navigation/navigation_helper.dart';
+import '../../messages/domain/room_event.dart';
 import '../data/detail_panel_providers.dart';
 import '../data/room_providers.dart';
-import '../../messages/domain/room_event.dart';
-import '../../../core/navigation/navigation_helper.dart';
 
 /// Room detail panel showing room information, motions, transactions, and media
 /// Displayed in the right panel on desktop layouts

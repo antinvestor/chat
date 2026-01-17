@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/navigation/navigation_helper.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/data/user_info_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {

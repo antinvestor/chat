@@ -2,29 +2,30 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:xid/xid.dart';
 
+import '../../../core/logging/app_logger.dart';
+import '../../../core/navigation/navigation_helper.dart';
+import '../../../core/sync/sync_engine.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../advanced/ui/motion_bubble.dart';
-import '../services/voice_recording_service.dart';
 import '../../advanced/ui/transaction_bubble.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
-import '../../../core/logging/app_logger.dart';
-import '../../../core/sync/sync_engine.dart';
-import '../../../core/theme/app_theme.dart';
 import '../data/message_providers.dart';
-import '../data/typing_provider.dart';
 import '../data/message_sending_service.dart';
+import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
-import 'message_bubble.dart';
-import 'input_bar.dart';
+import '../services/voice_recording_service.dart';
 import 'date_header.dart';
-import '../../../core/navigation/navigation_helper.dart';
+import 'input_bar.dart';
+import 'message_bubble.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String roomId;
