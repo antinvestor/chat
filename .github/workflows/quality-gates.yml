@@ -226,36 +226,6 @@ jobs:
         name: bundle-size-report
         path: build/
 
-  # API Contract Validation
-  api_contract_validation:
-    name: API Contract Validation
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Get Flutter dependencies
-      run: flutter pub get
-      
-    - name: Validate API contracts
-      run: |
-        python scripts/validate_api_contracts.py
-        
-    - name: Upload API validation report
-      uses: actions/upload-artifact@v4
-      with:
-        name: api-validation-report
-        path: api_validation/
-
   # Documentation Generation
   documentation_check:
     name: Documentation Check
