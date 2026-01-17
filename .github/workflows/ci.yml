@@ -75,7 +75,7 @@ jobs:
         dart run build_runner build --delete-conflicting-outputs
         
     - name: Run unit tests
-      run: flutter test --coverage --test-randomization-ordering-seed=random
+      run: flutter test --coverage --test-randomize-ordering-seed=random
       
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4

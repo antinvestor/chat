@@ -27,7 +27,7 @@ echo "🛡️  Running security checks..."
 
 # Check for hardcoded secrets (excluding legitimate token management)
 echo "  Checking for hardcoded secrets..."
-if grep -r -i "password\|secret\|api_key\|token" lib/ --include="*.dart" | grep -v "//.*password\|//.*secret\|//.*api_key\|//.*token" | grep -v "_cachedToken\|getAccessToken\|refreshToken\|access_token\|id_token\|TokenManager\|TokenProvider\|token.*=" > security_reports/hardcoded_secrets.txt 2>/dev/null; then
+if grep -r -i "password\|secret\|api_key\|token" lib/ --include="*.dart" | grep -v "//.*password\|//.*secret\|//.*api_key\|//.*token" | grep -v "_cachedToken\|getAccessToken\|refreshToken\|access_token\|id_token\|TokenManager\|TokenProvider\|onTokenExpired\|ensureValidAccessToken\|Authorization.*Bearer.*token" > security_reports/hardcoded_secrets.txt 2>/dev/null; then
     echo "  ⚠️  Potential hardcoded secrets found"
     cat security_reports/hardcoded_secrets.txt | head -5
 else
