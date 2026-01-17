@@ -1,5 +1,9 @@
 name: chat
-description: "automated and secure group credit & savings"
+description: "Secure group credit and savings management application with end-to-end encryption, real-time messaging, and comprehensive financial tracking features. Built with Flutter for cross-platform mobile experiences."
+homepage: "https://github.com/antinvestor/chat"
+repository: "https://github.com/antinvestor/chat"
+issue_tracker: "https://github.com/antinvestor/chat/issues"
+documentation: "https://github.com/antinvestor/chat/blob/main/README.md"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
