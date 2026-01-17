@@ -4,11 +4,21 @@ import 'package:drift_flutter/drift_flutter.dart';
 part 'database.g.dart';
 
 // Table definitions
+/// Profile table stores user profile information
 class Profiles extends Table {
+  /// Profile ID
   TextColumn get id => text()();
+  
+  /// Profile name
   TextColumn get name => text().nullable()();
+  
+  /// Profile avatar URL
   TextColumn get avatarUrl => text().nullable()();
+  
+  /// Last updated timestamp
   IntColumn get updatedAt => integer().nullable()();
+  
+  /// Profile metadata
   TextColumn get metadata => text().nullable()();
 
   @override
@@ -22,19 +32,40 @@ class Profiles extends Table {
 /// - contactId: Contact's unique identifier from server (available after successful sync)
 /// - contactDetail: Email/phone number as stored locally for display
 class Roster extends Table {
-  TextColumn get id => text()(); // Stable local UUID
+  /// Stable local UUID
+  TextColumn get id => text()();
+  
+  /// Server roster entry ID (synced)
   TextColumn get rosterId =>
-      text().nullable()(); // Server roster entry ID (synced)
+      text().nullable()();
+  
+  /// Null if user hasn't logged in yet
   TextColumn get profileId =>
-      text().nullable()(); // Null if user hasn't logged in yet
+      text().nullable()();
+  
+  /// Contact's unique ID from server
   TextColumn get contactId =>
-      text().nullable()(); // Contact's unique ID from server
+      text().nullable()();
+  
+  /// Contact type (0=regular, 1=blocked, etc.)
   IntColumn get contactType => integer().withDefault(const Constant(0))();
+  
+  /// Email/phone number for display
   TextColumn get contactDetail => text()();
+  
+  /// Whether contact is verified
   BoolColumn get isVerified => boolean().withDefault(const Constant(false))();
+  
+  /// Display name for contact
   TextColumn get displayName => text().nullable()();
+  
+  /// Whether contact is blocked
   BoolColumn get isBlocked => boolean().withDefault(const Constant(false))();
+  
+  /// Last sync timestamp
   IntColumn get syncedAt => integer().nullable()();
+  
+  /// Creation timestamp
   IntColumn get createdAt => integer().nullable()();
 
   @override
@@ -167,11 +198,8 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 2;
 
   @override
-  MigrationStrategy get migration {
-    return MigrationStrategy(
-      onCreate: (Migrator m) async {
-        await m.createAll();
-      },
+  MigrationStrategy get migration => MigrationStrategy(
+      onCreate: (Migrator m) async => m.createAll(),
       onUpgrade: (Migrator m, int from, int to) async {
         if (from <= 1) {
           // Migration from v1 to v2: Add rosterId column and convert existing IDs to stable local UUIDs

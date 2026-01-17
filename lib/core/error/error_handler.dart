@@ -34,7 +34,6 @@ class ErrorHandler {
                   onPressed: onRetry,
                 )
               : null,
-          duration: const Duration(seconds: 4),
         ),
       );
     }

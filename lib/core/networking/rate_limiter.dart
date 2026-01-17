@@ -110,14 +110,12 @@ class RateLimiters {
   /// 100 requests per minute (aggressive use)
   static final chat = RateLimiter(
     maxRequests: 100,
-    windowDuration: const Duration(minutes: 1),
   );
 
   /// Rate limiter for gateway service (streaming)
   /// More lenient since it's used for real-time sync
   static final gateway = RateLimiter(
     maxRequests: 200,
-    windowDuration: const Duration(minutes: 1),
   );
 
   /// Rate limiter for profile service

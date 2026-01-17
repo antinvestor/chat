@@ -2,16 +2,16 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Simplified KeyManager for E2EE
-/// Note: vodozemac integration will be implemented when API is stable
+/// Manages cryptographic keys for secure messaging
 class KeyManager {
   final FlutterSecureStorage _storage;
 
-  // Placeholder for account state
   String? _identityKey;
 
+  /// Creates a key manager
   KeyManager(this._storage);
 
+  /// Initialize the key manager
   Future<void> init() async {
     // Try to load from storage
     final key = await _storage.read(key: 'identity_key');
@@ -24,25 +24,22 @@ class KeyManager {
     }
   }
 
+  /// Gets the current identity key
   String get identityKey => _identityKey ?? '';
 
-  // Helper to get public bundle to upload
-  Map<String, dynamic> getPublicBundle() {
-    return {'identity_key': _identityKey, 'curve25519_key': _identityKey};
-  }
+  /// Helper to get public bundle to upload
+  Map<String, dynamic> getPublicBundle() =>
+      {'identity_key': _identityKey, 'curve25519_key': _identityKey};
 
-  // Placeholder encryption/decryption methods
-  Future<String> encrypt(String plaintext, String recipientKey) async {
-    // Note: Olm encryption will be implemented when vodozemac API is stable
-    return base64Encode(utf8.encode(plaintext));
-  }
+  /// Placeholder encryption method
+  Future<String> encrypt(String plaintext, String recipientKey) async =>
+      base64Encode(utf8.encode(plaintext));
 
-  Future<String> decrypt(String ciphertext, String senderKey) async {
-    // Note: Olm decryption will be implemented when vodozemac API is stable
-    return utf8.decode(base64Decode(ciphertext));
-  }
+  /// Placeholder decryption method
+  Future<String> decrypt(String ciphertext, String senderKey) async =>
+      utf8.decode(base64Decode(ciphertext));
 
-  Future<String> getDeviceId() async {
+  /// Gets the device ID for this installation
     var deviceId = await _storage.read(key: 'device_id');
     if (deviceId == null) {
       deviceId = 'flutter_device_${DateTime.now().millisecondsSinceEpoch}';

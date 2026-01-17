@@ -17,11 +17,22 @@ class E2EEncryptionService {
   final Random _random = Random.secure();
 
   String? _identityKey;
+  /// E2E encryption service for end-to-end encrypted messaging
+/// 
+/// This service provides X25519 key exchange and double ratchet encryption
+/// for secure group conversations without a central server
+class E2EEncryptionService {
+  final FlutterSecureStorage _storage;
+  final AppDatabase _database;
+  final Random _random = Random.secure();
+
+  String? _identityKey;
   final Map<String, _SessionState> _sessions = {};
   final Map<String, GroupSessionState> _groupSessions = {};
 
   bool _isInitialized = false;
 
+  /// Creates an E2E encryption service
   E2EEncryptionService(this._storage, this._database);
 
   /// Initialize the encryption service
@@ -236,9 +247,8 @@ class E2EEncryptionService {
   }
 
   /// Decrypt arbitrary data
-  Future<Uint8List> decryptData(EncryptedData encryptedData) async {
-    return _xorEncrypt(encryptedData.data, utf8.encode(encryptedData.key));
-  }
+  Future<Uint8List> decryptData(EncryptedData encryptedData) async =>
+      _xorEncrypt(encryptedData.data, utf8.encode(encryptedData.key));
 
   // Private helper methods
 
@@ -316,7 +326,9 @@ class E2EEncryptionService {
 
   Future<void> _saveGroupSession(String roomId) async {
     final session = _groupSessions[roomId];
-    if (session == null) return;
+    if (session == null) {
+      return;
+    }
 
     await _storage.write(
       key: 'group_session_$roomId',
@@ -371,6 +383,8 @@ class E2EEncryptionService {
 }
 
 class _SessionState {
+  final String sessionId;
+  class _SessionState {
   final String sessionId;
   final String sharedKey;
   int messageIndex;

@@ -22,6 +22,7 @@ part 'router.g.dart';
 
 /// Notifier that triggers router refresh when auth state changes
 class AuthChangeNotifier extends ChangeNotifier {
+  /// Creates an auth change notifier
   AuthChangeNotifier(Ref ref) {
     // Listen to auth state changes and notify router to re-evaluate redirects
     ref.listen(authStateProvider, (previous, next) {
@@ -34,6 +35,7 @@ class AuthChangeNotifier extends ChangeNotifier {
 @riverpod
 AuthChangeNotifier authChangeNotifier(Ref ref) => AuthChangeNotifier(ref);
 
+/// Creates the app router with authentication-aware redirects
 @riverpod
 GoRouter router(Ref ref) {
   final authRepository = ref.watch(authRepositoryProvider);
