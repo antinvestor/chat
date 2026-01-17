@@ -73,7 +73,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
           AppLogger.debug('SyncEngine: TokenManager updated with new token');
         }
         return newToken;
-      } catch (e, st) {
+      } on Exception catch (e, st) {
         AppLogger.error(
           'SyncEngine: Token refresh failed with exception',
           error: e,
@@ -386,13 +386,11 @@ class SyncEngine {
   }
 
   /// Check if this is a normal/expected disconnection (not a real error)
-  bool _isNormalDisconnect(String errorStr) {
-    return errorStr.contains('connection closed') ||
+  bool _isNormalDisconnect(String errorStr) => errorStr.contains('connection closed') ||
         errorStr.contains('stream was reset') ||
         errorStr.contains('connection reset') ||
         errorStr.contains('eof') ||
         errorStr.contains('cancelled');
-  }
 
   /// Check if an error is an authentication/authorization error
   bool _isAuthenticationError(String errorStr) {
@@ -540,13 +538,10 @@ class SyncEngine {
     }
   }
 
-  bool _isCallEvent(domain.RoomEventType type) {
-    // All call events are now handled as a single type in the new API
-    return type == domain.RoomEventType.callOffer ||
+  bool _isCallEvent(domain.RoomEventType type) => type == domain.RoomEventType.callOffer ||
         type == domain.RoomEventType.callAnswer ||
         type == domain.RoomEventType.callIce ||
         type == domain.RoomEventType.callEnd;
-  }
 
   /// Process system events that don't have roomId (like auth events, token refresh, etc.)
   Future<void> _processSystemEvent(pb.RoomEvent event) async {
@@ -1170,9 +1165,8 @@ class SyncEngine {
   ///
   /// @param roomId Optional room filter
   /// @return List of anonymous subscriptions
-  Future<List<RoomMember>> getAnonymousSubscriptions({String? roomId}) async {
-    return await _subscriptionService.getAnonymousSubscriptions(roomId: roomId);
-  }
+  Future<List<RoomMember>> getAnonymousSubscriptions({String? roomId}) async =>
+      _subscriptionService.getAnonymousSubscriptions(roomId: roomId);
 
   /// Send typing event to server
   Future<void> sendTyping(String roomId, bool isTyping) async {
