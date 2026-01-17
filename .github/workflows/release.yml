@@ -1,0 +1,337 @@
+name: Release Management
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  FLUTTER_VERSION: '3.19.0'
+
+jobs:
+  # Create Release
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Extract version
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "release_name=Chat App v$VERSION" >> $GITHUB_OUTPUT
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ steps.version.outputs.release_name }}
+        body: |
+          ## Chat App v${{ steps.version.outputs.version }}
+          
+          ### 🚀 Features
+          <!-- Add features here -->
+          
+          ### 🐛 Bug Fixes
+          <!-- Add bug fixes here -->
+          
+          ### 🔧 Improvements
+          <!-- Add improvements here -->
+          
+          ### 📱 Downloads
+          - Android: [APK](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/chat-v${{ steps.version.outputs.version }}-android.apk)
+          - iOS: Available on TestFlight
+          - Web: [Live Demo](https://chat.antinvestor.com)
+          
+          ### 🔐 Security
+          - All features include end-to-end encryption
+          - Certificate pinning enabled
+          - Biometric authentication available
+          
+          ### 📋 Installation
+          
+          **Android:**
+          1. Download the APK below
+          2. Enable "Install from unknown sources"
+          3. Install the APK
+          
+          **iOS:**
+          1. Join TestFlight program
+          2. Install from TestFlight
+          
+          **Web:**
+          1. Visit [chat.antinvestor.com](https://chat.antinvestor.com)
+          2. Login or create account
+          
+          ---
+          
+          📖 [Full Documentation](https://docs.antinvestor.com/chat)
+          🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
+          💬 [Discord Community](https://discord.gg/antinvestor)
+        draft: false
+        prerelease: false
+
+  # Build Release Artifacts
+  build_release:
+    name: Build Release Artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: create_release
+    strategy:
+      matrix:
+        platform: [android, ios, web, windows, linux, macos]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get Flutter dependencies
+      run: flutter pub get
+      
+    - name: Generate code
+      run: |
+        flutter packages pub run build_runner build --delete-conflicting-outputs
+        
+    - name: Build Android Release
+      if: matrix.platform == 'android'
+      run: |
+        flutter build apk --release --shrink
+        flutter build appbundle --release
+        
+    - name: Build iOS Release
+      if: matrix.platform == 'ios'
+      run: |
+        flutter build ios --release --no-codesign
+        mkdir -p build/ios/ipa
+        cp -r build/ios/iphoneos/Runner.app build/ios/ipa/
+        cd build/ios/ipa
+        zip -r Runner.ipa Runner.app
+        
+    - name: Build Web Release
+      if: matrix.platform == 'web'
+      run: |
+        flutter build web --release --web-renderer canvaskit
+        cd build/web
+        zip -r web-release.zip .
+        
+    - name: Build Windows Release
+      if: matrix.platform == 'windows'
+      run: |
+        flutter build windows --release
+        cd build/windows/runner/Release
+        zip -r chat-windows.zip .
+        
+    - name: Build Linux Release
+      if: matrix.platform == 'linux'
+      run: |
+        flutter build linux --release
+        cd build/linux/x64/release/bundle
+        tar -czf chat-linux.tar.gz .
+        
+    - name: Build macOS Release
+      if: matrix.platform == 'macos'
+      run: |
+        flutter build macos --release
+        cd build/macos/Build/Products/Release
+        zip -r chat-macos.zip Chat.app
+        
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create_release.outputs.upload_url }}
+        asset_path: |
+          ${{ matrix.platform == 'android' && 'build/app/outputs/flutter-apk/app-release.apk' }}
+          ${{ matrix.platform == 'android' && 'build/app/outputs/bundle/release/app-release.aab' }}
+          ${{ matrix.platform == 'ios' && 'build/ios/ipa/Runner.ipa' }}
+          ${{ matrix.platform == 'web' && 'build/web/web-release.zip' }}
+          ${{ matrix.platform == 'windows' && 'build/windows/runner/Release/chat-windows.zip' }}
+          ${{ matrix.platform == 'linux' && 'build/linux/x64/release/bundle/chat-linux.tar.gz' }}
+          ${{ matrix.platform == 'macos' && 'build/macos/Build/Products/Release/chat-macos.zip' }}
+        asset_name: |
+          ${{ matrix.platform == 'android' && 'chat-v${{ github.ref_name }}-android.apk' }}
+          ${{ matrix.platform == 'android' && 'chat-v${{ github.ref_name }}-android.aab' }}
+          ${{ matrix.platform == 'ios' && 'chat-v${{ github.ref_name }}-ios.ipa' }}
+          ${{ matrix.platform == 'web' && 'chat-v${{ github.ref_name }}-web.zip' }}
+          ${{ matrix.platform == 'windows' && 'chat-v${{ github.ref_name }}-windows.zip' }}
+          ${{ matrix.platform == 'linux' && 'chat-v${{ github.ref_name }}-linux.tar.gz' }}
+          ${{ matrix.platform == 'macos' && 'chat-v${{ github.ref_name }}-macos.zip' }}
+        asset_content_type: |
+          ${{ matrix.platform == 'android' && 'application/vnd.android.package-archive' }}
+          ${{ matrix.platform == 'android' && 'application/octet-stream' }}
+          ${{ matrix.platform == 'ios' && 'application/octet-stream' }}
+          ${{ matrix.platform == 'web' && 'application/zip' }}
+          ${{ matrix.platform == 'windows' && 'application/zip' }}
+          ${{ matrix.platform == 'linux' && 'application/gzip' }}
+          ${{ matrix.platform == 'macos' && 'application/zip' }}
+
+  # Deploy to Stores
+  deploy_stores:
+    name: Deploy to App Stores
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [create_release, build_release]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download Android App Bundle
+      uses: actions/download-artifact@v4
+      with:
+        name: android-appbundle
+        path: artifacts/
+        
+    - name: Download iOS IPA
+      uses: actions/download-artifact@v4
+      with:
+        name: ios-ipa
+        path: artifacts/
+        
+    - name: Deploy to Google Play Console
+      uses: r0adkll/upload-google-play@v1
+      with:
+        serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+        packageName: com.antinvestor.chat
+        releaseFiles: artifacts/app-release.aab
+        track: production
+        status: completed
+        whatsNewDirectory: fastlane/metadata/android
+        
+    - name: Deploy to App Store Connect
+      uses: apple-actions/upload-testflight-build@v1
+      with:
+        app-path: artifacts/Runner.ipa
+        apple-id: ${{ secrets.APPLE_ID }}
+        issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
+        key-id: ${{ secrets.APPLE_KEY_ID }}
+        key: ${{ secrets.APPLE_KEY }}
+
+  # Update Documentation
+  update_docs:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [create_release, build_release]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Get Flutter dependencies
+      run: flutter pub get
+      
+    - name: Generate documentation
+      run: |
+        dart doc
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./doc/api
+        destination_dir: api
+        
+    - name: Update API Documentation
+      run: |
+        # Update API docs on external site
+        curl -X POST "https://docs.antinvestor.com/api/update" \
+          -H "Authorization: Bearer ${{ secrets.DOCS_API_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{"version": "${{ github.ref_name }}", "app": "chat"}'
+
+  # Notify Teams
+  notify_teams:
+    name: Notify Teams
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [create_release, deploy_stores]
+    
+    steps:
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#releases'
+        text: |
+          🚀 Chat App v${{ github.ref_name }} has been released!
+          
+          📱 Downloads:
+          - Android: Available on Google Play
+          - iOS: Available on App Store
+          - Web: Live at https://chat.antinvestor.com
+          
+          📋 Release Notes: https://github.com/${{ github.repository }}/releases/tag/v${{ github.ref_name }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: Notify Discord
+      uses: Ilshidur/action-discord@master
+      with:
+        args: |
+          🚀 **Chat App v${{ github.ref_name }} Released!**
+          
+          📱 **Available on:**
+          - Google Play Store
+          - Apple App Store  
+          - Web: https://chat.antinvestor.com
+          
+          📋 [Release Notes](https://github.com/${{ github.repository }}/releases/tag/v${{ github.ref_name }})
+          🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        
+    - name: Send Email Notification
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "Chat App v${{ github.ref_name }} Released"
+        body: |
+          Hello,
+          
+          Chat App v${{ github.ref_name }} has been successfully released!
+          
+          What's new:
+          - Check the release notes for details
+          - All platforms are now updated
+          
+          Download links:
+          - Android: Google Play Store
+          - iOS: App Store
+          - Web: https://chat.antinvestor.com
+          
+          Best regards,
+          Chat App Team
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: Chat App Team
