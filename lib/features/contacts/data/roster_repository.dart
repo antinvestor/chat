@@ -29,19 +29,13 @@ final _emailRegex = RegExp(
 
 /// Validate email format with thorough checking
 bool isValidEmail(String email) {
-  if (email.isEmpty) {
-    return false;
-  }
+  if (email.isEmpty) return false;
 
   final normalized = email.toLowerCase().trim();
 
   // Basic length checks
-  if (normalized.length < 5) {
-    return false; // a@b.c minimum
-  }
-  if (normalized.length > 254) {
-    return false; // RFC 5321 limit
-  }
+  if (normalized.length < 5) return false; // a@b.c minimum
+  if (normalized.length > 254) return false; // RFC 5321 limit
 
   // Must contain exactly one @
   final atIndex = normalized.indexOf('@');

@@ -414,7 +414,7 @@ class SyncEngine {
   }
 
   Duration _getBackoffDelay() {
-    final delay = _initialBackoffMs * (1 << _reconnectAttempts);
+    int delay = _initialBackoffMs * (1 << _reconnectAttempts);
     if (delay > _maxBackoffMs) {
       delay = _maxBackoffMs;
     }
@@ -468,7 +468,7 @@ class SyncEngine {
     }
 
     // Extract content from typed payload fields
-    final content = <String, dynamic>{};
+    Map<String, dynamic> content = {};
     if (event.hasPayload()) {
       final payload = event.payload;
       if (payload.hasText()) {

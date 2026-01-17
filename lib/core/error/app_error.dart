@@ -23,9 +23,7 @@ class AppError {
 
   /// Create error from exception
   factory AppError.fromException(dynamic error, [StackTrace? stack]) {
-    if (error is AppError) {
-      return error;
-    }
+    if (error is AppError) return error;
 
     // Network errors
     if (error.toString().contains('SocketException') ||
