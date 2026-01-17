@@ -18,6 +18,10 @@ class SettingsScreen extends ConsumerWidget {
         backgroundColor: AppTheme.primaryGreen,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.navigateBack(),
+        ),
       ),
       body: Column(
         children: [
