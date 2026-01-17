@@ -337,7 +337,7 @@ jobs:
         dart run build_runner build --delete-conflicting-outputs
         
     - name: Run performance tests
-      run: flutter test --profile test/performance_test/
+      run: flutter test test/performance_test/
       
     - name: Upload performance results
       uses: actions/upload-artifact@v4

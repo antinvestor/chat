@@ -78,7 +78,7 @@ jobs:
         
     - name: Run performance benchmarks
       run: |
-        flutter test --profile test/performance_test/ --reporter=expanded
+        flutter test test/performance_test/ --reporter=expanded
         
     - name: Check performance thresholds
       run: |
@@ -117,7 +117,7 @@ jobs:
         
     - name: Run memory leak tests
       run: |
-        flutter test --profile test/memory_test/ --timeout=600s
+        flutter test test/memory_test/ --timeout=600s
         
     - name: Analyze memory usage
       run: |

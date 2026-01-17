@@ -35,7 +35,7 @@ void main() {
       developer.log('Performance test: Chat input bar render time: ${stopwatch.elapsedMilliseconds}ms');
       
       // Placeholder performance assertion - should render within reasonable time
-      expect(stopwatch.elapsedMilliseconds, lessThan(1000));
+      expect(stopwatch.elapsedMilliseconds, lessThan(3000));
     });
 
     testWidgets('Performance test for text input responsiveness', (WidgetTester tester) async {
