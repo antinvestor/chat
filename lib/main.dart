@@ -67,17 +67,17 @@ void main() async {
     data: {'backgroundSyncRegistered': isMobile},
   );
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(const ProviderScope(child: ChatApp()));
 }
 
-class MyApp extends ConsumerStatefulWidget {
-  const MyApp({super.key});
+class ChatApp extends ConsumerStatefulWidget {
+  const ChatApp({super.key});
 
   @override
-  ConsumerState<MyApp> createState() => _MyAppState();
+  ConsumerState<ChatApp> createState() => _ChatAppState();
 }
 
-class _MyAppState extends ConsumerState<MyApp> {
+class _ChatAppState extends ConsumerState<ChatApp> {
   @override
   void initState() {
     super.initState();

@@ -39,7 +39,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Analyze code
       run: flutter analyze --fatal-infos
@@ -77,7 +77,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Run unit tests
       run: flutter test --coverage --test-randomization-ordering-seed=random
@@ -111,7 +111,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Run widget tests
       run: flutter test --coverage test/widget_test/
@@ -138,7 +138,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Run integration tests
       run: |
@@ -180,7 +180,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Setup Android signing
       env:
@@ -235,7 +235,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Setup iOS signing
       env:
@@ -305,7 +305,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Build Web
       run: flutter build web --release --web-renderer canvaskit
@@ -339,7 +339,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Run performance tests
       run: flutter test --profile test/performance_test/

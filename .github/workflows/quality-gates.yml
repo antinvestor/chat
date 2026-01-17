@@ -32,7 +32,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Run tests with coverage
       run: flutter test --coverage
@@ -74,7 +74,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Run performance benchmarks
       run: |
@@ -113,7 +113,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Run memory leak tests
       run: |
@@ -145,7 +145,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Run accessibility tests
       run: |
@@ -209,7 +209,7 @@ jobs:
       
     - name: Generate code
       run: |
-        flutter packages pub run build_runner build --delete-conflicting-outputs
+        dart run build_runner build --delete-conflicting-outputs
         
     - name: Build release APK
       run: flutter build apk --release --shrink

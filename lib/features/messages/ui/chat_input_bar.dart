@@ -43,6 +43,7 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
   @override
   void dispose() {
+    _recordingTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
