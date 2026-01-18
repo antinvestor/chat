@@ -213,26 +213,32 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     needs: [analyze, test, widget_test]
-    continue-on-error: true  # iOS project may not be configured
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
         cache: true
-        
+
     - name: Get Flutter dependencies
       run: flutter pub get
-      
+
+    - name: Create iOS project if missing
+      run: |
+        if [ ! -d "ios" ]; then
+          echo "iOS project not found, creating..."
+          flutter create --platforms=ios .
+        fi
+
     - name: Generate code
       run: |
         dart run build_runner build --delete-conflicting-outputs
-        
+
     - name: Setup iOS signing
       continue-on-error: true  # Skip if secrets not configured
       env:
