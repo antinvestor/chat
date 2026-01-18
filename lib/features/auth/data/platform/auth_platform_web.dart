@@ -60,21 +60,25 @@ class AuthPlatformWeb implements AuthPlatform {
       port: currentUri.port,
       path: currentUri.path,
     );
-    
+
     final codeVerifier = _generateCodeVerifier();
-    final flow = Flow.authorizationCodeWithPKCE(_client!, codeVerifier: codeVerifier)
-      ..scopes.addAll(scopes)
-      ..redirectUri = redirectUri;
+    final flow =
+        Flow.authorizationCodeWithPKCE(_client!, codeVerifier: codeVerifier)
+          ..scopes.addAll(scopes)
+          ..redirectUri = redirectUri;
 
     // Store state, code_verifier, and timestamp for PKCE callback
     web.window.localStorage.setItem(_stateKey, flow.state);
     web.window.localStorage.setItem(_codeVerifierKey, codeVerifier);
-    web.window.localStorage.setItem(_timestampKey, DateTime.now().millisecondsSinceEpoch.toString());
+    web.window.localStorage.setItem(
+      _timestampKey,
+      DateTime.now().millisecondsSinceEpoch.toString(),
+    );
 
-    AppLogger.debug('Starting web auth flow', data: {
-      'redirectUri': redirectUri.toString(),
-      'state': flow.state,
-    });
+    AppLogger.debug(
+      'Starting web auth flow',
+      data: {'redirectUri': redirectUri.toString(), 'state': flow.state},
+    );
 
     // Redirect to authorization endpoint
     web.window.location.href = flow.authenticationUri.toString();
@@ -95,10 +99,10 @@ class AuthPlatformWeb implements AuthPlatform {
 
     // Check for OAuth error response
     if (error != null) {
-      AppLogger.error('OAuth error from provider', data: {
-        'error': error,
-        'description': errorDescription,
-      });
+      AppLogger.error(
+        'OAuth error from provider',
+        data: {'error': error, 'description': errorDescription},
+      );
       _clearAuthState();
       // Clean up URL
       _cleanUrl(uri);
@@ -108,15 +112,17 @@ class AuthPlatformWeb implements AuthPlatform {
     if (code == null || state == null) return null;
 
     final storedState = web.window.localStorage.getItem(_stateKey);
-    final storedCodeVerifier = web.window.localStorage.getItem(_codeVerifierKey);
+    final storedCodeVerifier = web.window.localStorage.getItem(
+      _codeVerifierKey,
+    );
     final storedTimestamp = web.window.localStorage.getItem(_timestampKey);
 
     // Validate state
     if (storedState != state) {
-      AppLogger.warning('OIDC state mismatch', data: {
-        'expected': storedState,
-        'received': state,
-      });
+      AppLogger.warning(
+        'OIDC state mismatch',
+        data: {'expected': storedState, 'received': state},
+      );
       _clearAuthState();
       _cleanUrl(uri);
       return null;
@@ -144,7 +150,7 @@ class AuthPlatformWeb implements AuthPlatform {
 
     try {
       AppLogger.debug('Processing auth callback', data: {'state': state});
-      
+
       // Clean up URL first to prevent re-processing
       _cleanUrl(uri);
 
@@ -164,27 +170,33 @@ class AuthPlatformWeb implements AuthPlatform {
       )..redirectUri = redirectUri;
 
       // Exchange code for tokens with timeout
-      final credential = await flow.callback({'code': code, 'state': state}).timeout(
-        _tokenExchangeTimeout,
-        onTimeout: () {
-          throw TimeoutException('Token exchange timed out');
-        },
-      );
-      
+      final credential = await flow
+          .callback({'code': code, 'state': state})
+          .timeout(
+            _tokenExchangeTimeout,
+            onTimeout: () {
+              throw TimeoutException('Token exchange timed out');
+            },
+          );
+
       final tokenResponse = await credential.getTokenResponse().timeout(
         _tokenExchangeTimeout,
         onTimeout: () {
           throw TimeoutException('Getting token response timed out');
         },
       );
-      
+
       // Clear auth state only after successful token exchange
       _clearAuthState();
-      
+
       AppLogger.info('Web authentication successful');
       return tokenResponse;
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to exchange code for tokens', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to exchange code for tokens',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _clearAuthState();
       rethrow;
     }

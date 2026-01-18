@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenRefreshResult;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openid_client/openid_client.dart';
 
@@ -31,7 +32,7 @@ class AuthService {
   }
 
   /// Authenticate user with OIDC provider
-  /// 
+  ///
   /// Returns [TokenResponse] on success, null if redirect-based flow (web).
   /// Throws on error.
   Future<TokenResponse?> authenticate() async {
@@ -52,21 +53,22 @@ class AuthService {
       if (token != null) {
         // Validate that we actually got an access token
         if (token.accessToken == null || token.accessToken!.isEmpty) {
-          AppLogger.error('Token response missing access token', data: {
-            'hasRefreshToken': token.refreshToken != null,
-          });
+          AppLogger.error(
+            'Token response missing access token',
+            data: {'hasRefreshToken': token.refreshToken != null},
+          );
           throw Exception('Authentication failed: No access token received');
         }
-        
+
         await _saveTokens(token);
-        
+
         // Verify the token was actually saved
         final savedToken = await getAccessToken();
         if (savedToken == null) {
           AppLogger.error('Failed to save token to secure storage');
           throw Exception('Authentication failed: Could not save credentials');
         }
-        
+
         AppLogger.info('User authenticated successfully');
         return token;
       } else {
@@ -88,7 +90,7 @@ class AuthService {
   }
 
   /// Cancel any ongoing authentication flow
-  /// 
+  ///
   /// Call this if the user wants to abort authentication or if the app
   /// needs to clean up before starting a new auth flow.
   Future<void> cancelAuthentication() async {
@@ -109,23 +111,23 @@ class AuthService {
     await _storage.write(key: 'refresh_token', value: token.refreshToken);
     try {
       // idToken may throw on access if not present
-        await _storage.write(
-          key: 'id_token',
-          value: token.idToken.toCompactSerialization(),
-        );
-
+      await _storage.write(
+        key: 'id_token',
+        value: token.idToken.toCompactSerialization(),
+      );
     } catch (_) {
       // ID token might be missing or throw on access
       AppLogger.debug('No ID token in response');
     }
 
     // Store token expiry timestamp - use default if server doesn't provide one
-    final expiresAt = token.expiresAt ?? DateTime.now().add(_defaultTokenLifetime);
+    final expiresAt =
+        token.expiresAt ?? DateTime.now().add(_defaultTokenLifetime);
     await _storage.write(
       key: 'token_expires_at',
       value: expiresAt.millisecondsSinceEpoch.toString(),
     );
-    
+
     AppLogger.debug(
       'Tokens saved to secure storage',
       data: {
@@ -152,7 +154,9 @@ class AuthService {
 
   /// Check if access token is expired or about to expire
   /// Returns true if token expires within the specified buffer time
-  Future<bool> isTokenExpired({Duration buffer = const Duration(minutes: 2)}) async {
+  Future<bool> isTokenExpired({
+    Duration buffer = const Duration(minutes: 2),
+  }) async {
     final expiresAtStr = await _storage.read(key: 'token_expires_at');
     if (expiresAtStr == null) {
       // If we don't have expiry info, assume expired to trigger refresh
@@ -167,7 +171,10 @@ class AuthService {
       return now.isAfter(expiresAt.subtract(buffer));
     } catch (e) {
       // If we can't parse the expiry, assume expired
-      AppLogger.warning('Failed to parse token expiry', data: {'error': e.toString()});
+      AppLogger.warning(
+        'Failed to parse token expiry',
+        data: {'error': e.toString()},
+      );
       return true;
     }
   }
@@ -187,20 +194,22 @@ class AuthService {
   Future<Duration?> getTimeUntilRefreshNeeded() async {
     final expiresAtStr = await _storage.read(key: 'token_expires_at');
     if (expiresAtStr == null) return null;
-    
+
     try {
-      final expiresAt = DateTime.fromMillisecondsSinceEpoch(int.parse(expiresAtStr));
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+        int.parse(expiresAtStr),
+      );
       final now = DateTime.now();
-      
+
       // Refresh 5 minutes before expiry
       final refreshBuffer = const Duration(minutes: 5);
       final refreshAt = expiresAt.subtract(refreshBuffer);
-      
+
       if (now.isAfter(refreshAt)) {
         // Already past refresh time
         return Duration.zero;
       }
-      
+
       return refreshAt.difference(now);
     } catch (e) {
       return Duration.zero; // Refresh immediately on error
@@ -209,58 +218,84 @@ class AuthService {
 
   // Mutex to prevent concurrent refresh attempts
   // Stores the full result so waiters can get the token too
-  Completer<({TokenRefreshResult result, TokenResponse? token, String? error})>? _refreshCompleter;
-  
+  Completer<({TokenRefreshResult result, TokenResponse? token, String? error})>?
+  _refreshCompleter;
+
   /// Refresh the access token using refresh token
   /// Returns a [TokenRefreshResult] indicating success or type of failure
   /// Does NOT automatically logout - caller decides based on result
-  /// 
+  ///
   /// This method is safe to call concurrently - if a refresh is already in progress,
   /// callers will wait for the existing operation to complete and receive the same result.
-  Future<({TokenRefreshResult result, TokenResponse? token, String? error})> refreshTokenWithResult() async {
+  Future<({TokenRefreshResult result, TokenResponse? token, String? error})>
+  refreshTokenWithResult() async {
     // Prevent concurrent refresh attempts - return existing operation if in progress
     if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
-      AppLogger.debug('Token refresh already in progress, waiting for existing operation...');
+      AppLogger.debug(
+        'Token refresh already in progress, waiting for existing operation...',
+      );
       // Wait for the in-progress refresh and return its result
       final existingResult = await _refreshCompleter!.future;
-      AppLogger.debug('Refresh completed by another caller', data: {
-        'result': existingResult.result.toString(),
-      });
+      AppLogger.debug(
+        'Refresh completed by another caller',
+        data: {'result': existingResult.result.toString()},
+      );
       return existingResult;
     }
-    
-    _refreshCompleter = Completer<({TokenRefreshResult result, TokenResponse? token, String? error})>();
-    
+
+    _refreshCompleter =
+        Completer<
+          ({TokenRefreshResult result, TokenResponse? token, String? error})
+        >();
+
     try {
       final refreshTokenValue = await getRefreshToken();
       if (refreshTokenValue == null) {
         AppLogger.warning('No refresh token available for token refresh');
-        final noTokenResult = (result: TokenRefreshResult.permanentError, token: null as TokenResponse?, error: 'No refresh token');
+        final noTokenResult = (
+          result: TokenRefreshResult.permanentError,
+          token: null as TokenResponse?,
+          error: 'No refresh token',
+        );
         _refreshCompleter!.complete(noTokenResult);
         return noTokenResult;
       }
 
       // Log refresh attempt with masked refresh token for debugging
-      final maskedRefreshToken = refreshTokenValue.length > 10 
+      final maskedRefreshToken = refreshTokenValue.length > 10
           ? '${refreshTokenValue.substring(0, 5)}...${refreshTokenValue.substring(refreshTokenValue.length - 5)}'
           : '***';
-      AppLogger.debug('Attempting to refresh access token', data: {
-        'refreshTokenPrefix': maskedRefreshToken,
-        'refreshTokenLength': refreshTokenValue.length,
-      });
-      
+      AppLogger.debug(
+        'Attempting to refresh access token',
+        data: {
+          'refreshTokenPrefix': maskedRefreshToken,
+          'refreshTokenLength': refreshTokenValue.length,
+        },
+      );
+
       try {
         await _ensureInitialized();
       } catch (e) {
         // Network error during initialization - transient
-        AppLogger.warning('Failed to initialize OIDC client for refresh', data: {'error': e.toString()});
-        final initFailResult = (result: TokenRefreshResult.transientError, token: null as TokenResponse?, error: 'OIDC initialization failed: $e');
+        AppLogger.warning(
+          'Failed to initialize OIDC client for refresh',
+          data: {'error': e.toString()},
+        );
+        final initFailResult = (
+          result: TokenRefreshResult.transientError,
+          token: null as TokenResponse?,
+          error: 'OIDC initialization failed: $e',
+        );
         _refreshCompleter!.complete(initFailResult);
         return initFailResult;
       }
 
       if (_platform.client == null) {
-        final clientNullResult = (result: TokenRefreshResult.transientError, token: null as TokenResponse?, error: 'Auth client not initialized');
+        final clientNullResult = (
+          result: TokenRefreshResult.transientError,
+          token: null as TokenResponse?,
+          error: 'Auth client not initialized',
+        );
         _refreshCompleter!.complete(clientNullResult);
         return clientNullResult;
       }
@@ -271,62 +306,92 @@ class AuthService {
       );
 
       // Refresh the token with timeout - pass forceRefresh=true to actually refresh
-      final newCredential = await credential.getTokenResponse(true)
+      final newCredential = await credential
+          .getTokenResponse(true)
           .timeout(const Duration(seconds: 30));
-      
+
       // Validate that we actually got a new access token
-      if (newCredential.accessToken == null || newCredential.accessToken!.isEmpty) {
-        AppLogger.error('Token refresh returned empty access token', data: {
-          'hasRefreshToken': newCredential.refreshToken != null,
-          'expiresAt': newCredential.expiresAt?.toIso8601String(),
-          'refreshTokenUsed': maskedRefreshToken,
-        });
-        final emptyTokenResult = (result: TokenRefreshResult.permanentError, token: null as TokenResponse?, error: 'Refresh returned empty access token');
+      if (newCredential.accessToken == null ||
+          newCredential.accessToken!.isEmpty) {
+        AppLogger.error(
+          'Token refresh returned empty access token',
+          data: {
+            'hasRefreshToken': newCredential.refreshToken != null,
+            'expiresAt': newCredential.expiresAt?.toIso8601String(),
+            'refreshTokenUsed': maskedRefreshToken,
+          },
+        );
+        final emptyTokenResult = (
+          result: TokenRefreshResult.permanentError,
+          token: null as TokenResponse?,
+          error: 'Refresh returned empty access token',
+        );
         _refreshCompleter!.complete(emptyTokenResult);
         return emptyTokenResult;
       }
-      
+
       // Save tokens including any new refresh token issued
       await _saveTokens(newCredential);
-      
+
       // Verify the token was actually saved
       final savedToken = await getAccessToken();
       if (savedToken == null || savedToken.isEmpty) {
-        AppLogger.error('Failed to save refreshed token to storage', data: {
-          'refreshTokenUsed': maskedRefreshToken,
-        });
-        final saveFailResult = (result: TokenRefreshResult.transientError, token: null as TokenResponse?, error: 'Failed to save refreshed token');
+        AppLogger.error(
+          'Failed to save refreshed token to storage',
+          data: {'refreshTokenUsed': maskedRefreshToken},
+        );
+        final saveFailResult = (
+          result: TokenRefreshResult.transientError,
+          token: null as TokenResponse?,
+          error: 'Failed to save refreshed token',
+        );
         _refreshCompleter!.complete(saveFailResult);
         return saveFailResult;
       }
-      
-      // Log success with details
-      AppLogger.info('Access token refreshed successfully', data: {
-        'expiresAt': newCredential.expiresAt?.toIso8601String(),
-        'newRefreshTokenIssued': newCredential.refreshToken != null && 
-            newCredential.refreshToken != refreshTokenValue,
-        'accessTokenLength': newCredential.accessToken!.length,
-      });
 
-      final successResult = (result: TokenRefreshResult.success, token: newCredential, error: null as String?);
+      // Log success with details
+      AppLogger.info(
+        'Access token refreshed successfully',
+        data: {
+          'expiresAt': newCredential.expiresAt?.toIso8601String(),
+          'newRefreshTokenIssued':
+              newCredential.refreshToken != null &&
+              newCredential.refreshToken != refreshTokenValue,
+          'accessTokenLength': newCredential.accessToken!.length,
+        },
+      );
+
+      final successResult = (
+        result: TokenRefreshResult.success,
+        token: newCredential,
+        error: null as String?,
+      );
       _refreshCompleter!.complete(successResult);
       return successResult;
     } on TimeoutException {
       AppLogger.warning('Token refresh timed out');
-      final timeoutResult = (result: TokenRefreshResult.transientError, token: null as TokenResponse?, error: 'Refresh timed out');
+      final timeoutResult = (
+        result: TokenRefreshResult.transientError,
+        token: null as TokenResponse?,
+        error: 'Refresh timed out',
+      );
       _refreshCompleter!.complete(timeoutResult);
       return timeoutResult;
     } catch (e, stackTrace) {
       final errorStr = e.toString().toLowerCase();
       final isPermanentError = _isPermanentRefreshError(errorStr);
-      
+
       if (isPermanentError) {
         AppLogger.error(
           'Token refresh failed permanently - re-authentication required',
           error: e,
           stackTrace: stackTrace,
         );
-        final permErrorResult = (result: TokenRefreshResult.permanentError, token: null as TokenResponse?, error: e.toString());
+        final permErrorResult = (
+          result: TokenRefreshResult.permanentError,
+          token: null as TokenResponse?,
+          error: e.toString(),
+        );
         _refreshCompleter!.complete(permErrorResult);
         return permErrorResult;
       } else {
@@ -334,13 +399,17 @@ class AuthService {
           'Token refresh failed with transient error',
           data: {'error': e.toString()},
         );
-        final transientResult = (result: TokenRefreshResult.transientError, token: null as TokenResponse?, error: e.toString());
+        final transientResult = (
+          result: TokenRefreshResult.transientError,
+          token: null as TokenResponse?,
+          error: e.toString(),
+        );
         _refreshCompleter!.complete(transientResult);
         return transientResult;
       }
     }
   }
-  
+
   /// Check if an error indicates permanent refresh failure
   /// We are VERY conservative here - only truly permanent errors cause logout.
   /// Network issues, timeouts, and ambiguous errors are treated as transient.
@@ -360,10 +429,10 @@ class AuthService {
   bool _isPermanentRefreshError(String errorStr) {
     // OAuth2 standard error codes that indicate permanent failure
     const permanentOAuthErrors = [
-      'invalid_grant',      // Refresh token expired/invalid
-      'invalid_client',     // Wrong client credentials
+      'invalid_grant', // Refresh token expired/invalid
+      'invalid_client', // Wrong client credentials
       'unauthorized_client', // Client not allowed
-      'access_denied',      // User denied access
+      'access_denied', // User denied access
     ];
 
     // Check for OAuth2 standard errors
@@ -395,8 +464,8 @@ class AuthService {
     // If error contains both "refresh" and specific failure indicators
     if (errorStr.contains('refresh') &&
         (errorStr.contains('revoked') ||
-         errorStr.contains('invalid') ||
-         errorStr.contains('expired'))) {
+            errorStr.contains('invalid') ||
+            errorStr.contains('expired'))) {
       AppLogger.debug('Permanent error: refresh token specific failure');
       return true;
     }
@@ -454,18 +523,18 @@ class AuthService {
   Future<bool> isAuthenticated() async {
     // Check for redirect result first (only matters for web)
     await _handleRedirectResult();
-    
+
     final accessToken = await getAccessToken();
     if (accessToken != null) {
       return true;
     }
-    
+
     // No access token, but check if we have a refresh token
     // If so, the user is still "logged in" and we can recover the session
     final refreshTokenValue = await getRefreshToken();
     return refreshTokenValue != null;
   }
-  
+
   /// Check if user has a valid, usable access token
   /// This is different from isAuthenticated - this checks if we can make API calls right now
   Future<bool> hasValidAccessToken() async {
@@ -473,21 +542,22 @@ class AuthService {
     if (accessToken == null) {
       return false;
     }
-    
+
     // Check if token is expired
     final expired = await isTokenExpired();
     return !expired;
   }
-  
+
   /// Ensure we have a valid access token, refreshing if necessary
   /// Returns a tuple with the access token (if successful) and whether re-login is needed
   /// This method implements retry logic for transient errors
-  Future<({String? token, bool needsRelogin})> ensureValidAccessTokenWithStatus({
+  Future<({String? token, bool needsRelogin})>
+  ensureValidAccessTokenWithStatus({
     int maxRetries = 3,
     Duration retryDelay = const Duration(seconds: 2),
   }) async {
     final accessToken = await getAccessToken();
-    
+
     // If we have a token and it's not expired, return it
     if (accessToken != null) {
       final expired = await isTokenExpired();
@@ -495,47 +565,56 @@ class AuthService {
         return (token: accessToken, needsRelogin: false);
       }
     }
-    
+
     // Token is missing or expired, try to refresh
     final refreshTokenValue = await getRefreshToken();
     if (refreshTokenValue == null) {
       AppLogger.debug('No refresh token available, user needs to login');
       return (token: null, needsRelogin: true);
     }
-    
+
     // Attempt refresh with retries for transient errors
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      AppLogger.debug('Access token missing/expired, attempting refresh', 
-          data: {'attempt': attempt, 'maxRetries': maxRetries});
-      
+      AppLogger.debug(
+        'Access token missing/expired, attempting refresh',
+        data: {'attempt': attempt, 'maxRetries': maxRetries},
+      );
+
       final result = await refreshTokenWithResult();
-      
+
       switch (result.result) {
         case TokenRefreshResult.success:
-          return (token: result.token?.accessToken ?? await getAccessToken(), needsRelogin: false);
-          
+          return (
+            token: result.token?.accessToken ?? await getAccessToken(),
+            needsRelogin: false,
+          );
+
         case TokenRefreshResult.permanentError:
           AppLogger.error('Permanent refresh error, user must re-login');
           await logout();
           return (token: null, needsRelogin: true);
-          
+
         case TokenRefreshResult.transientError:
           if (attempt < maxRetries) {
             final delay = retryDelay * attempt; // Linear backoff
-            AppLogger.info('Transient refresh error, retrying in ${delay.inSeconds}s', 
-                data: {'attempt': attempt, 'error': result.error});
+            AppLogger.info(
+              'Transient refresh error, retrying in ${delay.inSeconds}s',
+              data: {'attempt': attempt, 'error': result.error},
+            );
             await Future.delayed(delay);
           } else {
-            AppLogger.warning('Max refresh retries reached, but not logging out (transient error)');
+            AppLogger.warning(
+              'Max refresh retries reached, but not logging out (transient error)',
+            );
             // Don't logout on transient errors - might recover on next attempt
             return (token: null, needsRelogin: false);
           }
       }
     }
-    
+
     return (token: null, needsRelogin: false);
   }
-  
+
   /// Legacy method for backward compatibility
   Future<String?> ensureValidAccessToken() async {
     final result = await ensureValidAccessTokenWithStatus();
@@ -543,7 +622,7 @@ class AuthService {
   }
 
   /// Handle redirect result from Web authentication
-  /// 
+  ///
   /// Returns true if a valid session was recovered from redirect.
   Future<bool> _handleRedirectResult() async {
     try {
@@ -561,7 +640,10 @@ class AuthService {
         'Error handling redirect result',
         data: {'error': e.toString()},
       );
-      AppLogger.debug('Redirect error details', data: {'stackTrace': stackTrace.toString()});
+      AppLogger.debug(
+        'Redirect error details',
+        data: {'stackTrace': stackTrace.toString()},
+      );
       return false;
     }
   }

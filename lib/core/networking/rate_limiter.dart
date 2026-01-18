@@ -44,7 +44,7 @@ class RateLimiter {
 
     // Remove timestamps outside the current window
     while (_requestTimestamps.isNotEmpty &&
-           _requestTimestamps.first.isBefore(windowStart)) {
+        _requestTimestamps.first.isBefore(windowStart)) {
       _requestTimestamps.removeFirst();
     }
 
@@ -91,7 +91,7 @@ class RateLimiter {
 
     // Remove expired timestamps
     while (_requestTimestamps.isNotEmpty &&
-           _requestTimestamps.first.isBefore(windowStart)) {
+        _requestTimestamps.first.isBefore(windowStart)) {
       _requestTimestamps.removeFirst();
     }
 

@@ -17,7 +17,7 @@ class ErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Material(
       color: _getBackgroundColor(theme),
       elevation: 4,
@@ -25,11 +25,7 @@ class ErrorBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Icon(
-              _getIcon(),
-              color: _getIconColor(theme),
-              size: 20,
-            ),
+            Icon(_getIcon(), color: _getIconColor(theme), size: 20),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

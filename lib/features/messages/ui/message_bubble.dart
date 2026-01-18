@@ -127,7 +127,10 @@ class MessageBubble extends ConsumerWidget {
                             Positioned(
                               bottom: 4,
                               right: 8,
-                              child: _buildTimestampAndStatus(context, timestamp),
+                              child: _buildTimestampAndStatus(
+                                context,
+                                timestamp,
+                              ),
                             ),
                           ],
                         ),
@@ -569,13 +572,7 @@ class MessageBubble extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            timestamp,
-            style: TextStyle(
-              fontSize: 11,
-              color: textColor,
-            ),
-          ),
+          Text(timestamp, style: TextStyle(fontSize: 11, color: textColor)),
           if (isMe) ...[
             const SizedBox(width: 3),
             _buildStatusIndicator(context),
@@ -601,11 +598,7 @@ class MessageBubble extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 14,
-              color: Colors.red.shade600,
-            ),
+            Icon(Icons.error_outline, size: 14, color: Colors.red.shade600),
             const SizedBox(width: 6),
             Text(
               'Not sent. Tap to retry',
@@ -616,11 +609,7 @@ class MessageBubble extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(
-              Icons.refresh,
-              size: 14,
-              color: Colors.red.shade600,
-            ),
+            Icon(Icons.refresh, size: 14, color: Colors.red.shade600),
           ],
         ),
       ),
@@ -668,11 +657,7 @@ class MessageBubble extends ConsumerWidget {
         );
       case EventStatus.failed:
         // Error icon for failed
-        return Icon(
-          Icons.error_outline,
-          size: 14,
-          color: Colors.red.shade600,
-        );
+        return Icon(Icons.error_outline, size: 14, color: Colors.red.shade600);
     }
   }
 

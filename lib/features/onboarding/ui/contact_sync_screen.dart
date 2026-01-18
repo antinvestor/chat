@@ -55,7 +55,7 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
       if (_isMobile) {
         // Use permission_handler for more control on mobile
         final status = await Permission.contacts.request();
-        
+
         if (status.isGranted) {
           await _syncContacts();
         } else if (status.isPermanentlyDenied) {
@@ -63,14 +63,16 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
             setState(() {
               _state = ContactSyncState.permissionDenied;
               _permissionPermanentlyDenied = true;
-              _statusMessage = 'Permission was denied. Please enable contacts access in Settings.';
+              _statusMessage =
+                  'Permission was denied. Please enable contacts access in Settings.';
             });
           }
         } else {
           if (mounted) {
             setState(() {
               _state = ContactSyncState.permissionDenied;
-              _statusMessage = 'Contacts permission is required to find friends';
+              _statusMessage =
+                  'Contacts permission is required to find friends';
             });
           }
         }
@@ -82,7 +84,8 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
           if (mounted) {
             setState(() {
               _state = ContactSyncState.permissionDenied;
-              _statusMessage = 'Contacts permission is required to find friends';
+              _statusMessage =
+                  'Contacts permission is required to find friends';
             });
           }
           return;
@@ -91,7 +94,11 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
         await _syncContacts();
       }
     } catch (e, stackTrace) {
-      AppLogger.error('Permission request failed', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Permission request failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (mounted) {
         setState(() {
           _state = ContactSyncState.error;
@@ -199,11 +206,7 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
               const Spacer(),
 
               // Icon
-              Icon(
-                _getIcon(),
-                size: 80,
-                color: _getIconColor(theme),
-              ),
+              Icon(_getIcon(), size: 80, color: _getIconColor(theme)),
               const SizedBox(height: 32),
 
               // Title

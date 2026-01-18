@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:antinvestor_api_common/antinvestor_api_common.dart' show TokenRefreshResult;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,11 +16,12 @@ class MockAuthService extends AuthService {
   bool _isAuthenticated = false;
   bool _shouldThrowError = false;
 
-  MockAuthService() : super(
-    const FlutterSecureStorage(),
-    issuerUrl: 'https://mock-oauth.com',
-    clientId: 'mock-client-id',
-  );
+  MockAuthService()
+    : super(
+        const FlutterSecureStorage(),
+        issuerUrl: 'https://mock-oauth.com',
+        clientId: 'mock-client-id',
+      );
 
   void setAuthenticated(bool authenticated) {
     _isAuthenticated = authenticated;
@@ -43,7 +45,9 @@ class MockAuthService extends AuthService {
   }
 
   @override
-  Future<bool> isTokenExpired({Duration buffer = const Duration(minutes: 2)}) async {
+  Future<bool> isTokenExpired({
+    Duration buffer = const Duration(minutes: 2),
+  }) async {
     return false; // Mock token never expires
   }
 
@@ -54,7 +58,8 @@ class MockAuthService extends AuthService {
   }
 
   @override
-  Future<({TokenRefreshResult result, TokenResponse? token, String? error})> refreshTokenWithResult() async {
+  Future<({TokenRefreshResult result, TokenResponse? token, String? error})>
+  refreshTokenWithResult() async {
     return (
       result: TokenRefreshResult.success,
       token: _isAuthenticated ? null : null,
@@ -73,7 +78,8 @@ class MockAuthService extends AuthService {
   }
 
   @override
-  Future<({String? token, bool needsRelogin})> ensureValidAccessTokenWithStatus({
+  Future<({String? token, bool needsRelogin})>
+  ensureValidAccessTokenWithStatus({
     int maxRetries = 3,
     Duration retryDelay = const Duration(seconds: 2),
   }) async {
@@ -131,10 +137,7 @@ class TestHelpers {
 extension ProviderScopeTest on WidgetTester {
   Future<void> pumpWidgetWithMocks(Widget child) async {
     await pumpWidget(
-      ProviderScope(
-        overrides: TestHelpers.overrides,
-        child: child,
-      ),
+      ProviderScope(overrides: TestHelpers.overrides, child: child),
     );
   }
 }

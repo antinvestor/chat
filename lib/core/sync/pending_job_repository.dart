@@ -11,20 +11,22 @@ class PendingJobRepository {
   PendingJobRepository(this._database);
 
   Future<void> addJob(domain.JobType type, Map<String, dynamic> payload) async {
-    await _database.into(_database.pendingJobs).insert(
-      PendingJobsCompanion.insert(
-        type: type.name,
-        payload: Value(jsonEncode(payload)),
-        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
-      ),
-    );
+    await _database
+        .into(_database.pendingJobs)
+        .insert(
+          PendingJobsCompanion.insert(
+            type: type.name,
+            payload: Value(jsonEncode(payload)),
+            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
   }
 
   Future<List<domain.PendingJob>> getPendingJobs() async {
     final query = _database.select(_database.pendingJobs)
       ..where((t) => t.status.equals('pending'))
       ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]);
-    
+
     final results = await query.get();
 
     return results.map((row) {
@@ -40,9 +42,9 @@ class PendingJobRepository {
   }
 
   Future<void> deleteJob(int id) async {
-    await (_database.delete(_database.pendingJobs)
-      ..where((t) => t.id.equals(id)))
-      .go();
+    await (_database.delete(
+      _database.pendingJobs,
+    )..where((t) => t.id.equals(id))).go();
   }
 
   Future<void> incrementRetry(int id) async {

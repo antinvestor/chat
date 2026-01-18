@@ -48,7 +48,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check, size: 18),
-                label: Text(_selectedContacts.length == 1 ? 'Chat' : 'Create Group'),
+                label: Text(
+                  _selectedContacts.length == 1 ? 'Chat' : 'Create Group',
+                ),
               ),
             ),
         ],
@@ -78,7 +80,10 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               onChanged: (value) {
                 setState(() => _searchQuery = value.toLowerCase());
@@ -102,7 +107,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                       avatar: CircleAvatar(
                         backgroundColor: theme.colorScheme.primary,
                         child: Text(
-                          _getInitials(contact.displayName ?? contact.contactDetail),
+                          _getInitials(
+                            contact.displayName ?? contact.contactDetail,
+                          ),
                           style: TextStyle(
                             fontSize: 12,
                             color: theme.colorScheme.onPrimary,
@@ -128,7 +135,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             child: rosterAsync.when(
               data: (contacts) {
                 final filteredContacts = _filterContacts(contacts);
-                
+
                 if (contacts.isEmpty) {
                   return _buildEmptyState(theme);
                 }
@@ -174,10 +181,14 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                                     color: theme.colorScheme.onPrimary,
                                   )
                                 : Text(
-                                    _getInitials(contact.displayName ?? contact.contactDetail),
+                                    _getInitials(
+                                      contact.displayName ??
+                                          contact.contactDetail,
+                                    ),
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
-                                      color: theme.colorScheme.onPrimaryContainer,
+                                      color:
+                                          theme.colorScheme.onPrimaryContainer,
                                     ),
                                   ),
                           ),
@@ -203,7 +214,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                       title: Text(
                         contact.displayName ?? contact.contactDetail,
                         style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       ),
                       subtitle: contact.displayName != null
@@ -221,7 +234,8 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                             )
                           : null,
                       selected: isSelected,
-                      selectedTileColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      selectedTileColor: theme.colorScheme.primaryContainer
+                          .withValues(alpha: 0.3),
                       onTap: () {
                         setState(() {
                           if (isSelected) {
@@ -353,20 +367,26 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
       final roomService = await ref.read(roomServiceProvider.future);
 
       // Get all contact identifiers using priority logic - server will handle routing
-      final contactIds = _selectedContacts.map((c) => _getContactIdentifier(c)).toList();
+      final contactIds = _selectedContacts
+          .map((c) => _getContactIdentifier(c))
+          .toList();
 
       // Generate room name
       final roomName = _selectedContacts.length == 1
-          ? (_selectedContacts.first.displayName ?? _selectedContacts.first.contactDetail)
+          ? (_selectedContacts.first.displayName ??
+                _selectedContacts.first.contactDetail)
           : '${_selectedContacts.map((c) => c.displayName ?? c.contactDetail).take(3).join(', ')}${_selectedContacts.length > 3 ? '...' : ''}';
 
       final roomType = _selectedContacts.length == 1 ? 'direct' : 'group';
 
-      AppLogger.info('[NewChat] Creating room', data: {
-        'name': roomName,
-        'type': roomType,
-        'memberCount': contactIds.length,
-      });
+      AppLogger.info(
+        '[NewChat] Creating room',
+        data: {
+          'name': roomName,
+          'type': roomType,
+          'memberCount': contactIds.length,
+        },
+      );
 
       // Create room - server handles member routing and billing
       final room = await roomService.createRoom(
@@ -380,7 +400,11 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
         context.go('/chat/${room.id}?name=${Uri.encodeComponent(room.name)}');
       }
     } catch (e, stackTrace) {
-      AppLogger.error('[NewChat] Failed to create room', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        '[NewChat] Failed to create room',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

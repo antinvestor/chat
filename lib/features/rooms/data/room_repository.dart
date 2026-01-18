@@ -15,12 +15,13 @@ class RoomRepository {
     final query = _database.select(_database.rooms)
       ..orderBy([(t) => OrderingTerm.desc(t.lastEventIndex)]);
     final results = await query.get();
-    
+
     return results.map((row) => _toRoom(row)).toList();
   }
 
   Future<List<RoomWithLastMessage>> getRoomsWithLastMessage() async {
-    final query = _database.customSelect('''
+    final query = _database.customSelect(
+      '''
       SELECT 
         r.id,
         r.name,
@@ -32,10 +33,12 @@ class RoomRepository {
       FROM rooms r
       LEFT JOIN room_events e ON r.last_event_id = e.id
       ORDER BY COALESCE(e.created_at, 0) DESC
-    ''', readsFrom: {_database.rooms, _database.roomEvents});
-    
+    ''',
+      readsFrom: {_database.rooms, _database.roomEvents},
+    );
+
     final results = await query.get();
-    
+
     return results.map((row) {
       String? lastMessageText;
       final content = row.read<String?>('last_message_content');
@@ -43,7 +46,7 @@ class RoomRepository {
         final decoded = jsonDecode(content) as Map<String, dynamic>;
         lastMessageText = decoded['text'] as String?;
       }
-      
+
       return RoomWithLastMessage(
         id: row.read<String>('id'),
         name: row.read<String?>('name') ?? '',
@@ -60,29 +63,32 @@ class RoomRepository {
     final query = _database.select(_database.rooms)
       ..where((t) => t.id.equals(roomId));
     final result = await query.getSingleOrNull();
-    
+
     if (result == null) return null;
     return _toRoom(result);
   }
 
   Future<void> insertRoom(domain.Room room) async {
-    await _database.into(_database.rooms).insertOnConflictUpdate(
-      RoomsCompanion.insert(
-        id: room.id,
-        name: Value(room.name),
-        type: Value(room.type),
-        lastEventId: Value(room.lastEventId),
-        lastEventIndex: Value(room.lastEventIndex),
-        unreadCount: Value(room.unreadCount),
-        metadata: Value(room.metadata != null ? jsonEncode(room.metadata) : null),
-      ),
-    );
+    await _database
+        .into(_database.rooms)
+        .insertOnConflictUpdate(
+          RoomsCompanion.insert(
+            id: room.id,
+            name: Value(room.name),
+            type: Value(room.type),
+            lastEventId: Value(room.lastEventId),
+            lastEventIndex: Value(room.lastEventIndex),
+            unreadCount: Value(room.unreadCount),
+            metadata: Value(
+              room.metadata != null ? jsonEncode(room.metadata) : null,
+            ),
+          ),
+        );
   }
 
   Future<void> updateUnreadCount(String roomId, int count) async {
-    await (_database.update(_database.rooms)
-      ..where((t) => t.id.equals(roomId)))
-      .write(RoomsCompanion(unreadCount: Value(count)));
+    await (_database.update(_database.rooms)..where((t) => t.id.equals(roomId)))
+        .write(RoomsCompanion(unreadCount: Value(count)));
   }
 
   domain.Room _toRoom(Room row) {

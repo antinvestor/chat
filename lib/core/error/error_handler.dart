@@ -16,7 +16,11 @@ class ErrorHandler {
     VoidCallback? onRetry,
   }) {
     // Log the error
-    AppLogger.error('Error handled by ErrorHandler', error: error, stackTrace: stackTrace);
+    AppLogger.error(
+      'Error handled by ErrorHandler',
+      error: error,
+      stackTrace: stackTrace,
+    );
 
     // Determine user-friendly message
     final message = userMessage ?? _getUserMessage(error);
@@ -83,12 +87,9 @@ class ErrorHandler {
     Duration duration = const Duration(seconds: 3),
   }) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: duration,
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message), duration: duration));
     }
   }
 }

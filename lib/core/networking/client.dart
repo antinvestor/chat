@@ -20,7 +20,7 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
 });
 
 /// Token manager provider using antinvestor_api_common TokenManager
-/// 
+///
 /// TokenManager handles:
 /// - Persistent storage of tokens
 /// - Reactive refresh on 401 (via interceptor)
@@ -29,7 +29,7 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
 final tokenManagerProvider = Provider<TokenManager>((ref) {
   final storage = ref.watch(secureStorageProvider);
   final authRepo = ref.watch(authRepositoryProvider);
-  
+
   final tokenManager = TokenManager(
     persistTokens: (accessToken, refreshToken) async {
       if (accessToken != null) {
@@ -47,10 +47,7 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
       final accessToken = await storage.read(key: 'access_token');
       final refreshToken = await storage.read(key: 'refresh_token');
       if (accessToken != null) {
-        return TokenPair(
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-        );
+        return TokenPair(accessToken: accessToken, refreshToken: refreshToken);
       }
       return null;
     },
@@ -71,18 +68,18 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
       await authRepo.logout();
     },
   );
-  
+
   ref.onDispose(() {
     tokenManager.dispose();
   });
-  
+
   return tokenManager;
 });
 
 /// Token refresh callback provider - delegates to TokenManager's performRefresh
 final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
   final tokenManager = ref.watch(tokenManagerProvider);
-  
+
   return (String? refreshToken) async {
     // Use TokenManager's built-in refresh which handles concurrent requests
     final result = await tokenManager.performRefresh();
@@ -98,7 +95,10 @@ final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
 });
 
 /// Transport factory function for creating Connect transports
-connect.Transport createTransport(Uri baseUrl, List<connect.Interceptor> interceptors) {
+connect.Transport createTransport(
+  Uri baseUrl,
+  List<connect.Interceptor> interceptors,
+) {
   final httpClient = io.HttpClient()
     ..connectionTimeout = ApiConfig.connectionTimeout
     ..idleTimeout = ApiConfig.idleTimeout
@@ -132,10 +132,10 @@ final authHeadersProvider = FutureProvider<connect.Headers>((ref) async {
 final chatClientProvider = FutureProvider<ChatClient>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
-  
+
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
-  
+
   return await newChatClient(
     createTransport: createTransport,
     tokenManager: tokenManager,
@@ -147,10 +147,10 @@ final chatClientProvider = FutureProvider<ChatClient>((ref) async {
 final gatewayClientProvider = FutureProvider<GatewayClient>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
-  
+
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
-  
+
   return await newGatewayClient(
     createTransport: createTransport,
     tokenManager: tokenManager,
@@ -162,10 +162,10 @@ final gatewayClientProvider = FutureProvider<GatewayClient>((ref) async {
 final deviceClientProvider = FutureProvider<DeviceClient>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
-  
+
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
-  
+
   return await newDeviceClient(
     createTransport: createTransport,
     tokenManager: tokenManager,
@@ -189,22 +189,30 @@ final profileClientProvider = FutureProvider<ProfileClient>((ref) async {
 });
 
 /// Legacy providers for backward compatibility - expose the underlying service clients
-final chatServiceClientProvider = FutureProvider<ChatServiceClient>((ref) async {
+final chatServiceClientProvider = FutureProvider<ChatServiceClient>((
+  ref,
+) async {
   final client = await ref.watch(chatClientProvider.future);
   return client.stub;
 });
 
-final gatewayServiceClientProvider = FutureProvider<GatewayServiceClient>((ref) async {
+final gatewayServiceClientProvider = FutureProvider<GatewayServiceClient>((
+  ref,
+) async {
   final client = await ref.watch(gatewayClientProvider.future);
   return client.stub;
 });
 
-final deviceServiceClientProvider = FutureProvider<DeviceServiceClient>((ref) async {
+final deviceServiceClientProvider = FutureProvider<DeviceServiceClient>((
+  ref,
+) async {
   final client = await ref.watch(deviceClientProvider.future);
   return client.stub;
 });
 
-final profileServiceClientProvider = FutureProvider<ProfileServiceClient>((ref) async {
+final profileServiceClientProvider = FutureProvider<ProfileServiceClient>((
+  ref,
+) async {
   final client = await ref.watch(profileClientProvider.future);
   return client.stub;
 });
@@ -215,7 +223,9 @@ final profileServiceClientProvider = FutureProvider<ProfileServiceClient>((ref) 
 
 /// Helper to get current auth headers for API calls
 /// Usage: final headers = await ref.read(getAuthHeadersProvider.future);
-final getAuthHeadersProvider = FutureProvider.autoDispose<connect.Headers>((ref) async {
+final getAuthHeadersProvider = FutureProvider.autoDispose<connect.Headers>((
+  ref,
+) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final headers = connect.Headers();
   final token = tokenManager.accessToken;

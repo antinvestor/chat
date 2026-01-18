@@ -10,10 +10,7 @@ import '../services/motion_service.dart';
 class CreateMotionDialog extends ConsumerStatefulWidget {
   final String roomId;
 
-  const CreateMotionDialog({
-    super.key,
-    required this.roomId,
-  });
+  const CreateMotionDialog({super.key, required this.roomId});
 
   @override
   ConsumerState<CreateMotionDialog> createState() => _CreateMotionDialogState();
@@ -122,12 +119,7 @@ class _CreateMotionDialogState extends ConsumerState<CreateMotionDialog> {
       }
     } catch (e, stack) {
       if (mounted) {
-        ErrorHandler.handleError(
-          context,
-          e,
-          stack,
-          onRetry: _createMotion,
-        );
+        ErrorHandler.handleError(context, e, stack, onRetry: _createMotion);
       }
     } finally {
       if (mounted) {
@@ -219,8 +211,13 @@ class _CreateMotionDialogState extends ConsumerState<CreateMotionDialog> {
                       ),
                       if (_optionControllers.length > 2)
                         IconButton(
-                          icon: const Icon(Icons.remove_circle, color: Colors.red),
-                          onPressed: _isCreating ? null : () => _removeOption(index),
+                          icon: const Icon(
+                            Icons.remove_circle,
+                            color: Colors.red,
+                          ),
+                          onPressed: _isCreating
+                              ? null
+                              : () => _removeOption(index),
                         ),
                     ],
                   ),

@@ -23,12 +23,13 @@ This document establishes the development workflow, quality gates, and collabora
 
 ### Branch Naming Convention
 
+This project uses trunk-based development with `main` as the single integration branch.
+
 ```
 main                           # Protected, production-ready code
-├── develop                    # Integration branch (optional)
-├── feature/MSG-EDIT-001       # Feature branches
+├── feature/MSG-EDIT-001       # Feature branches (from main)
 ├── feature/SEC-E2E-001
-├── bugfix/MSG-EDIT-001-fix    # Bug fix branches
+├── bugfix/MSG-EDIT-001-fix    # Bug fix branches (from main)
 ├── hotfix/critical-fix        # Emergency production fixes
 └── release/v1.0.0             # Release branches
 ```
@@ -38,10 +39,10 @@ main                           # Protected, production-ready code
 | Branch | Protection | Merge Strategy |
 |--------|------------|----------------|
 | `main` | Protected, requires PR | Squash merge |
-| `develop` | Protected, requires PR | Merge commit |
 | `feature/*` | None | Rebase from main |
 | `bugfix/*` | None | Rebase from main |
 | `hotfix/*` | None | Cherry-pick to main |
+| `release/*` | None | Merge to main |
 
 ### Creating a Feature Branch
 
@@ -54,7 +55,7 @@ git pull origin main
 git checkout -b feature/MSG-EDIT-001
 
 # Make changes, commit frequently
-git add .
+git add -p  # Interactively stage changes
 git commit -m "feat(messages): add edit message UI
 
 - Add long-press menu with edit option
@@ -420,7 +421,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build apk --release
+      - run: flutter build apk --debug
 
   build-ios:
     needs: [lint, test]
@@ -429,7 +430,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build ios --release --no-codesign
+      - run: flutter build ios --debug --no-codesign
 
   build-web:
     needs: [lint, test]
@@ -596,20 +597,9 @@ Closes #3
 Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ```
 
-### PR Status Updates
+### PR Status
 
-When a PR status changes, update labels:
-
-```bash
-# PR ready for review
-gh pr edit --add-label "status:ready-for-review"
-
-# Changes requested
-gh pr edit --remove-label "status:ready-for-review" --add-label "status:changes-requested"
-
-# Approved and ready to merge
-gh pr edit --remove-label "status:changes-requested" --add-label "status:approved"
-```
+GitHub automatically tracks PR states (ready for review, changes requested, approved) through its built-in review system. Use labels only for supplemental metadata like sprint assignments and work streams.
 
 ### Blocking Issues
 

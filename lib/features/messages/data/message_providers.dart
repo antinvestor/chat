@@ -19,17 +19,21 @@ MessageRepository messageRepository(Ref ref) {
 
 /// Reactive stream provider for messages - provides instant UI updates
 /// when messages are added, updated, or deleted from the local database
-final messagesStreamProvider = StreamProvider.family<List<domain.RoomEvent>, String>((ref, roomId) {
-  final repo = ref.watch(messageRepositoryProvider);
-  return repo.watchMessagesForRoom(roomId);
-});
+final messagesStreamProvider =
+    StreamProvider.family<List<domain.RoomEvent>, String>((ref, roomId) {
+      final repo = ref.watch(messageRepositoryProvider);
+      return repo.watchMessagesForRoom(roomId);
+    });
 
 /// Paginated messages stream provider with configurable limit
 /// Use this for views that need to load more messages on scroll
-final paginatedMessagesStreamProvider = StreamProvider.family<List<domain.RoomEvent>, ({String roomId, int limit})>((ref, params) {
-  final repo = ref.watch(messageRepositoryProvider);
-  return repo.watchMessagesForRoom(params.roomId, limit: params.limit);
-});
+final paginatedMessagesStreamProvider =
+    StreamProvider.family<List<domain.RoomEvent>, ({String roomId, int limit})>(
+      (ref, params) {
+        final repo = ref.watch(messageRepositoryProvider);
+        return repo.watchMessagesForRoom(params.roomId, limit: params.limit);
+      },
+    );
 
 @riverpod
 class MessageList extends _$MessageList {
@@ -115,7 +119,10 @@ class MessageList extends _$MessageList {
         return true;
       } else {
         // No more messages available
-        AppLogger.debug('No more history available for room', data: {'roomId': roomId});
+        AppLogger.debug(
+          'No more history available for room',
+          data: {'roomId': roomId},
+        );
         return false;
       }
     } catch (e) {

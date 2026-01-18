@@ -17,16 +17,16 @@ class AuthInterceptor {
   /// Caches token for 30 seconds to reduce secure storage reads
   Future<connect.Headers> getAuthHeaders() async {
     final headers = connect.Headers();
-    
+
     // Check if cached token is still valid
     final now = DateTime.now();
-    if (_cachedToken != null && 
-        _cacheTime != null && 
+    if (_cachedToken != null &&
+        _cacheTime != null &&
         now.difference(_cacheTime!) < _cacheValidDuration) {
       headers['Authorization'] = 'Bearer $_cachedToken';
       return headers;
     }
-    
+
     // Read fresh token
     final token = await _storage.read(key: 'access_token');
     if (token != null && token.isNotEmpty) {

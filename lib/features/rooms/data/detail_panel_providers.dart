@@ -16,34 +16,39 @@ Stream<List<domain.RoomEvent>> activeMotions(Ref ref, String roomId) {
 
   // Watch room events and filter for active motions
   return (db.select(db.roomEvents)
-    ..where((t) => t.roomId.equals(roomId))
-    ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        ..where((t) => t.roomId.equals(roomId))
+        ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
       .watch()
       .map((events) {
-    final now = DateTime.now();
+        final now = DateTime.now();
 
-    return events.where((event) {
-      if (event.type != domain.RoomEventType.motion.index) return false;
+        return events
+            .where((event) {
+              if (event.type != domain.RoomEventType.motion.index) return false;
 
-      // Parse content to check deadline
-      try {
-        final content = event.content != null
-            ? (jsonDecode(event.content!) as Map<String, dynamic>)
-            : <String, dynamic>{};
+              // Parse content to check deadline
+              try {
+                final content = event.content != null
+                    ? (jsonDecode(event.content!) as Map<String, dynamic>)
+                    : <String, dynamic>{};
 
-        final deadlineMs = content['deadline'] as int?;
-        if (deadlineMs == null) return false;
+                final deadlineMs = content['deadline'] as int?;
+                if (deadlineMs == null) return false;
 
-        final deadline = DateTime.fromMillisecondsSinceEpoch(deadlineMs);
-        final status = content['status'] as String? ?? 'active';
+                final deadline = DateTime.fromMillisecondsSinceEpoch(
+                  deadlineMs,
+                );
+                final status = content['status'] as String? ?? 'active';
 
-        // Include if not expired and status is active
-        return now.isBefore(deadline) && status == 'active';
-      } catch (e) {
-        return false;
-      }
-    }).map((event) => _toRoomEvent(event)).toList();
-  });
+                // Include if not expired and status is active
+                return now.isBefore(deadline) && status == 'active';
+              } catch (e) {
+                return false;
+              }
+            })
+            .map((event) => _toRoomEvent(event))
+            .toList();
+      });
 }
 
 /// Provider for room members
@@ -87,15 +92,17 @@ Future<List<RoomMemberInfo>> roomMembers(Ref ref, String roomId) async {
       }
     }
 
-    memberInfoList.add(RoomMemberInfo(
-      subscriptionId: member.subscriptionId,
-      profileId: member.profileId,
-      contactId: member.contactId,
-      name: name ?? 'Unknown',
-      avatarUrl: avatarUrl,
-      role: member.role ?? 'member',
-      joinedAt: member.joinedAt,
-    ));
+    memberInfoList.add(
+      RoomMemberInfo(
+        subscriptionId: member.subscriptionId,
+        profileId: member.profileId,
+        contactId: member.contactId,
+        name: name ?? 'Unknown',
+        avatarUrl: avatarUrl,
+        role: member.role ?? 'member',
+        joinedAt: member.joinedAt,
+      ),
+    );
   }
 
   return memberInfoList;
@@ -108,15 +115,17 @@ Stream<List<domain.RoomEvent>> roomMedia(Ref ref, String roomId) {
 
   return (db.select(db.roomEvents)
         ..where((t) => t.roomId.equals(roomId))
-        ..where((t) =>
-            t.type.equals(domain.RoomEventType.image.index) |
-            t.type.equals(domain.RoomEventType.video.index))
+        ..where(
+          (t) =>
+              t.type.equals(domain.RoomEventType.image.index) |
+              t.type.equals(domain.RoomEventType.video.index),
+        )
         ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
         ..limit(50))
       .watch()
       .map((events) {
-    return events.map((event) => _toRoomEvent(event)).toList();
-  });
+        return events.map((event) => _toRoomEvent(event)).toList();
+      });
 }
 
 /// Provider for recent transactions in a room
@@ -131,8 +140,8 @@ Stream<List<domain.RoomEvent>> roomTransactions(Ref ref, String roomId) {
         ..limit(50))
       .watch()
       .map((events) {
-    return events.map((event) => _toRoomEvent(event)).toList();
-  });
+        return events.map((event) => _toRoomEvent(event)).toList();
+      });
 }
 
 // Helper to convert database row to domain model

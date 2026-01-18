@@ -5,31 +5,38 @@ import '../../../core/db/database.dart';
 import '../../rooms/domain/room.dart' as domain;
 
 /// Provider to get a profile by ID
-final profileByIdProvider = FutureProvider.family<Profile?, String>((ref, profileId) async {
+final profileByIdProvider = FutureProvider.family<Profile?, String>((
+  ref,
+  profileId,
+) async {
   final db = AppDatabase.instance;
-  final query = db.select(db.profiles)
-    ..where((t) => t.id.equals(profileId));
+  final query = db.select(db.profiles)..where((t) => t.id.equals(profileId));
 
   return query.getSingleOrNull();
 });
 
 /// Provider to watch a profile by ID (reactive updates)
-final profileByIdStreamProvider = StreamProvider.family<Profile?, String>((ref, profileId) {
+final profileByIdStreamProvider = StreamProvider.family<Profile?, String>((
+  ref,
+  profileId,
+) {
   final db = AppDatabase.instance;
-  final query = db.select(db.profiles)
-    ..where((t) => t.id.equals(profileId));
+  final query = db.select(db.profiles)..where((t) => t.id.equals(profileId));
 
   return query.watchSingleOrNull();
 });
 
 /// Provider to get shared rooms between current user and another profile
-final sharedRoomsProvider = FutureProvider.family<List<domain.Room>, String>((ref, profileId) async {
+final sharedRoomsProvider = FutureProvider.family<List<domain.Room>, String>((
+  ref,
+  profileId,
+) async {
   final db = AppDatabase.instance;
 
   // Get rooms where both current user and target profile are members
-  final memberRooms = await (db.select(db.roomMembers)
-        ..where((t) => t.profileId.equals(profileId)))
-      .get();
+  final memberRooms = await (db.select(
+    db.roomMembers,
+  )..where((t) => t.profileId.equals(profileId))).get();
 
   if (memberRooms.isEmpty) {
     return [];
@@ -37,19 +44,23 @@ final sharedRoomsProvider = FutureProvider.family<List<domain.Room>, String>((re
 
   // Get room details for each membership
   final roomIds = memberRooms.map((m) => m.roomId).toList();
-  final rooms = await (db.select(db.rooms)
-        ..where((t) => t.id.isIn(roomIds)))
-      .get();
+  final rooms = await (db.select(
+    db.rooms,
+  )..where((t) => t.id.isIn(roomIds))).get();
 
-  return rooms.map((r) => domain.Room(
-    id: r.id,
-    name: r.name ?? 'Unknown Room',
-    type: r.type ?? 'group',
-    unreadCount: r.unreadCount,
-    lastEventId: r.lastEventId,
-    lastEventIndex: r.lastEventIndex ?? 0,
-    metadata: null,
-  )).toList();
+  return rooms
+      .map(
+        (r) => domain.Room(
+          id: r.id,
+          name: r.name ?? 'Unknown Room',
+          type: r.type ?? 'group',
+          unreadCount: r.unreadCount,
+          lastEventId: r.lastEventId,
+          lastEventIndex: r.lastEventIndex ?? 0,
+          metadata: null,
+        ),
+      )
+      .toList();
 });
 
 /// Provider for the current user's profile
@@ -62,13 +73,15 @@ final currentProfileProvider = FutureProvider<Profile?>((ref) async {
 });
 
 /// Provider to search profiles by name
-final searchProfilesProvider = FutureProvider.family<List<Profile>, String>((ref, searchTerm) async {
+final searchProfilesProvider = FutureProvider.family<List<Profile>, String>((
+  ref,
+  searchTerm,
+) async {
   if (searchTerm.isEmpty) return [];
 
   final db = AppDatabase.instance;
   final pattern = '%$searchTerm%';
-  final query = db.select(db.profiles)
-    ..where((t) => t.name.like(pattern));
+  final query = db.select(db.profiles)..where((t) => t.name.like(pattern));
 
   return query.get();
 });

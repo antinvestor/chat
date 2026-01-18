@@ -17,7 +17,7 @@ Future<void> showContactSyncSheet({
   VoidCallback? onDismiss,
 }) async {
   final completer = Completer<void>();
-  
+
   showModalBottomSheet(
     context: context,
     isDismissible: true,
@@ -46,7 +46,7 @@ Future<void> showContactSyncSheet({
       completer.complete();
     }
   });
-  
+
   return completer.future;
 }
 
@@ -83,14 +83,18 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
     AppLogger.debug('[ContactSyncSheet] Starting two-phase sync');
 
     // Phase 1: Local sync (immediate)
-    AppLogger.info('[ContactSyncSheet] ========== PHASE 1: LOCAL SYNC ==========');
+    AppLogger.info(
+      '[ContactSyncSheet] ========== PHASE 1: LOCAL SYNC ==========',
+    );
     await widget.repository.syncContactsLocal(
       progressCallback: (progress) {
         if (mounted) {
           setState(() => _progress = progress);
 
           if (progress.state == SyncState.permissionDenied) {
-            AppLogger.warning('[ContactSyncSheet] Permission denied, checking if permanent');
+            AppLogger.warning(
+              '[ContactSyncSheet] Permission denied, checking if permanent',
+            );
             _checkIfPermanentlyDenied();
           }
         }
@@ -99,7 +103,9 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
 
     // Phase 2: Server sync (background)
     if (mounted && _progress.state != SyncState.permissionDenied) {
-      AppLogger.info('[ContactSyncSheet] ========== PHASE 2: SERVER SYNC ==========');
+      AppLogger.info(
+        '[ContactSyncSheet] ========== PHASE 2: SERVER SYNC ==========',
+      );
       await widget.repository.syncContactsToServer(
         progressCallback: (progress) {
           if (mounted) {
@@ -107,7 +113,9 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
 
             if (progress.state == SyncState.completed) {
               _isComplete = true;
-              AppLogger.info('[ContactSyncSheet] Sync completed, auto-dismissing in ${widget.autoDismissDelay.inSeconds}s');
+              AppLogger.info(
+                '[ContactSyncSheet] Sync completed, auto-dismissing in ${widget.autoDismissDelay.inSeconds}s',
+              );
               Future.delayed(widget.autoDismissDelay, () {
                 if (mounted) {
                   AppLogger.debug('[ContactSyncSheet] Auto-dismiss triggered');
@@ -123,19 +131,25 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
 
   Future<void> _checkIfPermanentlyDenied() async {
     final status = await Permission.contacts.status;
-    AppLogger.debug('[ContactSyncSheet] Permission status check', data: {
-      'isGranted': status.isGranted,
-      'isDenied': status.isDenied,
-      'isPermanentlyDenied': status.isPermanentlyDenied,
-      'isRestricted': status.isRestricted,
-    });
+    AppLogger.debug(
+      '[ContactSyncSheet] Permission status check',
+      data: {
+        'isGranted': status.isGranted,
+        'isDenied': status.isDenied,
+        'isPermanentlyDenied': status.isPermanentlyDenied,
+        'isRestricted': status.isRestricted,
+      },
+    );
     if (mounted) {
       setState(() {
         // On Android, after denying twice the permission becomes permanently denied
         // On iOS, after denying once it's permanently denied
-        _permissionPermanentlyDenied = status.isPermanentlyDenied || status.isRestricted;
+        _permissionPermanentlyDenied =
+            status.isPermanentlyDenied || status.isRestricted;
       });
-      AppLogger.debug('[ContactSyncSheet] Permission permanently denied: $_permissionPermanentlyDenied');
+      AppLogger.debug(
+        '[ContactSyncSheet] Permission permanently denied: $_permissionPermanentlyDenied',
+      );
     }
   }
 
@@ -149,15 +163,20 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
     });
 
     final status = await Permission.contacts.request();
-    AppLogger.debug('[ContactSyncSheet] Permission request result', data: {
-      'isGranted': status.isGranted,
-      'isDenied': status.isDenied,
-      'isPermanentlyDenied': status.isPermanentlyDenied,
-    });
-    
+    AppLogger.debug(
+      '[ContactSyncSheet] Permission request result',
+      data: {
+        'isGranted': status.isGranted,
+        'isDenied': status.isDenied,
+        'isPermanentlyDenied': status.isPermanentlyDenied,
+      },
+    );
+
     if (status.isGranted) {
       // Permission granted, restart sync
-      AppLogger.info('[ContactSyncSheet] Permission granted on retry, restarting sync');
+      AppLogger.info(
+        '[ContactSyncSheet] Permission granted on retry, restarting sync',
+      );
       await _startSync();
     } else if (status.isPermanentlyDenied) {
       AppLogger.warning('[ContactSyncSheet] Permission permanently denied');
@@ -193,7 +212,7 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -222,11 +241,11 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Icon
             _buildIcon(theme),
             const SizedBox(height: 16),
-            
+
             // Title
             Text(
               _getTitle(),
@@ -235,7 +254,7 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            
+
             // Message
             Text(
               _progress.message ?? '',
@@ -244,7 +263,7 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             // Progress bar (only during upload)
             if (_progress.state == SyncState.uploading) ...[
               const SizedBox(height: 16),
@@ -282,9 +301,14 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
                 const SizedBox(height: 12),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.7),
+                    color: theme.colorScheme.primaryContainer.withValues(
+                      alpha: 0.7,
+                    ),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -309,19 +333,22 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
                 ),
               ],
             ],
-            
+
             // Loading indicator for non-upload states
             if (_progress.state == SyncState.requestingPermission ||
                 _progress.state == SyncState.readingContacts) ...[
               const SizedBox(height: 16),
               const LinearProgressIndicator(),
             ],
-            
+
             // Completed count
             if (_isComplete && _progress.foundOnPlatform > 0) ...[
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(20),

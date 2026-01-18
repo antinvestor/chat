@@ -32,13 +32,17 @@ class AuthStateNotifier extends _$AuthStateNotifier {
 
       // Token is null - check if this is a permanent failure requiring re-login
       if (result.needsRelogin) {
-        AppLogger.info('Authentication state: unauthenticated (permanent token failure)');
+        AppLogger.info(
+          'Authentication state: unauthenticated (permanent token failure)',
+        );
         return AuthState.unauthenticated;
       }
 
       // Transient error (network issues, etc.) - user is still authenticated
       // They have valid credentials, just can't refresh right now
-      AppLogger.info('Authentication state: authenticated (transient refresh error, keeping session)');
+      AppLogger.info(
+        'Authentication state: authenticated (transient refresh error, keeping session)',
+      );
       return AuthState.authenticated;
     }
 
@@ -53,7 +57,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     try {
       AppLogger.info('Login initiated');
       final authRepo = ref.read(authRepositoryProvider);
-      
+
       // Perform authentication
       await authRepo.login();
 
@@ -91,7 +95,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
       AppLogger.info('Logout initiated');
       final authRepo = ref.read(authRepositoryProvider);
       final onboardingRepo = ref.read(onboardingRepositoryProvider);
-      
+
       await authRepo.logout();
       await onboardingRepo.reset(); // Clear onboarding state for next login
 

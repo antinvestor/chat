@@ -10,7 +10,10 @@ class MessageRepository {
 
   MessageRepository(this._database);
 
-  Future<List<domain.RoomEvent>> getMessagesForRoom(String roomId, {int limit = 50}) async {
+  Future<List<domain.RoomEvent>> getMessagesForRoom(
+    String roomId, {
+    int limit = 50,
+  }) async {
     final query = _database.select(_database.roomEvents)
       ..where((t) => t.roomId.equals(roomId))
       ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
@@ -28,7 +31,11 @@ class MessageRepository {
     int limit = 50,
   }) async {
     final query = _database.select(_database.roomEvents)
-      ..where((t) => t.roomId.equals(roomId) & t.createdAt.isSmallerThanValue(beforeTimestamp))
+      ..where(
+        (t) =>
+            t.roomId.equals(roomId) &
+            t.createdAt.isSmallerThanValue(beforeTimestamp),
+      )
       ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
       ..limit(limit);
 
@@ -56,7 +63,10 @@ class MessageRepository {
   }
 
   /// Watch messages for a room - provides reactive updates for instant UI refresh
-  Stream<List<domain.RoomEvent>> watchMessagesForRoom(String roomId, {int limit = 50}) {
+  Stream<List<domain.RoomEvent>> watchMessagesForRoom(
+    String roomId, {
+    int limit = 50,
+  }) {
     final query = _database.select(_database.roomEvents)
       ..where((t) => t.roomId.equals(roomId))
       ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
@@ -68,33 +78,41 @@ class MessageRepository {
   }
 
   Future<void> insertMessage(domain.RoomEvent event) async {
-    await _database.into(_database.roomEvents).insertOnConflictUpdate(
-      RoomEventsCompanion.insert(
-        id: event.id,
-        roomId: event.roomId,
-        senderId: event.senderId,
-        type: event.type.index,
-        content: Value(jsonEncode(event.content)),
-        parentId: Value(event.parentId),
-        status: Value(event.status.index),
-        createdAt: Value(event.createdAt),
-        serverTs: Value(event.serverTs),
-        localId: Value(event.localId),
-      ),
-    );
+    await _database
+        .into(_database.roomEvents)
+        .insertOnConflictUpdate(
+          RoomEventsCompanion.insert(
+            id: event.id,
+            roomId: event.roomId,
+            senderId: event.senderId,
+            type: event.type.index,
+            content: Value(jsonEncode(event.content)),
+            parentId: Value(event.parentId),
+            status: Value(event.status.index),
+            createdAt: Value(event.createdAt),
+            serverTs: Value(event.serverTs),
+            localId: Value(event.localId),
+          ),
+        );
   }
 
-  Future<void> updateMessageStatus(String messageId, domain.EventStatus status) async {
+  Future<void> updateMessageStatus(
+    String messageId,
+    domain.EventStatus status,
+  ) async {
     await (_database.update(_database.roomEvents)
-      ..where((t) => t.id.equals(messageId)))
-      .write(RoomEventsCompanion(status: Value(status.index)));
+          ..where((t) => t.id.equals(messageId)))
+        .write(RoomEventsCompanion(status: Value(status.index)));
   }
 
-  Future<void> updateMessagesStatus(List<String> messageIds, domain.EventStatus status) async {
+  Future<void> updateMessagesStatus(
+    List<String> messageIds,
+    domain.EventStatus status,
+  ) async {
     if (messageIds.isEmpty) return;
     await (_database.update(_database.roomEvents)
-      ..where((t) => t.id.isIn(messageIds)))
-      .write(RoomEventsCompanion(status: Value(status.index)));
+          ..where((t) => t.id.isIn(messageIds)))
+        .write(RoomEventsCompanion(status: Value(status.index)));
   }
 
   Future<domain.RoomEvent?> getEventById(String eventId) async {
@@ -107,7 +125,11 @@ class MessageRepository {
 
   Future<List<domain.RoomEvent>> getReactionsForEvent(String eventId) async {
     final query = _database.select(_database.roomEvents)
-      ..where((t) => t.parentId.equals(eventId) & t.type.equals(domain.RoomEventType.reaction.index));
+      ..where(
+        (t) =>
+            t.parentId.equals(eventId) &
+            t.type.equals(domain.RoomEventType.reaction.index),
+      );
 
     final results = await query.get();
     return results.map((row) => _toRoomEvent(row)).toList();

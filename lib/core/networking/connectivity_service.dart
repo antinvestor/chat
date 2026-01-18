@@ -10,7 +10,7 @@ import '../sync/sync_engine.dart';
 class ConnectivityService {
   final Connectivity _connectivity;
   final SyncEngine _syncEngine;
-  
+
   StreamSubscription<List<ConnectivityResult>>? _subscription;
   bool _wasOffline = false;
   bool _isInitialized = false;
@@ -22,8 +22,10 @@ class ConnectivityService {
     if (_isInitialized) return;
     _isInitialized = true;
 
-    _subscription = _connectivity.onConnectivityChanged.listen(_handleConnectivityChange);
-    
+    _subscription = _connectivity.onConnectivityChanged.listen(
+      _handleConnectivityChange,
+    );
+
     // Check initial connectivity
     _checkInitialConnectivity();
   }
@@ -32,10 +34,13 @@ class ConnectivityService {
     try {
       final results = await _connectivity.checkConnectivity();
       _wasOffline = !_hasConnection(results);
-      AppLogger.info('Initial connectivity check', data: {
-        'hasConnection': !_wasOffline,
-        'results': results.map((r) => r.name).toList(),
-      });
+      AppLogger.info(
+        'Initial connectivity check',
+        data: {
+          'hasConnection': !_wasOffline,
+          'results': results.map((r) => r.name).toList(),
+        },
+      );
     } catch (e) {
       AppLogger.error('Failed to check initial connectivity', error: e);
     }
@@ -43,12 +48,15 @@ class ConnectivityService {
 
   void _handleConnectivityChange(List<ConnectivityResult> results) {
     final hasConnection = _hasConnection(results);
-    
-    AppLogger.info('Connectivity changed', data: {
-      'hasConnection': hasConnection,
-      'wasOffline': _wasOffline,
-      'results': results.map((r) => r.name).toList(),
-    });
+
+    AppLogger.info(
+      'Connectivity changed',
+      data: {
+        'hasConnection': hasConnection,
+        'wasOffline': _wasOffline,
+        'results': results.map((r) => r.name).toList(),
+      },
+    );
 
     if (hasConnection && _wasOffline) {
       // Just came back online - trigger sync
@@ -60,10 +68,12 @@ class ConnectivityService {
   }
 
   bool _hasConnection(List<ConnectivityResult> results) {
-    return results.any((result) =>
-        result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.mobile ||
-        result == ConnectivityResult.ethernet);
+    return results.any(
+      (result) =>
+          result == ConnectivityResult.wifi ||
+          result == ConnectivityResult.mobile ||
+          result == ConnectivityResult.ethernet,
+    );
   }
 
   void _triggerSync() {
@@ -91,14 +101,16 @@ class ConnectivityService {
 }
 
 /// Provider for connectivity service
-final connectivityServiceProvider = FutureProvider<ConnectivityService>((ref) async {
+final connectivityServiceProvider = FutureProvider<ConnectivityService>((
+  ref,
+) async {
   final syncEngine = await ref.watch(syncEngineProvider.future);
   final service = ConnectivityService(Connectivity(), syncEngine);
-  
+
   ref.onDispose(() {
     service.stop();
   });
-  
+
   return service;
 });
 
@@ -111,11 +123,13 @@ final isConnectedProvider = FutureProvider<bool>((ref) async {
 /// Stream provider for connectivity changes
 final connectivityStreamProvider = StreamProvider<bool>((ref) {
   final connectivity = Connectivity();
-  
+
   return connectivity.onConnectivityChanged.map((results) {
-    return results.any((result) =>
-        result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.mobile ||
-        result == ConnectivityResult.ethernet);
+    return results.any(
+      (result) =>
+          result == ConnectivityResult.wifi ||
+          result == ConnectivityResult.mobile ||
+          result == ConnectivityResult.ethernet,
+    );
   });
 });

@@ -1,11 +1,5 @@
 /// Centralized error types for the application
-enum ErrorType {
-  network,
-  authentication,
-  validation,
-  server,
-  unknown,
-}
+enum ErrorType { network, authentication, validation, server, unknown }
 
 /// Application error with user-friendly messaging
 class AppError {

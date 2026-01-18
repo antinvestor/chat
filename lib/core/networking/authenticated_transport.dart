@@ -13,6 +13,7 @@ import 'api_config.dart';
 abstract class TokenProvider {
   Future<String?> getAccessToken();
   Future<void> onTokenExpired();
+
   /// Ensure we have a valid access token, refreshing if necessary
   Future<String?> ensureValidAccessToken();
 }
@@ -27,8 +28,8 @@ class SecureStorageTokenProvider implements TokenProvider {
     this._storage, {
     Future<void> Function()? onExpired,
     Future<String?> Function()? ensureValidToken,
-  })  : _onExpired = onExpired,
-        _ensureValidToken = ensureValidToken;
+  }) : _onExpired = onExpired,
+       _ensureValidToken = ensureValidToken;
 
   @override
   Future<String?> getAccessToken() async {
@@ -60,22 +61,22 @@ class AuthenticatedHttpClient {
   final TokenProvider _tokenProvider;
   final io.HttpClient _httpClient;
 
-  AuthenticatedHttpClient(this._tokenProvider) 
-      : _httpClient = _createOptimizedHttpClient();
+  AuthenticatedHttpClient(this._tokenProvider)
+    : _httpClient = _createOptimizedHttpClient();
 
   static io.HttpClient _createOptimizedHttpClient() {
     final client = io.HttpClient();
-    
+
     // Optimize for low-resource devices
     client.connectionTimeout = ApiConfig.connectionTimeout;
     client.idleTimeout = ApiConfig.idleTimeout;
-    
+
     // Limit concurrent connections to reduce memory usage
     client.maxConnectionsPerHost = 4;
-    
+
     // Enable automatic decompression
     client.autoUncompress = true;
-    
+
     return client;
   }
 
@@ -127,16 +128,19 @@ class TransportFactory {
   connect.Transport get chatTransport => getTransport(ApiConfig.chatBaseUrl);
 
   /// Get transport for Gateway service
-  connect.Transport get gatewayTransport => getTransport(ApiConfig.gatewayBaseUrl);
+  connect.Transport get gatewayTransport =>
+      getTransport(ApiConfig.gatewayBaseUrl);
 
   /// Get transport for Device service
-  connect.Transport get deviceTransport => getTransport(ApiConfig.devicesBaseUrl);
+  connect.Transport get deviceTransport =>
+      getTransport(ApiConfig.devicesBaseUrl);
 
   /// Get transport for File service
   connect.Transport get fileTransport => getTransport(ApiConfig.filesBaseUrl);
 
   /// Get transport for Profile service
-  connect.Transport get profileTransport => getTransport(ApiConfig.profileBaseUrl);
+  connect.Transport get profileTransport =>
+      getTransport(ApiConfig.profileBaseUrl);
 
   /// Get auth headers for manual header injection
   Future<connect.Headers> getAuthHeaders() => httpClient.getAuthHeaders();
