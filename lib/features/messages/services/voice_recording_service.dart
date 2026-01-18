@@ -69,7 +69,9 @@ class VoiceRecordingService {
 
       // Start duration timer
       _durationTimer?.cancel();
-      _durationTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      _durationTimer = Timer.periodic(const Duration(milliseconds: 100), (
+        timer,
+      ) {
         if (_recordingStartTime != null) {
           final duration = DateTime.now().difference(_recordingStartTime!);
           _durationController.add(duration);
@@ -81,10 +83,17 @@ class VoiceRecordingService {
         }
       });
 
-      AppLogger.info('Voice recording started', data: {'path': _currentRecordingPath});
+      AppLogger.info(
+        'Voice recording started',
+        data: {'path': _currentRecordingPath},
+      );
       return _currentRecordingPath;
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to start voice recording', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to start voice recording',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }
@@ -114,7 +123,10 @@ class VoiceRecordingService {
       // Verify the file exists and has content
       final file = File(path);
       if (!await file.exists()) {
-        AppLogger.warning('Recording file does not exist', data: {'path': path});
+        AppLogger.warning(
+          'Recording file does not exist',
+          data: {'path': path},
+        );
         return null;
       }
 
@@ -127,16 +139,18 @@ class VoiceRecordingService {
 
       // Require minimum duration (500ms) to prevent accidental taps
       if (duration.inMilliseconds < 500) {
-        AppLogger.debug('Recording too short, discarding', data: {'duration': duration.inMilliseconds});
+        AppLogger.debug(
+          'Recording too short, discarding',
+          data: {'duration': duration.inMilliseconds},
+        );
         await file.delete();
         return null;
       }
 
-      AppLogger.info('Voice recording stopped', data: {
-        'path': path,
-        'duration': duration.inSeconds,
-        'size': fileSize,
-      });
+      AppLogger.info(
+        'Voice recording stopped',
+        data: {'path': path, 'duration': duration.inSeconds, 'size': fileSize},
+      );
 
       return VoiceRecordingResult(
         path: path,
@@ -144,7 +158,11 @@ class VoiceRecordingService {
         sizeBytes: fileSize,
       );
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to stop voice recording', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to stop voice recording',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }
@@ -170,7 +188,11 @@ class VoiceRecordingService {
 
       AppLogger.debug('Voice recording cancelled');
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to cancel voice recording', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to cancel voice recording',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 

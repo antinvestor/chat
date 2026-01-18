@@ -99,16 +99,16 @@ class RoomEvents extends Table {
 class Sessions extends Table {
   /// Session ID
   TextColumn get sessionId => text()();
-  
+
   /// Profile ID
   TextColumn get profileId => text()();
-  
+
   /// Device ID
   TextColumn get deviceId => text()();
-  
+
   /// Ratchet state blob
   BlobColumn get ratchetState => blob().nullable()();
-  
+
   /// Creation timestamp
   IntColumn get createdAt => integer().nullable()();
 
@@ -119,13 +119,13 @@ class Sessions extends Table {
 class Prekeys extends Table {
   /// Prekey ID
   IntColumn get id => integer().autoIncrement()();
-  
+
   /// Public key
   TextColumn get publicKey => text().nullable()();
-  
+
   /// Private key
   TextColumn get privateKey => text().nullable()();
-  
+
   /// Whether key is signed
   BoolColumn get isSigned => boolean().withDefault(const Constant(false))();
 }
@@ -133,19 +133,19 @@ class Prekeys extends Table {
 class PendingJobs extends Table {
   /// Job ID
   IntColumn get id => integer().autoIncrement()();
-  
+
   /// Job type
   TextColumn get type => text()();
-  
+
   /// Job payload
   TextColumn get payload => text().nullable()();
-  
+
   /// Creation timestamp
   IntColumn get createdAt => integer().nullable()();
-  
+
   /// Retry count
   IntColumn get retryCount => integer().withDefault(const Constant(0))();
-  
+
   /// Job status
   TextColumn get status => text().withDefault(const Constant('pending'))();
 }

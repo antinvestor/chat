@@ -31,8 +31,14 @@ class _DesktopAuthenticator {
 
     try {
       // Start local server to receive callback
-      _server = await HttpServer.bind(InternetAddress.loopbackIPv4, flow.redirectUri.port);
-      AppLogger.debug('Started auth callback server', data: {'port': flow.redirectUri.port});
+      _server = await HttpServer.bind(
+        InternetAddress.loopbackIPv4,
+        flow.redirectUri.port,
+      );
+      AppLogger.debug(
+        'Started auth callback server',
+        data: {'port': flow.redirectUri.port},
+      );
 
       // Handle incoming requests
       _server!.listen((request) async {
@@ -44,16 +50,23 @@ class _DesktopAuthenticator {
         }
 
         try {
-          AppLogger.debug('Received callback request', data: {
-            'uri': request.uri.toString(),
-            'queryParams': request.uri.queryParameters,
-          });
+          AppLogger.debug(
+            'Received callback request',
+            data: {
+              'uri': request.uri.toString(),
+              'queryParams': request.uri.queryParameters,
+            },
+          );
 
           // Check for OAuth error response
           final error = request.uri.queryParameters['error'];
           if (error != null) {
-            final errorDesc = request.uri.queryParameters['error_description'] ?? error;
-            AppLogger.error('OAuth error from provider', data: {'error': error, 'description': errorDesc});
+            final errorDesc =
+                request.uri.queryParameters['error_description'] ?? error;
+            AppLogger.error(
+              'OAuth error from provider',
+              data: {'error': error, 'description': errorDesc},
+            );
             request.response.statusCode = HttpStatus.badRequest;
             request.response.write('Authentication error: $errorDesc');
             await request.response.close();
@@ -68,14 +81,20 @@ class _DesktopAuthenticator {
           final state = request.uri.queryParameters['state'];
 
           if (code == null) {
-            AppLogger.warning('No code in callback', data: {'uri': request.uri.toString()});
+            AppLogger.warning(
+              'No code in callback',
+              data: {'uri': request.uri.toString()},
+            );
             request.response.statusCode = HttpStatus.badRequest;
             request.response.write('Missing authorization code');
             await request.response.close();
             return;
           }
 
-          AppLogger.debug('Processing auth callback', data: {'hasCode': true, 'hasState': state != null});
+          AppLogger.debug(
+            'Processing auth callback',
+            data: {'hasCode': true, 'hasState': state != null},
+          );
 
           // Return success page
           request.response.statusCode = HttpStatus.ok;
@@ -94,13 +113,21 @@ class _DesktopAuthenticator {
               completer.complete(credential);
             }
           } catch (e, stackTrace) {
-            AppLogger.error('Code exchange failed', error: e, stackTrace: stackTrace);
+            AppLogger.error(
+              'Code exchange failed',
+              error: e,
+              stackTrace: stackTrace,
+            );
             if (!completer.isCompleted) {
               completer.completeError(e);
             }
           }
         } catch (e, stackTrace) {
-          AppLogger.error('Error handling callback request', error: e, stackTrace: stackTrace);
+          AppLogger.error(
+            'Error handling callback request',
+            error: e,
+            stackTrace: stackTrace,
+          );
           try {
             request.response.statusCode = HttpStatus.internalServerError;
             request.response.write('Internal error');
@@ -143,10 +170,7 @@ class _MobileAuthenticator {
   StreamSubscription<Uri>? _linkSubscription;
   bool _cancelled = false;
 
-  _MobileAuthenticator({
-    required this.flow,
-    required this.urlLauncher,
-  });
+  _MobileAuthenticator({required this.flow, required this.urlLauncher});
 
   Future<Credential> authorize() async {
     final completer = Completer<Credential>();
@@ -156,12 +180,15 @@ class _MobileAuthenticator {
       _linkSubscription = _appLinks.uriLinkStream.listen((Uri uri) async {
         if (_cancelled) return;
 
-        AppLogger.debug('Received deep link callback', data: {
-          'uri': uri.toString(),
-          'scheme': uri.scheme,
-          'host': uri.host,
-          'queryParams': uri.queryParameters,
-        });
+        AppLogger.debug(
+          'Received deep link callback',
+          data: {
+            'uri': uri.toString(),
+            'scheme': uri.scheme,
+            'host': uri.host,
+            'queryParams': uri.queryParameters,
+          },
+        );
 
         // Verify this is our OAuth callback
         if (uri.scheme != _customScheme || uri.host != _customHost) {
@@ -173,7 +200,10 @@ class _MobileAuthenticator {
         final error = uri.queryParameters['error'];
         if (error != null) {
           final errorDesc = uri.queryParameters['error_description'] ?? error;
-          AppLogger.error('OAuth error from provider', data: {'error': error, 'description': errorDesc});
+          AppLogger.error(
+            'OAuth error from provider',
+            data: {'error': error, 'description': errorDesc},
+          );
           if (!completer.isCompleted) {
             completer.completeError(Exception('OAuth error: $errorDesc'));
           }
@@ -185,14 +215,20 @@ class _MobileAuthenticator {
         final state = uri.queryParameters['state'];
 
         if (code == null) {
-          AppLogger.warning('No code in callback', data: {'uri': uri.toString()});
+          AppLogger.warning(
+            'No code in callback',
+            data: {'uri': uri.toString()},
+          );
           if (!completer.isCompleted) {
             completer.completeError(Exception('Missing authorization code'));
           }
           return;
         }
 
-        AppLogger.debug('Processing OAuth callback', data: {'hasCode': true, 'hasState': state != null});
+        AppLogger.debug(
+          'Processing OAuth callback',
+          data: {'hasCode': true, 'hasState': state != null},
+        );
 
         // Exchange code for tokens
         try {
@@ -205,7 +241,11 @@ class _MobileAuthenticator {
             completer.complete(credential);
           }
         } catch (e, stackTrace) {
-          AppLogger.error('Code exchange failed', error: e, stackTrace: stackTrace);
+          AppLogger.error(
+            'Code exchange failed',
+            error: e,
+            stackTrace: stackTrace,
+          );
           if (!completer.isCompleted) {
             completer.completeError(e);
           }
@@ -236,7 +276,7 @@ AuthPlatform getAuthPlatform() => AuthPlatformIO();
 class AuthPlatformIO implements AuthPlatform {
   static const int _authPort = 5170;
   static const Duration _authTimeout = Duration(minutes: 3);
-  
+
   Issuer? _issuer;
   Client? _client;
   _DesktopAuthenticator? _desktopAuthenticator;
@@ -271,13 +311,16 @@ class AuthPlatformIO implements AuthPlatform {
           Uri.parse(issuerUrl),
         ).timeout(const Duration(seconds: 15));
         _client = Client(_issuer!, clientId);
-        
-        AppLogger.debug('OIDC initialized', data: {
-          'issuer': issuerUrl,
-          'clientId': clientId,
-          'platform': _isMobile ? 'mobile' : 'desktop',
-          'redirectUri': _getRedirectUri().toString(),
-        });
+
+        AppLogger.debug(
+          'OIDC initialized',
+          data: {
+            'issuer': issuerUrl,
+            'clientId': clientId,
+            'platform': _isMobile ? 'mobile' : 'desktop',
+            'redirectUri': _getRedirectUri().toString(),
+          },
+        );
       } catch (e) {
         AppLogger.error(
           'Failed to discover OIDC issuer',
@@ -299,23 +342,27 @@ class AuthPlatformIO implements AuthPlatform {
     await cancelAuthentication();
 
     final redirectUri = _getRedirectUri();
-    
+
     Future<void> urlLauncher(String url) async {
       final uri = Uri.parse(url);
       AppLogger.debug('Launching auth URL', data: {'url': url});
-      
+
       try {
         // Use external application mode to ensure proper redirect handling
         final launched = await launchUrl(
           uri,
           mode: LaunchMode.externalApplication,
         );
-        
+
         if (!launched) {
           throw Exception('Could not launch authentication URL');
         }
       } catch (e) {
-        AppLogger.error('Failed to launch auth URL', error: e, data: {'url': url});
+        AppLogger.error(
+          'Failed to launch auth URL',
+          error: e,
+          data: {'url': url},
+        );
         rethrow;
       }
     }
@@ -324,15 +371,18 @@ class AuthPlatformIO implements AuthPlatform {
       ..scopes.addAll(scopes)
       ..redirectUri = redirectUri;
 
-    AppLogger.debug('Starting authorization flow...', data: {
-      'redirectUri': redirectUri.toString(),
-      'scopes': scopes,
-      'platform': _isMobile ? 'mobile' : 'desktop',
-    });
-    
+    AppLogger.debug(
+      'Starting authorization flow...',
+      data: {
+        'redirectUri': redirectUri.toString(),
+        'scopes': scopes,
+        'platform': _isMobile ? 'mobile' : 'desktop',
+      },
+    );
+
     try {
       Credential credential;
-      
+
       if (_isMobile) {
         // Mobile: Use custom URL scheme with deep link handling
         _mobileAuthenticator = _MobileAuthenticator(
@@ -344,7 +394,10 @@ class AuthPlatformIO implements AuthPlatform {
           onTimeout: () {
             AppLogger.warning('Authentication timed out after $_authTimeout');
             cancelAuthentication();
-            throw TimeoutException('Authentication timed out. Please try again.', _authTimeout);
+            throw TimeoutException(
+              'Authentication timed out. Please try again.',
+              _authTimeout,
+            );
           },
         );
       } else {
@@ -411,13 +464,18 @@ class AuthPlatformIO implements AuthPlatform {
           onTimeout: () {
             AppLogger.warning('Authentication timed out after $_authTimeout');
             cancelAuthentication();
-            throw TimeoutException('Authentication timed out. Please try again.', _authTimeout);
+            throw TimeoutException(
+              'Authentication timed out. Please try again.',
+              _authTimeout,
+            );
           },
         );
       }
-      
-      AppLogger.debug('Authorization flow completed, getting token response...');
-      
+
+      AppLogger.debug(
+        'Authorization flow completed, getting token response...',
+      );
+
       // Close any in-app browser on mobile
       if (_isMobile) {
         try {
@@ -434,32 +492,41 @@ class AuthPlatformIO implements AuthPlatform {
         () async {
           AppLogger.debug('Attempting to get token response...');
           final response = await credential.getTokenResponse();
-          AppLogger.debug('Token response received', data: {
-            'hasAccessToken': response.accessToken != null,
-            'accessTokenLength': response.accessToken?.length ?? 0,
-            'hasRefreshToken': response.refreshToken != null,
-            'expiresAt': response.expiresAt?.toIso8601String(),
-          });
-          
+          AppLogger.debug(
+            'Token response received',
+            data: {
+              'hasAccessToken': response.accessToken != null,
+              'accessTokenLength': response.accessToken?.length ?? 0,
+              'hasRefreshToken': response.refreshToken != null,
+              'expiresAt': response.expiresAt?.toIso8601String(),
+            },
+          );
+
           // Validate token response
           if (response.accessToken == null || response.accessToken!.isEmpty) {
             AppLogger.error('Token exchange returned empty access token');
-            throw Exception('Token exchange failed: No access token in response');
+            throw Exception(
+              'Token exchange failed: No access token in response',
+            );
           }
-          
+
           return response;
         },
         maxAttempts: 3,
         initialDelay: const Duration(seconds: 1),
       );
-      
+
       // Clean up
       await cancelAuthentication();
-      
+
       AppLogger.info('Authentication successful');
       return tokenResponse;
     } catch (e, stackTrace) {
-      AppLogger.error('Authentication failed', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Authentication failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       await cancelAuthentication();
       rethrow;
     }
@@ -477,7 +544,7 @@ class AuthPlatformIO implements AuthPlatform {
       }
       _mobileAuthenticator = null;
     }
-    
+
     // Cancel desktop authenticator if active
     if (_desktopAuthenticator != null) {
       try {
@@ -502,7 +569,7 @@ class AuthPlatformIO implements AuthPlatform {
     required Duration initialDelay,
   }) async {
     Duration delay = initialDelay;
-    
+
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await operation().timeout(
@@ -512,26 +579,27 @@ class AuthPlatformIO implements AuthPlatform {
           },
         );
       } catch (e) {
-        final isNetworkError = e.toString().contains('SocketException') ||
+        final isNetworkError =
+            e.toString().contains('SocketException') ||
             e.toString().contains('Failed host lookup') ||
             e.toString().contains('Connection refused') ||
             e.toString().contains('Network is unreachable') ||
             e is TimeoutException;
-        
+
         if (!isNetworkError || attempt == maxAttempts) {
           rethrow;
         }
-        
+
         AppLogger.warning(
           'Network error on attempt $attempt/$maxAttempts, retrying in ${delay.inSeconds}s...',
           data: {'error': e.toString()},
         );
-        
+
         await Future.delayed(delay);
         delay *= 2; // Exponential backoff
       }
     }
-    
+
     throw StateError('Retry loop completed without returning');
   }
 }

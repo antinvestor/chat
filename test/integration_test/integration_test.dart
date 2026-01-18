@@ -11,7 +11,9 @@ void main() {
   });
 
   group('Integration Tests', () {
-    testWidgets('Complete message flow integration test', (WidgetTester tester) async {
+    testWidgets('Complete message flow integration test', (
+      WidgetTester tester,
+    ) async {
       // TODO(developer): Implement complete message flow test
       // This should test the entire flow from:
       // 1. App startup
@@ -20,15 +22,17 @@ void main() {
       // 4. Message sending
       // 5. Message receiving
       // 6. Real-time updates
-      
+
       await tester.pumpWidgetWithMocks(const ChatApp());
       await tester.pumpAndSettle();
-      
+
       // Placeholder assertion
       expect(find.byType(MaterialApp), findsOneWidget);
     });
 
-    testWidgets('Authentication flow integration test', (WidgetTester tester) async {
+    testWidgets('Authentication flow integration test', (
+      WidgetTester tester,
+    ) async {
       // TODO(developer): Implement authentication flow test
       // This should test:
       // 1. Login screen
@@ -36,15 +40,17 @@ void main() {
       // 3. Token management
       // 4. Session persistence
       // 5. Logout functionality
-      
+
       await tester.pumpWidgetWithMocks(const ChatApp());
       await tester.pumpAndSettle();
-      
+
       // Placeholder assertion
       expect(find.byType(MaterialApp), findsOneWidget);
     });
 
-    testWidgets('Real-time messaging integration test', (WidgetTester tester) async {
+    testWidgets('Real-time messaging integration test', (
+      WidgetTester tester,
+    ) async {
       // TODO(developer): Implement real-time messaging test
       // This should test:
       // 1. WebSocket connection
@@ -52,10 +58,10 @@ void main() {
       // 3. Online status updates
       // 4. Typing indicators
       // 5. Connection recovery
-      
+
       await tester.pumpWidgetWithMocks(const ChatApp());
       await tester.pumpAndSettle();
-      
+
       // Placeholder assertion
       expect(find.byType(MaterialApp), findsOneWidget);
     });
@@ -69,10 +75,10 @@ void main() {
       // 4. File preview
       // 5. File download
       // 6. File storage integration
-      
+
       await tester.pumpWidgetWithMocks(const ChatApp());
       await tester.pumpAndSettle();
-      
+
       // Placeholder assertion
       expect(find.byType(MaterialApp), findsOneWidget);
     });
@@ -85,15 +91,17 @@ void main() {
       // 3. Offline message queuing
       // 4. Data synchronization
       // 5. Database migrations
-      
+
       await tester.pumpWidgetWithMocks(const ChatApp());
       await tester.pumpAndSettle();
-      
+
       // Placeholder assertion
       expect(find.byType(MaterialApp), findsOneWidget);
     });
 
-    testWidgets('Push notifications integration test', (WidgetTester tester) async {
+    testWidgets('Push notifications integration test', (
+      WidgetTester tester,
+    ) async {
       // TODO(developer): Implement push notifications test
       // This should test:
       // 1. Permission handling
@@ -101,10 +109,10 @@ void main() {
       // 3. Message notification receipt
       // 4. Notification handling when app is backgrounded
       // 5. Notification tap handling
-      
+
       await tester.pumpWidgetWithMocks(const ChatApp());
       await tester.pumpAndSettle();
-      
+
       // Placeholder assertion
       expect(find.byType(MaterialApp), findsOneWidget);
     });
@@ -117,10 +125,10 @@ void main() {
       // 3. Camera integration
       // 4. Share sheet integration
       // 5. Platform-specific UI adaptations
-      
+
       await tester.pumpWidgetWithMocks(const ChatApp());
       await tester.pumpAndSettle();
-      
+
       // Placeholder assertion
       expect(find.byType(MaterialApp), findsOneWidget);
     });
@@ -133,10 +141,10 @@ void main() {
       // 3. Authentication failures
       // 4. File upload failures
       // 5. Graceful degradation
-      
+
       await tester.pumpWidgetWithMocks(const ChatApp());
       await tester.pumpAndSettle();
-      
+
       // Placeholder assertion
       expect(find.byType(MaterialApp), findsOneWidget);
     });

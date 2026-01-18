@@ -11,7 +11,9 @@ void main() {
   });
 
   group('Accessibility Tests', () {
-    testWidgets('Chat input bar has proper semantic labels', (WidgetTester tester) async {
+    testWidgets('Chat input bar has proper semantic labels', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidgetWithMocks(
         const MaterialApp(
           home: Scaffold(
@@ -56,7 +58,9 @@ void main() {
       );
     });
 
-    testWidgets('Chat input bar supports accessibility navigation', (WidgetTester tester) async {
+    testWidgets('Chat input bar supports accessibility navigation', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidgetWithMocks(
         const MaterialApp(
           home: Scaffold(
@@ -82,7 +86,9 @@ void main() {
       // This is a placeholder for comprehensive accessibility testing
     });
 
-    testWidgets('Chat input bar has proper contrast ratios', (WidgetTester tester) async {
+    testWidgets('Chat input bar has proper contrast ratios', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidgetWithMocks(
         const MaterialApp(
           home: Scaffold(
@@ -96,7 +102,9 @@ void main() {
       // Should verify that text and background colors meet WCAG AA standards
     });
 
-    testWidgets('Chat input bar works with screen readers', (WidgetTester tester) async {
+    testWidgets('Chat input bar works with screen readers', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidgetWithMocks(
         const MaterialApp(
           home: Scaffold(
@@ -110,7 +118,9 @@ void main() {
       // Should verify that all interactive elements announce their purpose
     });
 
-    testWidgets('Chat input bar supports keyboard navigation', (WidgetTester tester) async {
+    testWidgets('Chat input bar supports keyboard navigation', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidgetWithMocks(
         const MaterialApp(
           home: Scaffold(
@@ -124,7 +134,9 @@ void main() {
       // Should verify that all interactive elements can be accessed via keyboard
     });
 
-    testWidgets('Chat input bar has proper touch target sizes', (WidgetTester tester) async {
+    testWidgets('Chat input bar has proper touch target sizes', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidgetWithMocks(
         const MaterialApp(
           home: Scaffold(

@@ -6,11 +6,7 @@ class TransactionBubble extends StatelessWidget {
   final RoomEvent event;
   final bool isMe;
 
-  const TransactionBubble({
-    super.key,
-    required this.event,
-    required this.isMe,
-  });
+  const TransactionBubble({super.key, required this.event, required this.isMe});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +16,7 @@ class TransactionBubble extends StatelessWidget {
     final currency = content['currency'] as String? ?? 'USD';
     final note = content['note'] as String? ?? '';
     final status = content['status'] as String? ?? 'pending';
-    
+
     final isCompleted = status == 'completed';
     final isFailed = status == 'failed';
 
@@ -43,9 +39,7 @@ class TransactionBubble extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(
         children: [

@@ -126,7 +126,9 @@ class _InputBarState extends ConsumerState<InputBar>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not start recording. Please check microphone permissions.'),
+            content: Text(
+              'Could not start recording. Please check microphone permissions.',
+            ),
             duration: Duration(seconds: 2),
           ),
         );
@@ -250,10 +252,7 @@ class _InputBarState extends ConsumerState<InputBar>
           color: theme.colorScheme.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
           border: Border(
-            left: BorderSide(
-              color: theme.colorScheme.primary,
-              width: 3,
-            ),
+            left: BorderSide(color: theme.colorScheme.primary, width: 3),
           ),
         ),
         child: Row(
@@ -335,10 +334,7 @@ class _InputBarState extends ConsumerState<InputBar>
           // Cancel button
           TextButton(
             onPressed: _cancelVoiceRecording,
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.red.shade600),
-            ),
+            child: Text('Cancel', style: TextStyle(color: Colors.red.shade600)),
           ),
           const SizedBox(width: 8),
           // Send button
@@ -359,7 +355,9 @@ class _InputBarState extends ConsumerState<InputBar>
             child: Container(
               constraints: const BoxConstraints(minHeight: 44),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF5F5F5),
+                color: isDark
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Row(
@@ -388,7 +386,9 @@ class _InputBarState extends ConsumerState<InputBar>
                             ? 'Encrypted message'
                             : 'Message',
                         hintStyle: TextStyle(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
@@ -456,7 +456,9 @@ class _InputBarState extends ConsumerState<InputBar>
     final showSend = _hasText || isRecording;
 
     return GestureDetector(
-      onTap: showSend ? (isRecording ? _stopVoiceRecording : _sendMessage) : null,
+      onTap: showSend
+          ? (isRecording ? _stopVoiceRecording : _sendMessage)
+          : null,
       onLongPressStart: !showSend ? (_) => _startVoiceRecording() : null,
       onLongPressEnd: !showSend ? (_) => _stopVoiceRecording() : null,
       child: AnimatedContainer(

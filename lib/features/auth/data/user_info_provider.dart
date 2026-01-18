@@ -12,18 +12,13 @@ class UserInfo {
   final String? picture;
   final String? phone;
 
-  const UserInfo({
-    this.id,
-    this.name,
-    this.email,
-    this.picture,
-    this.phone,
-  });
+  const UserInfo({this.id, this.name, this.email, this.picture, this.phone});
 
   factory UserInfo.fromClaims(Map<String, dynamic> claims) {
     return UserInfo(
       id: claims['sub'] as String?,
-      name: claims['name'] as String? ?? claims['preferred_username'] as String?,
+      name:
+          claims['name'] as String? ?? claims['preferred_username'] as String?,
       email: claims['email'] as String?,
       picture: claims['picture'] as String?,
       phone: claims['phone_number'] as String?,
@@ -31,7 +26,7 @@ class UserInfo {
   }
 
   String get displayName => name ?? email ?? phone ?? 'User';
-  
+
   String get initials {
     if (name != null && name!.isNotEmpty) {
       final parts = name!.split(' ');

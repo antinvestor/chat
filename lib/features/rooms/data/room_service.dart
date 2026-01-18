@@ -230,9 +230,7 @@ class RoomService {
   Future<void> syncRoomMembers(String roomId) async {
     try {
       // Create request to search room subscriptions
-      final request = pb_chat.SearchRoomSubscriptionsRequest(
-        roomId: roomId,
-      );
+      final request = pb_chat.SearchRoomSubscriptionsRequest(roomId: roomId);
 
       // Fetch subscriptions from API (unary call returns single response)
       final response = await _chatClient.searchRoomSubscriptions(request);
@@ -245,33 +243,39 @@ class RoomService {
         final subscriptionId = subscription.id;
 
         // Extract profileId and contactId from ContactLink
-        final profileId = subscription.hasMember() && subscription.member.hasProfileId()
+        final profileId =
+            subscription.hasMember() && subscription.member.hasProfileId()
             ? subscription.member.profileId
             : null;
-        final contactId = subscription.hasMember() && subscription.member.hasContactId()
+        final contactId =
+            subscription.hasMember() && subscription.member.hasContactId()
             ? subscription.member.contactId
             : null;
 
         // Extract role (use first role if multiple, or null)
-        final role = subscription.roles.isNotEmpty ? subscription.roles.first : null;
+        final role = subscription.roles.isNotEmpty
+            ? subscription.roles.first
+            : null;
 
         // Extract joined timestamp
         final joinedAt = subscription.hasJoinedAt()
             ? subscription.joinedAt.seconds.toInt() * 1000 +
-                subscription.joinedAt.nanos ~/ 1000000
+                  subscription.joinedAt.nanos ~/ 1000000
             : null;
 
         // Insert or update room member
-        await _database.into(_database.roomMembers).insertOnConflictUpdate(
-          RoomMembersCompanion.insert(
-            subscriptionId: subscriptionId,
-            roomId: subscription.roomId,
-            profileId: Value(profileId),
-            contactId: Value(contactId),
-            role: Value(role),
-            joinedAt: Value(joinedAt),
-          ),
-        );
+        await _database
+            .into(_database.roomMembers)
+            .insertOnConflictUpdate(
+              RoomMembersCompanion.insert(
+                subscriptionId: subscriptionId,
+                roomId: subscription.roomId,
+                profileId: Value(profileId),
+                contactId: Value(contactId),
+                role: Value(role),
+                joinedAt: Value(joinedAt),
+              ),
+            );
 
         memberCount++;
       }

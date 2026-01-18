@@ -129,7 +129,7 @@ jobs:
     - name: Build Web Release
       if: matrix.platform == 'web'
       run: |
-        flutter build web --release --web-renderer canvaskit
+        flutter build web --release 
         cd build/web
         zip -r web-release.zip .
         

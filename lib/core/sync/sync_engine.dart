@@ -386,11 +386,12 @@ class SyncEngine {
   }
 
   /// Check if this is a normal/expected disconnection (not a real error)
-  bool _isNormalDisconnect(String errorStr) => errorStr.contains('connection closed') ||
-        errorStr.contains('stream was reset') ||
-        errorStr.contains('connection reset') ||
-        errorStr.contains('eof') ||
-        errorStr.contains('cancelled');
+  bool _isNormalDisconnect(String errorStr) =>
+      errorStr.contains('connection closed') ||
+      errorStr.contains('stream was reset') ||
+      errorStr.contains('connection reset') ||
+      errorStr.contains('eof') ||
+      errorStr.contains('cancelled');
 
   /// Check if an error is an authentication/authorization error
   bool _isAuthenticationError(String errorStr) {
@@ -538,10 +539,11 @@ class SyncEngine {
     }
   }
 
-  bool _isCallEvent(domain.RoomEventType type) => type == domain.RoomEventType.callOffer ||
-        type == domain.RoomEventType.callAnswer ||
-        type == domain.RoomEventType.callIce ||
-        type == domain.RoomEventType.callEnd;
+  bool _isCallEvent(domain.RoomEventType type) =>
+      type == domain.RoomEventType.callOffer ||
+      type == domain.RoomEventType.callAnswer ||
+      type == domain.RoomEventType.callIce ||
+      type == domain.RoomEventType.callEnd;
 
   /// Process system events that don't have roomId (like auth events, token refresh, etc.)
   Future<void> _processSystemEvent(pb.RoomEvent event) async {

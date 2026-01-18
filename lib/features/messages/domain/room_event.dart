@@ -19,13 +19,7 @@ enum RoomEventType {
   transaction,
 }
 
-enum EventStatus {
-  pending,
-  sent,
-  delivered,
-  read,
-  failed,
-}
+enum EventStatus { pending, sent, delivered, read, failed }
 
 @freezed
 abstract class RoomEvent with _$RoomEvent {
@@ -43,5 +37,6 @@ abstract class RoomEvent with _$RoomEvent {
     String? localId,
   }) = _RoomEvent;
 
-  factory RoomEvent.fromJson(Map<String, dynamic> json) => _$RoomEventFromJson(json);
+  factory RoomEvent.fromJson(Map<String, dynamic> json) =>
+      _$RoomEventFromJson(json);
 }

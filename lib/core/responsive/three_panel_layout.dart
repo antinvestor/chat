@@ -28,24 +28,18 @@ class ThreePanelLayout extends StatelessWidget {
     return Row(
       children: [
         // Left panel (room list)
-        SizedBox(
-          width: AppBreakpoints.roomListWidth,
-          child: leftPanel,
-        ),
-        
+        SizedBox(width: AppBreakpoints.roomListWidth, child: leftPanel),
+
         // Vertical divider
         const VerticalDivider(width: 1),
-        
+
         // Center panel (chat)
         Expanded(child: centerPanel),
-        
+
         // Right panel (details) - only shown if provided
         if (rightPanel != null) ...[
           const VerticalDivider(width: 1),
-          SizedBox(
-            width: AppBreakpoints.detailPanelWidth,
-            child: rightPanel!,
-          ),
+          SizedBox(width: AppBreakpoints.detailPanelWidth, child: rightPanel!),
         ],
       ],
     );

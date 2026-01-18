@@ -10,7 +10,6 @@ import 'auth_state_provider.dart';
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     show TokenRefreshResult;
 
-
 part 'token_refresh_service.g.dart';
 
 /// Service that handles automatic token refresh in the background

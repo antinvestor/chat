@@ -80,7 +80,7 @@ class BatchProcessor<T> {
   final int batchSize;
   final Duration maxWait;
   final Future<void> Function(List<T> items) processor;
-  
+
   final List<T> _pending = [];
   Timer? _timer;
   bool _isProcessing = false;
@@ -93,7 +93,7 @@ class BatchProcessor<T> {
 
   void add(T item) {
     _pending.add(item);
-    
+
     if (_pending.length >= batchSize) {
       _processBatch();
     } else {
@@ -104,9 +104,9 @@ class BatchProcessor<T> {
   Future<void> _processBatch() async {
     _timer?.cancel();
     _timer = null;
-    
+
     if (_pending.isEmpty || _isProcessing) return;
-    
+
     _isProcessing = true;
     try {
       final batch = List<T>.from(_pending);
@@ -141,18 +141,18 @@ class RateLimiter {
   /// Returns true if request is allowed, false if rate limited
   bool allowRequest() {
     final now = DateTime.now();
-    
+
     // Remove expired timestamps
     while (_requestTimes.isNotEmpty &&
         now.difference(_requestTimes.first) > window) {
       _requestTimes.removeFirst();
     }
-    
+
     if (_requestTimes.length < maxRequests) {
       _requestTimes.addLast(now);
       return true;
     }
-    
+
     return false;
   }
 

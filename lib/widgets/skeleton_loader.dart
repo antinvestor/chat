@@ -30,9 +30,10 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: -1.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -104,10 +105,7 @@ class RoomListSkeleton extends StatelessWidget {
             ),
           ),
           // Timestamp skeleton
-          const SkeletonLoader(
-            width: 40,
-            height: 12,
-          ),
+          const SkeletonLoader(width: 40, height: 12),
         ],
       ),
     );
@@ -125,8 +123,9 @@ class MessageSkeleton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!isMe) ...[
             const SkeletonLoader(

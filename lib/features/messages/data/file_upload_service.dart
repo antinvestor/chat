@@ -41,11 +41,7 @@ class FileUploadService {
         onProgress: onProgress,
       );
     } catch (e, stackTrace) {
-      AppLogger.error(
-        'File upload failed',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      AppLogger.error('File upload failed', error: e, stackTrace: stackTrace);
       return UploadResult.failure(e.toString());
     }
   }
@@ -73,11 +69,7 @@ class FileUploadService {
         onProgress: onProgress,
       );
     } catch (e, stackTrace) {
-      AppLogger.error(
-        'Bytes upload failed',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      AppLogger.error('Bytes upload failed', error: e, stackTrace: stackTrace);
       return UploadResult.failure(e.toString());
     }
   }
@@ -95,22 +87,24 @@ class FileUploadService {
     final request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Bearer $token';
 
-    request.files.add(http.MultipartFile.fromBytes(
-      'file',
-      bytes,
-      filename: fileName,
-    ));
+    request.files.add(
+      http.MultipartFile.fromBytes('file', bytes, filename: fileName),
+    );
 
     request.fields['content_type'] = mimeType;
 
     // Send request with progress tracking
     final streamedResponse = await request.send();
 
-    if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
+    if (streamedResponse.statusCode == 200 ||
+        streamedResponse.statusCode == 201) {
       final responseBody = await streamedResponse.stream.bytesToString();
       final json = jsonDecode(responseBody) as Map<String, dynamic>;
 
-      AppLogger.info('File uploaded successfully', data: {'fileName': fileName});
+      AppLogger.info(
+        'File uploaded successfully',
+        data: {'fileName': fileName},
+      );
 
       return UploadResult.success(
         fileId: json['id'] as String? ?? '',
@@ -123,10 +117,7 @@ class FileUploadService {
       final errorBody = await streamedResponse.stream.bytesToString();
       AppLogger.error(
         'Upload failed',
-        data: {
-          'statusCode': streamedResponse.statusCode,
-          'error': errorBody,
-        },
+        data: {'statusCode': streamedResponse.statusCode, 'error': errorBody},
       );
       return UploadResult.failure(
         'Upload failed: ${streamedResponse.statusCode}',
@@ -277,10 +268,7 @@ class UploadResult {
   }
 
   factory UploadResult.failure(String message) {
-    return UploadResult._(
-      isSuccess: false,
-      errorMessage: message,
-    );
+    return UploadResult._(isSuccess: false, errorMessage: message);
   }
 }
 
