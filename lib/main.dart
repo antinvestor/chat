@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -7,12 +8,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'app/router.dart';
+import 'core/error/error_tracking_service.dart';
 import 'core/logging/app_logger.dart';
 import 'core/networking/connectivity_service.dart';
 import 'core/sync/background_sync_task.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/data/auth_repository.dart';
+
+/// Sentry DSN - should be configured via environment variable in production
+const String _sentryDsn = String.fromEnvironment(
+  'SENTRY_DSN',
+  defaultValue: '',
+);
 
 /// Background task callback - must be top-level function
 @pragma('vm:entry-point')
@@ -43,6 +51,22 @@ void callbackDispatcher() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize error tracking with Sentry
+  if (_sentryDsn.isNotEmpty) {
+    await ErrorTrackingService.initialize(
+      dsn: _sentryDsn,
+      tracesSampleRate: kReleaseMode ? 0.2 : 1.0,
+      appRunner: () => _initializeAndRun(),
+    );
+  } else {
+    // Run without Sentry if DSN not configured
+    AppLogger.warning('Sentry DSN not configured, error tracking disabled');
+    await _initializeAndRun();
+  }
+}
+
+/// Initialize app services and run the app
+Future<void> _initializeAndRun() async {
   // Database is initialized lazily by Drift
 
   // Initialize workmanager (only supported on Android and iOS)
@@ -65,8 +89,20 @@ void main() async {
 
   AppLogger.info(
     'Application starting',
-    data: {'backgroundSyncRegistered': isMobile},
+    data: {
+      'backgroundSyncRegistered': isMobile,
+      'errorTrackingEnabled': ErrorTrackingService.isInitialized,
+    },
   );
+
+  // Add breadcrumb for app start
+  if (ErrorTrackingService.isInitialized) {
+    await ErrorTrackingService.addBreadcrumb(
+      message: 'App started',
+      category: 'lifecycle',
+      data: {'platform': Platform.operatingSystem},
+    );
+  }
 
   runApp(const ProviderScope(child: ChatApp()));
 }
@@ -107,6 +143,22 @@ class _ChatAppState extends ConsumerState<ChatApp> {
       AppLogger.info(
         'Valid access token obtained, starting background services',
       );
+
+      // Set user context for error tracking
+      if (ErrorTrackingService.isInitialized) {
+        final userInfo = await authRepo.getUserInfo();
+        if (userInfo != null) {
+          await ErrorTrackingService.setUser(
+            id: userInfo['sub'] as String? ?? 'unknown',
+            email: userInfo['email'] as String?,
+            username: userInfo['preferred_username'] as String?,
+          );
+          await ErrorTrackingService.addBreadcrumb(
+            message: 'User authenticated',
+            category: 'auth',
+          );
+        }
+      }
 
       // Token refresh is now handled reactively by TokenManager on 401
 
