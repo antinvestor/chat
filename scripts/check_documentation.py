@@ -11,12 +11,12 @@ import re
 from pathlib import Path
 from typing import Dict, List, Any
 
-# Documentation thresholds (relaxed for initial development)
+# Documentation thresholds
 DOC_THRESHOLDS = {
-    'public_api_coverage': 10,     # percentage (will increase over time)
-    'class_doc_coverage': 10,      # percentage (will increase over time)
-    'method_doc_coverage': 5,      # percentage (will increase over time)
-    'example_coverage': 0,         # percentage (optional for now)
+    'public_api_coverage': 90,     # percentage
+    'class_doc_coverage': 80,      # percentage
+    'method_doc_coverage': 75,     # percentage
+    'example_coverage': 50,        # percentage
 }
 
 def analyze_dart_documentation():

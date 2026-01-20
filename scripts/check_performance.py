@@ -21,14 +21,13 @@ PERFORMANCE_THRESHOLDS = {
 
 def check_performance_metrics():
     """Check performance metrics against thresholds"""
-
+    
     # Look for performance test results
     test_results_path = Path('test_results/performance_metrics.json')
-
+    
     if not test_results_path.exists():
-        print("⚠️  Performance test results not found - skipping threshold check")
-        print("   To enable threshold checking, generate test_results/performance_metrics.json")
-        return True  # Pass when no metrics file (tests run separately)
+        print("❌ Performance test results not found")
+        return False
     
     try:
         with open(test_results_path, 'r') as f:
