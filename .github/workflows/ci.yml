@@ -238,15 +238,15 @@ jobs:
     - name: Set iOS deployment target
       run: |
         cd ios
-        # Update Podfile to use iOS 14.0 (required by workmanager_apple)
+        # Update Podfile to use iOS 15.0 (required by Firebase SDK 12.x)
         if grep -q "^# platform :ios" Podfile; then
-          sed -i '' "s/^# platform :ios.*/platform :ios, '14.0'/" Podfile
+          sed -i '' "s/^# platform :ios.*/platform :ios, '15.0'/" Podfile
         elif grep -q "^platform :ios" Podfile; then
-          sed -i '' "s/^platform :ios.*/platform :ios, '14.0'/" Podfile
+          sed -i '' "s/^platform :ios.*/platform :ios, '15.0'/" Podfile
         else
-          echo "platform :ios, '14.0'" | cat - Podfile > temp && mv temp Podfile
+          echo "platform :ios, '15.0'" | cat - Podfile > temp && mv temp Podfile
         fi
-        echo "Updated Podfile with iOS 14.0 target"
+        echo "Updated Podfile with iOS 15.0 target"
         head -5 Podfile
 
     - name: Install CocoaPods dependencies
