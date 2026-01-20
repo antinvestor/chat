@@ -2096,6 +2096,43 @@ class $RoomEventsTable extends RoomEvents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _redactedMeta = const VerificationMeta(
+    'redacted',
+  );
+  @override
+  late final GeneratedColumn<bool> redacted = GeneratedColumn<bool>(
+    'redacted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("redacted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _redactedAtMeta = const VerificationMeta(
+    'redactedAt',
+  );
+  @override
+  late final GeneratedColumn<int> redactedAt = GeneratedColumn<int>(
+    'redacted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _redactedByMeta = const VerificationMeta(
+    'redactedBy',
+  );
+  @override
+  late final GeneratedColumn<String> redactedBy = GeneratedColumn<String>(
+    'redacted_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2111,6 +2148,9 @@ class $RoomEventsTable extends RoomEvents
     localId,
     editedAt,
     originalContent,
+    redacted,
+    redactedAt,
+    redactedBy,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2213,6 +2253,24 @@ class $RoomEventsTable extends RoomEvents
         ),
       );
     }
+    if (data.containsKey('redacted')) {
+      context.handle(
+        _redactedMeta,
+        redacted.isAcceptableOrUnknown(data['redacted']!, _redactedMeta),
+      );
+    }
+    if (data.containsKey('redacted_at')) {
+      context.handle(
+        _redactedAtMeta,
+        redactedAt.isAcceptableOrUnknown(data['redacted_at']!, _redactedAtMeta),
+      );
+    }
+    if (data.containsKey('redacted_by')) {
+      context.handle(
+        _redactedByMeta,
+        redactedBy.isAcceptableOrUnknown(data['redacted_by']!, _redactedByMeta),
+      );
+    }
     return context;
   }
 
@@ -2274,6 +2332,18 @@ class $RoomEventsTable extends RoomEvents
         DriftSqlType.string,
         data['${effectivePrefix}original_content'],
       ),
+      redacted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}redacted'],
+      )!,
+      redactedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}redacted_at'],
+      ),
+      redactedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}redacted_by'],
+      ),
     );
   }
 
@@ -2322,6 +2392,15 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
 
   /// Original message content before editing (preserved for history)
   final String? originalContent;
+
+  /// Whether the message has been deleted/redacted
+  final bool redacted;
+
+  /// Timestamp when message was redacted
+  final int? redactedAt;
+
+  /// Profile ID of who redacted the message (for admin deletions)
+  final String? redactedBy;
   const RoomEvent({
     required this.id,
     required this.roomId,
@@ -2336,6 +2415,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     this.localId,
     this.editedAt,
     this.originalContent,
+    required this.redacted,
+    this.redactedAt,
+    this.redactedBy,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2368,6 +2450,13 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     }
     if (!nullToAbsent || originalContent != null) {
       map['original_content'] = Variable<String>(originalContent);
+    }
+    map['redacted'] = Variable<bool>(redacted);
+    if (!nullToAbsent || redactedAt != null) {
+      map['redacted_at'] = Variable<int>(redactedAt);
+    }
+    if (!nullToAbsent || redactedBy != null) {
+      map['redacted_by'] = Variable<String>(redactedBy);
     }
     return map;
   }
@@ -2403,6 +2492,13 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       originalContent: originalContent == null && nullToAbsent
           ? const Value.absent()
           : Value(originalContent),
+      redacted: Value(redacted),
+      redactedAt: redactedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(redactedAt),
+      redactedBy: redactedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(redactedBy),
     );
   }
 
@@ -2425,6 +2521,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       localId: serializer.fromJson<String?>(json['localId']),
       editedAt: serializer.fromJson<int?>(json['editedAt']),
       originalContent: serializer.fromJson<String?>(json['originalContent']),
+      redacted: serializer.fromJson<bool>(json['redacted']),
+      redactedAt: serializer.fromJson<int?>(json['redactedAt']),
+      redactedBy: serializer.fromJson<String?>(json['redactedBy']),
     );
   }
   @override
@@ -2444,6 +2543,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       'localId': serializer.toJson<String?>(localId),
       'editedAt': serializer.toJson<int?>(editedAt),
       'originalContent': serializer.toJson<String?>(originalContent),
+      'redacted': serializer.toJson<bool>(redacted),
+      'redactedAt': serializer.toJson<int?>(redactedAt),
+      'redactedBy': serializer.toJson<String?>(redactedBy),
     };
   }
 
@@ -2461,6 +2563,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     Value<String?> localId = const Value.absent(),
     Value<int?> editedAt = const Value.absent(),
     Value<String?> originalContent = const Value.absent(),
+    bool? redacted,
+    Value<int?> redactedAt = const Value.absent(),
+    Value<String?> redactedBy = const Value.absent(),
   }) => RoomEvent(
     id: id ?? this.id,
     roomId: roomId ?? this.roomId,
@@ -2479,6 +2584,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     originalContent: originalContent.present
         ? originalContent.value
         : this.originalContent,
+    redacted: redacted ?? this.redacted,
+    redactedAt: redactedAt.present ? redactedAt.value : this.redactedAt,
+    redactedBy: redactedBy.present ? redactedBy.value : this.redactedBy,
   );
   RoomEvent copyWithCompanion(RoomEventsCompanion data) {
     return RoomEvent(
@@ -2499,6 +2607,13 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       originalContent: data.originalContent.present
           ? data.originalContent.value
           : this.originalContent,
+      redacted: data.redacted.present ? data.redacted.value : this.redacted,
+      redactedAt: data.redactedAt.present
+          ? data.redactedAt.value
+          : this.redactedAt,
+      redactedBy: data.redactedBy.present
+          ? data.redactedBy.value
+          : this.redactedBy,
     );
   }
 
@@ -2517,7 +2632,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ..write('serverTs: $serverTs, ')
           ..write('localId: $localId, ')
           ..write('editedAt: $editedAt, ')
-          ..write('originalContent: $originalContent')
+          ..write('originalContent: $originalContent, ')
+          ..write('redacted: $redacted, ')
+          ..write('redactedAt: $redactedAt, ')
+          ..write('redactedBy: $redactedBy')
           ..write(')'))
         .toString();
   }
@@ -2537,6 +2655,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     localId,
     editedAt,
     originalContent,
+    redacted,
+    redactedAt,
+    redactedBy,
   );
   @override
   bool operator ==(Object other) =>
@@ -2554,7 +2675,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           other.serverTs == this.serverTs &&
           other.localId == this.localId &&
           other.editedAt == this.editedAt &&
-          other.originalContent == this.originalContent);
+          other.originalContent == this.originalContent &&
+          other.redacted == this.redacted &&
+          other.redactedAt == this.redactedAt &&
+          other.redactedBy == this.redactedBy);
 }
 
 class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
@@ -2571,6 +2695,9 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
   final Value<String?> localId;
   final Value<int?> editedAt;
   final Value<String?> originalContent;
+  final Value<bool> redacted;
+  final Value<int?> redactedAt;
+  final Value<String?> redactedBy;
   final Value<int> rowid;
   const RoomEventsCompanion({
     this.id = const Value.absent(),
@@ -2586,6 +2713,9 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.localId = const Value.absent(),
     this.editedAt = const Value.absent(),
     this.originalContent = const Value.absent(),
+    this.redacted = const Value.absent(),
+    this.redactedAt = const Value.absent(),
+    this.redactedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomEventsCompanion.insert({
@@ -2602,6 +2732,9 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.localId = const Value.absent(),
     this.editedAt = const Value.absent(),
     this.originalContent = const Value.absent(),
+    this.redacted = const Value.absent(),
+    this.redactedAt = const Value.absent(),
+    this.redactedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        roomId = Value(roomId),
@@ -2621,6 +2754,9 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Expression<String>? localId,
     Expression<int>? editedAt,
     Expression<String>? originalContent,
+    Expression<bool>? redacted,
+    Expression<int>? redactedAt,
+    Expression<String>? redactedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2637,6 +2773,9 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       if (localId != null) 'local_id': localId,
       if (editedAt != null) 'edited_at': editedAt,
       if (originalContent != null) 'original_content': originalContent,
+      if (redacted != null) 'redacted': redacted,
+      if (redactedAt != null) 'redacted_at': redactedAt,
+      if (redactedBy != null) 'redacted_by': redactedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2655,6 +2794,9 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Value<String?>? localId,
     Value<int?>? editedAt,
     Value<String?>? originalContent,
+    Value<bool>? redacted,
+    Value<int?>? redactedAt,
+    Value<String?>? redactedBy,
     Value<int>? rowid,
   }) {
     return RoomEventsCompanion(
@@ -2671,6 +2813,9 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       localId: localId ?? this.localId,
       editedAt: editedAt ?? this.editedAt,
       originalContent: originalContent ?? this.originalContent,
+      redacted: redacted ?? this.redacted,
+      redactedAt: redactedAt ?? this.redactedAt,
+      redactedBy: redactedBy ?? this.redactedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2717,6 +2862,15 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     if (originalContent.present) {
       map['original_content'] = Variable<String>(originalContent.value);
     }
+    if (redacted.present) {
+      map['redacted'] = Variable<bool>(redacted.value);
+    }
+    if (redactedAt.present) {
+      map['redacted_at'] = Variable<int>(redactedAt.value);
+    }
+    if (redactedBy.present) {
+      map['redacted_by'] = Variable<String>(redactedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2739,6 +2893,9 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
           ..write('localId: $localId, ')
           ..write('editedAt: $editedAt, ')
           ..write('originalContent: $originalContent, ')
+          ..write('redacted: $redacted, ')
+          ..write('redactedAt: $redactedAt, ')
+          ..write('redactedBy: $redactedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5979,6 +6136,9 @@ typedef $$RoomEventsTableCreateCompanionBuilder =
       Value<String?> localId,
       Value<int?> editedAt,
       Value<String?> originalContent,
+      Value<bool> redacted,
+      Value<int?> redactedAt,
+      Value<String?> redactedBy,
       Value<int> rowid,
     });
 typedef $$RoomEventsTableUpdateCompanionBuilder =
@@ -5996,6 +6156,9 @@ typedef $$RoomEventsTableUpdateCompanionBuilder =
       Value<String?> localId,
       Value<int?> editedAt,
       Value<String?> originalContent,
+      Value<bool> redacted,
+      Value<int?> redactedAt,
+      Value<String?> redactedBy,
       Value<int> rowid,
     });
 
@@ -6088,6 +6251,21 @@ class $$RoomEventsTableFilterComposer
 
   ColumnFilters<String> get originalContent => $composableBuilder(
     column: $table.originalContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get redacted => $composableBuilder(
+    column: $table.redacted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get redactedAt => $composableBuilder(
+    column: $table.redactedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get redactedBy => $composableBuilder(
+    column: $table.redactedBy,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6184,6 +6362,21 @@ class $$RoomEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get redacted => $composableBuilder(
+    column: $table.redacted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get redactedAt => $composableBuilder(
+    column: $table.redactedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get redactedBy => $composableBuilder(
+    column: $table.redactedBy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RoomsTableOrderingComposer get roomId {
     final $$RoomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6257,6 +6450,19 @@ class $$RoomEventsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get redacted =>
+      $composableBuilder(column: $table.redacted, builder: (column) => column);
+
+  GeneratedColumn<int> get redactedAt => $composableBuilder(
+    column: $table.redactedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get redactedBy => $composableBuilder(
+    column: $table.redactedBy,
+    builder: (column) => column,
+  );
+
   $$RoomsTableAnnotationComposer get roomId {
     final $$RoomsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -6322,6 +6528,9 @@ class $$RoomEventsTableTableManager
                 Value<String?> localId = const Value.absent(),
                 Value<int?> editedAt = const Value.absent(),
                 Value<String?> originalContent = const Value.absent(),
+                Value<bool> redacted = const Value.absent(),
+                Value<int?> redactedAt = const Value.absent(),
+                Value<String?> redactedBy = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion(
                 id: id,
@@ -6337,6 +6546,9 @@ class $$RoomEventsTableTableManager
                 localId: localId,
                 editedAt: editedAt,
                 originalContent: originalContent,
+                redacted: redacted,
+                redactedAt: redactedAt,
+                redactedBy: redactedBy,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6354,6 +6566,9 @@ class $$RoomEventsTableTableManager
                 Value<String?> localId = const Value.absent(),
                 Value<int?> editedAt = const Value.absent(),
                 Value<String?> originalContent = const Value.absent(),
+                Value<bool> redacted = const Value.absent(),
+                Value<int?> redactedAt = const Value.absent(),
+                Value<String?> redactedBy = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion.insert(
                 id: id,
@@ -6369,6 +6584,9 @@ class $$RoomEventsTableTableManager
                 localId: localId,
                 editedAt: editedAt,
                 originalContent: originalContent,
+                redacted: redacted,
+                redactedAt: redactedAt,
+                redactedBy: redactedBy,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

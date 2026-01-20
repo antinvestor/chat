@@ -168,6 +168,15 @@ class RoomEvents extends Table {
   /// Original message content before editing (preserved for history)
   TextColumn get originalContent => text().nullable()();
 
+  /// Whether the message has been deleted/redacted
+  BoolColumn get redacted => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when message was redacted
+  IntColumn get redactedAt => integer().nullable()();
+
+  /// Profile ID of who redacted the message (for admin deletions)
+  TextColumn get redactedBy => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -355,7 +364,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -372,6 +381,12 @@ class AppDatabase extends _$AppDatabase {
           // Migration from v2 to v3: Add message editing columns
           await m.addColumn(roomEvents, roomEvents.editedAt);
           await m.addColumn(roomEvents, roomEvents.originalContent);
+        }
+        if (from <= 3) {
+          // Migration from v3 to v4: Add message deletion columns
+          await m.addColumn(roomEvents, roomEvents.redacted);
+          await m.addColumn(roomEvents, roomEvents.redactedAt);
+          await m.addColumn(roomEvents, roomEvents.redactedBy);
         }
       },
       beforeOpen: (details) async {
