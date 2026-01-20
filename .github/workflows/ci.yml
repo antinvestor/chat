@@ -246,12 +246,35 @@ jobs:
         else
           echo "platform :ios, '15.0'" | cat - Podfile > temp && mv temp Podfile
         fi
-        echo "Updated Podfile with iOS 15.0 target"
-        head -5 Podfile
+
+        # Add PhoneNumberKit pod explicitly (required by libphonenumber_plugin)
+        if ! grep -q "PhoneNumberKit" Podfile; then
+          sed -i '' "/target 'Runner' do/a\\
+          pod 'PhoneNumberKit', '~> 3.7'
+        " Podfile
+        fi
+
+        # Add post_install hook to set deployment target for all pods
+        if ! grep -q "post_install" Podfile; then
+          cat >> Podfile << 'HOOK'
+
+        post_install do |installer|
+          installer.pods_project.targets.each do |target|
+            target.build_configurations.each do |config|
+              config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+            end
+          end
+        end
+        HOOK
+        fi
+
+        echo "Updated Podfile:"
+        cat Podfile
 
     - name: Install CocoaPods dependencies
       run: |
         cd ios
+        pod repo update
         pod install --repo-update || pod install
 
     - name: Generate code
