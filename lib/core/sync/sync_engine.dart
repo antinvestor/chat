@@ -713,6 +713,9 @@ class SyncEngine {
         case domain_job.JobType.editMessage:
           await _processEditMessage(job);
           break;
+        case domain_job.JobType.deleteMessage:
+          await _processDeleteMessage(job);
+          break;
       }
       await _jobRepo.deleteJob(job.id);
     } catch (e, stackTrace) {
@@ -1022,6 +1025,22 @@ class SyncEngine {
     await _chatClient.sendEvent(request);
 
     AppLogger.info('Edit message synced', data: {'messageId': messageId});
+  }
+
+  Future<void> _processDeleteMessage(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final messageId = payload['messageId'] as String;
+    final roomId = payload['roomId'] as String;
+
+    // Build the redact request
+    final request = pb.RedactEventRequest(
+      roomId: roomId,
+      eventId: messageId,
+    );
+
+    await _chatClient.redactEvent(request);
+
+    AppLogger.info('Delete message synced', data: {'messageId': messageId});
   }
 
   // ignore: unused_element

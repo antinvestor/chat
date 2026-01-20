@@ -81,12 +81,17 @@ abstract class RoomEvent with _$RoomEvent {
     required int createdAt,
     int? serverTs,
     String? localId,
-    int?
-    editedAt, // Timestamp when message was last edited (null if never edited)
+    int? editedAt, // Timestamp when message was last edited
+    @Default(false) bool redacted, // Whether message is deleted
+    int? redactedAt, // Timestamp when message was deleted
+    String? redactedBy, // Profile ID of who deleted (for admin deletions)
   }) = _RoomEvent;
 
   /// Returns true if this message has been edited
   bool get isEdited => editedAt != null;
+
+  /// Returns true if this message has been deleted/redacted
+  bool get isDeleted => redacted;
 
   factory RoomEvent.fromJson(Map<String, dynamic> json) =>
       _$RoomEventFromJson(json);

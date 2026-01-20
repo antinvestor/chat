@@ -474,6 +474,105 @@ class MessageSendingService {
     return true;
   }
 
+  /// Delete a message for everyone
+  ///
+  /// Returns true if the deletion was successfully queued, false if deleting
+  /// is not allowed (not own message, outside time window, already deleted).
+  Future<bool> deleteMessage({
+    required String messageId,
+    Duration deleteWindow = const Duration(hours: 24),
+  }) async {
+    final currentUserId = await _getCurrentProfileId();
+
+    // Check if message can be deleted
+    final canDelete = await _messageRepo.canDeleteMessage(
+      messageId,
+      currentUserId,
+      deleteWindow: deleteWindow,
+    );
+
+    if (!canDelete) {
+      AppLogger.warning(
+        'Cannot delete message',
+        data: {'messageId': messageId, 'userId': currentUserId},
+      );
+      return false;
+    }
+
+    // Get the original message for roomId
+    final originalEvent = await _messageRepo.getEventById(messageId);
+    if (originalEvent == null) return false;
+
+    // Mark as deleted locally first (optimistic update)
+    await _messageRepo.deleteMessage(messageId, deletedBy: currentUserId);
+
+    // Queue for sync to server
+    await _jobRepo.addJob(JobType.deleteMessage, {
+      'messageId': messageId,
+      'roomId': originalEvent.roomId,
+    });
+
+    AppLogger.info('Message delete queued', data: {'messageId': messageId});
+    return true;
+  }
+
+  /// Delete a message for the current user only (local deletion)
+  ///
+  /// This removes the message from the local database only.
+  /// Other users will still see the message.
+  Future<void> deleteMessageForMe(String messageId) async {
+    await _messageRepo.deleteMessageForMe(messageId);
+    AppLogger.info(
+      'Message deleted locally',
+      data: {'messageId': messageId},
+    );
+  }
+
+  /// Check if a message can be deleted (async - fetches from DB)
+  Future<bool> canDelete(String messageId, {bool isAdmin = false}) async {
+    final currentUserId = await _getCurrentProfileId();
+    return _messageRepo.canDeleteMessage(
+      messageId,
+      currentUserId,
+      isAdmin: isAdmin,
+    );
+  }
+
+  /// Check if a message can be deleted (sync - for UI when message data is available)
+  ///
+  /// Use this method when you already have the message data to avoid
+  /// unnecessary database lookups. This is the single source of truth
+  /// for delete validation logic.
+  static bool canDeleteMessage({
+    required bool isOwnMessage,
+    required domain.EventStatus messageStatus,
+    required int messageCreatedAt,
+    required bool isDeleted,
+    bool isAdmin = false,
+    Duration deleteWindow = const Duration(hours: 24),
+  }) {
+    // Already deleted
+    if (isDeleted) return false;
+
+    // Admins can delete any message
+    if (isAdmin) return true;
+
+    // Must be own message
+    if (!isOwnMessage) return false;
+
+    // Must not be pending or failed (use cancel instead)
+    if (messageStatus == domain.EventStatus.pending ||
+        messageStatus == domain.EventStatus.failed) {
+      return false;
+    }
+
+    // Must be within delete window
+    final messageAge = DateTime.now().millisecondsSinceEpoch - messageCreatedAt;
+    if (messageAge > deleteWindow.inMilliseconds) return false;
+
+    return true;
+  }
+
   bool _isMediaType(domain.RoomEventType type) {
     return type == domain.RoomEventType.image ||
         type == domain.RoomEventType.video ||

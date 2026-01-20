@@ -18,6 +18,8 @@ class MessageBubble extends ConsumerWidget {
   final VoidCallback? onRetry;
   final Function(String messageId, String currentText)? onEdit;
   final bool canEdit;
+  final Function(String messageId, {required bool forEveryone})? onDelete;
+  final bool canDelete;
 
   const MessageBubble({
     super.key,
@@ -29,6 +31,8 @@ class MessageBubble extends ConsumerWidget {
     this.onRetry,
     this.onEdit,
     this.canEdit = false,
+    this.onDelete,
+    this.canDelete = false,
   });
 
   @override
@@ -37,6 +41,11 @@ class MessageBubble extends ConsumerWidget {
     final timestamp = _formatTimestamp(message.createdAt);
     final text = message.content['text'] as String? ?? '';
     final isDarkMode = theme.brightness == Brightness.dark;
+
+    // Handle deleted messages
+    if (message.isDeleted) {
+      return _buildDeletedMessage(context, timestamp, isDarkMode);
+    }
 
     return RepaintBoundary(
       key: ValueKey(
@@ -158,6 +167,59 @@ class MessageBubble extends ConsumerWidget {
                 const SizedBox(width: 48), // Space for avatar
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Build placeholder for deleted messages
+  Widget _buildDeletedMessage(
+    BuildContext context,
+    String timestamp,
+    bool isDarkMode,
+  ) {
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDarkMode
+              ? Colors.grey.shade800.withValues(alpha: 0.5)
+              : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.block,
+              size: 16,
+              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isMe ? 'You deleted this message' : 'This message was deleted',
+              style: TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color:
+                    isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              timestamp,
+              style: TextStyle(
+                fontSize: 11,
+                color:
+                    isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -682,6 +744,32 @@ class MessageBubble extends ConsumerWidget {
                     _copyToClipboard(context, text);
                   },
                 ),
+              // Delete for me option (available for all messages)
+              if (onDelete != null)
+                ListTile(
+                  leading: Icon(Icons.delete_outline, color: Colors.orange),
+                  title: const Text('Delete for me'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDeleteConfirmation(
+                      context,
+                      forEveryone: false,
+                    );
+                  },
+                ),
+              // Delete for everyone option (only for own messages within window)
+              if (isMe && canDelete && onDelete != null)
+                ListTile(
+                  leading: Icon(Icons.delete_forever, color: Colors.red),
+                  title: const Text('Delete for everyone'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDeleteConfirmation(
+                      context,
+                      forEveryone: true,
+                    );
+                  },
+                ),
             ],
           ),
         ),
@@ -696,6 +784,40 @@ class MessageBubble extends ConsumerWidget {
       const SnackBar(
         content: Text('Copied to clipboard'),
         duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  /// Show delete confirmation dialog
+  void _showDeleteConfirmation(
+    BuildContext context, {
+    required bool forEveryone,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(forEveryone ? 'Delete for everyone?' : 'Delete for me?'),
+        content: Text(
+          forEveryone
+              ? 'This message will be deleted for everyone in this chat. '
+                  'Others will see that a message was deleted.'
+              : 'This message will be removed from your device only. '
+                  'Others will still see it.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onDelete?.call(message.id, forEveryone: forEveryone);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

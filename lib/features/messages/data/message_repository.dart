@@ -107,6 +107,9 @@ class MessageRepository {
             serverTs: Value(event.serverTs),
             localId: Value(event.localId),
             editedAt: Value(event.editedAt),
+            redacted: Value(event.redacted),
+            redactedAt: Value(event.redactedAt),
+            redactedBy: Value(event.redactedBy),
           ),
         );
   }
@@ -201,6 +204,71 @@ class MessageRepository {
     return results.map((row) => _toRoomEvent(row)).toList();
   }
 
+  /// Delete a message for everyone (marks as redacted)
+  ///
+  /// Sets the redacted flag and timestamp. The message content
+  /// is preserved locally for history but hidden in UI.
+  Future<void> deleteMessage(
+    String messageId, {
+    String? deletedBy,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await (_database.update(_database.roomEvents)
+          ..where((t) => t.id.equals(messageId)))
+        .write(
+      RoomEventsCompanion(
+        redacted: const Value(true),
+        redactedAt: Value(now),
+        redactedBy: deletedBy != null ? Value(deletedBy) : const Value.absent(),
+      ),
+    );
+  }
+
+  /// Delete a message locally only (removes from local database)
+  ///
+  /// This is for "delete for me" functionality where the message
+  /// is only removed from the current user's device.
+  Future<void> deleteMessageForMe(String messageId) async {
+    await (_database.delete(_database.roomEvents)
+          ..where((t) => t.id.equals(messageId)))
+        .go();
+  }
+
+  /// Check if a message can be deleted by the current user
+  ///
+  /// Users can delete their own messages within a time window,
+  /// or admins can delete any message.
+  Future<bool> canDeleteMessage(
+    String messageId,
+    String currentUserId, {
+    Duration deleteWindow = const Duration(hours: 24),
+    bool isAdmin = false,
+  }) async {
+    final event = await getEventById(messageId);
+    if (event == null) return false;
+
+    // Already deleted
+    if (event.isDeleted) return false;
+
+    // Admins can delete any message
+    if (isAdmin) return true;
+
+    // Must be own message
+    if (event.senderId != currentUserId) return false;
+
+    // Must be within delete window
+    final messageAge = DateTime.now().millisecondsSinceEpoch - event.createdAt;
+    if (messageAge > deleteWindow.inMilliseconds) return false;
+
+    // Cannot delete pending or failed messages (use cancel instead)
+    if (event.status == domain.EventStatus.pending ||
+        event.status == domain.EventStatus.failed) {
+      return false;
+    }
+
+    return true;
+  }
+
   domain.RoomEvent _toRoomEvent(RoomEvent row) {
     return domain.RoomEvent(
       id: row.id,
@@ -214,6 +282,9 @@ class MessageRepository {
       serverTs: row.serverTs,
       localId: row.localId,
       editedAt: row.editedAt,
+      redacted: row.redacted,
+      redactedAt: row.redactedAt,
+      redactedBy: row.redactedBy,
     );
   }
 }
