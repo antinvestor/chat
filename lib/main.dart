@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -15,6 +17,7 @@ import 'core/sync/background_sync_task.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/data/auth_repository.dart';
+import 'features/notifications/notification_service.dart';
 
 /// Sentry DSN - should be configured via environment variable in production
 const String _sentryDsn = String.fromEnvironment(
@@ -87,8 +90,18 @@ void main() async {
 Future<void> _initializeAndRun() async {
   // Database is initialized lazily by Drift
 
-  // Initialize workmanager (only supported on Android and iOS)
+  // Initialize Firebase (required for push notifications)
   final isMobile = Platform.isAndroid || Platform.isIOS;
+  if (isMobile) {
+    await Firebase.initializeApp();
+
+    // Register background message handler
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    AppLogger.info('Firebase initialized');
+  }
+
+  // Initialize workmanager (only supported on Android and iOS)
   if (isMobile) {
     await Workmanager().initialize(callbackDispatcher);
 
@@ -109,6 +122,7 @@ Future<void> _initializeAndRun() async {
     'Application starting',
     data: {
       'backgroundSyncRegistered': isMobile,
+      'firebaseInitialized': isMobile,
       'errorTrackingEnabled': ErrorTrackingService.isInitialized,
     },
   );
@@ -193,6 +207,12 @@ class _ChatAppState extends ConsumerState<ChatApp> {
         connectivityServiceProvider.future,
       );
       connectivityService.start();
+
+      // Initialize push notifications (after auth is confirmed)
+      if (NotificationService.isSupported) {
+        final notificationService = ref.read(notificationServiceProvider);
+        await notificationService.initialize();
+      }
     } else {
       AppLogger.debug('Profile not logged in, skipping service initialization');
     }
