@@ -199,6 +199,35 @@ gh pr edit --add-label "WS1:Messaging,sprint:1"
 | Medium | 100-400 | 5-10 | Acceptable |
 | Large | > 400 | > 10 | Split if possible |
 
+### Review Feedback Policy
+
+**CRITICAL RULE**: All PR review feedback must be addressed before proceeding to work on other issues.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  PR Created → Review Comments → Address ALL Feedback →      │
+│  Wait for CI → Merge → THEN start next issue                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why this matters:**
+- Prevents accumulation of unresolved issues
+- Ensures code quality before moving forward
+- Maintains clean PR history
+- Avoids context-switching overhead later
+
+**When to proceed to next issue:**
+- [ ] All review comments marked as resolved
+- [ ] No pending "Changes Requested" status
+- [ ] CI checks passing
+- [ ] PR merged OR explicitly paused with documented reason
+
+**If blocked by reviewer availability:**
+1. Document the blocker in PR comments
+2. Add `status:awaiting-review` label
+3. Only then may you start a new issue
+4. Return to complete the PR once feedback is received
+
 ---
 
 ## Quality Gates
@@ -267,6 +296,7 @@ Before creating a PR, ensure:
 3. **Clear descriptions**: Explain the "why" not just the "what"
 4. **Respond promptly**: Address feedback within 24 hours
 5. **Don't take it personally**: Reviews improve code quality
+6. **CRITICAL: Address all review feedback before moving on**: All PR review comments must be resolved before starting work on other issues. This ensures quality and prevents accumulation of technical debt. Do not leave comments unaddressed.
 
 ### For Reviewers
 
