@@ -363,12 +363,24 @@ class BackgroundSyncTask {
     final messageId = payload['messageId'] as String;
     final roomId = payload['roomId'] as String;
 
-    final request = pb.RedactEventRequest(
-      roomId: roomId,
-      eventId: messageId,
+    // Send a redacted event to mark the message as deleted
+    final now = DateTime.now();
+    final timestamp = common.Timestamp(
+      seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
+      nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
     );
 
-    await chatClient.redactEvent(request, headers: authHeaders);
+    final event = pb.RoomEvent(
+      id: messageId,
+      roomId: roomId,
+      type: pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE,
+      sentAt: timestamp,
+      redacted: true,
+    );
+
+    final request = pb.SendEventRequest(event: [event]);
+    await chatClient.sendEvent(request, headers: authHeaders);
+
     AppLogger.debug(
       'Message deleted in background',
       data: {'messageId': messageId, 'roomId': roomId},

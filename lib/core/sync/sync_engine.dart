@@ -1032,13 +1032,19 @@ class SyncEngine {
     final messageId = payload['messageId'] as String;
     final roomId = payload['roomId'] as String;
 
-    // Build the redact request
-    final request = pb.RedactEventRequest(
+    // Send a redacted event to mark the message as deleted
+    final timestamp = common_types.Timestamp.fromDateTime(DateTime.now());
+
+    final event = pb.RoomEvent(
+      id: messageId,
       roomId: roomId,
-      eventId: messageId,
+      type: pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE,
+      sentAt: timestamp,
+      redacted: true,
     );
 
-    await _chatClient.redactEvent(request);
+    final request = pb.SendEventRequest(event: [event]);
+    await _chatClient.sendEvent(request);
 
     AppLogger.info('Delete message synced', data: {'messageId': messageId});
   }
