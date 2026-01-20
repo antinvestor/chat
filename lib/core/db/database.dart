@@ -355,13 +355,15 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+        // Create FTS5 virtual table for message search
+        await _createFtsTable();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from <= 1) {
@@ -372,6 +374,12 @@ class AppDatabase extends _$AppDatabase {
           // Migration from v2 to v3: Add message editing columns
           await m.addColumn(roomEvents, roomEvents.editedAt);
           await m.addColumn(roomEvents, roomEvents.originalContent);
+        }
+        if (from <= 3) {
+          // Migration from v3 to v4: Add FTS5 for full-text message search
+          await _createFtsTable();
+          // Populate FTS index with existing text messages
+          await _populateFtsFromExistingMessages();
         }
       },
       beforeOpen: (details) async {
@@ -407,6 +415,178 @@ class AppDatabase extends _$AppDatabase {
         }
       },
     );
+  }
+
+  /// Create the FTS5 virtual table for full-text message search
+  Future<void> _createFtsTable() async {
+    await customStatement('''
+      CREATE VIRTUAL TABLE IF NOT EXISTS room_events_fts USING fts5(
+        event_id,
+        room_id,
+        content,
+        tokenize='porter unicode61'
+      )
+    ''');
+
+    // Create triggers to keep FTS index in sync with room_events table
+
+    // Trigger for new text messages
+    await customStatement('''
+      CREATE TRIGGER IF NOT EXISTS room_events_ai AFTER INSERT ON room_events
+      WHEN new.type = 0 AND new.content IS NOT NULL
+      BEGIN
+        INSERT INTO room_events_fts(event_id, room_id, content)
+        VALUES (new.id, new.room_id, json_extract(new.content, '\$.text'));
+      END
+    ''');
+
+    // Trigger for updated messages (editing)
+    await customStatement('''
+      CREATE TRIGGER IF NOT EXISTS room_events_au AFTER UPDATE ON room_events
+      WHEN new.type = 0 AND new.content IS NOT NULL
+      BEGIN
+        DELETE FROM room_events_fts WHERE event_id = old.id;
+        INSERT INTO room_events_fts(event_id, room_id, content)
+        VALUES (new.id, new.room_id, json_extract(new.content, '\$.text'));
+      END
+    ''');
+
+    // Trigger for deleted messages
+    await customStatement('''
+      CREATE TRIGGER IF NOT EXISTS room_events_ad AFTER DELETE ON room_events
+      BEGIN
+        DELETE FROM room_events_fts WHERE event_id = old.id;
+      END
+    ''');
+  }
+
+  /// Populate FTS index from existing text messages
+  Future<void> _populateFtsFromExistingMessages() async {
+    await customStatement('''
+      INSERT INTO room_events_fts(event_id, room_id, content)
+      SELECT id, room_id, json_extract(content, '\$.text')
+      FROM room_events
+      WHERE type = 0 AND content IS NOT NULL
+        AND json_extract(content, '\$.text') IS NOT NULL
+    ''');
+  }
+
+  // ============================================================================
+  // Full-Text Search Methods
+  // ============================================================================
+
+  /// Search messages by text content across all rooms
+  ///
+  /// Returns messages matching the search query, ordered by relevance.
+  ///
+  /// Parameters:
+  /// - [query]: The search query (supports FTS5 syntax)
+  /// - [limit]: Maximum number of results (default 50)
+  ///
+  /// Example:
+  /// ```dart
+  /// final results = await db.searchMessages('hello world', limit: 20);
+  /// ```
+  Future<List<RoomEvent>> searchMessages(String query, {int limit = 50}) async {
+    if (query.trim().isEmpty) {
+      return [];
+    }
+
+    final results = await customSelect(
+      '''
+      SELECT re.*
+      FROM room_events re
+      INNER JOIN room_events_fts fts ON re.id = fts.event_id
+      WHERE room_events_fts MATCH ?
+      ORDER BY rank
+      LIMIT ?
+      ''',
+      variables: [Variable.withString(query), Variable.withInt(limit)],
+      readsFrom: {roomEvents},
+    ).get();
+
+    return results
+        .map(
+          (row) => RoomEvent(
+            id: row.read<String>('id'),
+            roomId: row.read<String>('room_id'),
+            senderId: row.read<String>('sender_id'),
+            senderContactId: row.readNullable<String>('sender_contact_id'),
+            type: row.read<int>('type'),
+            content: row.readNullable<String>('content'),
+            parentId: row.readNullable<String>('parent_id'),
+            status: row.read<int>('status'),
+            createdAt: row.readNullable<int>('created_at'),
+            serverTs: row.readNullable<int>('server_ts'),
+            localId: row.readNullable<String>('local_id'),
+            editedAt: row.readNullable<int>('edited_at'),
+            originalContent: row.readNullable<String>('original_content'),
+          ),
+        )
+        .toList();
+  }
+
+  /// Search messages within a specific room
+  ///
+  /// Returns messages matching the search query in the specified room.
+  ///
+  /// Parameters:
+  /// - [roomId]: The room to search in
+  /// - [query]: The search query (supports FTS5 syntax)
+  /// - [limit]: Maximum number of results (default 50)
+  Future<List<RoomEvent>> searchMessagesInRoom(
+    String roomId,
+    String query, {
+    int limit = 50,
+  }) async {
+    if (query.trim().isEmpty) {
+      return [];
+    }
+
+    final results = await customSelect(
+      '''
+      SELECT re.*
+      FROM room_events re
+      INNER JOIN room_events_fts fts ON re.id = fts.event_id
+      WHERE fts.room_id = ? AND room_events_fts MATCH ?
+      ORDER BY rank
+      LIMIT ?
+      ''',
+      variables: [
+        Variable.withString(roomId),
+        Variable.withString(query),
+        Variable.withInt(limit),
+      ],
+      readsFrom: {roomEvents},
+    ).get();
+
+    return results
+        .map(
+          (row) => RoomEvent(
+            id: row.read<String>('id'),
+            roomId: row.read<String>('room_id'),
+            senderId: row.read<String>('sender_id'),
+            senderContactId: row.readNullable<String>('sender_contact_id'),
+            type: row.read<int>('type'),
+            content: row.readNullable<String>('content'),
+            parentId: row.readNullable<String>('parent_id'),
+            status: row.read<int>('status'),
+            createdAt: row.readNullable<int>('created_at'),
+            serverTs: row.readNullable<int>('server_ts'),
+            localId: row.readNullable<String>('local_id'),
+            editedAt: row.readNullable<int>('edited_at'),
+            originalContent: row.readNullable<String>('original_content'),
+          ),
+        )
+        .toList();
+  }
+
+  /// Rebuild the FTS index from scratch
+  ///
+  /// Use this if the index becomes corrupted or out of sync.
+  Future<void> rebuildFtsIndex() async {
+    await customStatement('DELETE FROM room_events_fts');
+    await _populateFtsFromExistingMessages();
   }
 
   static QueryExecutor _openConnection() {
