@@ -208,14 +208,11 @@ class MessageRepository {
   ///
   /// Sets the redacted flag and timestamp. The message content
   /// is preserved locally for history but hidden in UI.
-  Future<void> deleteMessage(
-    String messageId, {
-    String? deletedBy,
-  }) async {
+  Future<void> deleteMessage(String messageId, {String? deletedBy}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    await (_database.update(_database.roomEvents)
-          ..where((t) => t.id.equals(messageId)))
-        .write(
+    await (_database.update(
+      _database.roomEvents,
+    )..where((t) => t.id.equals(messageId))).write(
       RoomEventsCompanion(
         redacted: const Value(true),
         redactedAt: Value(now),
@@ -229,9 +226,9 @@ class MessageRepository {
   /// This is for "delete for me" functionality where the message
   /// is only removed from the current user's device.
   Future<void> deleteMessageForMe(String messageId) async {
-    await (_database.delete(_database.roomEvents)
-          ..where((t) => t.id.equals(messageId)))
-        .go();
+    await (_database.delete(
+      _database.roomEvents,
+    )..where((t) => t.id.equals(messageId))).go();
   }
 
   /// Check if a message can be deleted by the current user

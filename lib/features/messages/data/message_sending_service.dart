@@ -522,10 +522,7 @@ class MessageSendingService {
   /// Other users will still see the message.
   Future<void> deleteMessageForMe(String messageId) async {
     await _messageRepo.deleteMessageForMe(messageId);
-    AppLogger.info(
-      'Message deleted locally',
-      data: {'messageId': messageId},
-    );
+    AppLogger.info('Message deleted locally', data: {'messageId': messageId});
   }
 
   /// Check if a message can be deleted (async - fetches from DB)

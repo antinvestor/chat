@@ -206,8 +206,7 @@ class MessageBubble extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontStyle: FontStyle.italic,
-                color:
-                    isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
               ),
             ),
             const SizedBox(width: 8),
@@ -215,8 +214,7 @@ class MessageBubble extends ConsumerWidget {
               timestamp,
               style: TextStyle(
                 fontSize: 11,
-                color:
-                    isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
+                color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
               ),
             ),
           ],
@@ -751,10 +749,7 @@ class MessageBubble extends ConsumerWidget {
                   title: const Text('Delete for me'),
                   onTap: () {
                     Navigator.pop(context);
-                    _showDeleteConfirmation(
-                      context,
-                      forEveryone: false,
-                    );
+                    _showDeleteConfirmation(context, forEveryone: false);
                   },
                 ),
               // Delete for everyone option (only for own messages within window)
@@ -764,10 +759,7 @@ class MessageBubble extends ConsumerWidget {
                   title: const Text('Delete for everyone'),
                   onTap: () {
                     Navigator.pop(context);
-                    _showDeleteConfirmation(
-                      context,
-                      forEveryone: true,
-                    );
+                    _showDeleteConfirmation(context, forEveryone: true);
                   },
                 ),
             ],
@@ -800,9 +792,9 @@ class MessageBubble extends ConsumerWidget {
         content: Text(
           forEveryone
               ? 'This message will be deleted for everyone in this chat. '
-                  'Others will see that a message was deleted.'
+                    'Others will see that a message was deleted.'
               : 'This message will be removed from your device only. '
-                  'Others will still see it.',
+                    'Others will still see it.',
         ),
         actions: [
           TextButton(
