@@ -238,7 +238,11 @@ jobs:
     - name: Install CocoaPods dependencies
       run: |
         cd ios
-        pod install --repo-update || pod install
+        if [ -f "Podfile" ]; then
+          pod install --repo-update || pod install
+        else
+          echo "No Podfile found, skipping pod install"
+        fi
 
     - name: Generate code
       run: |
