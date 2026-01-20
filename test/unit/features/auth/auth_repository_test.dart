@@ -38,10 +38,7 @@ void main() {
       test('throws when auth service throws', () async {
         mockAuthService.setShouldThrowError(true);
 
-        expect(
-          () => repository.isLoggedIn(),
-          throwsException,
-        );
+        expect(() => repository.isLoggedIn(), throwsException);
       });
     });
 

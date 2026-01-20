@@ -42,12 +42,7 @@ void main() {
       });
 
       test('inserts direct message room', () async {
-        const room = Room(
-          id: 'dm-1',
-          name: '',
-          type: 'direct',
-          unreadCount: 0,
-        );
+        const room = Room(id: 'dm-1', name: '', type: 'direct', unreadCount: 0);
 
         await repository.insertRoom(room);
 
@@ -72,8 +67,14 @@ void main() {
 
         final result = await repository.getRoomById('room-1');
         expect(result!.metadata, isNotNull);
-        expect(result.metadata!['description'], equals('A team collaboration room'));
-        expect(result.metadata!['avatarUrl'], equals('https://example.com/avatar.png'));
+        expect(
+          result.metadata!['description'],
+          equals('A team collaboration room'),
+        );
+        expect(
+          result.metadata!['avatarUrl'],
+          equals('https://example.com/avatar.png'),
+        );
         expect(result.metadata!['isPublic'], equals(false));
       });
 
@@ -124,9 +125,15 @@ void main() {
       });
 
       test('returns all rooms', () async {
-        await repository.insertRoom(const Room(id: 'room-1', name: 'Room 1', type: 'group'));
-        await repository.insertRoom(const Room(id: 'room-2', name: 'Room 2', type: 'group'));
-        await repository.insertRoom(const Room(id: 'room-3', name: 'Room 3', type: 'direct'));
+        await repository.insertRoom(
+          const Room(id: 'room-1', name: 'Room 1', type: 'group'),
+        );
+        await repository.insertRoom(
+          const Room(id: 'room-2', name: 'Room 2', type: 'group'),
+        );
+        await repository.insertRoom(
+          const Room(id: 'room-3', name: 'Room 3', type: 'direct'),
+        );
 
         final rooms = await repository.getAllRooms();
 
@@ -137,24 +144,30 @@ void main() {
       });
 
       test('returns rooms ordered by lastEventIndex descending', () async {
-        await repository.insertRoom(const Room(
-          id: 'room-1',
-          name: 'Room 1',
-          type: 'group',
-          lastEventIndex: 10,
-        ));
-        await repository.insertRoom(const Room(
-          id: 'room-2',
-          name: 'Room 2',
-          type: 'group',
-          lastEventIndex: 30,
-        ));
-        await repository.insertRoom(const Room(
-          id: 'room-3',
-          name: 'Room 3',
-          type: 'group',
-          lastEventIndex: 20,
-        ));
+        await repository.insertRoom(
+          const Room(
+            id: 'room-1',
+            name: 'Room 1',
+            type: 'group',
+            lastEventIndex: 10,
+          ),
+        );
+        await repository.insertRoom(
+          const Room(
+            id: 'room-2',
+            name: 'Room 2',
+            type: 'group',
+            lastEventIndex: 30,
+          ),
+        );
+        await repository.insertRoom(
+          const Room(
+            id: 'room-3',
+            name: 'Room 3',
+            type: 'group',
+            lastEventIndex: 20,
+          ),
+        );
 
         final rooms = await repository.getAllRooms();
 
@@ -197,12 +210,14 @@ void main() {
 
     group('updateUnreadCount', () {
       test('updates unread count for existing room', () async {
-        await repository.insertRoom(const Room(
-          id: 'room-1',
-          name: 'Test Room',
-          type: 'group',
-          unreadCount: 0,
-        ));
+        await repository.insertRoom(
+          const Room(
+            id: 'room-1',
+            name: 'Test Room',
+            type: 'group',
+            unreadCount: 0,
+          ),
+        );
 
         await repository.updateUnreadCount('room-1', 10);
 
@@ -211,12 +226,14 @@ void main() {
       });
 
       test('can set unread count to zero', () async {
-        await repository.insertRoom(const Room(
-          id: 'room-1',
-          name: 'Test Room',
-          type: 'group',
-          unreadCount: 50,
-        ));
+        await repository.insertRoom(
+          const Room(
+            id: 'room-1',
+            name: 'Test Room',
+            type: 'group',
+            unreadCount: 50,
+          ),
+        );
 
         await repository.updateUnreadCount('room-1', 0);
 
@@ -225,12 +242,14 @@ void main() {
       });
 
       test('increments unread count correctly', () async {
-        await repository.insertRoom(const Room(
-          id: 'room-1',
-          name: 'Test Room',
-          type: 'group',
-          unreadCount: 5,
-        ));
+        await repository.insertRoom(
+          const Room(
+            id: 'room-1',
+            name: 'Test Room',
+            type: 'group',
+            unreadCount: 5,
+          ),
+        );
 
         await repository.updateUnreadCount('room-1', 6);
 
@@ -246,11 +265,9 @@ void main() {
       });
 
       test('returns rooms without messages', () async {
-        await repository.insertRoom(const Room(
-          id: 'room-1',
-          name: 'Empty Room',
-          type: 'group',
-        ));
+        await repository.insertRoom(
+          const Room(id: 'room-1', name: 'Empty Room', type: 'group'),
+        );
 
         final rooms = await repository.getRoomsWithLastMessage();
 
@@ -264,12 +281,14 @@ void main() {
         final now = DateTime.now().millisecondsSinceEpoch;
 
         // Create room and set last event ID
-        await repository.insertRoom(const Room(
-          id: 'room-1',
-          name: 'Chat Room',
-          type: 'group',
-          lastEventId: 'event-1',
-        ));
+        await repository.insertRoom(
+          const Room(
+            id: 'room-1',
+            name: 'Chat Room',
+            type: 'group',
+            lastEventId: 'event-1',
+          ),
+        );
 
         // Create message
         await messageRepository.insertMessage(
@@ -295,12 +314,14 @@ void main() {
         final now = DateTime.now().millisecondsSinceEpoch;
 
         // Room with older message
-        await repository.insertRoom(const Room(
-          id: 'room-1',
-          name: 'Older Room',
-          type: 'group',
-          lastEventId: 'event-1',
-        ));
+        await repository.insertRoom(
+          const Room(
+            id: 'room-1',
+            name: 'Older Room',
+            type: 'group',
+            lastEventId: 'event-1',
+          ),
+        );
         await messageRepository.insertMessage(
           RoomEvent(
             id: 'event-1',
@@ -313,12 +334,14 @@ void main() {
         );
 
         // Room with newer message
-        await repository.insertRoom(const Room(
-          id: 'room-2',
-          name: 'Newer Room',
-          type: 'group',
-          lastEventId: 'event-2',
-        ));
+        await repository.insertRoom(
+          const Room(
+            id: 'room-2',
+            name: 'Newer Room',
+            type: 'group',
+            lastEventId: 'event-2',
+          ),
+        );
         await messageRepository.insertMessage(
           RoomEvent(
             id: 'event-2',
@@ -338,12 +361,14 @@ void main() {
       });
 
       test('includes unread count', () async {
-        await repository.insertRoom(const Room(
-          id: 'room-1',
-          name: 'Unread Room',
-          type: 'group',
-          unreadCount: 42,
-        ));
+        await repository.insertRoom(
+          const Room(
+            id: 'room-1',
+            name: 'Unread Room',
+            type: 'group',
+            unreadCount: 42,
+          ),
+        );
 
         final rooms = await repository.getRoomsWithLastMessage();
 
@@ -353,11 +378,7 @@ void main() {
 
     group('edge cases', () {
       test('handles room with empty name', () async {
-        const room = Room(
-          id: 'room-1',
-          name: '',
-          type: 'direct',
-        );
+        const room = Room(id: 'room-1', name: '', type: 'direct');
 
         await repository.insertRoom(room);
 
@@ -375,7 +396,10 @@ void main() {
         await repository.insertRoom(room);
 
         final result = await repository.getRoomById('room-1');
-        expect(result!.name, equals("Team's Chat 🎉 <script>alert('xss')</script>"));
+        expect(
+          result!.name,
+          equals("Team's Chat 🎉 <script>alert('xss')</script>"),
+        );
       });
 
       test('handles complex metadata JSON', () async {
@@ -385,9 +409,7 @@ void main() {
           type: 'group',
           metadata: {
             'nested': {
-              'level1': {
-                'level2': 'deep value',
-              },
+              'level1': {'level2': 'deep value'},
             },
             'array': [1, 2, 3, 'four'],
             'nullValue': null,
@@ -398,7 +420,10 @@ void main() {
         await repository.insertRoom(room);
 
         final result = await repository.getRoomById('room-1');
-        expect(result!.metadata!['nested']['level1']['level2'], equals('deep value'));
+        expect(
+          result!.metadata!['nested']['level1']['level2'],
+          equals('deep value'),
+        );
         expect(result.metadata!['array'][3], equals('four'));
         expect(result.metadata!['boolean'], equals(true));
       });

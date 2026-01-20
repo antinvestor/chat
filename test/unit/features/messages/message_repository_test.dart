@@ -12,13 +12,15 @@ void main() {
 
   /// Helper to create a room in the database (required due to foreign key constraints)
   Future<void> createTestRoom(String roomId, {String? name}) async {
-    await testDb.into(testDb.rooms).insertOnConflictUpdate(
-      RoomsCompanion.insert(
-        id: roomId,
-        name: Value(name ?? 'Test Room'),
-        type: const Value('group'),
-      ),
-    );
+    await testDb
+        .into(testDb.rooms)
+        .insertOnConflictUpdate(
+          RoomsCompanion.insert(
+            id: roomId,
+            name: Value(name ?? 'Test Room'),
+            type: const Value('group'),
+          ),
+        );
   }
 
   setUp(() async {
@@ -255,7 +257,9 @@ void main() {
       test('returns null for room with no messages', () async {
         await createTestRoom('empty-room');
 
-        final timestamp = await repository.getOldestMessageTimestamp('empty-room');
+        final timestamp = await repository.getOldestMessageTimestamp(
+          'empty-room',
+        );
         expect(timestamp, isNull);
       });
 
@@ -391,10 +395,11 @@ void main() {
           );
         }
 
-        await repository.updateMessagesStatus(
-          ['event-1', 'event-2', 'event-3'],
-          EventStatus.sent,
-        );
+        await repository.updateMessagesStatus([
+          'event-1',
+          'event-2',
+          'event-3',
+        ], EventStatus.sent);
 
         final event1 = await repository.getEventById('event-1');
         final event2 = await repository.getEventById('event-2');
@@ -529,7 +534,10 @@ void main() {
         final reactions = await repository.getReactionsForEvent('event-1');
 
         expect(reactions.length, equals(2));
-        expect(reactions.every((r) => r.type == RoomEventType.reaction), isTrue);
+        expect(
+          reactions.every((r) => r.type == RoomEventType.reaction),
+          isTrue,
+        );
         expect(reactions.any((r) => r.content['emoji'] == '👍'), isTrue);
         expect(reactions.any((r) => r.content['emoji'] == '❤️'), isTrue);
       });

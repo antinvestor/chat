@@ -12,7 +12,6 @@ import 'package:chat/features/auth/data/auth_service.dart';
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     show TokenRefreshResult;
 
-
 /// Mock AuthService for testing
 class MockAuthService extends AuthService {
   bool _isAuthenticated = false;

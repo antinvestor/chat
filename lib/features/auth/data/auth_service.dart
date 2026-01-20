@@ -10,7 +10,6 @@ import 'platform/auth_platform.dart';
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     show TokenRefreshResult;
 
-
 import 'platform/auth_platform_stub.dart'
     if (dart.library.io) 'platform/auth_platform_io.dart'
     if (dart.library.html) 'platform/auth_platform_web.dart';
