@@ -189,6 +189,9 @@ class BackgroundSyncTask {
       case domain_job.JobType.removeRoomMembers:
         await _processRemoveRoomMembers(job, chatClient, authHeaders);
         break;
+      case domain_job.JobType.deleteMessage:
+        await _processDeleteMessage(job, chatClient, authHeaders);
+        break;
       default:
         AppLogger.debug(
           'Skipping unsupported job type in background',
@@ -347,6 +350,40 @@ class BackgroundSyncTask {
         'roomId': payload['roomId'],
         'memberCount': (payload['profileIds'] as List).length,
       },
+    );
+  }
+
+  /// Delete a message (redact)
+  static Future<void> _processDeleteMessage(
+    domain_job.PendingJob job,
+    ChatServiceClient chatClient,
+    connect.Headers authHeaders,
+  ) async {
+    final payload = job.payload;
+    final messageId = payload['messageId'] as String;
+    final roomId = payload['roomId'] as String;
+
+    // Send a redacted event to mark the message as deleted
+    final now = DateTime.now();
+    final timestamp = common.Timestamp(
+      seconds: fixnum.Int64(now.millisecondsSinceEpoch ~/ 1000),
+      nanos: (now.millisecondsSinceEpoch % 1000) * 1000000,
+    );
+
+    final event = pb.RoomEvent(
+      id: messageId,
+      roomId: roomId,
+      type: pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE,
+      sentAt: timestamp,
+      redacted: true,
+    );
+
+    final request = pb.SendEventRequest(event: [event]);
+    await chatClient.sendEvent(request, headers: authHeaders);
+
+    AppLogger.debug(
+      'Message deleted in background',
+      data: {'messageId': messageId, 'roomId': roomId},
     );
   }
 

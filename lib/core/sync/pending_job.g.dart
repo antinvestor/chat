@@ -29,6 +29,7 @@ const _$JobTypeEnumMap = {
   JobType.sendMessage: 'sendMessage',
   JobType.sendMediaMessage: 'sendMediaMessage',
   JobType.editMessage: 'editMessage',
+  JobType.deleteMessage: 'deleteMessage',
   JobType.uploadFile: 'uploadFile',
   JobType.createRoom: 'createRoom',
   JobType.updateRoom: 'updateRoom',

@@ -866,6 +866,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       messageCreatedAt: message.createdAt,
     );
 
+    // Use shared validation logic for delete
+    final canDelete = MessageSendingService.canDeleteMessage(
+      isOwnMessage: isMe,
+      messageStatus: message.status,
+      messageCreatedAt: message.createdAt,
+      isDeleted: message.isDeleted,
+    );
+
     switch (message.type) {
       case RoomEventType.motion:
         return MotionBubble(event: message, isMe: isMe);
@@ -883,7 +891,58 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               : null,
           onEdit: _onEditMessage,
           canEdit: canEdit,
+          onDelete: (messageId, {required forEveryone}) =>
+              _onDeleteMessage(messageId, forEveryone: forEveryone),
+          canDelete: canDelete,
         );
+    }
+  }
+
+  Future<void> _onDeleteMessage(
+    String messageId, {
+    required bool forEveryone,
+  }) async {
+    final messagingService = ref.read(messageSendingServiceProvider);
+
+    try {
+      if (forEveryone) {
+        // Delete for everyone (marks as redacted on server)
+        final success = await messagingService.deleteMessage(
+          messageId: messageId,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                success
+                    ? 'Message deleted for everyone'
+                    : 'Cannot delete this message',
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Delete for me only (local deletion)
+        await messagingService.deleteMessageForMe(messageId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Message deleted for you'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete message: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

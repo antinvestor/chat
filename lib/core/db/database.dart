@@ -168,6 +168,15 @@ class RoomEvents extends Table {
   /// Original message content before editing (preserved for history)
   TextColumn get originalContent => text().nullable()();
 
+  /// Whether the message has been deleted/redacted
+  BoolColumn get redacted => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when message was redacted
+  IntColumn get redactedAt => integer().nullable()();
+
+  /// Profile ID of who redacted the message (for admin deletions)
+  TextColumn get redactedBy => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -355,7 +364,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -377,7 +386,13 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(roomEvents, roomEvents.originalContent);
         }
         if (from <= 3) {
-          // Migration from v3 to v4: Add FTS5 for full-text message search
+          // Migration from v3 to v4: Add message deletion columns
+          await m.addColumn(roomEvents, roomEvents.redacted);
+          await m.addColumn(roomEvents, roomEvents.redactedAt);
+          await m.addColumn(roomEvents, roomEvents.redactedBy);
+        }
+        if (from <= 4) {
+          // Migration from v4 to v5: Add FTS5 for full-text message search
           await _createFtsTable();
           // Populate FTS index with existing text messages
           await _populateFtsFromExistingMessages();
@@ -494,6 +509,9 @@ class AppDatabase extends _$AppDatabase {
       localId: row.readNullable<String>('local_id'),
       editedAt: row.readNullable<int>('edited_at'),
       originalContent: row.readNullable<String>('original_content'),
+      redacted: row.read<bool>('redacted'),
+      redactedAt: row.readNullable<int>('redacted_at'),
+      redactedBy: row.readNullable<String>('redacted_by'),
     );
   }
 

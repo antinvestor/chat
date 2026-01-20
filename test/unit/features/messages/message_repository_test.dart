@@ -923,5 +923,460 @@ void main() {
         expect(event.editedAt, equals(editedAt));
       });
     });
+
+    group('deleteMessage', () {
+      test('marks message as redacted', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'To be deleted'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        await repository.deleteMessage('event-1');
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.isDeleted, isTrue);
+        expect(event.redacted, isTrue);
+        expect(event.redactedAt, isNotNull);
+      });
+
+      test('sets deletedBy when provided', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'To be deleted'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        await repository.deleteMessage('event-1', deletedBy: 'admin-user');
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.isDeleted, isTrue);
+        expect(event.redactedBy, equals('admin-user'));
+      });
+
+      test('preserves original content after deletion', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Original content'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        await repository.deleteMessage('event-1');
+
+        final event = await repository.getEventById('event-1');
+        // Content is preserved but message is marked as deleted
+        expect(event!.isDeleted, isTrue);
+        expect(event.content['text'], equals('Original content'));
+      });
+    });
+
+    group('deleteMessageForMe', () {
+      test('removes message from local database', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'To be deleted locally'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        // Verify message exists
+        var event = await repository.getEventById('event-1');
+        expect(event, isNotNull);
+
+        await repository.deleteMessageForMe('event-1');
+
+        // Verify message is removed
+        event = await repository.getEventById('event-1');
+        expect(event, isNull);
+      });
+
+      test('only removes specified message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message 1'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-2',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message 2'},
+            status: EventStatus.sent,
+            createdAt: now + 1000,
+          ),
+        );
+
+        await repository.deleteMessageForMe('event-1');
+
+        // First message should be gone
+        final event1 = await repository.getEventById('event-1');
+        expect(event1, isNull);
+
+        // Second message should remain
+        final event2 = await repository.getEventById('event-2');
+        expect(event2, isNotNull);
+        expect(event2!.content['text'], equals('Message 2'));
+      });
+    });
+
+    group('canDeleteMessage', () {
+      test('returns true for own recent message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'My message'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        final canDelete = await repository.canDeleteMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canDelete, isTrue);
+      });
+
+      test('returns false for other user message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'other-user',
+            type: RoomEventType.text,
+            content: {'text': 'Their message'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        final canDelete = await repository.canDeleteMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canDelete, isFalse);
+      });
+
+      test('returns true for admin regardless of owner', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'other-user',
+            type: RoomEventType.text,
+            content: {'text': 'Their message'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        final canDelete = await repository.canDeleteMessage(
+          'event-1',
+          'admin-user',
+          isAdmin: true,
+        );
+        expect(canDelete, isTrue);
+      });
+
+      test('returns false for already deleted message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'My message'},
+            status: EventStatus.sent,
+            createdAt: now,
+            redacted: true,
+            redactedAt: now + 1000,
+          ),
+        );
+
+        final canDelete = await repository.canDeleteMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canDelete, isFalse);
+      });
+
+      test('returns false for message outside delete window', () async {
+        await createTestRoom('room-1');
+        // Message from 25 hours ago (default window is 24 hours)
+        final oldTimestamp =
+            DateTime.now().millisecondsSinceEpoch - (25 * 60 * 60 * 1000);
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'Old message'},
+            status: EventStatus.sent,
+            createdAt: oldTimestamp,
+          ),
+        );
+
+        final canDelete = await repository.canDeleteMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canDelete, isFalse);
+      });
+
+      test('returns false for pending message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'Pending message'},
+            status: EventStatus.pending,
+            createdAt: now,
+          ),
+        );
+
+        final canDelete = await repository.canDeleteMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canDelete, isFalse);
+      });
+
+      test('returns false for failed message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'Failed message'},
+            status: EventStatus.failed,
+            createdAt: now,
+          ),
+        );
+
+        final canDelete = await repository.canDeleteMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canDelete, isFalse);
+      });
+
+      test('returns false for non-existent message', () async {
+        final canDelete = await repository.canDeleteMessage(
+          'non-existent',
+          'current-user',
+        );
+        expect(canDelete, isFalse);
+      });
+
+      test('respects custom delete window', () async {
+        await createTestRoom('room-1');
+        // Message from 2 hours ago
+        final recentTimestamp =
+            DateTime.now().millisecondsSinceEpoch - (2 * 60 * 60 * 1000);
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'Recent message'},
+            status: EventStatus.sent,
+            createdAt: recentTimestamp,
+          ),
+        );
+
+        // With 1 hour window, should not be deletable
+        final canDeleteShortWindow = await repository.canDeleteMessage(
+          'event-1',
+          'current-user',
+          deleteWindow: const Duration(hours: 1),
+        );
+        expect(canDeleteShortWindow, isFalse);
+
+        // With 3 hour window, should be deletable
+        final canDeleteLongWindow = await repository.canDeleteMessage(
+          'event-1',
+          'current-user',
+          deleteWindow: const Duration(hours: 3),
+        );
+        expect(canDeleteLongWindow, isTrue);
+      });
+
+      test('allows admin to delete old messages', () async {
+        await createTestRoom('room-1');
+        // Message from 25 hours ago
+        final oldTimestamp =
+            DateTime.now().millisecondsSinceEpoch - (25 * 60 * 60 * 1000);
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'other-user',
+            type: RoomEventType.text,
+            content: {'text': 'Old message'},
+            status: EventStatus.sent,
+            createdAt: oldTimestamp,
+          ),
+        );
+
+        // Admin can delete even old messages
+        final canDelete = await repository.canDeleteMessage(
+          'event-1',
+          'admin-user',
+          isAdmin: true,
+        );
+        expect(canDelete, isTrue);
+      });
+    });
+
+    group('message deletion with isDeleted flag', () {
+      test('new messages have isDeleted as false', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'New message'},
+            createdAt: now,
+          ),
+        );
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.isDeleted, isFalse);
+        expect(event.redacted, isFalse);
+        expect(event.redactedAt, isNull);
+        expect(event.redactedBy, isNull);
+      });
+
+      test('deleted messages have isDeleted as true', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Original'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        await repository.deleteMessage('event-1', deletedBy: 'sender-1');
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.isDeleted, isTrue);
+        expect(event.redacted, isTrue);
+        expect(event.redactedAt, isNotNull);
+        expect(event.redactedBy, equals('sender-1'));
+      });
+
+      test('can insert message with redacted already set', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final redactedAt = now + 1000;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Already deleted'},
+            createdAt: now,
+            redacted: true,
+            redactedAt: redactedAt,
+            redactedBy: 'admin-user',
+          ),
+        );
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.isDeleted, isTrue);
+        expect(event.redacted, isTrue);
+        expect(event.redactedAt, equals(redactedAt));
+        expect(event.redactedBy, equals('admin-user'));
+      });
+    });
   });
 }
