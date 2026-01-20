@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenRefreshResult;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openid_client/openid_client.dart';
 
 import '../../../core/logging/app_logger.dart';
 import 'platform/auth_platform.dart';
+
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
+
 
 import 'platform/auth_platform_stub.dart'
     if (dart.library.io) 'platform/auth_platform_io.dart'

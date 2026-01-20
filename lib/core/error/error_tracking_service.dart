@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Service for error tracking and crash reporting using Sentry
