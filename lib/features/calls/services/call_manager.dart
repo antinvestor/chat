@@ -8,11 +8,13 @@ import 'package:chat/core/logging/app_logger.dart';
 import 'package:chat/features/messages/domain/room_event.dart';
 import '../../../features/auth/data/auth_repository.dart';
 import 'signaling_service.dart';
+import 'turn_credentials_service.dart';
 
 final callManagerProvider = FutureProvider<CallManager>((ref) async {
   final signalingService = await ref.watch(signalingServiceProvider.future);
   final authRepo = ref.watch(authRepositoryProvider);
-  return CallManager(signalingService, authRepo);
+  final turnService = await ref.watch(turnCredentialsServiceProvider.future);
+  return CallManager(signalingService, authRepo, turnService);
 });
 
 enum CallState {
@@ -26,6 +28,7 @@ enum CallState {
 class CallManager {
   final SignalingService _signalingService;
   final AuthRepository _authRepository;
+  final TurnCredentialsService _turnCredentialsService;
 
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
@@ -43,7 +46,11 @@ class CallManager {
   final _remoteStreamController = StreamController<MediaStream?>.broadcast();
   Stream<MediaStream?> get remoteStreamStream => _remoteStreamController.stream;
 
-  CallManager(this._signalingService, this._authRepository) {
+  CallManager(
+    this._signalingService,
+    this._authRepository,
+    this._turnCredentialsService,
+  ) {
     _signalingService.onSignal.listen(_handleSignal);
   }
 
@@ -130,11 +137,13 @@ class CallManager {
     // Request permissions
     await [Permission.camera, Permission.microphone].request();
 
-    final config = {
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-      ],
-    };
+    // Get ICE server configuration with TURN credentials
+    final config = await _turnCredentialsService.getIceServers();
+
+    AppLogger.info(
+      'Initializing peer connection',
+      data: {'iceServerCount': (config['iceServers'] as List).length},
+    );
 
     _peerConnection = await createPeerConnection(config);
 
