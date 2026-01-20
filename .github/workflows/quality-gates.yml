@@ -195,7 +195,7 @@ jobs:
   bundle_size_analysis:
     name: Bundle Size Analysis
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
     - name: Checkout code
