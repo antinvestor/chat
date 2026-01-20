@@ -8,6 +8,19 @@ import 'auth_service.dart';
 
 part 'auth_repository.g.dart';
 
+/// Repository for authentication operations
+///
+/// Provides a high-level interface for authentication including:
+/// - OAuth2/OIDC login and logout
+/// - Token management and refresh
+/// - User profile information retrieval
+///
+/// Example:
+/// ```dart
+/// final authRepo = ref.watch(authRepositoryProvider);
+/// await authRepo.login();
+/// final isLoggedIn = await authRepo.isLoggedIn();
+/// ```
 class AuthRepository {
   final AuthService _authService;
 

@@ -46,3 +46,9 @@ app.*.map.json
 
 deps.txt
 security_reports/
+test_results/
+# Generated iOS files (created by CI)
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*

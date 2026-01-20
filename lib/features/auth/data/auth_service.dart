@@ -13,6 +13,28 @@ import 'platform/auth_platform_stub.dart'
     if (dart.library.io) 'platform/auth_platform_io.dart'
     if (dart.library.html) 'platform/auth_platform_web.dart';
 
+/// OAuth2/OIDC authentication service
+///
+/// Handles user authentication using OpenID Connect with secure
+/// token storage. Supports both mobile (deep link) and web (redirect)
+/// authentication flows.
+///
+/// Features:
+/// - OAuth2 login with PKCE
+/// - Token refresh with mutex to prevent concurrent refreshes
+/// - Secure credential storage using flutter_secure_storage
+/// - Platform-specific authentication flows (mobile vs web)
+///
+/// Example:
+/// ```dart
+/// final authService = AuthService(
+///   storage,
+///   issuerUrl: 'https://auth.example.com',
+///   clientId: 'my-app',
+/// );
+/// await authService.authenticate();
+/// final token = await authService.getAccessToken();
+/// ```
 class AuthService {
   final FlutterSecureStorage _storage;
   final String _issuerUrl;

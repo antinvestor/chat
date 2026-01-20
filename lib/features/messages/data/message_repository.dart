@@ -5,6 +5,20 @@ import 'package:drift/drift.dart';
 import '../../../core/db/database.dart';
 import '../domain/room_event.dart' as domain;
 
+/// Repository for message and room event operations
+///
+/// Provides database access for messages including:
+/// - Fetching messages for a room with pagination
+/// - Inserting and updating messages
+/// - Watching message streams for reactive UI updates
+/// - Managing message status (sent, delivered, read)
+///
+/// Example:
+/// ```dart
+/// final repo = MessageRepository(database);
+/// final messages = await repo.getMessagesForRoom('room-123');
+/// await repo.insertMessage(newMessage);
+/// ```
 class MessageRepository {
   final AppDatabase _database;
 

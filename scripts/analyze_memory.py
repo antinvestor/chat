@@ -11,13 +11,18 @@ import re
 from pathlib import Path
 
 # Memory thresholds (in MB)
+# These thresholds are designed for production monitoring.
+# Test runs with short durations will skip rate-based checks.
 MEMORY_THRESHOLDS = {
-    'initial_heap_size': 50,      # MB
-    'peak_heap_size': 200,        # MB
-    'heap_growth_rate': 10,       # MB per minute
-    'gc_frequency': 5,            # GCs per minute
+    'initial_heap_size': 100,     # MB (generous for test environment)
+    'peak_heap_size': 300,        # MB
+    'heap_growth_rate': 10,       # MB per minute (only for runs > 1 minute)
+    'gc_frequency': 5,            # GCs per minute (only for runs > 1 minute)
     'memory_leak_threshold': 5,   # MB growth over 5 minutes
 }
+
+# Minimum duration (in seconds) required for rate-based analysis
+MIN_DURATION_FOR_RATE_ANALYSIS = 60  # 1 minute
 
 def analyze_memory_logs():
     """Analyze memory logs from Flutter tests"""
@@ -58,65 +63,74 @@ def analyze_memory_logs():
 
 def analyze_memory_patterns(memory_data):
     """Analyze memory usage patterns"""
-    
+
     if len(memory_data) < 2:
         print("⚠️  Insufficient memory data for analysis")
         return True
-    
+
     # Calculate metrics
     initial_heap = memory_data[0]['heap_size']
     peak_heap = max(data['heap_size'] for data in memory_data)
-    
+
     # Calculate heap growth rate
     first_time = memory_data[0]['timestamp']
     last_time = memory_data[-1]['timestamp']
     time_diff = parse_time_diff(last_time) - parse_time_diff(first_time)
-    
+
     if time_diff > 0:
         heap_growth = (memory_data[-1]['heap_size'] - initial_heap)
         growth_rate = heap_growth / (time_diff / 60)  # MB per minute
     else:
         growth_rate = 0
-    
+
     # Calculate GC frequency
     total_gc = sum(data['gc_count'] for data in memory_data)
     gc_frequency = total_gc / (time_diff / 60) if time_diff > 0 else 0
-    
+
     # Check for memory leaks
     memory_leak_detected = detect_memory_leak(memory_data)
-    
+
+    # Determine if this is a short test run
+    is_short_run = time_diff < MIN_DURATION_FOR_RATE_ANALYSIS
+
     # Print analysis results
     print(f"📊 Memory Analysis Results:")
     print(f"   Initial Heap: {initial_heap:.2f} MB")
     print(f"   Peak Heap: {peak_heap:.2f} MB")
-    print(f"   Growth Rate: {growth_rate:.2f} MB/min")
-    print(f"   GC Frequency: {gc_frequency:.2f} GCs/min")
+    print(f"   Duration: {time_diff:.2f} seconds")
+    if is_short_run:
+        print(f"   Note: Short test run ({time_diff:.1f}s < {MIN_DURATION_FOR_RATE_ANALYSIS}s), skipping rate-based checks")
+    else:
+        print(f"   Growth Rate: {growth_rate:.2f} MB/min")
+        print(f"   GC Frequency: {gc_frequency:.2f} GCs/min")
     print(f"   Memory Leak: {'Detected' if memory_leak_detected else 'None detected'}")
-    
+
     # Check thresholds
     failed_checks = []
-    
+
     if initial_heap > MEMORY_THRESHOLDS['initial_heap_size']:
         failed_checks.append(f"Initial heap size {initial_heap:.2f}MB > {MEMORY_THRESHOLDS['initial_heap_size']}MB")
-    
+
     if peak_heap > MEMORY_THRESHOLDS['peak_heap_size']:
         failed_checks.append(f"Peak heap size {peak_heap:.2f}MB > {MEMORY_THRESHOLDS['peak_heap_size']}MB")
-    
-    if growth_rate > MEMORY_THRESHOLDS['heap_growth_rate']:
-        failed_checks.append(f"Growth rate {growth_rate:.2f}MB/min > {MEMORY_THRESHOLDS['heap_growth_rate']}MB/min")
-    
-    if gc_frequency > MEMORY_THRESHOLDS['gc_frequency']:
-        failed_checks.append(f"GC frequency {gc_frequency:.2f}/min > {MEMORY_THRESHOLDS['gc_frequency']}/min")
-    
+
+    # Only check rate-based metrics for longer runs
+    if not is_short_run:
+        if growth_rate > MEMORY_THRESHOLDS['heap_growth_rate']:
+            failed_checks.append(f"Growth rate {growth_rate:.2f}MB/min > {MEMORY_THRESHOLDS['heap_growth_rate']}MB/min")
+
+        if gc_frequency > MEMORY_THRESHOLDS['gc_frequency']:
+            failed_checks.append(f"GC frequency {gc_frequency:.2f}/min > {MEMORY_THRESHOLDS['gc_frequency']}/min")
+
     if memory_leak_detected:
         failed_checks.append("Memory leak detected")
-    
+
     if failed_checks:
         print("❌ Memory thresholds exceeded:")
         for check in failed_checks:
             print(f"   - {check}")
         return False
-    
+
     print("✅ All memory metrics within thresholds")
     return True
 

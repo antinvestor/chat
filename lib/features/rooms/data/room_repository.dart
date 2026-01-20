@@ -6,6 +6,20 @@ import '../../../core/db/database.dart';
 import '../domain/room.dart' as domain;
 import '../domain/room_with_last_message.dart';
 
+/// Repository for chat room operations
+///
+/// Provides database access for room management including:
+/// - Fetching all rooms with optional filtering
+/// - Getting rooms with their last message for display
+/// - Creating, updating, and deleting rooms
+/// - Managing unread message counts
+///
+/// Example:
+/// ```dart
+/// final repo = RoomRepository(database);
+/// final rooms = await repo.getRoomsWithLastMessage();
+/// final room = await repo.getRoomById('room-123');
+/// ```
 class RoomRepository {
   final AppDatabase _database;
 
