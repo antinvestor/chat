@@ -106,6 +106,7 @@ class MessageRepository {
             createdAt: Value(event.createdAt),
             serverTs: Value(event.serverTs),
             localId: Value(event.localId),
+            editedAt: Value(event.editedAt),
           ),
         );
   }
@@ -127,6 +128,57 @@ class MessageRepository {
     await (_database.update(_database.roomEvents)
           ..where((t) => t.id.isIn(messageIds)))
         .write(RoomEventsCompanion(status: Value(status.index)));
+  }
+
+  /// Update the content of an existing message (for editing)
+  ///
+  /// Stores the original content if this is the first edit,
+  /// and updates the editedAt timestamp.
+  Future<void> updateMessageContent(
+    String messageId,
+    Map<String, dynamic> newContent, {
+    String? originalContent,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await (_database.update(
+      _database.roomEvents,
+    )..where((t) => t.id.equals(messageId))).write(
+      RoomEventsCompanion(
+        content: Value(jsonEncode(newContent)),
+        editedAt: Value(now),
+        originalContent: originalContent != null
+            ? Value(originalContent)
+            : const Value.absent(),
+      ),
+    );
+  }
+
+  /// Check if a message can be edited (within time window and is text type)
+  Future<bool> canEditMessage(
+    String messageId,
+    String currentUserId, {
+    Duration editWindow = const Duration(minutes: 15),
+  }) async {
+    final event = await getEventById(messageId);
+    if (event == null) return false;
+
+    // Must be own message
+    if (event.senderId != currentUserId) return false;
+
+    // Must be text type
+    if (event.type != domain.RoomEventType.text) return false;
+
+    // Must be within edit window
+    final messageAge = DateTime.now().millisecondsSinceEpoch - event.createdAt;
+    if (messageAge > editWindow.inMilliseconds) return false;
+
+    // Must not be failed or pending
+    if (event.status == domain.EventStatus.failed ||
+        event.status == domain.EventStatus.pending) {
+      return false;
+    }
+
+    return true;
   }
 
   Future<domain.RoomEvent?> getEventById(String eventId) async {
@@ -161,6 +213,7 @@ class MessageRepository {
       createdAt: row.createdAt ?? 0,
       serverTs: row.serverTs,
       localId: row.localId,
+      editedAt: row.editedAt,
     );
   }
 }

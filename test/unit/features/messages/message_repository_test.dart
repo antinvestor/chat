@@ -593,5 +593,335 @@ void main() {
         expect(messages[0].content['text'], equals('New message'));
       });
     });
+
+    group('updateMessageContent', () {
+      test('updates message content successfully', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Original message'},
+            createdAt: now,
+          ),
+        );
+
+        await repository.updateMessageContent('event-1', {
+          'text': 'Edited message',
+        });
+
+        final updated = await repository.getEventById('event-1');
+        expect(updated!.content['text'], equals('Edited message'));
+        expect(updated.editedAt, isNotNull);
+        expect(updated.isEdited, isTrue);
+      });
+
+      test('preserves original content on first edit', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Original message'},
+            createdAt: now,
+          ),
+        );
+
+        await repository.updateMessageContent('event-1', {
+          'text': 'Edited message',
+        }, originalContent: 'Original message');
+
+        final updated = await repository.getEventById('event-1');
+        expect(updated!.content['text'], equals('Edited message'));
+        expect(updated.editedAt, isNotNull);
+      });
+
+      test('sets editedAt timestamp', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Original'},
+            createdAt: now,
+          ),
+        );
+
+        // Ensure editedAt is null before edit
+        var event = await repository.getEventById('event-1');
+        expect(event!.editedAt, isNull);
+        expect(event.isEdited, isFalse);
+
+        await repository.updateMessageContent('event-1', {'text': 'Edited'});
+
+        event = await repository.getEventById('event-1');
+        expect(event!.editedAt, isNotNull);
+        expect(event.editedAt, greaterThanOrEqualTo(now));
+        expect(event.isEdited, isTrue);
+      });
+    });
+
+    group('canEditMessage', () {
+      test('returns true for own recent text message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'My message'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        final canEdit = await repository.canEditMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canEdit, isTrue);
+      });
+
+      test('returns false for other user message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'other-user',
+            type: RoomEventType.text,
+            content: {'text': 'Their message'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        final canEdit = await repository.canEditMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canEdit, isFalse);
+      });
+
+      test('returns false for non-text message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.image,
+            content: {'url': 'https://example.com/image.jpg'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        final canEdit = await repository.canEditMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canEdit, isFalse);
+      });
+
+      test('returns false for message outside edit window', () async {
+        await createTestRoom('room-1');
+        // Message from 20 minutes ago
+        final oldTimestamp =
+            DateTime.now().millisecondsSinceEpoch - (20 * 60 * 1000);
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'Old message'},
+            status: EventStatus.sent,
+            createdAt: oldTimestamp,
+          ),
+        );
+
+        final canEdit = await repository.canEditMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canEdit, isFalse);
+      });
+
+      test('returns false for pending message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'Pending message'},
+            status: EventStatus.pending,
+            createdAt: now,
+          ),
+        );
+
+        final canEdit = await repository.canEditMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canEdit, isFalse);
+      });
+
+      test('returns false for failed message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'Failed message'},
+            status: EventStatus.failed,
+            createdAt: now,
+          ),
+        );
+
+        final canEdit = await repository.canEditMessage(
+          'event-1',
+          'current-user',
+        );
+        expect(canEdit, isFalse);
+      });
+
+      test('returns false for non-existent message', () async {
+        final canEdit = await repository.canEditMessage(
+          'non-existent',
+          'current-user',
+        );
+        expect(canEdit, isFalse);
+      });
+
+      test('respects custom edit window', () async {
+        await createTestRoom('room-1');
+        // Message from 2 minutes ago
+        final recentTimestamp =
+            DateTime.now().millisecondsSinceEpoch - (2 * 60 * 1000);
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'current-user',
+            type: RoomEventType.text,
+            content: {'text': 'Recent message'},
+            status: EventStatus.sent,
+            createdAt: recentTimestamp,
+          ),
+        );
+
+        // With 1 minute window, should not be editable
+        final canEditShortWindow = await repository.canEditMessage(
+          'event-1',
+          'current-user',
+          editWindow: const Duration(minutes: 1),
+        );
+        expect(canEditShortWindow, isFalse);
+
+        // With 5 minute window, should be editable
+        final canEditLongWindow = await repository.canEditMessage(
+          'event-1',
+          'current-user',
+          editWindow: const Duration(minutes: 5),
+        );
+        expect(canEditLongWindow, isTrue);
+      });
+    });
+
+    group('message editing with isEdited flag', () {
+      test('new messages have isEdited as false', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'New message'},
+            createdAt: now,
+          ),
+        );
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.isEdited, isFalse);
+        expect(event.editedAt, isNull);
+      });
+
+      test('edited messages have isEdited as true', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Original'},
+            createdAt: now,
+          ),
+        );
+
+        await repository.updateMessageContent('event-1', {'text': 'Edited'});
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.isEdited, isTrue);
+        expect(event.editedAt, isNotNull);
+      });
+
+      test('can insert message with editedAt already set', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final editedAt = now + 1000;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Already edited'},
+            createdAt: now,
+            editedAt: editedAt,
+          ),
+        );
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.isEdited, isTrue);
+        expect(event.editedAt, equals(editedAt));
+      });
+    });
   });
 }

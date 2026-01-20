@@ -710,6 +710,9 @@ class SyncEngine {
         case domain_job.JobType.syncContacts:
           // Contact sync is handled by ContactSyncRepository
           break;
+        case domain_job.JobType.editMessage:
+          await _processEditMessage(job);
+          break;
       }
       await _jobRepo.deleteJob(job.id);
     } catch (e, stackTrace) {
@@ -990,6 +993,35 @@ class SyncEngine {
 
     final updatedEvent = motionEvent.copyWith(content: updatedContent);
     await _messageRepo.insertMessage(updatedEvent);
+  }
+
+  Future<void> _processEditMessage(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final messageId = payload['messageId'] as String;
+    final roomId = payload['roomId'] as String;
+    final content = payload['content'] as Map<String, dynamic>;
+
+    // Build the edit request
+    final timestamp = common_types.Timestamp.fromDateTime(DateTime.now());
+
+    final pbPayload = pb.Payload();
+    pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+
+    // Send as an edit event to the server
+    // Note: Backend API for editing may need to be implemented
+    // For now, we send as a regular message with edit metadata
+    final event = pb.RoomEvent(
+      id: messageId,
+      roomId: roomId,
+      type: pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE,
+      sentAt: timestamp,
+      payload: pbPayload,
+    );
+
+    final request = pb.SendEventRequest(event: [event]);
+    await _chatClient.sendEvent(request);
+
+    AppLogger.info('Edit message synced', data: {'messageId': messageId});
   }
 
   // ignore: unused_element

@@ -20,6 +20,7 @@ _RoomEvent _$RoomEventFromJson(Map<String, dynamic> json) => _RoomEvent(
   createdAt: (json['createdAt'] as num).toInt(),
   serverTs: (json['serverTs'] as num?)?.toInt(),
   localId: json['localId'] as String?,
+  editedAt: (json['editedAt'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$RoomEventToJson(_RoomEvent instance) =>
@@ -35,6 +36,7 @@ Map<String, dynamic> _$RoomEventToJson(_RoomEvent instance) =>
       'createdAt': instance.createdAt,
       'serverTs': instance.serverTs,
       'localId': instance.localId,
+      'editedAt': instance.editedAt,
     };
 
 const _$RoomEventTypeEnumMap = {
