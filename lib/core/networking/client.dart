@@ -3,8 +3,7 @@
 /// This module provides Riverpod providers for all API clients used
 /// in the application, including authentication, token management,
 /// and service-specific clients.
-
-import 'dart:io' as io;
+library;
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
 import 'package:antinvestor_api_common/antinvestor_api_common.dart';
@@ -18,7 +17,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/auth/data/auth_repository.dart';
-import 'api_config.dart';
 import 'certificate_pinning.dart';
 
 /// Secure storage provider for token access
@@ -101,6 +99,33 @@ final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
   };
 });
 
+/// Creates a transport factory that uses the provided CertificatePinning instance
+///
+/// This enables dependency injection of the CertificatePinning service
+/// while maintaining compatibility with the client factory function signature.
+typedef CreateTransportFn = connect.Transport Function(
+  Uri baseUrl,
+  List<connect.Interceptor> interceptors,
+);
+
+/// Creates a transport factory bound to a CertificatePinning instance
+///
+/// Parameters:
+/// - [certificatePinning]: The CertificatePinning instance to use
+///
+/// Returns a function that creates transports with certificate pinning enabled.
+CreateTransportFn createTransportFactory(CertificatePinning certificatePinning) {
+  return (Uri baseUrl, List<connect.Interceptor> interceptors) {
+    final httpClient = certificatePinning.createPinnedHttpClient();
+    return connect_protocol.Transport(
+      baseUrl: baseUrl.toString(),
+      codec: const connect_protobuf.ProtoCodec(),
+      httpClient: connect_io.createHttpClient(httpClient),
+      interceptors: interceptors,
+    );
+  };
+}
+
 /// Creates a Connect transport for API communication with certificate pinning
 ///
 /// Configures HTTP client with appropriate timeouts, connection pooling,
@@ -111,6 +136,9 @@ final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
 /// - [interceptors]: List of interceptors for auth, logging, etc.
 ///
 /// Returns a configured [connect.Transport] instance with certificate pinning.
+///
+/// Note: Prefer using [createTransportFactory] with dependency injection
+/// for better testability and single instance management.
 ///
 /// Example:
 /// ```dart
@@ -123,7 +151,7 @@ connect.Transport createTransport(
   Uri baseUrl,
   List<connect.Interceptor> interceptors,
 ) {
-  // Use certificate pinning for secure connections
+  // Fallback: create a new instance (for backwards compatibility)
   final certificatePinning = CertificatePinning();
   final httpClient = certificatePinning.createPinnedHttpClient();
 
@@ -154,12 +182,13 @@ final authHeadersProvider = FutureProvider<connect.Headers>((ref) async {
 final chatClientProvider = FutureProvider<ChatClient>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
+  final certificatePinning = ref.watch(certificatePinningProvider);
 
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
 
   return await newChatClient(
-    createTransport: createTransport,
+    createTransport: createTransportFactory(certificatePinning),
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
   );
@@ -169,12 +198,13 @@ final chatClientProvider = FutureProvider<ChatClient>((ref) async {
 final gatewayClientProvider = FutureProvider<GatewayClient>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
+  final certificatePinning = ref.watch(certificatePinningProvider);
 
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
 
   return await newGatewayClient(
-    createTransport: createTransport,
+    createTransport: createTransportFactory(certificatePinning),
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
   );
@@ -184,12 +214,13 @@ final gatewayClientProvider = FutureProvider<GatewayClient>((ref) async {
 final deviceClientProvider = FutureProvider<DeviceClient>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
+  final certificatePinning = ref.watch(certificatePinningProvider);
 
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
 
   return await newDeviceClient(
-    createTransport: createTransport,
+    createTransport: createTransportFactory(certificatePinning),
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
   );
@@ -199,12 +230,13 @@ final deviceClientProvider = FutureProvider<DeviceClient>((ref) async {
 final profileClientProvider = FutureProvider<ProfileClient>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
+  final certificatePinning = ref.watch(certificatePinningProvider);
 
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
 
   return await newProfileClient(
-    createTransport: createTransport,
+    createTransport: createTransportFactory(certificatePinning),
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
   );

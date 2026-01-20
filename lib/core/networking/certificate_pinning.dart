@@ -15,49 +15,65 @@ final certificatePinningProvider = Provider<CertificatePinning>((ref) {
 
 /// Service for TLS certificate pinning to prevent MITM attacks
 ///
-/// Implements public key pinning using SHA-256 hashes of the Subject Public Key Info (SPKI).
-/// Supports multiple pins per domain for certificate rotation.
+/// Implements public key pinning using SHA-256 hashes of the certificate's
+/// DER encoding. Supports multiple pins per domain for certificate rotation.
 ///
 /// Features:
 /// - Pin validation for all API endpoints
 /// - Backup pins for certificate rotation
 /// - Debug bypass for development builds
 /// - Graceful error handling
+/// - Dynamic pin updates for remote configuration
+///
+/// ## IMPORTANT: Production Setup Required
+///
+/// The default pins are **placeholders** and MUST be replaced with actual
+/// certificate hashes before production deployment. To generate a pin:
+///
+/// ```bash
+/// # Get certificate and generate SHA-256 hash:
+/// openssl s_client -connect chat.antinvestor.com:443 -servername chat.antinvestor.com \
+///   </dev/null 2>/dev/null | openssl x509 -outform DER | openssl sha256 -binary | base64
+/// ```
+///
+/// Include both current and backup pins to support certificate rotation.
 class CertificatePinning {
-  /// SHA-256 hashes of pinned public keys per domain
+  /// SHA-256 hashes of pinned certificates per domain
   ///
   /// Format: Map<hostname, List<base64-encoded SHA-256 hash>>
   /// Multiple pins per domain support certificate rotation
-  static final Map<String, List<String>> _pinnedHashes = {
-    // Chat API
+  ///
+  /// **WARNING**: These are placeholder values. Replace with actual certificate
+  /// hashes before deploying to production. See class documentation for instructions.
+  final Map<String, List<String>> _pinnedHashes = {
+    // Chat API - REPLACE WITH ACTUAL HASHES
     'chat.antinvestor.com': [
-      // Primary certificate pin (current)
-      // Backup pin (next certificate)
-      // Note: Replace with actual certificate hashes in production
+      // Primary certificate pin (current) - PLACEHOLDER
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+      // Backup pin (next certificate) - PLACEHOLDER
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
-    // Gateway API
+    // Gateway API - REPLACE WITH ACTUAL HASHES
     'gateway.antinvestor.com': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
-    // Device API
+    // Device API - REPLACE WITH ACTUAL HASHES
     'devices.antinvestor.com': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
-    // Files API
+    // Files API - REPLACE WITH ACTUAL HASHES
     'files.antinvestor.com': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
-    // Profile API
+    // Profile API - REPLACE WITH ACTUAL HASHES
     'profile.antinvestor.com': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
-    // OAuth2 Provider
+    // OAuth2 Provider - REPLACE WITH ACTUAL HASHES
     'oauth2.antinvestor.com': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
@@ -125,8 +141,8 @@ class CertificatePinning {
       return false;
     }
 
-    // Calculate the SHA-256 hash of the certificate's public key
-    final certHash = _calculatePublicKeyHash(certificate);
+    // Calculate the SHA-256 hash of the certificate
+    final certHash = _calculateCertificateHash(certificate);
 
     if (certHash == null) {
       AppLogger.error(
@@ -151,17 +167,22 @@ class CertificatePinning {
     return isValid;
   }
 
-  /// Calculate SHA-256 hash of the certificate's public key (SPKI)
+  /// Calculate SHA-256 hash of the certificate's DER encoding
   ///
   /// Returns base64-encoded hash or null on error
-  String? _calculatePublicKeyHash(io.X509Certificate certificate) {
+  ///
+  /// Note: This hashes the full DER-encoded certificate rather than just
+  /// the SPKI (Subject Public Key Info). While SPKI-only hashing is more
+  /// robust against certificate metadata changes, extracting SPKI requires
+  /// ASN.1 parsing which adds complexity. For most use cases, full certificate
+  /// hashing works well as long as both current and backup pins are configured
+  /// to handle certificate rotation gracefully.
+  String? _calculateCertificateHash(io.X509Certificate certificate) {
     try {
       // Get the DER-encoded certificate
       final derBytes = certificate.der;
 
-      // Extract Subject Public Key Info (SPKI) from certificate
-      // For simplicity, we hash the entire certificate in this implementation
-      // In production, extract just the SPKI for proper public key pinning
+      // Hash the full certificate DER encoding
       final digest = sha256.convert(derBytes);
 
       return base64.encode(digest.bytes);
@@ -221,17 +242,10 @@ class CertificatePinning {
 extension CertificatePinningExtension on CertificatePinning {
   /// Create an HTTP client with certificate pinning and background task settings
   ///
-  /// Reduced connection pool for background tasks
+  /// Reduced connection pool for background tasks to conserve resources
   io.HttpClient createPinnedHttpClientForBackground() {
-    final httpClient = io.HttpClient()
-      ..connectionTimeout = ApiConfig.connectionTimeout
-      ..idleTimeout = ApiConfig.idleTimeout
-      ..maxConnectionsPerHost =
-          2 // Reduced for background tasks
-      ..autoUncompress = true;
-
-    httpClient.badCertificateCallback = _validateCertificate;
-
+    final httpClient = createPinnedHttpClient();
+    httpClient.maxConnectionsPerHost = 2; // Reduced for background tasks
     return httpClient;
   }
 }
