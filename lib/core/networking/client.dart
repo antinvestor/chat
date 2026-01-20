@@ -1,3 +1,9 @@
+/// API Client providers and transport configuration
+///
+/// This module provides Riverpod providers for all API clients used
+/// in the application, including authentication, token management,
+/// and service-specific clients.
+
 import 'dart:io' as io;
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
@@ -94,7 +100,24 @@ final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
   };
 });
 
-/// Transport factory function for creating Connect transports
+/// Creates a Connect transport for API communication
+///
+/// Configures HTTP client with appropriate timeouts and connection
+/// pooling settings for optimal performance on mobile devices.
+///
+/// Parameters:
+/// - [baseUrl]: The base URL for the API endpoint
+/// - [interceptors]: List of interceptors for auth, logging, etc.
+///
+/// Returns a configured [connect.Transport] instance.
+///
+/// Example:
+/// ```dart
+/// final transport = createTransport(
+///   Uri.parse('https://api.example.com'),
+///   [authInterceptor],
+/// );
+/// ```
 connect.Transport createTransport(
   Uri baseUrl,
   List<connect.Interceptor> interceptors,

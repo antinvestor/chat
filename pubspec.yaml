@@ -79,6 +79,7 @@ dependencies:
   crypto: ^3.0.6
   libphonenumber_plugin: ^0.3.3
   record: ^6.1.2
+  sentry_flutter: ^8.12.0
 
 
 dev_dependencies:

@@ -85,8 +85,18 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   );
 });
 
+/// Connection state for the real-time sync engine
+///
+/// Example:
+/// ```dart
+/// final state = ref.watch(connectionStateProvider);
+/// if (state == SyncConnectionState.connected) {
+///   print('Connected to server');
+/// }
+/// ```
 enum SyncConnectionState { disconnected, connecting, connected }
 
+/// Stream provider for monitoring sync connection state
 final connectionStateProvider = StreamProvider<SyncConnectionState>((
   ref,
 ) async* {
@@ -97,6 +107,27 @@ final connectionStateProvider = StreamProvider<SyncConnectionState>((
 /// Callback type for token refresh operations
 typedef TokenRefreshCallback = Future<String?> Function();
 
+/// Real-time synchronization engine for bidirectional message streaming
+///
+/// Manages the WebSocket-like connection to the gateway service for:
+/// - Receiving incoming messages and events
+/// - Uploading pending messages from the offline queue
+/// - Handling typing indicators and read receipts
+/// - Managing connection state with automatic reconnection
+///
+/// Example:
+/// ```dart
+/// final syncEngine = await ref.watch(syncEngineProvider.future);
+/// syncEngine.start();
+///
+/// // Monitor connection state
+/// syncEngine.connectionState.listen((state) {
+///   print('Connection: $state');
+/// });
+///
+/// // Send a message
+/// await syncEngine.sendSignal(event);
+/// ```
 class SyncEngine {
   final pb.GatewayServiceClient _gatewayClient;
   final pb.ChatServiceClient _chatClient;

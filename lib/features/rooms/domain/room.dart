@@ -3,6 +3,21 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'room.freezed.dart';
 part 'room.g.dart';
 
+/// Chat room domain model
+///
+/// Represents a chat room which can be either a direct message (1:1)
+/// or a group conversation. Rooms track their last message for
+/// ordering and display purposes.
+///
+/// Example:
+/// ```dart
+/// final room = Room(
+///   id: 'room-123',
+///   name: 'Team Chat',
+///   type: 'group',
+///   unreadCount: 5,
+/// );
+/// ```
 @freezed
 abstract class Room with _$Room {
   const factory Room({
