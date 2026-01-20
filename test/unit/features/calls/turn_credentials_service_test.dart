@@ -2,6 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chat/features/calls/services/turn_credentials_service.dart';
 
+// Simple fake DeviceServiceClient for testing
+class FakeDeviceServiceClient {
+  // No-op client - service doesn't use it yet
+}
+
 void main() {
   group('TurnCredentials', () {
     group('isExpired', () {
@@ -76,5 +81,10 @@ void main() {
         expect(turnCredentialsServiceProvider, isNotNull);
       });
     });
+
+    // Note: Full service tests require a mock DeviceServiceClient.
+    // Since the service currently returns STUN-only configuration
+    // (TURN API not yet implemented), these tests verify the core behavior.
+    // When the TURN API is implemented, add proper mock-based tests.
   });
 }

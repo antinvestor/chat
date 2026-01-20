@@ -1,3 +1,4 @@
+import 'package:antinvestor_api_device/antinvestor_api_device.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/app_logger.dart';
@@ -49,7 +50,7 @@ class TurnCredentials {
 /// - Credential refresh before expiry
 /// - Fallback to STUN if TURN unavailable
 class TurnCredentialsService {
-  final dynamic _deviceClient;
+  final DeviceServiceClient _deviceClient;
 
   /// Cached TURN credentials
   List<TurnCredentials>? _cachedCredentials;
@@ -58,13 +59,6 @@ class TurnCredentialsService {
   static const List<Map<String, dynamic>> _defaultStunServers = [
     {'urls': 'stun:stun.l.google.com:19302'},
     {'urls': 'stun:stun1.l.google.com:19302'},
-  ];
-
-  /// AntInvestor TURN servers (configured with dynamic credentials)
-  static const List<String> _turnServerUrls = [
-    'turn:turn.antinvestor.com:3478',
-    'turn:turn.antinvestor.com:3478?transport=tcp',
-    'turns:turn.antinvestor.com:5349',
   ];
 
   TurnCredentialsService(this._deviceClient);
