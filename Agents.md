@@ -44,6 +44,40 @@ main                           # Protected, production-ready code
 | `hotfix/*` | None | Cherry-pick to main |
 | `release/*` | None | Merge to main |
 
+### Parallel Development with Worktrees
+
+For efficient parallel development while waiting for CI checks, use git worktrees:
+
+```bash
+# Create worktree directory structure
+mkdir -p ../chat-worktrees
+
+# Add worktree for a new feature
+git worktree add ../chat-worktrees/msg-delete feature/MSG-DEL-001
+
+# List active worktrees
+git worktree list
+
+# Remove worktree after PR is merged
+git worktree remove ../chat-worktrees/msg-delete
+```
+
+**Worktree Guidelines:**
+- Maximum 10 concurrent worktrees to manage complexity
+- Each worktree = one feature branch = one PR
+- Always pull main before creating new worktrees
+- Remove worktrees promptly after PR merge to avoid conflicts
+- Avoid overlapping file changes between concurrent features
+- Prioritize non-conflicting work streams for parallel execution
+
+**Example Parallel Workflow:**
+```
+main repo:     Monitoring PRs, creating new worktrees
+├── worktree1: feature/MSG-DEL-001 (Messaging)
+├── worktree2: feature/NOTIF-PUSH-001 (Notifications)
+└── worktree3: feature/CALL-TURN-001 (Calls)
+```
+
 ### Creating a Feature Branch
 
 ```bash
