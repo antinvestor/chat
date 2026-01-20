@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:meta/meta.dart';
 
 part 'database.g.dart';
 
@@ -340,6 +341,10 @@ class SyncMetadata extends Table {
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
+
+  /// Constructor for testing with custom executor (e.g., in-memory database)
+  @visibleForTesting
+  AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   static final AppDatabase instance = AppDatabase._();
 
