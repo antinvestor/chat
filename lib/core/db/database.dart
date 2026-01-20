@@ -362,7 +362,8 @@ class AppDatabase extends _$AppDatabase {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
-        // Create FTS5 virtual table for message search
+        // Create FTS5 virtual table for message search on new databases
+        // Uses IF NOT EXISTS for idempotency
         await _createFtsTable();
       },
       onUpgrade: (Migrator m, int from, int to) async {
@@ -475,6 +476,27 @@ class AppDatabase extends _$AppDatabase {
   // Full-Text Search Methods
   // ============================================================================
 
+  /// Map a QueryRow to a RoomEvent
+  ///
+  /// Helper method to reduce duplication in search methods.
+  RoomEvent _mapQueryRowToRoomEvent(QueryRow row) {
+    return RoomEvent(
+      id: row.read<String>('id'),
+      roomId: row.read<String>('room_id'),
+      senderId: row.read<String>('sender_id'),
+      senderContactId: row.readNullable<String>('sender_contact_id'),
+      type: row.read<int>('type'),
+      content: row.readNullable<String>('content'),
+      parentId: row.readNullable<String>('parent_id'),
+      status: row.read<int>('status'),
+      createdAt: row.readNullable<int>('created_at'),
+      serverTs: row.readNullable<int>('server_ts'),
+      localId: row.readNullable<String>('local_id'),
+      editedAt: row.readNullable<int>('edited_at'),
+      originalContent: row.readNullable<String>('original_content'),
+    );
+  }
+
   /// Search messages by text content across all rooms
   ///
   /// Returns messages matching the search query, ordered by relevance.
@@ -505,25 +527,7 @@ class AppDatabase extends _$AppDatabase {
       readsFrom: {roomEvents},
     ).get();
 
-    return results
-        .map(
-          (row) => RoomEvent(
-            id: row.read<String>('id'),
-            roomId: row.read<String>('room_id'),
-            senderId: row.read<String>('sender_id'),
-            senderContactId: row.readNullable<String>('sender_contact_id'),
-            type: row.read<int>('type'),
-            content: row.readNullable<String>('content'),
-            parentId: row.readNullable<String>('parent_id'),
-            status: row.read<int>('status'),
-            createdAt: row.readNullable<int>('created_at'),
-            serverTs: row.readNullable<int>('server_ts'),
-            localId: row.readNullable<String>('local_id'),
-            editedAt: row.readNullable<int>('edited_at'),
-            originalContent: row.readNullable<String>('original_content'),
-          ),
-        )
-        .toList();
+    return results.map(_mapQueryRowToRoomEvent).toList();
   }
 
   /// Search messages within a specific room
@@ -560,25 +564,7 @@ class AppDatabase extends _$AppDatabase {
       readsFrom: {roomEvents},
     ).get();
 
-    return results
-        .map(
-          (row) => RoomEvent(
-            id: row.read<String>('id'),
-            roomId: row.read<String>('room_id'),
-            senderId: row.read<String>('sender_id'),
-            senderContactId: row.readNullable<String>('sender_contact_id'),
-            type: row.read<int>('type'),
-            content: row.readNullable<String>('content'),
-            parentId: row.readNullable<String>('parent_id'),
-            status: row.read<int>('status'),
-            createdAt: row.readNullable<int>('created_at'),
-            serverTs: row.readNullable<int>('server_ts'),
-            localId: row.readNullable<String>('local_id'),
-            editedAt: row.readNullable<int>('edited_at'),
-            originalContent: row.readNullable<String>('original_content'),
-          ),
-        )
-        .toList();
+    return results.map(_mapQueryRowToRoomEvent).toList();
   }
 
   /// Rebuild the FTS index from scratch
