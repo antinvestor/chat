@@ -329,6 +329,31 @@ class SyncMetadata extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// User settings persistence table
+///
+/// Stores all user preferences as key-value pairs with timestamps.
+/// Settings are loaded on app startup and cached in memory.
+///
+/// Example:
+/// ```dart
+/// final theme = await db.userSettings.select()
+///   .where((s) => s.key.equals('theme_mode'))
+///   .getSingleOrNull();
+/// ```
+class UserSettings extends Table {
+  /// Setting key (e.g., 'theme_mode', 'font_size')
+  TextColumn get key => text()();
+
+  /// Setting value (stored as string, can be JSON for complex values)
+  TextColumn get value => text()();
+
+  /// Last update timestamp (milliseconds since epoch)
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -352,6 +377,7 @@ class SyncMetadata extends Table {
     PendingJobs,
     Transactions,
     SyncMetadata,
+    UserSettings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -364,7 +390,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -393,12 +419,36 @@ class AppDatabase extends _$AppDatabase {
       if (from <= 4) {
         // Migration from v4 to v5: Add FTS5 for full-text message search
         await _createFtsTable();
-        // Populate FTS index with existing text messages
-        await _populateFtsFromExistingMessages();
-      }
-    },
-    beforeOpen: (details) async {
-      await customStatement('PRAGMA foreign_keys = ON');
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from <= 1) {
+          // Migration from v1 to v2: Add rosterId column and convert existing IDs to stable local UUIDs
+          // For now, we'll handle this in beforeOpen instead
+        }
+        if (from <= 2) {
+          // Migration from v2 to v3: Add message editing columns
+          await m.addColumn(roomEvents, roomEvents.editedAt);
+          await m.addColumn(roomEvents, roomEvents.originalContent);
+        }
+        if (from <= 3) {
+          // Migration from v3 to v4: Add message deletion columns
+          await m.addColumn(roomEvents, roomEvents.redacted);
+          await m.addColumn(roomEvents, roomEvents.redactedAt);
+          await m.addColumn(roomEvents, roomEvents.redactedBy);
+        }
+        if (from <= 4) {
+          // Migration from v4 to v5: Add FTS5 for full-text message search
+          await _createFtsTable();
+          // Populate FTS index with existing text messages
+          await _populateFtsFromExistingMessages();
+        }
+        if (from <= 5) {
+          // Migration from v5 to v6: Add user settings table
+          await m.createTable(userSettings);
+        }
+      },
+      beforeOpen: (details) async {
+        await customStatement('PRAGMA foreign_keys = ON');
 
       // Handle data migration after schema changes
       if (details.hadUpgrade) {
