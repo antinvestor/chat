@@ -22,6 +22,24 @@ const String _sentryDsn = String.fromEnvironment(
   defaultValue: '',
 );
 
+/// Type-safe wrapper for user info from OIDC token
+class _UserInfo {
+  final String id;
+  final String? email;
+  final String? username;
+
+  _UserInfo({required this.id, this.email, this.username});
+
+  /// Parse user info from OIDC token claims
+  factory _UserInfo.fromOidcClaims(Map<String, dynamic> claims) {
+    return _UserInfo(
+      id: claims['sub'] as String? ?? 'unknown',
+      email: claims['email'] as String?,
+      username: claims['preferred_username'] as String?,
+    );
+  }
+}
+
 /// Background task callback - must be top-level function
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -146,12 +164,13 @@ class _ChatAppState extends ConsumerState<ChatApp> {
 
       // Set user context for error tracking
       if (ErrorTrackingService.isInitialized) {
-        final userInfo = await authRepo.getUserInfo();
-        if (userInfo != null) {
+        final userInfoMap = await authRepo.getUserInfo();
+        if (userInfoMap != null) {
+          final userInfo = _UserInfo.fromOidcClaims(userInfoMap);
           await ErrorTrackingService.setUser(
-            id: userInfo['sub'] as String? ?? 'unknown',
-            email: userInfo['email'] as String?,
-            username: userInfo['preferred_username'] as String?,
+            id: userInfo.id,
+            email: userInfo.email,
+            username: userInfo.username,
           );
           await ErrorTrackingService.addBreadcrumb(
             message: 'User authenticated',

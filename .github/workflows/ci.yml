@@ -235,6 +235,20 @@ jobs:
           flutter create --platforms=ios .
         fi
 
+    - name: Set iOS deployment target
+      run: |
+        cd ios
+        # Update Podfile to use iOS 14.0 (required by workmanager_apple)
+        if grep -q "^# platform :ios" Podfile; then
+          sed -i '' "s/^# platform :ios.*/platform :ios, '14.0'/" Podfile
+        elif grep -q "^platform :ios" Podfile; then
+          sed -i '' "s/^platform :ios.*/platform :ios, '14.0'/" Podfile
+        else
+          echo "platform :ios, '14.0'" | cat - Podfile > temp && mv temp Podfile
+        fi
+        echo "Updated Podfile with iOS 14.0 target"
+        head -5 Podfile
+
     - name: Install CocoaPods dependencies
       run: |
         cd ios

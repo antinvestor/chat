@@ -38,8 +38,7 @@ class ErrorTrackingService {
       // Capture unhandled errors
       options.attachStacktrace = true;
 
-      // Set release info
-      options.release = 'chat@1.0.0';
+      // Release version is auto-detected from pubspec.yaml by sentry_flutter
 
       // Only send errors in release mode by default
       options.beforeSend = (event, hint) {
@@ -110,14 +109,7 @@ class ErrorTrackingService {
     await Sentry.captureException(
       exception,
       stackTrace: stackTrace,
-      withScope: extra != null
-          ? (scope) {
-              for (final entry in extra.entries) {
-                scope.setExtra(entry.key, entry.value);
-              }
-              scope.level = level;
-            }
-          : null,
+      withScope: _scopeWithExtras(extra, level: level),
     );
   }
 
@@ -130,13 +122,7 @@ class ErrorTrackingService {
     await Sentry.captureMessage(
       message,
       level: level,
-      withScope: extra != null
-          ? (scope) {
-              for (final entry in extra.entries) {
-                scope.setExtra(entry.key, entry.value);
-              }
-            }
-          : null,
+      withScope: _scopeWithExtras(extra),
     );
   }
 
@@ -170,4 +156,22 @@ class ErrorTrackingService {
 
   /// Check if Sentry is initialized
   static bool get isInitialized => _initialized;
+
+  /// Helper to create a scope callback with extra data and optional level
+  static ScopeCallback? _scopeWithExtras(
+    Map<String, dynamic>? extra, {
+    SentryLevel? level,
+  }) {
+    if (extra == null && level == null) return null;
+    return (scope) {
+      if (extra != null) {
+        for (final entry in extra.entries) {
+          scope.setExtra(entry.key, entry.value);
+        }
+      }
+      if (level != null) {
+        scope.level = level;
+      }
+    };
+  }
 }
