@@ -75,8 +75,13 @@ dependencies:
   url_launcher: ^6.3.2
   uuid: ^4.5.1
   web: ^1.1.1
-  workmanager: ^0.9.0+3
-  xid: ^1.2.1
+  app_links: ^7.0.0
+  crypto: ^3.0.6
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
+  libphonenumber_plugin: ^0.3.3
+  record: ^6.1.2
+  sentry_flutter: ^8.12.0
 
 
 dev_dependencies:
