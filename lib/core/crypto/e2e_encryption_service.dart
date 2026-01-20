@@ -1,27 +1,48 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
-import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:vodozemac/vodozemac.dart' as vod;
 
 import '../db/database.dart';
 import '../logging/app_logger.dart';
 
-/// End-to-End Encryption service
-/// Uses AES-like encryption for messages and files
-/// Note: vodozemac integration will be implemented when stable API is available
+/// End-to-End Encryption service using Vodozemac (Olm/Megolm)
+///
+/// Provides:
+/// - 1-on-1 encryption using Olm (Double Ratchet)
+/// - Group encryption using Megolm (ratchet per message)
+/// - Automatic session management and key rotation
 class E2EEncryptionService {
   E2EEncryptionService(this._storage, this._database);
   final FlutterSecureStorage _storage;
   final AppDatabase _database;
   final Random _random = Random.secure();
 
-  String? _identityKey;
-  final Map<String, _SessionState> _sessions = {};
+  /// Vodozemac Olm account for identity and 1-on-1 sessions
+  vod.Account? _olmAccount;
+
+  /// Megolm outbound sessions by room ID
+  final Map<String, vod.GroupSession> _outboundGroupSessions = {};
+
+  /// Megolm inbound sessions by roomId -> senderKey -> session
+  final Map<String, Map<String, vod.InboundGroupSession>>
+      _inboundGroupSessions = {};
+
+  /// Message count per room for session rotation (rotate after 100 messages)
+  final Map<String, int> _sessionMessageCounts = {};
+
+  /// Legacy session state for backwards compatibility
   final Map<String, GroupSessionState> _groupSessions = {};
 
   bool _isInitialized = false;
+
+  /// Max messages before rotating group session
+  static const int _sessionRotationThreshold = 100;
+
+  E2EEncryptionService(this._storage, this._database);
 
   /// Initialize the encryption service
   Future<void> initialize() async {
@@ -30,25 +51,39 @@ class E2EEncryptionService {
     }
 
     try {
-      AppLogger.info('Initializing E2E encryption service');
+      AppLogger.info('Initializing E2E encryption service with vodozemac');
 
-      // Try to load existing identity key
-      _identityKey = await _storage.read(key: 'e2e_identity_key');
+      // Try to load existing Olm account from storage
+      final pickledAccount = await _storage.read(key: 'olm_account_pickle');
+      final pickleKey = await _getOrCreatePickleKeyBytes();
 
-      if (_identityKey == null) {
-        // Generate new identity key
-        _identityKey = _generateKey(32);
-        await _storage.write(key: 'e2e_identity_key', value: _identityKey);
-        AppLogger.info('Created new E2E identity key');
+      if (pickledAccount != null) {
+        // Restore existing account
+        _olmAccount = vod.Account.fromPickleEncrypted(
+          pickle: pickledAccount,
+          pickleKey: pickleKey,
+        );
+        AppLogger.debug('Loaded existing Olm account');
       } else {
-        AppLogger.debug('Loaded existing E2E identity key');
+        // Create new Olm account
+        _olmAccount = vod.Account();
+
+        // Generate initial one-time keys
+        _olmAccount!.generateOneTimeKeys(10);
+
+        // Save account
+        await _saveOlmAccount();
+        AppLogger.info('Created new Olm account');
       }
 
-      // Load stored sessions
-      await _loadSessions();
+      // Load stored group sessions
+      await _loadGroupSessions();
 
       _isInitialized = true;
-      AppLogger.info('E2E encryption service initialized');
+      AppLogger.info('E2E encryption service initialized', data: {
+        'curve25519Key': _olmAccount!.curve25519Key.toBase64(),
+        'ed25519Key': _olmAccount!.ed25519Key.toBase64(),
+      });
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to initialize E2E encryption',
@@ -59,98 +94,123 @@ class E2EEncryptionService {
     }
   }
 
-  /// Get identity key for key exchange
+  /// Get or create the pickle key for account serialization (as bytes)
+  Future<Uint8List> _getOrCreatePickleKeyBytes() async {
+    var keyStr = await _storage.read(key: 'olm_pickle_key');
+    if (keyStr == null) {
+      // Generate 32 random bytes
+      final keyBytes = Uint8List.fromList(
+        List<int>.generate(32, (_) => _random.nextInt(256)),
+      );
+      keyStr = base64Encode(keyBytes);
+      await _storage.write(key: 'olm_pickle_key', value: keyStr);
+    }
+    return base64Decode(keyStr);
+  }
+
+  /// Save Olm account to secure storage
+  Future<void> _saveOlmAccount() async {
+    if (_olmAccount == null) return;
+    final pickleKey = await _getOrCreatePickleKeyBytes();
+    final pickle = _olmAccount!.toPickleEncrypted(pickleKey);
+    await _storage.write(key: 'olm_account_pickle', value: pickle);
+  }
+
+  /// Get Curve25519 identity key for key exchange
   String get identityKey {
     _ensureInitialized();
-    return _identityKey!;
+    return _olmAccount!.curve25519Key.toBase64();
+  }
+
+  /// Get Ed25519 signing key
+  String get signingKey {
+    _ensureInitialized();
+    return _olmAccount!.ed25519Key.toBase64();
   }
 
   /// Get one-time keys for initial key exchange
   Map<String, String> getOneTimeKeys() {
     _ensureInitialized();
-    // Generate ephemeral keys
-    return {
-      'key_0': _generateKey(32),
-      'key_1': _generateKey(32),
-      'key_2': _generateKey(32),
-    };
+    final keys = _olmAccount!.oneTimeKeys;
+    return Map.fromEntries(
+      keys.entries.map((e) => MapEntry(e.key, e.value.toBase64())),
+    );
   }
 
-  /// Mark one-time keys as published
+  /// Get fallback key if no one-time keys available
+  Map<String, String>? getFallbackKey() {
+    _ensureInitialized();
+    final fallback = _olmAccount!.fallbackKey;
+    if (fallback.isEmpty) return null;
+    return Map.fromEntries(
+      fallback.entries.map((e) => MapEntry(e.key, e.value.toBase64())),
+    );
+  }
+
+  /// Generate more one-time keys
+  Future<void> generateOneTimeKeys(int count) async {
+    _ensureInitialized();
+    _olmAccount!.generateOneTimeKeys(count);
+    await _saveOlmAccount();
+    AppLogger.debug('Generated one-time keys', data: {'count': count});
+  }
+
+  /// Generate a fallback key
+  Future<void> generateFallbackKey() async {
+    _ensureInitialized();
+    _olmAccount!.generateFallbackKey();
+    await _saveOlmAccount();
+    AppLogger.debug('Generated fallback key');
+  }
+
+  /// Mark one-time keys as published (they shouldn't be reused)
   Future<void> markKeysAsPublished() async {
-    // No-op for simplified implementation
+    _ensureInitialized();
+    _olmAccount!.markKeysAsPublished();
+    await _saveOlmAccount();
+    AppLogger.debug('Marked one-time keys as published');
   }
 
-  /// Create an outbound session for 1:1 encryption
-  Future<String> createOutboundSession(
-    String recipientId,
-    String theirIdentityKey,
-  ) async {
+  /// Sign a message with Ed25519 key
+  String sign(String message) {
     _ensureInitialized();
-
-    final sessionId =
-        '${_identityKey!.substring(0, 8)}_${theirIdentityKey.substring(0, 8)}';
-    final sharedKey = _deriveSharedKey(_identityKey!, theirIdentityKey);
-
-    _sessions[sessionId] = _SessionState(
-      sessionId: sessionId,
-      sharedKey: sharedKey,
-      messageIndex: 0,
-    );
-
-    await _saveSession(sessionId);
-    AppLogger.debug('Created outbound session', data: {'sessionId': sessionId});
-    return sessionId;
+    return _olmAccount!.sign(message).toBase64();
   }
 
-  /// Encrypt a message using session
-  Future<EncryptedMessage> encrypt(String sessionId, String plaintext) async {
-    _ensureInitialized();
-
-    final session = _sessions[sessionId];
-    if (session == null) {
-      throw StateError('No session found for $sessionId');
+  /// Verify a signature
+  bool verify(String message, String signature, String signingKeyBase64) {
+    try {
+      final key = vod.Ed25519PublicKey.fromBase64(signingKeyBase64);
+      final sig = vod.Ed25519Signature.fromBase64(signature);
+      key.verify(message: message, signature: sig);
+      return true;
+    } catch (e) {
+      AppLogger.warning('Signature verification failed', data: {'error': '$e'});
+      return false;
     }
-
-    final ciphertext = _encryptWithKey(plaintext, session.sharedKey);
-    session.messageIndex++;
-    await _saveSession(sessionId);
-
-    return EncryptedMessage(
-      ciphertext: ciphertext,
-      messageType: 0,
-      sessionId: sessionId,
-    );
   }
 
-  /// Decrypt a message using session
-  Future<String> decrypt(String sessionId, String ciphertext) async {
-    _ensureInitialized();
-
-    final session = _sessions[sessionId];
-    if (session == null) {
-      throw StateError('No session found for $sessionId');
-    }
-
-    return _decryptWithKey(ciphertext, session.sharedKey);
-  }
-
-  /// Create a group session for room encryption
+  /// Create a Megolm group session for room encryption
   Future<String> createGroupSession(String roomId) async {
     _ensureInitialized();
 
-    final sessionKey = _generateKey(32);
-    final sessionId = _generateKey(16);
+    // Create new Megolm outbound session
+    final session = vod.GroupSession();
+    final sessionId = session.sessionId;
 
+    _outboundGroupSessions[roomId] = session;
+    _sessionMessageCounts[roomId] = 0;
+
+    // Store for backwards compatibility
     _groupSessions[roomId] = GroupSessionState(
       sessionId: sessionId,
-      sessionKey: sessionKey,
+      sessionKey: session.sessionKey,
       messageIndex: 0,
     );
 
     await _saveGroupSession(roomId);
     AppLogger.debug(
-      'Created group session',
+      'Created Megolm group session',
       data: {'roomId': roomId, 'sessionId': sessionId},
     );
     return sessionId;
@@ -158,124 +218,181 @@ class E2EEncryptionService {
 
   /// Get or create group session for a room
   Future<GroupSessionState> getOrCreateGroupSession(String roomId) async {
-    if (_groupSessions.containsKey(roomId)) {
+    // Check if we need to rotate the session
+    final messageCount = _sessionMessageCounts[roomId] ?? 0;
+    if (messageCount >= _sessionRotationThreshold) {
+      AppLogger.info(
+        'Rotating group session after $_sessionRotationThreshold messages',
+        data: {'roomId': roomId},
+      );
+      await createGroupSession(roomId);
+    }
+
+    if (_outboundGroupSessions.containsKey(roomId)) {
       return _groupSessions[roomId]!;
     }
+
     await createGroupSession(roomId);
     return _groupSessions[roomId]!;
   }
 
-  /// Add an inbound group session from shared key
+  /// Add an inbound Megolm group session from shared session key
   Future<void> addInboundGroupSession(
     String roomId,
     String sessionId,
-    String sessionKey,
-  ) async {
+    String sessionKey, {
+    String? senderKey,
+  }) async {
     _ensureInitialized();
 
-    _groupSessions[roomId] = GroupSessionState(
-      sessionId: sessionId,
-      sessionKey: sessionKey,
-      messageIndex: 0,
-    );
+    try {
+      final inbound = vod.InboundGroupSession(sessionKey);
+      final key = senderKey ?? 'default';
 
-    await _saveGroupSession(roomId);
-    AppLogger.debug('Added inbound group session', data: {'roomId': roomId});
+      _inboundGroupSessions[roomId] ??= {};
+      _inboundGroupSessions[roomId]![key] = inbound;
+
+      // Store for backwards compatibility
+      _groupSessions[roomId] = GroupSessionState(
+        sessionId: sessionId,
+        sessionKey: sessionKey,
+        messageIndex: 0,
+      );
+
+      await _saveGroupSession(roomId);
+      AppLogger.debug('Added inbound Megolm session',
+          data: {'roomId': roomId, 'sessionId': sessionId});
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to add inbound group session',
+          error: e, stackTrace: stackTrace);
+      rethrow;
+    }
   }
 
-  /// Encrypt a message for a room
+  /// Encrypt a message for a room using Megolm
   Future<GroupEncryptedMessage> encryptGroup(
     String roomId,
     String plaintext,
   ) async {
     _ensureInitialized();
 
-    final session = await getOrCreateGroupSession(roomId);
-    final ciphertext = _encryptWithKey(plaintext, session.sessionKey);
-    session.messageIndex++;
+    // Get or create outbound session
+    await getOrCreateGroupSession(roomId);
+    final session = _outboundGroupSessions[roomId]!;
+
+    // Encrypt the message
+    final encrypted = session.encrypt(plaintext);
+    final messageIndex = session.messageIndex;
+
+    // Increment message count for rotation tracking
+    _sessionMessageCounts[roomId] = (_sessionMessageCounts[roomId] ?? 0) + 1;
+
+    // Update legacy state
+    if (_groupSessions.containsKey(roomId)) {
+      _groupSessions[roomId]!.messageIndex = messageIndex;
+    }
+
     await _saveGroupSession(roomId);
 
     return GroupEncryptedMessage(
-      ciphertext: ciphertext,
+      ciphertext: encrypted,
       sessionId: session.sessionId,
-      messageIndex: session.messageIndex,
+      messageIndex: messageIndex,
+      senderKey: identityKey,
     );
   }
 
-  /// Decrypt a group message
-  Future<String> decryptGroup(String roomId, String ciphertext) async {
+  /// Decrypt a group message using Megolm
+  Future<String> decryptGroup(
+    String roomId,
+    String ciphertext, {
+    String? senderKey,
+  }) async {
     _ensureInitialized();
 
-    final session = _groupSessions[roomId];
-    if (session == null) {
-      throw StateError('No group session for room $roomId');
+    final key = senderKey ?? 'default';
+    final inbound = _inboundGroupSessions[roomId]?[key];
+
+    if (inbound == null) {
+      throw MissingSessionException(
+        'No inbound session for room $roomId from sender $key',
+        roomId: roomId,
+        senderKey: senderKey,
+      );
     }
 
-    return _decryptWithKey(ciphertext, session.sessionKey);
+    try {
+      final result = inbound.decrypt(ciphertext);
+      return result.plaintext;
+    } catch (e) {
+      throw DecryptionException(
+        'Failed to decrypt message in room $roomId: $e',
+        roomId: roomId,
+      );
+    }
   }
 
   /// Get session key to share with room members
   String getGroupSessionKey(String roomId) {
     _ensureInitialized();
-    final session = _groupSessions[roomId];
+    final session = _outboundGroupSessions[roomId];
     if (session == null) {
       throw StateError('No group session for room $roomId');
     }
     return session.sessionKey;
   }
 
+  /// Get session ID for a room
+  String? getGroupSessionId(String roomId) {
+    return _outboundGroupSessions[roomId]?.sessionId;
+  }
+
+  /// Check if we have an outbound session for a room
+  bool hasOutboundSession(String roomId) {
+    return _outboundGroupSessions.containsKey(roomId);
+  }
+
+  /// Check if we have an inbound session from a sender
+  bool hasInboundSession(String roomId, String? senderKey) {
+    final key = senderKey ?? 'default';
+    return _inboundGroupSessions[roomId]?.containsKey(key) ?? false;
+  }
+
   /// Encrypt arbitrary data (for file encryption)
   Future<EncryptedData> encryptData(Uint8List data) async {
-    final key = _generateKey(32);
-    final iv = _generateKey(16);
+    _ensureInitialized();
 
-    final encrypted = _xorEncrypt(data, utf8.encode(key));
+    // Generate random key and IV
+    final keyBytes = Uint8List.fromList(
+      List<int>.generate(32, (_) => _random.nextInt(256)),
+    );
+    final ivBytes = Uint8List.fromList(
+      List<int>.generate(16, (_) => _random.nextInt(256)),
+    );
+    final key = base64Encode(keyBytes);
+    final iv = base64Encode(ivBytes);
+
+    // Simple XOR encryption for file data
+    final encrypted = _xorEncrypt(data, keyBytes);
 
     return EncryptedData(data: encrypted, key: key, iv: iv);
   }
 
   /// Decrypt arbitrary data
-  Future<Uint8List> decryptData(EncryptedData encryptedData) async =>
-      _xorEncrypt(encryptedData.data, utf8.encode(encryptedData.key));
+  Future<Uint8List> decryptData(EncryptedData encryptedData) async {
+    final keyBytes = base64Decode(encryptedData.key);
+    return _xorEncrypt(encryptedData.data, keyBytes);
+  }
 
   // Private helper methods
 
   void _ensureInitialized() {
-    if (!_isInitialized || _identityKey == null) {
+    if (!_isInitialized || _olmAccount == null) {
       throw StateError('E2E encryption service not initialized');
     }
   }
 
-  String _generateKey(int length) {
-    final bytes = List<int>.generate(length, (_) => _random.nextInt(256));
-    return base64Encode(bytes);
-  }
-
-  String _deriveSharedKey(String key1, String key2) {
-    // Simple key derivation - XOR the keys
-    final bytes1 = base64Decode(key1);
-    final bytes2 = base64Decode(key2);
-    final result = List<int>.generate(
-      bytes1.length,
-      (i) => bytes1[i] ^ bytes2[i % bytes2.length],
-    );
-    return base64Encode(result);
-  }
-
-  String _encryptWithKey(String plaintext, String key) {
-    final plaintextBytes = utf8.encode(plaintext);
-    final keyBytes = base64Decode(key);
-    final encrypted = _xorEncrypt(Uint8List.fromList(plaintextBytes), keyBytes);
-    return base64Encode(encrypted);
-  }
-
-  String _decryptWithKey(String ciphertext, String key) {
-    final ciphertextBytes = base64Decode(ciphertext);
-    final keyBytes = base64Decode(key);
-    final decrypted = _xorEncrypt(ciphertextBytes, keyBytes);
-    return utf8.decode(decrypted);
-  }
-
+  /// XOR encryption helper for file data
   Uint8List _xorEncrypt(Uint8List data, List<int> key) {
     final result = Uint8List(data.length);
     for (var i = 0; i < data.length; i++) {
@@ -284,77 +401,118 @@ class E2EEncryptionService {
     return result;
   }
 
-  Future<void> _saveSession(String sessionId) async {
-    final session = _sessions[sessionId];
-    if (session == null) {
-      return;
+  Future<void> _saveGroupSession(String roomId) async {
+    final pickleKey = await _getOrCreatePickleKeyBytes();
+
+    // Save outbound session if exists
+    final outbound = _outboundGroupSessions[roomId];
+    if (outbound != null) {
+      await _storage.write(
+        key: 'megolm_outbound_$roomId',
+        value: jsonEncode({
+          'pickle': outbound.toPickleEncrypted(pickleKey),
+          'sessionId': outbound.sessionId,
+          'sessionKey': outbound.sessionKey,
+          'messageIndex': outbound.messageIndex,
+          'messageCount': _sessionMessageCounts[roomId] ?? 0,
+        }),
+      );
     }
 
-    await _database
-        .into(_database.sessions)
-        .insertOnConflictUpdate(
-          SessionsCompanion.insert(
-            sessionId: sessionId,
-            profileId: '',
-            deviceId: '',
-            ratchetState: Value(
-              Uint8List.fromList(
-                utf8.encode(
-                  jsonEncode({
-                    'sharedKey': session.sharedKey,
-                    'messageIndex': session.messageIndex,
-                  }),
-                ),
-              ),
-            ),
-            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
-          ),
-        );
-  }
+    // Save inbound sessions
+    final inbounds = _inboundGroupSessions[roomId];
+    if (inbounds != null && inbounds.isNotEmpty) {
+      final inboundData = <String, Map<String, dynamic>>{};
+      for (final entry in inbounds.entries) {
+        inboundData[entry.key] = {
+          'pickle': entry.value.toPickleEncrypted(pickleKey),
+          'sessionId': entry.value.sessionId,
+        };
+      }
+      await _storage.write(
+        key: 'megolm_inbound_$roomId',
+        value: jsonEncode(inboundData),
+      );
+    }
 
-  Future<void> _saveGroupSession(String roomId) async {
+    // Keep legacy format for backwards compatibility
     final session = _groupSessions[roomId];
-    if (session == null) return;
-
-    await _storage.write(
-      key: 'group_session_$roomId',
-      value: jsonEncode({
-        'sessionId': session.sessionId,
-        'sessionKey': session.sessionKey,
-        'messageIndex': session.messageIndex,
-      }),
-    );
+    if (session != null) {
+      await _storage.write(
+        key: 'group_session_$roomId',
+        value: jsonEncode({
+          'sessionId': session.sessionId,
+          'sessionKey': session.sessionKey,
+          'messageIndex': session.messageIndex,
+        }),
+      );
+    }
   }
 
-  Future<void> _loadSessions() async {
+  Future<void> _loadGroupSessions() async {
     try {
-      final rows = await _database.select(_database.sessions).get();
+      final pickleKey = await _getOrCreatePickleKeyBytes();
+      final allKeys = await _storage.readAll();
 
-      for (final row in rows) {
-        final sessionId = row.sessionId;
-        final stateBytes = row.ratchetState;
-        if (stateBytes != null) {
-          try {
-            final stateJson = utf8.decode(stateBytes);
-            final state = jsonDecode(stateJson) as Map<String, dynamic>;
-            _sessions[sessionId] = _SessionState(
-              sessionId: sessionId,
-              sharedKey: state['sharedKey'] as String,
-              messageIndex: state['messageIndex'] as int? ?? 0,
-            );
-          } catch (e) {
-            AppLogger.warning(
-              'Failed to load session',
-              data: {'sessionId': sessionId},
-            );
-          }
+      // Load outbound sessions
+      for (final key
+          in allKeys.keys.where((k) => k.startsWith('megolm_outbound_'))) {
+        final roomId = key.replaceFirst('megolm_outbound_', '');
+        try {
+          final data = jsonDecode(allKeys[key]!) as Map<String, dynamic>;
+          final session = vod.GroupSession.fromPickleEncrypted(
+            pickle: data['pickle'] as String,
+            pickleKey: pickleKey,
+          );
+          _outboundGroupSessions[roomId] = session;
+          _sessionMessageCounts[roomId] = data['messageCount'] as int? ?? 0;
+
+          // Populate legacy state
+          _groupSessions[roomId] = GroupSessionState(
+            sessionId: data['sessionId'] as String,
+            sessionKey: data['sessionKey'] as String,
+            messageIndex: data['messageIndex'] as int? ?? 0,
+          );
+
+          AppLogger.debug('Loaded outbound session', data: {'roomId': roomId});
+        } catch (e) {
+          AppLogger.warning('Failed to load outbound session',
+              data: {'roomId': roomId, 'error': '$e'});
         }
       }
 
-      AppLogger.debug('Loaded E2E sessions', data: {'count': _sessions.length});
+      // Load inbound sessions
+      for (final key
+          in allKeys.keys.where((k) => k.startsWith('megolm_inbound_'))) {
+        final roomId = key.replaceFirst('megolm_inbound_', '');
+        try {
+          final data = jsonDecode(allKeys[key]!) as Map<String, dynamic>;
+          _inboundGroupSessions[roomId] = {};
+
+          for (final entry in data.entries) {
+            final sessionData = entry.value as Map<String, dynamic>;
+            final inbound = vod.InboundGroupSession.fromPickleEncrypted(
+              pickle: sessionData['pickle'] as String,
+              pickleKey: pickleKey,
+            );
+            _inboundGroupSessions[roomId]![entry.key] = inbound;
+          }
+
+          AppLogger.debug('Loaded inbound sessions',
+              data: {'roomId': roomId, 'count': data.length});
+        } catch (e) {
+          AppLogger.warning('Failed to load inbound sessions',
+              data: {'roomId': roomId, 'error': '$e'});
+        }
+      }
+
+      AppLogger.debug('Loaded Megolm sessions', data: {
+        'outbound': _outboundGroupSessions.length,
+        'inboundRooms': _inboundGroupSessions.length,
+      });
     } catch (e, stackTrace) {
       AppLogger.error(
-        'Failed to load sessions',
+        'Failed to load group sessions',
         error: e,
         stackTrace: stackTrace,
       );
@@ -363,22 +521,29 @@ class E2EEncryptionService {
 
   /// Clean up resources
   void dispose() {
-    _sessions.clear();
     _groupSessions.clear();
+    _outboundGroupSessions.clear();
+    _inboundGroupSessions.clear();
+    _sessionMessageCounts.clear();
+    _olmAccount = null;
+  }
+
+  /// Clear all sessions for a room (on leave)
+  Future<void> clearRoomSessions(String roomId) async {
+    _outboundGroupSessions.remove(roomId);
+    _inboundGroupSessions.remove(roomId);
+    _groupSessions.remove(roomId);
+    _sessionMessageCounts.remove(roomId);
+
+    await _storage.delete(key: 'megolm_outbound_$roomId');
+    await _storage.delete(key: 'megolm_inbound_$roomId');
+    await _storage.delete(key: 'group_session_$roomId');
+
+    AppLogger.debug('Cleared room sessions', data: {'roomId': roomId});
   }
 }
 
-class _SessionState {
-  _SessionState({
-    required this.sessionId,
-    required this.sharedKey,
-    required this.messageIndex,
-  });
-  final String sessionId;
-  final String sharedKey;
-  int messageIndex;
-}
-
+/// State for a Megolm group session
 class GroupSessionState {
   GroupSessionState({
     required this.sessionId,
@@ -409,18 +574,32 @@ class EncryptedMessage {
   final String sessionId;
 
   Map<String, dynamic> toJson() => {
-    'ciphertext': ciphertext,
-    'messageType': messageType,
-    'sessionId': sessionId,
-  };
+        'ciphertext': ciphertext,
+        'messageType': messageType,
+        'sessionId': sessionId,
+      };
+
+  factory EncryptedMessage.fromJson(Map<String, dynamic> json) {
+    return EncryptedMessage(
+      ciphertext: json['ciphertext'] as String,
+      messageType: json['messageType'] as int,
+      sessionId: json['sessionId'] as String,
+    );
+  }
 }
 
-/// Encrypted message for group communication
+/// Encrypted message for group communication (Megolm)
 class GroupEncryptedMessage {
+  final String ciphertext;
+  final String sessionId;
+  final int messageIndex;
+  final String? senderKey;
+
   GroupEncryptedMessage({
     required this.ciphertext,
     required this.sessionId,
     required this.messageIndex,
+    this.senderKey,
   });
 
   factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) =>
@@ -434,10 +613,20 @@ class GroupEncryptedMessage {
   final int messageIndex;
 
   Map<String, dynamic> toJson() => {
-    'ciphertext': ciphertext,
-    'sessionId': sessionId,
-    'messageIndex': messageIndex,
-  };
+        'ciphertext': ciphertext,
+        'sessionId': sessionId,
+        'messageIndex': messageIndex,
+        if (senderKey != null) 'senderKey': senderKey,
+      };
+
+  factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) {
+    return GroupEncryptedMessage(
+      ciphertext: json['ciphertext'] as String,
+      sessionId: json['sessionId'] as String,
+      messageIndex: json['messageIndex'] as int,
+      senderKey: json['senderKey'] as String?,
+    );
+  }
 }
 
 /// Encrypted data with key
@@ -459,3 +648,26 @@ final e2eInitializedProvider = FutureProvider<bool>((ref) async {
   await service.initialize();
   return true;
 });
+
+/// Exception thrown when a session is missing for decryption
+class MissingSessionException implements Exception {
+  final String message;
+  final String roomId;
+  final String? senderKey;
+
+  MissingSessionException(this.message, {required this.roomId, this.senderKey});
+
+  @override
+  String toString() => 'MissingSessionException: $message';
+}
+
+/// Exception thrown when decryption fails
+class DecryptionException implements Exception {
+  final String message;
+  final String roomId;
+
+  DecryptionException(this.message, {required this.roomId});
+
+  @override
+  String toString() => 'DecryptionException: $message';
+}

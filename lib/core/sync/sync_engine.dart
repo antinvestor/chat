@@ -12,6 +12,7 @@ import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
+import '../crypto/e2e_encryption_service.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
 import '../networking/client.dart';
@@ -37,6 +38,10 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final chatClient = await ref.watch(chatServiceClientProvider.future);
   final tokenManager = ref.watch(tokenManagerProvider);
   final authRepo = ref.watch(authRepositoryProvider);
+  final encryptionService = ref.watch(e2eEncryptionServiceProvider);
+
+  // Initialize encryption service
+  await encryptionService.initialize();
 
   return SyncEngine(
     gatewayClient,
@@ -46,6 +51,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     authRepo,
     ref.watch(roomMemberRepositoryProvider),
     ref.watch(roomSubscriptionServiceProvider),
+    encryptionService,
     onTokenRefresh: () async {
       AppLogger.debug('SyncEngine: Starting token refresh via authRepo');
       try {
@@ -145,6 +151,7 @@ class SyncEngine {
   final AuthRepository _authRepository;
   final RoomMemberRepository _roomMemberRepository;
   final RoomSubscriptionService _subscriptionService;
+  final E2EEncryptionService _encryptionService;
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
@@ -176,6 +183,18 @@ class SyncEngine {
   static const _initialBackoffMs = 1000; // 1 second
   static const _maxBackoffMs = 30000; // 30 seconds
   static const _maxReconnectAttempts = 5;
+
+  SyncEngine(
+    this._gatewayClient,
+    this._chatClient,
+    this._messageRepo,
+    this._jobRepo,
+    this._authRepository,
+    this._roomMemberRepository,
+    this._subscriptionService,
+    this._encryptionService, {
+    TokenRefreshCallback? onTokenRefresh,
+  }) : _onTokenRefresh = onTokenRefresh;
 
   void start() {
     _shouldStop = false;
@@ -511,9 +530,53 @@ class SyncEngine {
           'size': payload.attachment.sizeBytes.toInt(),
         };
       } else if (payload.hasEncrypted()) {
-        // Encryption temporarily disabled
-        AppLogger.warning('Encrypted message received but encryption disabled');
-        content = {'text': '[Encrypted message]'};
+        // Decrypt the message using E2EE service
+        try {
+          final encrypted = payload.encrypted;
+          final ciphertext = encrypted.ciphertext;
+          final sessionId = encrypted.sessionId;
+          final senderKey = encrypted.hasSenderKey() ? encrypted.senderKey : null;
+
+          // Try to get the inbound session for this room/sender
+          if (_encryptionService.hasInboundSession(event.roomId, senderKey)) {
+            final plaintext = await _encryptionService.decryptGroup(
+              event.roomId,
+              ciphertext,
+              senderKey: senderKey,
+            );
+            content = {
+              'text': plaintext,
+              'encrypted': true, // Mark as was encrypted for UI indicator
+              'decrypted': true,
+            };
+            AppLogger.debug('Message decrypted', data: {
+              'roomId': event.roomId,
+              'sessionId': sessionId,
+            });
+          } else {
+            // Need to request session key from sender
+            AppLogger.warning('Missing session key for decryption', data: {
+              'roomId': event.roomId,
+              'sessionId': sessionId,
+              'senderKey': senderKey,
+            });
+            content = {
+              'text': '[Unable to decrypt - missing session key]',
+              'encrypted': true,
+              'decrypted': false,
+              'sessionId': sessionId,
+              'senderKey': senderKey,
+            };
+          }
+        } catch (e, stackTrace) {
+          AppLogger.error('Decryption failed', error: e, stackTrace: stackTrace);
+          content = {
+            'text': '[Unable to decrypt message]',
+            'encrypted': true,
+            'decrypted': false,
+            'error': e.toString(),
+          };
+        }
       } else if (payload.hasCall()) {
         // Extract call data
         content = {

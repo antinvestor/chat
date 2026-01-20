@@ -36,11 +36,14 @@ class MessageSendingService {
   final Future<String> Function() _getCurrentProfileId;
 
   /// Send a text message
+  ///
+  /// Messages are encrypted by default using Megolm (E2EE).
+  /// Set [encrypt] to false to send unencrypted (not recommended).
   Future<domain.RoomEvent> sendTextMessage({
     required String roomId,
     required String text,
     String? replyToId,
-    bool encrypt = false, // Encryption disabled by default for MVP
+    bool encrypt = true, // E2EE enabled by default
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -48,21 +51,30 @@ class MessageSendingService {
 
     var content = <String, dynamic>{'text': text};
 
-    // Encrypt if requested
+    // Encrypt by default for security
     if (encrypt) {
       try {
+        await _encryptionService.initialize();
         final encrypted = await _encryptionService.encryptGroup(roomId, text);
         content = {
           'encrypted': true,
           'ciphertext': encrypted.ciphertext,
           'sessionId': encrypted.sessionId,
           'messageIndex': encrypted.messageIndex,
+          'senderKey': encrypted.senderKey,
         };
-      } catch (e) {
-        AppLogger.warning(
+        AppLogger.debug('Message encrypted', data: {
+          'roomId': roomId,
+          'sessionId': encrypted.sessionId,
+        });
+      } catch (e, stackTrace) {
+        AppLogger.error(
           'Encryption failed, sending unencrypted',
-          data: {'error': e.toString()},
+          error: e,
+          stackTrace: stackTrace,
         );
+        // Fall back to unencrypted - add warning flag
+        content['encryptionFailed'] = true;
       }
     }
 
