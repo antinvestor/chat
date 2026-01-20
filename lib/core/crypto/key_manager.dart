@@ -1,9 +1,14 @@
 import 'dart:convert';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Simplified KeyManager for E2EE
-/// Note: vodozemac integration will be implemented when API is stable
+/// Provider for KeyManager
+final keyManagerProvider = Provider<KeyManager>((ref) {
+  return KeyManager(const FlutterSecureStorage());
+});
+
+/// Simplified KeyManager for device ID and secure storage
 class KeyManager {
   KeyManager(this._storage);
   final FlutterSecureStorage _storage;
