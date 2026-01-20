@@ -858,14 +858,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     bool shouldGroupWithPrevious,
     bool removeTail,
   ) {
-    // Check if message can be edited (within 15 minute window)
-    final canEdit =
-        isMe &&
-        message.type == RoomEventType.text &&
-        message.status != EventStatus.pending &&
-        message.status != EventStatus.failed &&
-        (DateTime.now().millisecondsSinceEpoch - message.createdAt) <
-            const Duration(minutes: 15).inMilliseconds;
+    // Use shared validation logic from MessageSendingService
+    final canEdit = MessageSendingService.canEditMessage(
+      isOwnMessage: isMe,
+      messageType: message.type,
+      messageStatus: message.status,
+      messageCreatedAt: message.createdAt,
+    );
 
     switch (message.type) {
       case RoomEventType.motion:

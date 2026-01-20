@@ -437,10 +437,41 @@ class MessageSendingService {
     return true;
   }
 
-  /// Check if a message can be edited
+  /// Check if a message can be edited (async - fetches from DB)
   Future<bool> canEdit(String messageId) async {
     final currentUserId = await _getCurrentProfileId();
     return _messageRepo.canEditMessage(messageId, currentUserId);
+  }
+
+  /// Check if a message can be edited (sync - for UI when message data is available)
+  ///
+  /// Use this method when you already have the message data to avoid
+  /// unnecessary database lookups. This is the single source of truth
+  /// for edit validation logic.
+  static bool canEditMessage({
+    required bool isOwnMessage,
+    required domain.RoomEventType messageType,
+    required domain.EventStatus messageStatus,
+    required int messageCreatedAt,
+    Duration editWindow = const Duration(minutes: 15),
+  }) {
+    // Must be own message
+    if (!isOwnMessage) return false;
+
+    // Must be text type
+    if (messageType != domain.RoomEventType.text) return false;
+
+    // Must not be pending or failed
+    if (messageStatus == domain.EventStatus.pending ||
+        messageStatus == domain.EventStatus.failed) {
+      return false;
+    }
+
+    // Must be within edit window
+    final messageAge = DateTime.now().millisecondsSinceEpoch - messageCreatedAt;
+    if (messageAge > editWindow.inMilliseconds) return false;
+
+    return true;
   }
 
   bool _isMediaType(domain.RoomEventType type) {
