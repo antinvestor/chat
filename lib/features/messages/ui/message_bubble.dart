@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,6 +16,8 @@ class MessageBubble extends ConsumerWidget {
   final bool removeTail;
   final Function(String messageId, String messageText)? onReply;
   final VoidCallback? onRetry;
+  final Function(String messageId, String currentText)? onEdit;
+  final bool canEdit;
 
   const MessageBubble({
     super.key,
@@ -24,6 +27,8 @@ class MessageBubble extends ConsumerWidget {
     this.removeTail = false,
     this.onReply,
     this.onRetry,
+    this.onEdit,
+    this.canEdit = false,
   });
 
   @override
@@ -55,89 +60,92 @@ class MessageBubble extends ConsumerWidget {
                 const SizedBox(width: 48), // Space for avatar
               // Message bubble with enhanced performance
               Flexible(
-                child: Dismissible(
-                  key: ValueKey(
-                    message.id,
-                  ), // Performance: Stable key for ListView
-                  direction: DismissDirection.startToEnd,
-                  dismissThresholds: const {DismissDirection.startToEnd: 0.3},
-                  // Use confirmDismiss instead of onDismissed to prevent actual dismissal
-                  // We just want to trigger the reply action, not remove the message
-                  confirmDismiss: (direction) async {
-                    onReply?.call(message.id, text);
-                    return false; // Never actually dismiss - just trigger reply
-                  },
-                  background: Container(
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.only(left: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: _getBubbleRadius(isMe, removeTail),
+                child: GestureDetector(
+                  onLongPress: () => _showMessageMenu(context, text),
+                  child: Dismissible(
+                    key: ValueKey(
+                      message.id,
+                    ), // Performance: Stable key for ListView
+                    direction: DismissDirection.startToEnd,
+                    dismissThresholds: const {DismissDirection.startToEnd: 0.3},
+                    // Use confirmDismiss instead of onDismissed to prevent actual dismissal
+                    // We just want to trigger the reply action, not remove the message
+                    confirmDismiss: (direction) async {
+                      onReply?.call(message.id, text);
+                      return false; // Never actually dismiss - just trigger reply
+                    },
+                    background: Container(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: _getBubbleRadius(isMe, removeTail),
+                      ),
+                      child: const Icon(Icons.reply, color: Colors.blue),
                     ),
-                    child: const Icon(Icons.reply, color: Colors.blue),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: _getBubbleColor(isMe, isDarkMode),
-                      borderRadius: _getBubbleRadius(isMe, removeTail),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Sender name for group messages (performance: conditional)
-                        if (!isMe && !shouldGroupWithPrevious)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
-                            child: Text(
-                              _getSenderName(ref),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: _getSenderNameColor(isMe, isDarkMode),
-                              ),
-                            ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _getBubbleColor(isMe, isDarkMode),
+                        borderRadius: _getBubbleRadius(isMe, removeTail),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                        // Message content with inline timestamp (WhatsApp style)
-                        Stack(
-                          children: [
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Sender name for group messages (performance: conditional)
+                          if (!isMe && !shouldGroupWithPrevious)
                             Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                12,
-                                (!isMe && !shouldGroupWithPrevious) ? 0 : 8,
-                                12,
-                                6,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildMessageContent(context),
-                                  // Spacer for timestamp+status
-                                  const SizedBox(height: 16),
-                                ],
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+                              child: Text(
+                                _getSenderName(ref),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: _getSenderNameColor(isMe, isDarkMode),
+                                ),
                               ),
                             ),
-                            // WhatsApp-style inline timestamp and status at bottom-right
-                            Positioned(
-                              bottom: 4,
-                              right: 8,
-                              child: _buildTimestampAndStatus(
-                                context,
-                                timestamp,
+                          // Message content with inline timestamp (WhatsApp style)
+                          Stack(
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  12,
+                                  (!isMe && !shouldGroupWithPrevious) ? 0 : 8,
+                                  12,
+                                  6,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildMessageContent(context),
+                                    // Spacer for timestamp+status
+                                    const SizedBox(height: 16),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        // Failed message retry button
-                        if (isMe && message.status == EventStatus.failed)
-                          _buildRetryButton(context),
-                      ],
+                              // WhatsApp-style inline timestamp and status at bottom-right
+                              Positioned(
+                                bottom: 4,
+                                right: 8,
+                                child: _buildTimestampAndStatus(
+                                  context,
+                                  timestamp,
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Failed message retry button
+                          if (isMe && message.status == EventStatus.failed)
+                            _buildRetryButton(context),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -572,6 +580,18 @@ class MessageBubble extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Show "edited" indicator if message was edited
+          if (message.isEdited) ...[
+            Text(
+              'edited',
+              style: TextStyle(
+                fontSize: 10,
+                fontStyle: FontStyle.italic,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
           Text(timestamp, style: TextStyle(fontSize: 11, color: textColor)),
           if (isMe) ...[
             const SizedBox(width: 3),
@@ -612,6 +632,70 @@ class MessageBubble extends ConsumerWidget {
             Icon(Icons.refresh, size: 14, color: Colors.red.shade600),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Show context menu for message actions (reply, edit, copy)
+  void _showMessageMenu(BuildContext context, String text) {
+    final theme = Theme.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Reply option
+              if (onReply != null)
+                ListTile(
+                  leading: Icon(Icons.reply, color: theme.colorScheme.primary),
+                  title: const Text('Reply'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onReply?.call(message.id, text);
+                  },
+                ),
+              // Edit option (only for own text messages within edit window)
+              if (isMe && canEdit && message.type == RoomEventType.text)
+                ListTile(
+                  leading: Icon(Icons.edit, color: theme.colorScheme.primary),
+                  title: const Text('Edit'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onEdit?.call(message.id, text);
+                  },
+                ),
+              // Copy option (for text messages)
+              if (message.type == RoomEventType.text && text.isNotEmpty)
+                ListTile(
+                  leading: Icon(Icons.copy, color: theme.colorScheme.primary),
+                  title: const Text('Copy'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Copy to clipboard
+                    _copyToClipboard(context, text);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Copy text to clipboard with feedback
+  void _copyToClipboard(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Copied to clipboard'),
+        duration: Duration(seconds: 2),
       ),
     );
   }

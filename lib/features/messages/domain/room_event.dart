@@ -67,6 +67,8 @@ enum EventStatus { pending, sent, delivered, read, failed }
 /// ```
 @freezed
 abstract class RoomEvent with _$RoomEvent {
+  const RoomEvent._();
+
   const factory RoomEvent({
     required String id,
     required String roomId,
@@ -79,7 +81,12 @@ abstract class RoomEvent with _$RoomEvent {
     required int createdAt,
     int? serverTs,
     String? localId,
+    int?
+    editedAt, // Timestamp when message was last edited (null if never edited)
   }) = _RoomEvent;
+
+  /// Returns true if this message has been edited
+  bool get isEdited => editedAt != null;
 
   factory RoomEvent.fromJson(Map<String, dynamic> json) =>
       _$RoomEventFromJson(json);

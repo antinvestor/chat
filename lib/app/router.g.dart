@@ -59,7 +59,7 @@ final class AuthChangeNotifierProvider
 }
 
 String _$authChangeNotifierHash() =>
-    r'909b689b91d50d4b5a2ca08c721b201beae7b44b';
+    r'f12de69a77a4a5895af2ea6c1785be9f2931fd0a';
 
 @ProviderFor(router)
 final routerProvider = RouterProvider._();

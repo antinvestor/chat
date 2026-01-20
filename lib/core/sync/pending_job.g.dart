@@ -28,6 +28,7 @@ Map<String, dynamic> _$PendingJobToJson(_PendingJob instance) =>
 const _$JobTypeEnumMap = {
   JobType.sendMessage: 'sendMessage',
   JobType.sendMediaMessage: 'sendMediaMessage',
+  JobType.editMessage: 'editMessage',
   JobType.uploadFile: 'uploadFile',
   JobType.createRoom: 'createRoom',
   JobType.updateRoom: 'updateRoom',

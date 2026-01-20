@@ -1238,12 +1238,25 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
 }
 
 class Room extends DataClass implements Insertable<Room> {
+  /// Unique room identifier from server
   final String id;
+
+  /// Display name for the room (null for direct messages)
   final String? name;
+
+  /// Room type: 'direct', 'group', or 'channel'
   final String? type;
+
+  /// ID of the last event received in this room
   final String? lastEventId;
+
+  /// Index of the last event for ordering
   final int? lastEventIndex;
+
+  /// Count of unread messages in this room
   final int unreadCount;
+
+  /// JSON-encoded room metadata (avatar, description, etc.)
   final String? metadata;
   const Room({
     required this.id,
@@ -2061,6 +2074,28 @@ class $RoomEventsTable extends RoomEvents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _editedAtMeta = const VerificationMeta(
+    'editedAt',
+  );
+  @override
+  late final GeneratedColumn<int> editedAt = GeneratedColumn<int>(
+    'edited_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _originalContentMeta = const VerificationMeta(
+    'originalContent',
+  );
+  @override
+  late final GeneratedColumn<String> originalContent = GeneratedColumn<String>(
+    'original_content',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2074,6 +2109,8 @@ class $RoomEventsTable extends RoomEvents
     createdAt,
     serverTs,
     localId,
+    editedAt,
+    originalContent,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2161,6 +2198,21 @@ class $RoomEventsTable extends RoomEvents
         localId.isAcceptableOrUnknown(data['local_id']!, _localIdMeta),
       );
     }
+    if (data.containsKey('edited_at')) {
+      context.handle(
+        _editedAtMeta,
+        editedAt.isAcceptableOrUnknown(data['edited_at']!, _editedAtMeta),
+      );
+    }
+    if (data.containsKey('original_content')) {
+      context.handle(
+        _originalContentMeta,
+        originalContent.isAcceptableOrUnknown(
+          data['original_content']!,
+          _originalContentMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2214,6 +2266,14 @@ class $RoomEventsTable extends RoomEvents
         DriftSqlType.string,
         data['${effectivePrefix}local_id'],
       ),
+      editedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}edited_at'],
+      ),
+      originalContent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}original_content'],
+      ),
     );
   }
 
@@ -2224,17 +2284,44 @@ class $RoomEventsTable extends RoomEvents
 }
 
 class RoomEvent extends DataClass implements Insertable<RoomEvent> {
+  /// Unique event identifier (server-assigned or local UUID)
   final String id;
+
+  /// Room this event belongs to (foreign key)
   final String roomId;
+
+  /// Profile ID of the sender from ContactLink
   final String senderId;
+
+  /// Contact ID of the sender from ContactLink (nullable)
   final String? senderContactId;
+
+  /// Event type as integer (text=0, image=1, video=2, etc.)
   final int type;
+
+  /// JSON-encoded event content (message text, attachment info, etc.)
   final String? content;
+
+  /// Parent event ID for replies/threads
   final String? parentId;
+
+  /// Event status (pending=0, sent=1, delivered=2, read=3, failed=4)
   final int status;
+
+  /// Client-side creation timestamp
   final int? createdAt;
+
+  /// Server-assigned timestamp for consistent ordering
   final int? serverTs;
+
+  /// Temporary local ID before server confirmation
   final String? localId;
+
+  /// Timestamp when message was last edited (null if never edited)
+  final int? editedAt;
+
+  /// Original message content before editing (preserved for history)
+  final String? originalContent;
   const RoomEvent({
     required this.id,
     required this.roomId,
@@ -2247,6 +2334,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     this.createdAt,
     this.serverTs,
     this.localId,
+    this.editedAt,
+    this.originalContent,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2273,6 +2362,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     }
     if (!nullToAbsent || localId != null) {
       map['local_id'] = Variable<String>(localId);
+    }
+    if (!nullToAbsent || editedAt != null) {
+      map['edited_at'] = Variable<int>(editedAt);
+    }
+    if (!nullToAbsent || originalContent != null) {
+      map['original_content'] = Variable<String>(originalContent);
     }
     return map;
   }
@@ -2302,6 +2397,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       localId: localId == null && nullToAbsent
           ? const Value.absent()
           : Value(localId),
+      editedAt: editedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(editedAt),
+      originalContent: originalContent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originalContent),
     );
   }
 
@@ -2322,6 +2423,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       createdAt: serializer.fromJson<int?>(json['createdAt']),
       serverTs: serializer.fromJson<int?>(json['serverTs']),
       localId: serializer.fromJson<String?>(json['localId']),
+      editedAt: serializer.fromJson<int?>(json['editedAt']),
+      originalContent: serializer.fromJson<String?>(json['originalContent']),
     );
   }
   @override
@@ -2339,6 +2442,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       'createdAt': serializer.toJson<int?>(createdAt),
       'serverTs': serializer.toJson<int?>(serverTs),
       'localId': serializer.toJson<String?>(localId),
+      'editedAt': serializer.toJson<int?>(editedAt),
+      'originalContent': serializer.toJson<String?>(originalContent),
     };
   }
 
@@ -2354,6 +2459,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     Value<int?> createdAt = const Value.absent(),
     Value<int?> serverTs = const Value.absent(),
     Value<String?> localId = const Value.absent(),
+    Value<int?> editedAt = const Value.absent(),
+    Value<String?> originalContent = const Value.absent(),
   }) => RoomEvent(
     id: id ?? this.id,
     roomId: roomId ?? this.roomId,
@@ -2368,6 +2475,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     serverTs: serverTs.present ? serverTs.value : this.serverTs,
     localId: localId.present ? localId.value : this.localId,
+    editedAt: editedAt.present ? editedAt.value : this.editedAt,
+    originalContent: originalContent.present
+        ? originalContent.value
+        : this.originalContent,
   );
   RoomEvent copyWithCompanion(RoomEventsCompanion data) {
     return RoomEvent(
@@ -2384,6 +2495,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       serverTs: data.serverTs.present ? data.serverTs.value : this.serverTs,
       localId: data.localId.present ? data.localId.value : this.localId,
+      editedAt: data.editedAt.present ? data.editedAt.value : this.editedAt,
+      originalContent: data.originalContent.present
+          ? data.originalContent.value
+          : this.originalContent,
     );
   }
 
@@ -2400,7 +2515,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('serverTs: $serverTs, ')
-          ..write('localId: $localId')
+          ..write('localId: $localId, ')
+          ..write('editedAt: $editedAt, ')
+          ..write('originalContent: $originalContent')
           ..write(')'))
         .toString();
   }
@@ -2418,6 +2535,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     createdAt,
     serverTs,
     localId,
+    editedAt,
+    originalContent,
   );
   @override
   bool operator ==(Object other) =>
@@ -2433,7 +2552,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           other.status == this.status &&
           other.createdAt == this.createdAt &&
           other.serverTs == this.serverTs &&
-          other.localId == this.localId);
+          other.localId == this.localId &&
+          other.editedAt == this.editedAt &&
+          other.originalContent == this.originalContent);
 }
 
 class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
@@ -2448,6 +2569,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
   final Value<int?> createdAt;
   final Value<int?> serverTs;
   final Value<String?> localId;
+  final Value<int?> editedAt;
+  final Value<String?> originalContent;
   final Value<int> rowid;
   const RoomEventsCompanion({
     this.id = const Value.absent(),
@@ -2461,6 +2584,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.createdAt = const Value.absent(),
     this.serverTs = const Value.absent(),
     this.localId = const Value.absent(),
+    this.editedAt = const Value.absent(),
+    this.originalContent = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomEventsCompanion.insert({
@@ -2475,6 +2600,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.createdAt = const Value.absent(),
     this.serverTs = const Value.absent(),
     this.localId = const Value.absent(),
+    this.editedAt = const Value.absent(),
+    this.originalContent = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        roomId = Value(roomId),
@@ -2492,6 +2619,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Expression<int>? createdAt,
     Expression<int>? serverTs,
     Expression<String>? localId,
+    Expression<int>? editedAt,
+    Expression<String>? originalContent,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2506,6 +2635,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       if (createdAt != null) 'created_at': createdAt,
       if (serverTs != null) 'server_ts': serverTs,
       if (localId != null) 'local_id': localId,
+      if (editedAt != null) 'edited_at': editedAt,
+      if (originalContent != null) 'original_content': originalContent,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2522,6 +2653,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Value<int?>? createdAt,
     Value<int?>? serverTs,
     Value<String?>? localId,
+    Value<int?>? editedAt,
+    Value<String?>? originalContent,
     Value<int>? rowid,
   }) {
     return RoomEventsCompanion(
@@ -2536,6 +2669,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       createdAt: createdAt ?? this.createdAt,
       serverTs: serverTs ?? this.serverTs,
       localId: localId ?? this.localId,
+      editedAt: editedAt ?? this.editedAt,
+      originalContent: originalContent ?? this.originalContent,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2576,6 +2711,12 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     if (localId.present) {
       map['local_id'] = Variable<String>(localId.value);
     }
+    if (editedAt.present) {
+      map['edited_at'] = Variable<int>(editedAt.value);
+    }
+    if (originalContent.present) {
+      map['original_content'] = Variable<String>(originalContent.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2596,6 +2737,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
           ..write('createdAt: $createdAt, ')
           ..write('serverTs: $serverTs, ')
           ..write('localId: $localId, ')
+          ..write('editedAt: $editedAt, ')
+          ..write('originalContent: $originalContent, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2761,10 +2904,19 @@ class $SessionsTable extends Sessions with TableInfo<$SessionsTable, Session> {
 }
 
 class Session extends DataClass implements Insertable<Session> {
+  /// Unique session identifier
   final String sessionId;
+
+  /// Profile ID of the session peer
   final String profileId;
+
+  /// Device ID of the session peer
   final String deviceId;
+
+  /// Serialized ratchet state for session continuity
   final Uint8List? ratchetState;
+
+  /// Session creation timestamp
   final int? createdAt;
   const Session({
     required this.sessionId,
@@ -3107,9 +3259,16 @@ class $PrekeysTable extends Prekeys with TableInfo<$PrekeysTable, Prekey> {
 }
 
 class Prekey extends DataClass implements Insertable<Prekey> {
+  /// Auto-incrementing prekey identifier
   final int id;
+
+  /// Base64-encoded public key for sharing
   final String? publicKey;
+
+  /// Base64-encoded private key (securely stored)
   final String? privateKey;
+
+  /// Whether this is a signed prekey (identity verification)
   final bool isSigned;
   const Prekey({
     required this.id,
@@ -3458,11 +3617,22 @@ class $PendingJobsTable extends PendingJobs
 }
 
 class PendingJob extends DataClass implements Insertable<PendingJob> {
+  /// Auto-incrementing job identifier
   final int id;
+
+  /// Job type identifier (e.g., 'send_message', 'mark_read')
   final String type;
+
+  /// JSON-encoded job payload with operation details
   final String? payload;
+
+  /// Job creation timestamp
   final int? createdAt;
+
+  /// Number of retry attempts made
   final int retryCount;
+
+  /// Job status: 'pending', 'processing', 'completed', 'failed'
   final String status;
   const PendingJob({
     required this.id,
@@ -3854,11 +4024,22 @@ class $TransactionsTable extends Transactions
 }
 
 class Transaction extends DataClass implements Insertable<Transaction> {
+  /// Unique transaction identifier
   final String id;
+
+  /// Room this transaction belongs to (foreign key)
   final String roomId;
+
+  /// Transaction amount as decimal string
   final String? amount;
+
+  /// Currency code (e.g., 'KES', 'USD')
   final String? currency;
+
+  /// Transaction status: 'pending', 'completed', 'cancelled'
   final String? status;
+
+  /// Profile ID of the transaction initiator
   final String? initiatorId;
   const Transaction({
     required this.id,
@@ -4200,8 +4381,13 @@ class $SyncMetadataTable extends SyncMetadata
 
 class SyncMetadataData extends DataClass
     implements Insertable<SyncMetadataData> {
+  /// Unique key identifier
   final String key;
+
+  /// Stored value (can be JSON for complex data)
   final String? value;
+
+  /// Last update timestamp
   final int? updatedAt;
   const SyncMetadataData({required this.key, this.value, this.updatedAt});
   @override
@@ -5791,6 +5977,8 @@ typedef $$RoomEventsTableCreateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> serverTs,
       Value<String?> localId,
+      Value<int?> editedAt,
+      Value<String?> originalContent,
       Value<int> rowid,
     });
 typedef $$RoomEventsTableUpdateCompanionBuilder =
@@ -5806,6 +5994,8 @@ typedef $$RoomEventsTableUpdateCompanionBuilder =
       Value<int?> createdAt,
       Value<int?> serverTs,
       Value<String?> localId,
+      Value<int?> editedAt,
+      Value<String?> originalContent,
       Value<int> rowid,
     });
 
@@ -5888,6 +6078,16 @@ class $$RoomEventsTableFilterComposer
 
   ColumnFilters<String> get localId => $composableBuilder(
     column: $table.localId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get editedAt => $composableBuilder(
+    column: $table.editedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get originalContent => $composableBuilder(
+    column: $table.originalContent,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5974,6 +6174,16 @@ class $$RoomEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get editedAt => $composableBuilder(
+    column: $table.editedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get originalContent => $composableBuilder(
+    column: $table.originalContent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RoomsTableOrderingComposer get roomId {
     final $$RoomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6039,6 +6249,14 @@ class $$RoomEventsTableAnnotationComposer
   GeneratedColumn<String> get localId =>
       $composableBuilder(column: $table.localId, builder: (column) => column);
 
+  GeneratedColumn<int> get editedAt =>
+      $composableBuilder(column: $table.editedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get originalContent => $composableBuilder(
+    column: $table.originalContent,
+    builder: (column) => column,
+  );
+
   $$RoomsTableAnnotationComposer get roomId {
     final $$RoomsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -6102,6 +6320,8 @@ class $$RoomEventsTableTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> serverTs = const Value.absent(),
                 Value<String?> localId = const Value.absent(),
+                Value<int?> editedAt = const Value.absent(),
+                Value<String?> originalContent = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion(
                 id: id,
@@ -6115,6 +6335,8 @@ class $$RoomEventsTableTableManager
                 createdAt: createdAt,
                 serverTs: serverTs,
                 localId: localId,
+                editedAt: editedAt,
+                originalContent: originalContent,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6130,6 +6352,8 @@ class $$RoomEventsTableTableManager
                 Value<int?> createdAt = const Value.absent(),
                 Value<int?> serverTs = const Value.absent(),
                 Value<String?> localId = const Value.absent(),
+                Value<int?> editedAt = const Value.absent(),
+                Value<String?> originalContent = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion.insert(
                 id: id,
@@ -6143,6 +6367,8 @@ class $$RoomEventsTableTableManager
                 createdAt: createdAt,
                 serverTs: serverTs,
                 localId: localId,
+                editedAt: editedAt,
+                originalContent: originalContent,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -162,6 +162,12 @@ class RoomEvents extends Table {
   /// Temporary local ID before server confirmation
   TextColumn get localId => text().nullable()();
 
+  /// Timestamp when message was last edited (null if never edited)
+  IntColumn get editedAt => integer().nullable()();
+
+  /// Original message content before editing (preserved for history)
+  TextColumn get originalContent => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -349,7 +355,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -361,6 +367,11 @@ class AppDatabase extends _$AppDatabase {
         if (from <= 1) {
           // Migration from v1 to v2: Add rosterId column and convert existing IDs to stable local UUIDs
           // For now, we'll handle this in beforeOpen instead
+        }
+        if (from <= 2) {
+          // Migration from v2 to v3: Add message editing columns
+          await m.addColumn(roomEvents, roomEvents.editedAt);
+          await m.addColumn(roomEvents, roomEvents.originalContent);
         }
       },
       beforeOpen: (details) async {

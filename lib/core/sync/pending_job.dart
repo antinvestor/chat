@@ -6,6 +6,7 @@ part 'pending_job.g.dart';
 enum JobType {
   sendMessage,
   sendMediaMessage,
+  editMessage,
   uploadFile,
   createRoom,
   updateRoom,

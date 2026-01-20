@@ -381,6 +381,68 @@ class MessageSendingService {
         .go();
   }
 
+  /// Edit an existing text message
+  ///
+  /// Returns true if the edit was successfully queued, false if editing
+  /// is not allowed (not own message, outside time window, not text type).
+  Future<bool> editTextMessage({
+    required String messageId,
+    required String newText,
+    Duration editWindow = const Duration(minutes: 15),
+  }) async {
+    final currentUserId = await _getCurrentProfileId();
+
+    // Check if message can be edited
+    final canEdit = await _messageRepo.canEditMessage(
+      messageId,
+      currentUserId,
+      editWindow: editWindow,
+    );
+
+    if (!canEdit) {
+      AppLogger.warning(
+        'Cannot edit message',
+        data: {'messageId': messageId, 'userId': currentUserId},
+      );
+      return false;
+    }
+
+    // Get the original message
+    final originalEvent = await _messageRepo.getEventById(messageId);
+    if (originalEvent == null) return false;
+
+    // Preserve original content if first edit
+    final originalContent = originalEvent.isEdited
+        ? null // Don't overwrite if already edited before
+        : originalEvent.content['text'] as String?;
+
+    final newContent = {'text': newText};
+
+    // Update locally first (optimistic update)
+    await _messageRepo.updateMessageContent(
+      messageId,
+      newContent,
+      originalContent: originalContent,
+    );
+
+    // Queue for sync to server
+    await _jobRepo.addJob(JobType.editMessage, {
+      'messageId': messageId,
+      'roomId': originalEvent.roomId,
+      'content': newContent,
+      'originalContent': originalContent,
+    });
+
+    AppLogger.info('Message edit queued', data: {'messageId': messageId});
+    return true;
+  }
+
+  /// Check if a message can be edited
+  Future<bool> canEdit(String messageId) async {
+    final currentUserId = await _getCurrentProfileId();
+    return _messageRepo.canEditMessage(messageId, currentUserId);
+  }
+
   bool _isMediaType(domain.RoomEventType type) {
     return type == domain.RoomEventType.image ||
         type == domain.RoomEventType.video ||

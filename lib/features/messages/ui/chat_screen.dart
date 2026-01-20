@@ -24,6 +24,7 @@ import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
 import '../services/voice_recording_service.dart';
 import 'date_header.dart';
+import 'edit_message_sheet.dart';
 import 'input_bar.dart';
 import 'message_bubble.dart';
 
@@ -164,6 +165,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _replyingToMessageId = messageId;
       _replyingToText = messageText;
     });
+  }
+
+  void _onEditMessage(String messageId, String currentText) {
+    showEditMessageSheet(
+      context: context,
+      messageId: messageId,
+      currentText: currentText,
+      onSave: (id, newText) async {
+        final messagingService = ref.read(messageSendingServiceProvider);
+        return await messagingService.editTextMessage(
+          messageId: id,
+          newText: newText,
+        );
+      },
+    );
   }
 
   Future<void> _retryMessage(RoomEvent message) async {
@@ -842,6 +858,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     bool shouldGroupWithPrevious,
     bool removeTail,
   ) {
+    // Check if message can be edited (within 15 minute window)
+    final canEdit =
+        isMe &&
+        message.type == RoomEventType.text &&
+        message.status != EventStatus.pending &&
+        message.status != EventStatus.failed &&
+        (DateTime.now().millisecondsSinceEpoch - message.createdAt) <
+            const Duration(minutes: 15).inMilliseconds;
+
     switch (message.type) {
       case RoomEventType.motion:
         return MotionBubble(event: message, isMe: isMe);
@@ -857,6 +882,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onRetry: message.status == EventStatus.failed
               ? () => _retryMessage(message)
               : null,
+          onEdit: _onEditMessage,
+          canEdit: canEdit,
         );
     }
   }

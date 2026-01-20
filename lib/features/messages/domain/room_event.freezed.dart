@@ -17,7 +17,7 @@ mixin _$RoomEvent {
 
  String get id; String get roomId; String get senderId;// Profile ID (from ContactLink.profileId)
  String? get senderContactId;// Contact ID (from ContactLink.contactId)
- RoomEventType get type; Map<String, dynamic> get content; String? get parentId; EventStatus get status; int get createdAt; int? get serverTs; String? get localId;
+ RoomEventType get type; Map<String, dynamic> get content; String? get parentId; EventStatus get status; int get createdAt; int? get serverTs; String? get localId; int? get editedAt;
 /// Create a copy of RoomEvent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,16 +30,16 @@ $RoomEventCopyWith<RoomEvent> get copyWith => _$RoomEventCopyWithImpl<RoomEvent>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.roomId, roomId) || other.roomId == roomId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.senderContactId, senderContactId) || other.senderContactId == senderContactId)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other.content, content)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.serverTs, serverTs) || other.serverTs == serverTs)&&(identical(other.localId, localId) || other.localId == localId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.roomId, roomId) || other.roomId == roomId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.senderContactId, senderContactId) || other.senderContactId == senderContactId)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other.content, content)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.serverTs, serverTs) || other.serverTs == serverTs)&&(identical(other.localId, localId) || other.localId == localId)&&(identical(other.editedAt, editedAt) || other.editedAt == editedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,roomId,senderId,senderContactId,type,const DeepCollectionEquality().hash(content),parentId,status,createdAt,serverTs,localId);
+int get hashCode => Object.hash(runtimeType,id,roomId,senderId,senderContactId,type,const DeepCollectionEquality().hash(content),parentId,status,createdAt,serverTs,localId,editedAt);
 
 @override
 String toString() {
-  return 'RoomEvent(id: $id, roomId: $roomId, senderId: $senderId, senderContactId: $senderContactId, type: $type, content: $content, parentId: $parentId, status: $status, createdAt: $createdAt, serverTs: $serverTs, localId: $localId)';
+  return 'RoomEvent(id: $id, roomId: $roomId, senderId: $senderId, senderContactId: $senderContactId, type: $type, content: $content, parentId: $parentId, status: $status, createdAt: $createdAt, serverTs: $serverTs, localId: $localId, editedAt: $editedAt)';
 }
 
 
@@ -50,7 +50,7 @@ abstract mixin class $RoomEventCopyWith<$Res>  {
   factory $RoomEventCopyWith(RoomEvent value, $Res Function(RoomEvent) _then) = _$RoomEventCopyWithImpl;
 @useResult
 $Res call({
- String id, String roomId, String senderId, String? senderContactId, RoomEventType type, Map<String, dynamic> content, String? parentId, EventStatus status, int createdAt, int? serverTs, String? localId
+ String id, String roomId, String senderId, String? senderContactId, RoomEventType type, Map<String, dynamic> content, String? parentId, EventStatus status, int createdAt, int? serverTs, String? localId, int? editedAt
 });
 
 
@@ -67,7 +67,7 @@ class _$RoomEventCopyWithImpl<$Res>
 
 /// Create a copy of RoomEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? roomId = null,Object? senderId = null,Object? senderContactId = freezed,Object? type = null,Object? content = null,Object? parentId = freezed,Object? status = null,Object? createdAt = null,Object? serverTs = freezed,Object? localId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? roomId = null,Object? senderId = null,Object? senderContactId = freezed,Object? type = null,Object? content = null,Object? parentId = freezed,Object? status = null,Object? createdAt = null,Object? serverTs = freezed,Object? localId = freezed,Object? editedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,roomId: null == roomId ? _self.roomId : roomId // ignore: cast_nullable_to_non_nullable
@@ -80,7 +80,8 @@ as String?,status: null == status ? _self.status : status // ignore: cast_nullab
 as EventStatus,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as int,serverTs: freezed == serverTs ? _self.serverTs : serverTs // ignore: cast_nullable_to_non_nullable
 as int?,localId: freezed == localId ? _self.localId : localId // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,editedAt: freezed == editedAt ? _self.editedAt : editedAt // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -165,10 +166,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String roomId,  String senderId,  String? senderContactId,  RoomEventType type,  Map<String, dynamic> content,  String? parentId,  EventStatus status,  int createdAt,  int? serverTs,  String? localId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String roomId,  String senderId,  String? senderContactId,  RoomEventType type,  Map<String, dynamic> content,  String? parentId,  EventStatus status,  int createdAt,  int? serverTs,  String? localId,  int? editedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RoomEvent() when $default != null:
-return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that.type,_that.content,_that.parentId,_that.status,_that.createdAt,_that.serverTs,_that.localId);case _:
+return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that.type,_that.content,_that.parentId,_that.status,_that.createdAt,_that.serverTs,_that.localId,_that.editedAt);case _:
   return orElse();
 
 }
@@ -186,10 +187,10 @@ return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String roomId,  String senderId,  String? senderContactId,  RoomEventType type,  Map<String, dynamic> content,  String? parentId,  EventStatus status,  int createdAt,  int? serverTs,  String? localId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String roomId,  String senderId,  String? senderContactId,  RoomEventType type,  Map<String, dynamic> content,  String? parentId,  EventStatus status,  int createdAt,  int? serverTs,  String? localId,  int? editedAt)  $default,) {final _that = this;
 switch (_that) {
 case _RoomEvent():
-return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that.type,_that.content,_that.parentId,_that.status,_that.createdAt,_that.serverTs,_that.localId);case _:
+return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that.type,_that.content,_that.parentId,_that.status,_that.createdAt,_that.serverTs,_that.localId,_that.editedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -206,10 +207,10 @@ return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String roomId,  String senderId,  String? senderContactId,  RoomEventType type,  Map<String, dynamic> content,  String? parentId,  EventStatus status,  int createdAt,  int? serverTs,  String? localId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String roomId,  String senderId,  String? senderContactId,  RoomEventType type,  Map<String, dynamic> content,  String? parentId,  EventStatus status,  int createdAt,  int? serverTs,  String? localId,  int? editedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _RoomEvent() when $default != null:
-return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that.type,_that.content,_that.parentId,_that.status,_that.createdAt,_that.serverTs,_that.localId);case _:
+return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that.type,_that.content,_that.parentId,_that.status,_that.createdAt,_that.serverTs,_that.localId,_that.editedAt);case _:
   return null;
 
 }
@@ -220,8 +221,8 @@ return $default(_that.id,_that.roomId,_that.senderId,_that.senderContactId,_that
 /// @nodoc
 @JsonSerializable()
 
-class _RoomEvent implements RoomEvent {
-  const _RoomEvent({required this.id, required this.roomId, required this.senderId, this.senderContactId, required this.type, required final  Map<String, dynamic> content, this.parentId, this.status = EventStatus.pending, required this.createdAt, this.serverTs, this.localId}): _content = content;
+class _RoomEvent extends RoomEvent {
+  const _RoomEvent({required this.id, required this.roomId, required this.senderId, this.senderContactId, required this.type, required final  Map<String, dynamic> content, this.parentId, this.status = EventStatus.pending, required this.createdAt, this.serverTs, this.localId, this.editedAt}): _content = content,super._();
   factory _RoomEvent.fromJson(Map<String, dynamic> json) => _$RoomEventFromJson(json);
 
 @override final  String id;
@@ -243,6 +244,7 @@ class _RoomEvent implements RoomEvent {
 @override final  int createdAt;
 @override final  int? serverTs;
 @override final  String? localId;
+@override final  int? editedAt;
 
 /// Create a copy of RoomEvent
 /// with the given fields replaced by the non-null parameter values.
@@ -257,16 +259,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.roomId, roomId) || other.roomId == roomId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.senderContactId, senderContactId) || other.senderContactId == senderContactId)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other._content, _content)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.serverTs, serverTs) || other.serverTs == serverTs)&&(identical(other.localId, localId) || other.localId == localId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.roomId, roomId) || other.roomId == roomId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.senderContactId, senderContactId) || other.senderContactId == senderContactId)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other._content, _content)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.serverTs, serverTs) || other.serverTs == serverTs)&&(identical(other.localId, localId) || other.localId == localId)&&(identical(other.editedAt, editedAt) || other.editedAt == editedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,roomId,senderId,senderContactId,type,const DeepCollectionEquality().hash(_content),parentId,status,createdAt,serverTs,localId);
+int get hashCode => Object.hash(runtimeType,id,roomId,senderId,senderContactId,type,const DeepCollectionEquality().hash(_content),parentId,status,createdAt,serverTs,localId,editedAt);
 
 @override
 String toString() {
-  return 'RoomEvent(id: $id, roomId: $roomId, senderId: $senderId, senderContactId: $senderContactId, type: $type, content: $content, parentId: $parentId, status: $status, createdAt: $createdAt, serverTs: $serverTs, localId: $localId)';
+  return 'RoomEvent(id: $id, roomId: $roomId, senderId: $senderId, senderContactId: $senderContactId, type: $type, content: $content, parentId: $parentId, status: $status, createdAt: $createdAt, serverTs: $serverTs, localId: $localId, editedAt: $editedAt)';
 }
 
 
@@ -277,7 +279,7 @@ abstract mixin class _$RoomEventCopyWith<$Res> implements $RoomEventCopyWith<$Re
   factory _$RoomEventCopyWith(_RoomEvent value, $Res Function(_RoomEvent) _then) = __$RoomEventCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String roomId, String senderId, String? senderContactId, RoomEventType type, Map<String, dynamic> content, String? parentId, EventStatus status, int createdAt, int? serverTs, String? localId
+ String id, String roomId, String senderId, String? senderContactId, RoomEventType type, Map<String, dynamic> content, String? parentId, EventStatus status, int createdAt, int? serverTs, String? localId, int? editedAt
 });
 
 
@@ -294,7 +296,7 @@ class __$RoomEventCopyWithImpl<$Res>
 
 /// Create a copy of RoomEvent
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? roomId = null,Object? senderId = null,Object? senderContactId = freezed,Object? type = null,Object? content = null,Object? parentId = freezed,Object? status = null,Object? createdAt = null,Object? serverTs = freezed,Object? localId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? roomId = null,Object? senderId = null,Object? senderContactId = freezed,Object? type = null,Object? content = null,Object? parentId = freezed,Object? status = null,Object? createdAt = null,Object? serverTs = freezed,Object? localId = freezed,Object? editedAt = freezed,}) {
   return _then(_RoomEvent(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,roomId: null == roomId ? _self.roomId : roomId // ignore: cast_nullable_to_non_nullable
@@ -307,7 +309,8 @@ as String?,status: null == status ? _self.status : status // ignore: cast_nullab
 as EventStatus,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as int,serverTs: freezed == serverTs ? _self.serverTs : serverTs // ignore: cast_nullable_to_non_nullable
 as int?,localId: freezed == localId ? _self.localId : localId // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,editedAt: freezed == editedAt ? _self.editedAt : editedAt // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
