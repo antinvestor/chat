@@ -1,7 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenRefreshResult;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +8,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:chat/features/auth/data/auth_repository.dart';
 import 'package:chat/features/auth/data/auth_service.dart';
+
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
 
 /// Mock AuthService for testing
 class MockAuthService extends AuthService {
