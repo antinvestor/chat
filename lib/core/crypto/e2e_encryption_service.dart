@@ -11,10 +11,14 @@ import '../logging/app_logger.dart';
 
 /// End-to-End Encryption service using Vodozemac (Olm/Megolm)
 ///
-/// Provides:
-/// - 1-on-1 encryption using Olm (Double Ratchet)
+/// Currently provides:
 /// - Group encryption using Megolm (ratchet per message)
 /// - Automatic session management and key rotation
+/// - Key generation and signing for key exchange
+///
+/// Note: 1-on-1 Olm encryption is not yet implemented. All messages
+/// currently use Megolm group sessions, even for direct messages.
+/// Olm support will be added in a future release.
 class E2EEncryptionService {
   E2EEncryptionService(this._storage, this._database);
   final FlutterSecureStorage _storage;
@@ -35,6 +39,13 @@ class E2EEncryptionService {
   final Map<String, int> _sessionMessageCounts = {};
 
   /// Legacy session state for backwards compatibility
+  ///
+  /// This maintains the old GroupSessionState format alongside Vodozemac sessions
+  /// for compatibility with existing stored data. This will be removed in a future
+  /// version once migration is complete.
+  ///
+  /// TODO: Remove legacy state once all clients have migrated to Vodozemac sessions
+  @Deprecated('Legacy state - will be removed in future version')
   final Map<String, GroupSessionState> _groupSessions = {};
 
   bool _isInitialized = false;
@@ -80,9 +91,12 @@ class E2EEncryptionService {
       await _loadGroupSessions();
 
       _isInitialized = true;
-      AppLogger.info('E2E encryption service initialized', data: {
-        'curve25519Key': _olmAccount!.curve25519Key.toBase64(),
-        'ed25519Key': _olmAccount!.ed25519Key.toBase64(),
+      // Log key fingerprints (first 8 chars) rather than full keys for security
+      final curve25519 = _olmAccount!.curve25519Key.toBase64();
+      final ed25519 = _olmAccount!.ed25519Key.toBase64();
+      AppLogger.debug('E2E encryption service initialized', data: {
+        'curve25519Fingerprint': curve25519.length > 8 ? curve25519.substring(0, 8) : curve25519,
+        'ed25519Fingerprint': ed25519.length > 8 ? ed25519.substring(0, 8) : ed25519,
       });
     } catch (e, stackTrace) {
       AppLogger.error(
@@ -237,20 +251,26 @@ class E2EEncryptionService {
   }
 
   /// Add an inbound Megolm group session from shared session key
+  ///
+  /// The [senderKey] is required and should be the sender's Curve25519 identity key.
+  /// This ensures proper session mapping and prevents collisions.
   Future<void> addInboundGroupSession(
     String roomId,
     String sessionId,
     String sessionKey, {
-    String? senderKey,
+    required String senderKey,
   }) async {
     _ensureInitialized();
 
+    if (senderKey.isEmpty) {
+      throw ArgumentError('senderKey cannot be empty');
+    }
+
     try {
       final inbound = vod.InboundGroupSession(sessionKey);
-      final key = senderKey ?? 'default';
 
       _inboundGroupSessions[roomId] ??= {};
-      _inboundGroupSessions[roomId]![key] = inbound;
+      _inboundGroupSessions[roomId]![senderKey] = inbound;
 
       // Store for backwards compatibility
       _groupSessions[roomId] = GroupSessionState(
@@ -303,19 +323,24 @@ class E2EEncryptionService {
   }
 
   /// Decrypt a group message using Megolm
+  ///
+  /// The [senderKey] is required and should be the sender's Curve25519 identity key.
   Future<String> decryptGroup(
     String roomId,
     String ciphertext, {
-    String? senderKey,
+    required String senderKey,
   }) async {
     _ensureInitialized();
 
-    final key = senderKey ?? 'default';
-    final inbound = _inboundGroupSessions[roomId]?[key];
+    if (senderKey.isEmpty) {
+      throw ArgumentError('senderKey cannot be empty');
+    }
+
+    final inbound = _inboundGroupSessions[roomId]?[senderKey];
 
     if (inbound == null) {
       throw MissingSessionException(
-        'No inbound session for room $roomId from sender $key',
+        'No inbound session for room $roomId from sender $senderKey',
         roomId: roomId,
         senderKey: senderKey,
       );
@@ -353,14 +378,26 @@ class E2EEncryptionService {
   }
 
   /// Check if we have an inbound session from a sender
-  bool hasInboundSession(String roomId, String? senderKey) {
-    final key = senderKey ?? 'default';
-    return _inboundGroupSessions[roomId]?.containsKey(key) ?? false;
+  ///
+  /// The [senderKey] is required and should be the sender's Curve25519 identity key.
+  bool hasInboundSession(String roomId, String senderKey) {
+    if (senderKey.isEmpty) return false;
+    return _inboundGroupSessions[roomId]?.containsKey(senderKey) ?? false;
   }
 
   /// Encrypt arbitrary data (for file encryption)
+  ///
+  /// WARNING: This currently uses a placeholder XOR cipher which is NOT
+  /// cryptographically secure. Do NOT use for production file encryption.
+  ///
+  /// TODO: Replace with AES-GCM encryption using a proper cryptographic library
+  /// (e.g., pointycastle or cryptography package) before production use.
+  @Deprecated('XOR encryption is not secure - replace with AES-GCM')
   Future<EncryptedData> encryptData(Uint8List data) async {
     _ensureInitialized();
+    AppLogger.warning(
+      'Using insecure XOR encryption for file data - replace with AES-GCM',
+    );
 
     // Generate random key and IV
     final keyBytes = Uint8List.fromList(
@@ -372,15 +409,21 @@ class E2EEncryptionService {
     final key = base64Encode(keyBytes);
     final iv = base64Encode(ivBytes);
 
-    // Simple XOR encryption for file data
+    // INSECURE: XOR cipher - placeholder only
+    // TODO: Replace with AES-GCM using pointycastle or similar
     final encrypted = _xorEncrypt(data, keyBytes);
 
     return EncryptedData(data: encrypted, key: key, iv: iv);
   }
 
   /// Decrypt arbitrary data
+  ///
+  /// WARNING: This currently uses a placeholder XOR cipher which is NOT
+  /// cryptographically secure.
+  @Deprecated('XOR encryption is not secure - replace with AES-GCM')
   Future<Uint8List> decryptData(EncryptedData encryptedData) async {
     final keyBytes = base64Decode(encryptedData.key);
+    // INSECURE: XOR cipher - placeholder only
     return _xorEncrypt(encryptedData.data, keyBytes);
   }
 

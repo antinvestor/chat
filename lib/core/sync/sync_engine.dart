@@ -535,10 +535,22 @@ class SyncEngine {
           final encrypted = payload.encrypted;
           final ciphertext = encrypted.ciphertext;
           final sessionId = encrypted.sessionId;
-          final senderKey = encrypted.hasSenderKey() ? encrypted.senderKey : null;
+          final senderKey = encrypted.hasSenderKey() ? encrypted.senderKey : '';
 
-          // Try to get the inbound session for this room/sender
-          if (_encryptionService.hasInboundSession(event.roomId, senderKey)) {
+          // senderKey is required for E2EE decryption
+          if (senderKey.isEmpty) {
+            AppLogger.warning('Encrypted message missing senderKey', data: {
+              'roomId': event.roomId,
+              'sessionId': sessionId,
+            });
+            content = {
+              'text': '[Unable to decrypt - missing sender key]',
+              'encrypted': true,
+              'decrypted': false,
+              'error': 'missing_sender_key',
+            };
+          } else if (_encryptionService.hasInboundSession(event.roomId, senderKey)) {
+            // Try to get the inbound session for this room/sender
             final plaintext = await _encryptionService.decryptGroup(
               event.roomId,
               ciphertext,
