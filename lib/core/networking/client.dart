@@ -19,6 +19,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/auth/data/auth_repository.dart';
 import 'api_config.dart';
+import 'certificate_pinning.dart';
 
 /// Secure storage provider for token access
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
@@ -100,16 +101,16 @@ final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
   };
 });
 
-/// Creates a Connect transport for API communication
+/// Creates a Connect transport for API communication with certificate pinning
 ///
-/// Configures HTTP client with appropriate timeouts and connection
-/// pooling settings for optimal performance on mobile devices.
+/// Configures HTTP client with appropriate timeouts, connection pooling,
+/// and TLS certificate pinning for optimal performance and security.
 ///
 /// Parameters:
 /// - [baseUrl]: The base URL for the API endpoint
 /// - [interceptors]: List of interceptors for auth, logging, etc.
 ///
-/// Returns a configured [connect.Transport] instance.
+/// Returns a configured [connect.Transport] instance with certificate pinning.
 ///
 /// Example:
 /// ```dart
@@ -122,11 +123,9 @@ connect.Transport createTransport(
   Uri baseUrl,
   List<connect.Interceptor> interceptors,
 ) {
-  final httpClient = io.HttpClient()
-    ..connectionTimeout = ApiConfig.connectionTimeout
-    ..idleTimeout = ApiConfig.idleTimeout
-    ..maxConnectionsPerHost = 4
-    ..autoUncompress = true;
+  // Use certificate pinning for secure connections
+  final certificatePinning = CertificatePinning();
+  final httpClient = certificatePinning.createPinnedHttpClient();
 
   return connect_protocol.Transport(
     baseUrl: baseUrl.toString(),
