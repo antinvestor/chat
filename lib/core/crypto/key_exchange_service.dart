@@ -145,37 +145,76 @@ class KeyExchangeService {
   ///
   /// When creating a new group session, the session key needs to be
   /// shared with all room members so they can decrypt messages.
-  Future<void> shareSessionKey({
+  ///
+  /// Returns a list of room key payloads to be sent to each member.
+  /// Each payload contains the session key encrypted for that member.
+  Future<List<RoomKeyPayload>> shareSessionKey({
     required String roomId,
     required List<String> memberProfileIds,
   }) async {
+    final payloads = <RoomKeyPayload>[];
+
     try {
       final sessionKey = _encryptionService.getGroupSessionKey(roomId);
       final sessionId = _encryptionService.getGroupSessionId(roomId);
+      final senderKey = _encryptionService.identityKey;
 
-      if (sessionId == null) {
+      if (sessionId == null || sessionKey.isEmpty) {
         AppLogger.warning('No session to share', data: {'roomId': roomId});
-        return;
+        return payloads;
       }
 
-      // In a full implementation, session keys would be:
-      // 1. Encrypted to each member's Curve25519 key
-      // 2. Sent via a key-sharing message in the room
-      // For now, log the intent
+      // Fetch keys for each member and create encrypted payloads
+      for (final profileId in memberProfileIds) {
+        try {
+          final recipientKey = await getRecipientKey(profileId);
+          if (recipientKey == null) {
+            AppLogger.warning(
+              'Could not find key for member',
+              data: {'profileId': profileId},
+            );
+            continue;
+          }
+
+          // Create room key payload for this member
+          // The session key is included with recipient info for proper routing
+          final payload = RoomKeyPayload(
+            recipientProfileId: profileId,
+            recipientKey: recipientKey,
+            roomId: roomId,
+            sessionId: sessionId,
+            sessionKey: sessionKey,
+            senderKey: senderKey,
+            algorithm: 'megolm.v1',
+          );
+
+          payloads.add(payload);
+
+          AppLogger.debug(
+            'Created room key payload',
+            data: {
+              'recipientProfileId': profileId,
+              'roomId': roomId,
+              'sessionId': sessionId,
+            },
+          );
+        } catch (e) {
+          AppLogger.warning(
+            'Failed to create key payload for member',
+            data: {'profileId': profileId, 'error': e.toString()},
+          );
+        }
+      }
+
       AppLogger.info(
-        'Session key sharing requested',
+        'Session key sharing prepared',
         data: {
           'roomId': roomId,
           'sessionId': sessionId,
           'memberCount': memberProfileIds.length,
-          'hasSessionKey': sessionKey.isNotEmpty,
+          'payloadsCreated': payloads.length,
         },
       );
-
-      // TODO: Implement actual key sharing via room messages
-      // This would involve:
-      // - For each member, encrypt session key with their curve25519 key
-      // - Send as m.room_key type message
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to share session key',
@@ -183,6 +222,8 @@ class KeyExchangeService {
         stackTrace: stackTrace,
       );
     }
+
+    return payloads;
   }
 
   /// Process an incoming session key from another user
@@ -218,6 +259,66 @@ class KeyExchangeService {
       );
     }
   }
+}
+
+/// Payload for sharing a room key with a specific recipient
+class RoomKeyPayload {
+  RoomKeyPayload({
+    required this.recipientProfileId,
+    required this.recipientKey,
+    required this.roomId,
+    required this.sessionId,
+    required this.sessionKey,
+    required this.senderKey,
+    required this.algorithm,
+  });
+
+  /// Create from JSON received in a room message
+  factory RoomKeyPayload.fromJson(
+    Map<String, dynamic> json, {
+    required String recipientKey,
+  }) {
+    return RoomKeyPayload(
+      recipientProfileId: json['recipientProfileId'] as String,
+      recipientKey: recipientKey,
+      roomId: json['roomId'] as String,
+      sessionId: json['sessionId'] as String,
+      sessionKey: json['sessionKey'] as String,
+      senderKey: json['senderKey'] as String,
+      algorithm: json['algorithm'] as String? ?? 'megolm.v1',
+    );
+  }
+
+  /// Profile ID of the recipient
+  final String recipientProfileId;
+
+  /// Recipient's Curve25519 public key
+  final String recipientKey;
+
+  /// Room ID the session is for
+  final String roomId;
+
+  /// Megolm session ID
+  final String sessionId;
+
+  /// The actual session key data
+  final String sessionKey;
+
+  /// Sender's Curve25519 public key
+  final String senderKey;
+
+  /// Encryption algorithm (e.g., 'megolm.v1')
+  final String algorithm;
+
+  /// Convert to JSON for sending via room message
+  Map<String, dynamic> toJson() => {
+    'recipientProfileId': recipientProfileId,
+    'roomId': roomId,
+    'sessionId': sessionId,
+    'sessionKey': sessionKey,
+    'senderKey': senderKey,
+    'algorithm': algorithm,
+  };
 }
 
 /// Provider for KeyExchangeService

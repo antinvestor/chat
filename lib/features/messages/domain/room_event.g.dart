@@ -59,6 +59,7 @@ const _$RoomEventTypeEnumMap = {
   RoomEventType.motion: 'motion',
   RoomEventType.vote: 'vote',
   RoomEventType.transaction: 'transaction',
+  RoomEventType.roomKey: 'roomKey',
 };
 
 const _$EventStatusEnumMap = {

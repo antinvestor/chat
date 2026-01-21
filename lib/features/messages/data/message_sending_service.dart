@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 
 import '../../../core/crypto/e2e_encryption_service.dart';
+import '../../../core/crypto/key_exchange_service.dart';
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/pending_job.dart';
@@ -331,6 +333,79 @@ class MessageSendingService {
     });
 
     return event;
+  }
+
+  /// Send a room key event to share E2EE session keys with a recipient
+  ///
+  /// This is used to share Megolm session keys so other users can decrypt
+  /// messages in an encrypted room. The session key is sent as a special
+  /// roomKey event that recipients process to add inbound sessions.
+  Future<domain.RoomEvent> sendRoomKeyEvent({
+    required RoomKeyPayload payload,
+  }) async {
+    final localId = Xid().toString();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final senderId = await _getCurrentProfileId();
+
+    // Create the content with type marker for recipient detection
+    final content = {'type': 'roomKey', ...payload.toJson()};
+
+    final event = domain.RoomEvent(
+      id: localId,
+      roomId: payload.roomId,
+      senderId: senderId,
+      type: domain.RoomEventType.roomKey,
+      content: content,
+      createdAt: now,
+      localId: localId,
+    );
+
+    // Don't store roomKey events as regular messages - they're control messages
+    // Just queue for sending
+    await _jobRepo.addJob(JobType.sendMessage, {
+      'roomId': payload.roomId,
+      'type': event.type.toString(),
+      'content': {'text': jsonEncode(content)}, // Encode as JSON text for wire
+      'localId': localId,
+    });
+
+    AppLogger.debug(
+      'Room key event queued',
+      data: {
+        'localId': localId,
+        'roomId': payload.roomId,
+        'recipientProfileId': payload.recipientProfileId,
+        'sessionId': payload.sessionId,
+      },
+    );
+
+    return event;
+  }
+
+  /// Share session keys with all specified room members
+  ///
+  /// Creates and sends roomKey events for each member so they can decrypt
+  /// messages encrypted with our Megolm session.
+  Future<void> shareSessionKeysWithMembers({
+    required List<RoomKeyPayload> payloads,
+  }) async {
+    for (final payload in payloads) {
+      try {
+        await sendRoomKeyEvent(payload: payload);
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Failed to send room key to member',
+          error: e,
+          stackTrace: stackTrace,
+          data: {'recipientProfileId': payload.recipientProfileId},
+        );
+      }
+    }
+
+    AppLogger.info(
+      'Session keys shared with members',
+      data: {'memberCount': payloads.length},
+    );
   }
 
   /// Retry a failed message

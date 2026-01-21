@@ -514,6 +514,9 @@ class BackgroundSyncTask {
       case domain.RoomEventType.transaction:
         // These might not be in protobuf yet, map to MESSAGE for now
         return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
+      case domain.RoomEventType.roomKey:
+        // Room key events are sent as messages for E2EE key exchange
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
     }
   }
 }
