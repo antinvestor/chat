@@ -24,6 +24,8 @@ _RoomEvent _$RoomEventFromJson(Map<String, dynamic> json) => _RoomEvent(
   redacted: json['redacted'] as bool? ?? false,
   redactedAt: (json['redactedAt'] as num?)?.toInt(),
   redactedBy: json['redactedBy'] as String?,
+  retryCount: (json['retryCount'] as num?)?.toInt() ?? 0,
+  errorMessage: json['errorMessage'] as String?,
 );
 
 Map<String, dynamic> _$RoomEventToJson(_RoomEvent instance) =>
@@ -43,6 +45,8 @@ Map<String, dynamic> _$RoomEventToJson(_RoomEvent instance) =>
       'redacted': instance.redacted,
       'redactedAt': instance.redactedAt,
       'redactedBy': instance.redactedBy,
+      'retryCount': instance.retryCount,
+      'errorMessage': instance.errorMessage,
     };
 
 const _$RoomEventTypeEnumMap = {

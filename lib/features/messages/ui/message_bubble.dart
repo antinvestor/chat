@@ -657,37 +657,139 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
-  /// Retry button for failed messages
-  Widget _buildRetryButton(BuildContext context) => GestureDetector(
-    onTap: onRetry,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.1),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(12),
-          bottomRight: Radius.circular(12),
+  /// Retry button for failed messages with retry count and error info
+  Widget _buildRetryButton(BuildContext context) {
+    final retryCount = message.retryCount;
+    final errorMsg = message.errorMessage;
+    final requiresManual = message.requiresManualRetry;
+
+    return GestureDetector(
+      onTap: () => _showRetryOptions(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(12),
+            bottomRight: Radius.circular(12),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, size: 14, color: Colors.red.shade600),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    requiresManual
+                        ? 'Failed after $retryCount attempts. Tap for options'
+                        : 'Not sent${retryCount > 0 ? " ($retryCount/$maxAutoRetries)" : ""}. Tap for options',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Show error message if available
+            if (errorMsg != null && errorMsg.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                errorMsg,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.red.shade400,
+                  fontStyle: FontStyle.italic,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.error_outline, size: 14, color: Colors.red.shade600),
-          const SizedBox(width: 6),
-          Text(
-            'Not sent. Tap to retry',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.red.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.refresh, size: 14, color: Colors.red.shade600),
-        ],
+    );
+  }
+
+  /// Show retry/delete options for failed messages
+  void _showRetryOptions(BuildContext context) {
+    final theme = Theme.of(context);
+    final retryCount = message.retryCount;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-    ),
-  );
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with retry count
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red.shade600),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Message not sent',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (retryCount > 0)
+                            Text(
+                              'Attempted $retryCount time${retryCount > 1 ? "s" : ""}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Retry option
+              ListTile(
+                leading: Icon(Icons.refresh, color: theme.colorScheme.primary),
+                title: const Text('Retry sending'),
+                subtitle: const Text('Try to send the message again'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onRetry?.call();
+                },
+              ),
+              // Delete option
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Delete message'),
+                subtitle: const Text('Remove this unsent message'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete?.call(message.id, forEveryone: false);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Show context menu for message actions (reply, edit, copy)
   void _showMessageMenu(BuildContext context, String text) {

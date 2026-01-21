@@ -68,6 +68,9 @@ enum EventStatus { pending, sent, delivered, read, failed }
 ///   createdAt: DateTime.now().millisecondsSinceEpoch,
 /// );
 /// ```
+/// Maximum number of automatic retry attempts before manual retry is required
+const int maxAutoRetries = 5;
+
 @freezed
 abstract class RoomEvent with _$RoomEvent {
   const factory RoomEvent({
@@ -88,6 +91,8 @@ abstract class RoomEvent with _$RoomEvent {
     @Default(false) bool redacted, // Whether message is deleted
     int? redactedAt, // Timestamp when message was deleted
     String? redactedBy, // Profile ID of who deleted (for admin deletions)
+    @Default(0) int retryCount, // Number of send retry attempts
+    String? errorMessage, // Error reason if failed
   }) = _RoomEvent;
 
   factory RoomEvent.fromJson(Map<String, dynamic> json) =>
@@ -99,4 +104,12 @@ abstract class RoomEvent with _$RoomEvent {
 
   /// Returns true if this message has been deleted/redacted
   bool get isDeleted => redacted;
+
+  /// Returns true if manual retry is required (exceeded auto-retry limit)
+  bool get requiresManualRetry =>
+      status == EventStatus.failed && retryCount >= maxAutoRetries;
+
+  /// Returns true if the message can still auto-retry
+  bool get canAutoRetry =>
+      status == EventStatus.failed && retryCount < maxAutoRetries;
 }
