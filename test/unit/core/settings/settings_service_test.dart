@@ -398,25 +398,27 @@ void main() {
       });
 
       test('chatWallpaper getter and setter', () async {
-        expect(settingsService.chatWallpaper, equals(''));
+        // Initially null when not set
+        expect(settingsService.chatWallpaper, isNull);
 
         await settingsService.setChatWallpaper('/path/to/wallpaper.jpg');
         expect(settingsService.chatWallpaper, equals('/path/to/wallpaper.jpg'));
 
-        // Test removal
+        // Test removal - returns null when removed
         await settingsService.setChatWallpaper(null);
-        expect(settingsService.chatWallpaper, equals(''));
+        expect(settingsService.chatWallpaper, isNull);
       });
 
       test('accentColor getter and setter', () async {
-        expect(settingsService.accentColor, equals(''));
+        // Initially null when not set
+        expect(settingsService.accentColor, isNull);
 
         await settingsService.setAccentColor('#FF5733');
         expect(settingsService.accentColor, equals('#FF5733'));
 
-        // Test removal
+        // Test removal - returns null when removed
         await settingsService.setAccentColor(null);
-        expect(settingsService.accentColor, equals(''));
+        expect(settingsService.accentColor, isNull);
       });
     });
   });
