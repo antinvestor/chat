@@ -63,10 +63,10 @@ class MessageSendingService {
           'messageIndex': encrypted.messageIndex,
           'senderKey': encrypted.senderKey,
         };
-        AppLogger.debug('Message encrypted', data: {
-          'roomId': roomId,
-          'sessionId': encrypted.sessionId,
-        });
+        AppLogger.debug(
+          'Message encrypted',
+          data: {'roomId': roomId, 'sessionId': encrypted.sessionId},
+        );
       } catch (e, stackTrace) {
         AppLogger.error(
           'Encryption failed, sending unencrypted',

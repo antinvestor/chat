@@ -14,15 +14,14 @@ import 'key_manager.dart';
 /// - Fetching recipient's keys for new conversations
 /// - Sharing Megolm session keys with room members
 class KeyExchangeService {
-  final E2EEncryptionService _encryptionService;
-  final pb.DeviceServiceClient _deviceClient;
-  final KeyManager _keyManager;
-
   KeyExchangeService(
     this._encryptionService,
     this._deviceClient,
     this._keyManager,
   );
+  final E2EEncryptionService _encryptionService;
+  final pb.DeviceServiceClient _deviceClient;
+  final KeyManager _keyManager;
 
   /// Upload identity keys to the backend after login
   ///
@@ -33,18 +32,22 @@ class KeyExchangeService {
       final deviceId = await _keyManager.getDeviceId();
 
       // Upload Curve25519 identity key (as base64-encoded bytes)
-      await _deviceClient.addKey(pb.AddKeyRequest(
-        deviceId: deviceId,
-        keyType: pb.KeyType.CURVE25519_KEY,
-        data: _stringToBytes(_encryptionService.identityKey),
-      ));
+      await _deviceClient.addKey(
+        pb.AddKeyRequest(
+          deviceId: deviceId,
+          keyType: pb.KeyType.CURVE25519_KEY,
+          data: _stringToBytes(_encryptionService.identityKey),
+        ),
+      );
 
       // Upload Ed25519 signing key
-      await _deviceClient.addKey(pb.AddKeyRequest(
-        deviceId: deviceId,
-        keyType: pb.KeyType.ED25519_KEY,
-        data: _stringToBytes(_encryptionService.signingKey),
-      ));
+      await _deviceClient.addKey(
+        pb.AddKeyRequest(
+          deviceId: deviceId,
+          keyType: pb.KeyType.ED25519_KEY,
+          data: _stringToBytes(_encryptionService.signingKey),
+        ),
+      );
 
       AppLogger.info('Identity keys uploaded', data: {'deviceId': deviceId});
     } catch (e, stackTrace) {
@@ -73,20 +76,22 @@ class KeyExchangeService {
       final oneTimeKeys = _encryptionService.getOneTimeKeys();
 
       for (final entry in oneTimeKeys.entries) {
-        await _deviceClient.addKey(pb.AddKeyRequest(
-          deviceId: deviceId,
-          keyType: pb.KeyType.CURVE25519_KEY,
-          data: _stringToBytes(entry.value),
-        ));
+        await _deviceClient.addKey(
+          pb.AddKeyRequest(
+            deviceId: deviceId,
+            keyType: pb.KeyType.CURVE25519_KEY,
+            data: _stringToBytes(entry.value),
+          ),
+        );
       }
 
       // Mark keys as published so they won't be reused
       await _encryptionService.markKeysAsPublished();
 
-      AppLogger.info('One-time keys uploaded', data: {
-        'deviceId': deviceId,
-        'count': oneTimeKeys.length,
-      });
+      AppLogger.info(
+        'One-time keys uploaded',
+        data: {'deviceId': deviceId, 'count': oneTimeKeys.length},
+      );
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to upload one-time keys',
@@ -103,23 +108,27 @@ class KeyExchangeService {
   /// Returns the recipient's Curve25519 identity key for key exchange.
   Future<String?> getRecipientKey(String deviceIdOrQuery) async {
     try {
-      final response = await _deviceClient.searchKey(pb.SearchKeyRequest(
-        query: deviceIdOrQuery,
-        keyTypes: [pb.KeyType.CURVE25519_KEY],
-      ));
+      final response = await _deviceClient.searchKey(
+        pb.SearchKeyRequest(
+          query: deviceIdOrQuery,
+          keyTypes: [pb.KeyType.CURVE25519_KEY],
+        ),
+      );
 
       if (response.data.isEmpty) {
-        AppLogger.warning('No keys found for recipient',
-            data: {'query': deviceIdOrQuery});
+        AppLogger.warning(
+          'No keys found for recipient',
+          data: {'query': deviceIdOrQuery},
+        );
         return null;
       }
 
       // Return the first available key
       final keyObj = response.data.first;
-      AppLogger.debug('Retrieved recipient key', data: {
-        'query': deviceIdOrQuery,
-        'keyId': keyObj.id,
-      });
+      AppLogger.debug(
+        'Retrieved recipient key',
+        data: {'query': deviceIdOrQuery, 'keyId': keyObj.id},
+      );
 
       return _bytesToString(keyObj.key);
     } catch (e, stackTrace) {
@@ -153,11 +162,14 @@ class KeyExchangeService {
       // 1. Encrypted to each member's Curve25519 key
       // 2. Sent via a key-sharing message in the room
       // For now, log the intent
-      AppLogger.info('Session key sharing requested', data: {
-        'roomId': roomId,
-        'sessionId': sessionId,
-        'memberCount': memberProfileIds.length,
-      });
+      AppLogger.info(
+        'Session key sharing requested',
+        data: {
+          'roomId': roomId,
+          'sessionId': sessionId,
+          'memberCount': memberProfileIds.length,
+        },
+      );
 
       // TODO: Implement actual key sharing via room messages
       // This would involve:
@@ -189,11 +201,14 @@ class KeyExchangeService {
         senderKey: senderKey,
       );
 
-      AppLogger.info('Received and stored session key', data: {
-        'roomId': roomId,
-        'sessionId': sessionId,
-        'senderKey': senderKey.substring(0, 8),
-      });
+      AppLogger.info(
+        'Received and stored session key',
+        data: {
+          'roomId': roomId,
+          'sessionId': sessionId,
+          'senderKey': senderKey.substring(0, 8),
+        },
+      );
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to process received session key',

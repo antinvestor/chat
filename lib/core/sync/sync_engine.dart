@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
@@ -141,9 +142,11 @@ class SyncEngine {
     this._jobRepo,
     this._authRepository,
     this._roomMemberRepository,
-    this._subscriptionService, {
+    this._subscriptionService,
+    this._encryptionService, {
     TokenRefreshCallback? onTokenRefresh,
   }) : _onTokenRefresh = onTokenRefresh;
+
   final pb.GatewayServiceClient _gatewayClient;
   final pb.ChatServiceClient _chatClient;
   final MessageRepository _messageRepo;
@@ -183,18 +186,6 @@ class SyncEngine {
   static const _initialBackoffMs = 1000; // 1 second
   static const _maxBackoffMs = 30000; // 30 seconds
   static const _maxReconnectAttempts = 5;
-
-  SyncEngine(
-    this._gatewayClient,
-    this._chatClient,
-    this._messageRepo,
-    this._jobRepo,
-    this._authRepository,
-    this._roomMemberRepository,
-    this._subscriptionService,
-    this._encryptionService, {
-    TokenRefreshCallback? onTokenRefresh,
-  }) : _onTokenRefresh = onTokenRefresh;
 
   void start() {
     _shouldStop = false;
@@ -533,23 +524,30 @@ class SyncEngine {
         // Decrypt the message using E2EE service
         try {
           final encrypted = payload.encrypted;
-          final ciphertext = encrypted.ciphertext;
+          // Convert ciphertext bytes to base64 string for decryption
+          final ciphertext = base64Encode(encrypted.ciphertext);
           final sessionId = encrypted.sessionId;
-          final senderKey = encrypted.hasSenderKey() ? encrypted.senderKey : '';
+          // Use sender's subscription ID as sender key for session lookup
+          final senderKey = event.hasSubscriptionId()
+              ? event.subscriptionId
+              : '';
 
           // senderKey is required for E2EE decryption
           if (senderKey.isEmpty) {
-            AppLogger.warning('Encrypted message missing senderKey', data: {
-              'roomId': event.roomId,
-              'sessionId': sessionId,
-            });
+            AppLogger.warning(
+              'Encrypted message missing sender info',
+              data: {'roomId': event.roomId, 'sessionId': sessionId},
+            );
             content = {
-              'text': '[Unable to decrypt - missing sender key]',
+              'text': '[Unable to decrypt - unknown sender]',
               'encrypted': true,
               'decrypted': false,
               'error': 'missing_sender_key',
             };
-          } else if (_encryptionService.hasInboundSession(event.roomId, senderKey)) {
+          } else if (_encryptionService.hasInboundSession(
+            event.roomId,
+            senderKey,
+          )) {
             // Try to get the inbound session for this room/sender
             final plaintext = await _encryptionService.decryptGroup(
               event.roomId,
@@ -561,17 +559,20 @@ class SyncEngine {
               'encrypted': true, // Mark as was encrypted for UI indicator
               'decrypted': true,
             };
-            AppLogger.debug('Message decrypted', data: {
-              'roomId': event.roomId,
-              'sessionId': sessionId,
-            });
+            AppLogger.debug(
+              'Message decrypted',
+              data: {'roomId': event.roomId, 'sessionId': sessionId},
+            );
           } else {
             // Need to request session key from sender
-            AppLogger.warning('Missing session key for decryption', data: {
-              'roomId': event.roomId,
-              'sessionId': sessionId,
-              'senderKey': senderKey,
-            });
+            AppLogger.warning(
+              'Missing session key for decryption',
+              data: {
+                'roomId': event.roomId,
+                'sessionId': sessionId,
+                'senderKey': senderKey,
+              },
+            );
             content = {
               'text': '[Unable to decrypt - missing session key]',
               'encrypted': true,
@@ -581,7 +582,11 @@ class SyncEngine {
             };
           }
         } catch (e, stackTrace) {
-          AppLogger.error('Decryption failed', error: e, stackTrace: stackTrace);
+          AppLogger.error(
+            'Decryption failed',
+            error: e,
+            stackTrace: stackTrace,
+          );
           content = {
             'text': '[Unable to decrypt message]',
             'encrypted': true,
