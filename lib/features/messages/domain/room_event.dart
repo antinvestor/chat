@@ -29,6 +29,9 @@ enum RoomEventType {
   motion,
   vote,
   transaction,
+
+  /// Room key sharing for E2EE session keys
+  roomKey,
 }
 
 /// Status of a message/event in its delivery lifecycle

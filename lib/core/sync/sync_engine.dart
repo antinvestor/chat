@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
@@ -12,6 +13,7 @@ import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
+import '../crypto/e2e_encryption_service.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
 import '../networking/client.dart';
@@ -37,6 +39,10 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final chatClient = await ref.watch(chatServiceClientProvider.future);
   final tokenManager = ref.watch(tokenManagerProvider);
   final authRepo = ref.watch(authRepositoryProvider);
+  final encryptionService = ref.watch(e2eEncryptionServiceProvider);
+
+  // Initialize encryption service
+  await encryptionService.initialize();
 
   return SyncEngine(
     gatewayClient,
@@ -46,6 +52,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     authRepo,
     ref.watch(roomMemberRepositoryProvider),
     ref.watch(roomSubscriptionServiceProvider),
+    encryptionService,
     onTokenRefresh: () async {
       AppLogger.debug('SyncEngine: Starting token refresh via authRepo');
       try {
@@ -135,9 +142,11 @@ class SyncEngine {
     this._jobRepo,
     this._authRepository,
     this._roomMemberRepository,
-    this._subscriptionService, {
+    this._subscriptionService,
+    this._encryptionService, {
     TokenRefreshCallback? onTokenRefresh,
   }) : _onTokenRefresh = onTokenRefresh;
+
   final pb.GatewayServiceClient _gatewayClient;
   final pb.ChatServiceClient _chatClient;
   final MessageRepository _messageRepo;
@@ -145,6 +154,7 @@ class SyncEngine {
   final AuthRepository _authRepository;
   final RoomMemberRepository _roomMemberRepository;
   final RoomSubscriptionService _subscriptionService;
+  final E2EEncryptionService _encryptionService;
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
@@ -499,10 +509,35 @@ class SyncEngine {
 
     // Extract content from typed payload fields
     var content = <String, dynamic>{};
+    var isRoomKeyEvent = false;
     if (event.hasPayload()) {
       final payload = event.payload;
       if (payload.hasText()) {
-        content = {'text': payload.text.body};
+        final textBody = payload.text.body;
+        // Check if this is a roomKey event (session key sharing for E2EE)
+        if (textBody.startsWith('{"type":"roomKey"') ||
+            textBody.contains('"algorithm":"megolm')) {
+          try {
+            final keyData = jsonDecode(textBody) as Map<String, dynamic>;
+            if (keyData['type'] == 'roomKey' ||
+                keyData['algorithm'] == 'megolm.v1') {
+              // Process the session key
+              await _processRoomKeyEvent(keyData, event.roomId);
+              isRoomKeyEvent = true;
+              content = {
+                'type': 'roomKey',
+                'processed': true,
+                'sessionId': keyData['sessionId'],
+              };
+            }
+          } catch (e) {
+            // Not a valid JSON roomKey, treat as regular text
+            AppLogger.debug('Text is not a roomKey event: $e');
+          }
+        }
+        if (!isRoomKeyEvent) {
+          content = {'text': textBody};
+        }
       } else if (payload.hasAttachment()) {
         content = {
           'attachmentId': payload.attachment.attachmentId,
@@ -511,9 +546,79 @@ class SyncEngine {
           'size': payload.attachment.sizeBytes.toInt(),
         };
       } else if (payload.hasEncrypted()) {
-        // Encryption temporarily disabled
-        AppLogger.warning('Encrypted message received but encryption disabled');
-        content = {'text': '[Encrypted message]'};
+        // Decrypt the message using E2EE service
+        try {
+          final encrypted = payload.encrypted;
+          // Convert ciphertext bytes to base64 string for decryption
+          final ciphertext = base64Encode(encrypted.ciphertext);
+          final sessionId = encrypted.sessionId;
+          // Use sender's subscription ID as sender key for session lookup
+          final senderKey = event.hasSubscriptionId()
+              ? event.subscriptionId
+              : '';
+
+          // senderKey is required for E2EE decryption
+          if (senderKey.isEmpty) {
+            AppLogger.warning(
+              'Encrypted message missing sender info',
+              data: {'roomId': event.roomId, 'sessionId': sessionId},
+            );
+            content = {
+              'text': '[Unable to decrypt - unknown sender]',
+              'encrypted': true,
+              'decrypted': false,
+              'error': 'missing_sender_key',
+            };
+          } else if (_encryptionService.hasInboundSession(
+            event.roomId,
+            senderKey,
+          )) {
+            // Try to get the inbound session for this room/sender
+            final plaintext = await _encryptionService.decryptGroup(
+              event.roomId,
+              ciphertext,
+              senderKey: senderKey,
+            );
+            content = {
+              'text': plaintext,
+              'encrypted': true, // Mark as was encrypted for UI indicator
+              'decrypted': true,
+            };
+            AppLogger.debug(
+              'Message decrypted',
+              data: {'roomId': event.roomId, 'sessionId': sessionId},
+            );
+          } else {
+            // Need to request session key from sender
+            AppLogger.warning(
+              'Missing session key for decryption',
+              data: {
+                'roomId': event.roomId,
+                'sessionId': sessionId,
+                'senderKey': senderKey,
+              },
+            );
+            content = {
+              'text': '[Unable to decrypt - missing session key]',
+              'encrypted': true,
+              'decrypted': false,
+              'sessionId': sessionId,
+              'senderKey': senderKey,
+            };
+          }
+        } catch (e, stackTrace) {
+          AppLogger.error(
+            'Decryption failed',
+            error: e,
+            stackTrace: stackTrace,
+          );
+          content = {
+            'text': '[Unable to decrypt message]',
+            'encrypted': true,
+            'decrypted': false,
+            'error': e.toString(),
+          };
+        }
       } else if (payload.hasCall()) {
         // Extract call data
         content = {
@@ -629,6 +734,57 @@ class SyncEngine {
       event.eventId.toList(),
       domain.EventStatus.delivered,
     );
+  }
+
+  /// Process a roomKey event containing E2EE session key data
+  ///
+  /// When another user shares their Megolm session key with us, we need to
+  /// add it as an inbound session so we can decrypt their messages.
+  Future<void> _processRoomKeyEvent(
+    Map<String, dynamic> keyData,
+    String eventRoomId,
+  ) async {
+    try {
+      final roomId = keyData['roomId'] as String? ?? eventRoomId;
+      final sessionId = keyData['sessionId'] as String?;
+      final sessionKey = keyData['sessionKey'] as String?;
+      final senderKey = keyData['senderKey'] as String?;
+
+      if (sessionId == null || sessionKey == null || senderKey == null) {
+        AppLogger.warning(
+          'Invalid roomKey event: missing required fields',
+          data: {
+            'hasSessionId': sessionId != null,
+            'hasSessionKey': sessionKey != null,
+            'hasSenderKey': senderKey != null,
+          },
+        );
+        return;
+      }
+
+      // Add the session key as an inbound group session
+      await _encryptionService.addInboundGroupSession(
+        roomId,
+        sessionId,
+        sessionKey,
+        senderKey: senderKey,
+      );
+
+      AppLogger.info(
+        'Received and stored session key',
+        data: {
+          'roomId': roomId,
+          'sessionId': sessionId,
+          'senderKey': senderKey.substring(0, 8),
+        },
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to process roomKey event',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   void _startUploadLoop() {
@@ -892,6 +1048,9 @@ class SyncEngine {
     final pbPayload = pb.Payload();
     if (localType == domain.RoomEventType.text) {
       pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+    } else if (localType == domain.RoomEventType.roomKey) {
+      // Room key events are sent as JSON-encoded text for key sharing
+      pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
     } else if (localType == domain.RoomEventType.image ||
         localType == domain.RoomEventType.video ||
         localType == domain.RoomEventType.audio ||
@@ -1125,6 +1284,9 @@ class SyncEngine {
       case domain.RoomEventType.vote:
       case domain.RoomEventType.transaction:
         // These might not be in protobuf yet, map to MESSAGE for now
+        return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
+      case domain.RoomEventType.roomKey:
+        // Room key events are sent as encrypted messages for key exchange
         return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
     }
   }
