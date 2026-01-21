@@ -2133,6 +2133,29 @@ class $RoomEventsTable extends RoomEvents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _retryCountMeta = const VerificationMeta(
+    'retryCount',
+  );
+  @override
+  late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
+    'retry_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _errorMessageMeta = const VerificationMeta(
+    'errorMessage',
+  );
+  @override
+  late final GeneratedColumn<String> errorMessage = GeneratedColumn<String>(
+    'error_message',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2151,6 +2174,8 @@ class $RoomEventsTable extends RoomEvents
     redacted,
     redactedAt,
     redactedBy,
+    retryCount,
+    errorMessage,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2271,6 +2296,21 @@ class $RoomEventsTable extends RoomEvents
         redactedBy.isAcceptableOrUnknown(data['redacted_by']!, _redactedByMeta),
       );
     }
+    if (data.containsKey('retry_count')) {
+      context.handle(
+        _retryCountMeta,
+        retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
+      );
+    }
+    if (data.containsKey('error_message')) {
+      context.handle(
+        _errorMessageMeta,
+        errorMessage.isAcceptableOrUnknown(
+          data['error_message']!,
+          _errorMessageMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2344,6 +2384,14 @@ class $RoomEventsTable extends RoomEvents
         DriftSqlType.string,
         data['${effectivePrefix}redacted_by'],
       ),
+      retryCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retry_count'],
+      )!,
+      errorMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error_message'],
+      ),
     );
   }
 
@@ -2401,6 +2449,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
 
   /// Profile ID of who redacted the message (for admin deletions)
   final String? redactedBy;
+
+  /// Number of retry attempts for failed messages
+  final int retryCount;
+
+  /// Error message if send failed
+  final String? errorMessage;
   const RoomEvent({
     required this.id,
     required this.roomId,
@@ -2418,6 +2472,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     required this.redacted,
     this.redactedAt,
     this.redactedBy,
+    required this.retryCount,
+    this.errorMessage,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2457,6 +2513,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     }
     if (!nullToAbsent || redactedBy != null) {
       map['redacted_by'] = Variable<String>(redactedBy);
+    }
+    map['retry_count'] = Variable<int>(retryCount);
+    if (!nullToAbsent || errorMessage != null) {
+      map['error_message'] = Variable<String>(errorMessage);
     }
     return map;
   }
@@ -2499,6 +2559,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       redactedBy: redactedBy == null && nullToAbsent
           ? const Value.absent()
           : Value(redactedBy),
+      retryCount: Value(retryCount),
+      errorMessage: errorMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorMessage),
     );
   }
 
@@ -2524,6 +2588,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       redacted: serializer.fromJson<bool>(json['redacted']),
       redactedAt: serializer.fromJson<int?>(json['redactedAt']),
       redactedBy: serializer.fromJson<String?>(json['redactedBy']),
+      retryCount: serializer.fromJson<int>(json['retryCount']),
+      errorMessage: serializer.fromJson<String?>(json['errorMessage']),
     );
   }
   @override
@@ -2546,6 +2612,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       'redacted': serializer.toJson<bool>(redacted),
       'redactedAt': serializer.toJson<int?>(redactedAt),
       'redactedBy': serializer.toJson<String?>(redactedBy),
+      'retryCount': serializer.toJson<int>(retryCount),
+      'errorMessage': serializer.toJson<String?>(errorMessage),
     };
   }
 
@@ -2566,6 +2634,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     bool? redacted,
     Value<int?> redactedAt = const Value.absent(),
     Value<String?> redactedBy = const Value.absent(),
+    int? retryCount,
+    Value<String?> errorMessage = const Value.absent(),
   }) => RoomEvent(
     id: id ?? this.id,
     roomId: roomId ?? this.roomId,
@@ -2587,6 +2657,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     redacted: redacted ?? this.redacted,
     redactedAt: redactedAt.present ? redactedAt.value : this.redactedAt,
     redactedBy: redactedBy.present ? redactedBy.value : this.redactedBy,
+    retryCount: retryCount ?? this.retryCount,
+    errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
   );
   RoomEvent copyWithCompanion(RoomEventsCompanion data) {
     return RoomEvent(
@@ -2614,6 +2686,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       redactedBy: data.redactedBy.present
           ? data.redactedBy.value
           : this.redactedBy,
+      retryCount: data.retryCount.present
+          ? data.retryCount.value
+          : this.retryCount,
+      errorMessage: data.errorMessage.present
+          ? data.errorMessage.value
+          : this.errorMessage,
     );
   }
 
@@ -2635,7 +2713,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ..write('originalContent: $originalContent, ')
           ..write('redacted: $redacted, ')
           ..write('redactedAt: $redactedAt, ')
-          ..write('redactedBy: $redactedBy')
+          ..write('redactedBy: $redactedBy, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('errorMessage: $errorMessage')
           ..write(')'))
         .toString();
   }
@@ -2658,6 +2738,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     redacted,
     redactedAt,
     redactedBy,
+    retryCount,
+    errorMessage,
   );
   @override
   bool operator ==(Object other) =>
@@ -2678,7 +2760,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           other.originalContent == this.originalContent &&
           other.redacted == this.redacted &&
           other.redactedAt == this.redactedAt &&
-          other.redactedBy == this.redactedBy);
+          other.redactedBy == this.redactedBy &&
+          other.retryCount == this.retryCount &&
+          other.errorMessage == this.errorMessage);
 }
 
 class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
@@ -2698,6 +2782,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
   final Value<bool> redacted;
   final Value<int?> redactedAt;
   final Value<String?> redactedBy;
+  final Value<int> retryCount;
+  final Value<String?> errorMessage;
   final Value<int> rowid;
   const RoomEventsCompanion({
     this.id = const Value.absent(),
@@ -2716,6 +2802,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.redacted = const Value.absent(),
     this.redactedAt = const Value.absent(),
     this.redactedBy = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.errorMessage = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomEventsCompanion.insert({
@@ -2735,6 +2823,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.redacted = const Value.absent(),
     this.redactedAt = const Value.absent(),
     this.redactedBy = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.errorMessage = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        roomId = Value(roomId),
@@ -2757,6 +2847,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Expression<bool>? redacted,
     Expression<int>? redactedAt,
     Expression<String>? redactedBy,
+    Expression<int>? retryCount,
+    Expression<String>? errorMessage,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2776,6 +2868,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       if (redacted != null) 'redacted': redacted,
       if (redactedAt != null) 'redacted_at': redactedAt,
       if (redactedBy != null) 'redacted_by': redactedBy,
+      if (retryCount != null) 'retry_count': retryCount,
+      if (errorMessage != null) 'error_message': errorMessage,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2797,6 +2891,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Value<bool>? redacted,
     Value<int?>? redactedAt,
     Value<String?>? redactedBy,
+    Value<int>? retryCount,
+    Value<String?>? errorMessage,
     Value<int>? rowid,
   }) {
     return RoomEventsCompanion(
@@ -2816,6 +2912,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       redacted: redacted ?? this.redacted,
       redactedAt: redactedAt ?? this.redactedAt,
       redactedBy: redactedBy ?? this.redactedBy,
+      retryCount: retryCount ?? this.retryCount,
+      errorMessage: errorMessage ?? this.errorMessage,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2871,6 +2969,12 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     if (redactedBy.present) {
       map['redacted_by'] = Variable<String>(redactedBy.value);
     }
+    if (retryCount.present) {
+      map['retry_count'] = Variable<int>(retryCount.value);
+    }
+    if (errorMessage.present) {
+      map['error_message'] = Variable<String>(errorMessage.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2896,6 +3000,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
           ..write('redacted: $redacted, ')
           ..write('redactedAt: $redactedAt, ')
           ..write('redactedBy: $redactedBy, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('errorMessage: $errorMessage, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6408,6 +6514,8 @@ typedef $$RoomEventsTableCreateCompanionBuilder =
       Value<bool> redacted,
       Value<int?> redactedAt,
       Value<String?> redactedBy,
+      Value<int> retryCount,
+      Value<String?> errorMessage,
       Value<int> rowid,
     });
 typedef $$RoomEventsTableUpdateCompanionBuilder =
@@ -6428,6 +6536,8 @@ typedef $$RoomEventsTableUpdateCompanionBuilder =
       Value<bool> redacted,
       Value<int?> redactedAt,
       Value<String?> redactedBy,
+      Value<int> retryCount,
+      Value<String?> errorMessage,
       Value<int> rowid,
     });
 
@@ -6535,6 +6645,16 @@ class $$RoomEventsTableFilterComposer
 
   ColumnFilters<String> get redactedBy => $composableBuilder(
     column: $table.redactedBy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6646,6 +6766,16 @@ class $$RoomEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RoomsTableOrderingComposer get roomId {
     final $$RoomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6732,6 +6862,16 @@ class $$RoomEventsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => column,
+  );
+
   $$RoomsTableAnnotationComposer get roomId {
     final $$RoomsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -6800,6 +6940,8 @@ class $$RoomEventsTableTableManager
                 Value<bool> redacted = const Value.absent(),
                 Value<int?> redactedAt = const Value.absent(),
                 Value<String?> redactedBy = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<String?> errorMessage = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion(
                 id: id,
@@ -6818,6 +6960,8 @@ class $$RoomEventsTableTableManager
                 redacted: redacted,
                 redactedAt: redactedAt,
                 redactedBy: redactedBy,
+                retryCount: retryCount,
+                errorMessage: errorMessage,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6838,6 +6982,8 @@ class $$RoomEventsTableTableManager
                 Value<bool> redacted = const Value.absent(),
                 Value<int?> redactedAt = const Value.absent(),
                 Value<String?> redactedBy = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<String?> errorMessage = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion.insert(
                 id: id,
@@ -6856,6 +7002,8 @@ class $$RoomEventsTableTableManager
                 redacted: redacted,
                 redactedAt: redactedAt,
                 redactedBy: redactedBy,
+                retryCount: retryCount,
+                errorMessage: errorMessage,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

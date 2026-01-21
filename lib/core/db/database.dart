@@ -177,6 +177,12 @@ class RoomEvents extends Table {
   /// Profile ID of who redacted the message (for admin deletions)
   TextColumn get redactedBy => text().nullable()();
 
+  /// Number of retry attempts for failed messages
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+
+  /// Error message if send failed
+  TextColumn get errorMessage => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -390,7 +396,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -425,6 +431,11 @@ class AppDatabase extends _$AppDatabase {
       if (from <= 5) {
         // Migration from v5 to v6: Add user settings table
         await m.createTable(userSettings);
+      }
+      if (from <= 6) {
+        // Migration from v6 to v7: Add retry tracking columns for messages
+        await m.addColumn(roomEvents, roomEvents.retryCount);
+        await m.addColumn(roomEvents, roomEvents.errorMessage);
       }
     },
     beforeOpen: (details) async {
@@ -539,6 +550,8 @@ class AppDatabase extends _$AppDatabase {
     redacted: row.read<bool>('redacted'),
     redactedAt: row.readNullable<int>('redacted_at'),
     redactedBy: row.readNullable<String>('redacted_by'),
+    retryCount: row.readNullable<int>('retry_count') ?? 0,
+    errorMessage: row.readNullable<String>('error_message'),
   );
 
   /// Search messages by text content across all rooms
