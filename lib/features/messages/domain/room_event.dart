@@ -67,18 +67,19 @@ enum EventStatus { pending, sent, delivered, read, failed }
 /// ```
 @freezed
 abstract class RoomEvent with _$RoomEvent {
-  const RoomEvent._();
 
   const factory RoomEvent({
+    // Required parameters first
     required String id,
     required String roomId,
     required String senderId, // Profile ID (from ContactLink.profileId)
-    String? senderContactId, // Contact ID (from ContactLink.contactId)
     required RoomEventType type,
     required Map<String, dynamic> content,
+    required int createdAt,
+    // Optional parameters
+    String? senderContactId, // Contact ID (from ContactLink.contactId)
     String? parentId,
     @Default(EventStatus.pending) EventStatus status,
-    required int createdAt,
     int? serverTs,
     String? localId,
     int? editedAt, // Timestamp when message was last edited
@@ -87,12 +88,13 @@ abstract class RoomEvent with _$RoomEvent {
     String? redactedBy, // Profile ID of who deleted (for admin deletions)
   }) = _RoomEvent;
 
+  factory RoomEvent.fromJson(Map<String, dynamic> json) =>
+      _$RoomEventFromJson(json);
+  const RoomEvent._();
+
   /// Returns true if this message has been edited
   bool get isEdited => editedAt != null;
 
   /// Returns true if this message has been deleted/redacted
   bool get isDeleted => redacted;
-
-  factory RoomEvent.fromJson(Map<String, dynamic> json) =>
-      _$RoomEventFromJson(json);
 }

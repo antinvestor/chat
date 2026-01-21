@@ -65,14 +65,14 @@ class _StorageSettingsScreenState extends ConsumerState<StorageSettingsScreen> {
                     context,
                     title: 'Manage storage',
                     subtitle: 'Free up space by clearing cache and old files',
-                    onTap: () => _showStorageManagementDialog(),
+                    onTap: _showStorageManagementDialog,
                   ),
                   _buildSettingsItem(
                     context,
                     title: 'Clear cache',
                     subtitle:
                         'Clear temporary files (${_formatBytes(cacheSize)})',
-                    onTap: () => _clearCache(),
+                    onTap: _clearCache,
                   ),
                 ],
               ),
@@ -224,7 +224,7 @@ class _StorageSettingsScreenState extends ConsumerState<StorageSettingsScreen> {
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       await ref.read(cacheManagerProvider.notifier).clearCache();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -238,8 +238,7 @@ class _StorageSettingsScreenState extends ConsumerState<StorageSettingsScreen> {
     BuildContext context, {
     required String title,
     required List<Widget> items,
-  }) {
-    return Column(
+  }) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -255,15 +254,13 @@ class _StorageSettingsScreenState extends ConsumerState<StorageSettingsScreen> {
         ...items,
       ],
     );
-  }
 
   Widget _buildSettingsItem(
     BuildContext context, {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-  }) {
-    return Container(
+  }) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -298,5 +295,4 @@ class _StorageSettingsScreenState extends ConsumerState<StorageSettingsScreen> {
         onTap: onTap,
       ),
     );
-  }
 }

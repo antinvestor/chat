@@ -125,7 +125,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     });
   }
 
-  void _markAllAsRead() async {
+  Future<void> _markAllAsRead() async {
     final rooms = ref.read(roomListWithMessagesProvider).value ?? [];
     final unreadRooms = rooms.where((room) => room.unreadCount > 0).toList();
 
@@ -181,12 +181,12 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Archive Chat'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Are you sure you want to archive this chat?'),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text('Archived chats can be found in the archived section.'),
           ],
         ),
@@ -295,13 +295,11 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
-  }) {
-    return ListTile(
+  }) => ListTile(
       leading: Icon(icon, color: Colors.grey[600]),
       title: Text(title),
       onTap: onTap,
     );
-  }
 
   void _showRoomInfo(RoomWithLastMessage room) {
     showDialog(
@@ -333,7 +331,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Notifications ${room.isTyping == true ? 'unmuted' : 'muted'} for ${room.name}',
+          'Notifications ${room.isTyping ?? false ? 'unmuted' : 'muted'} for ${room.name}',
         ),
         duration: const Duration(seconds: 2),
       ),
@@ -344,7 +342,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '${room.isTyping == true ? 'Unpinned' : 'Pinned'} ${room.name}',
+          '${room.isTyping ?? false ? 'Unpinned' : 'Pinned'} ${room.name}',
         ),
         duration: const Duration(seconds: 2),
       ),
@@ -356,7 +354,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Chat'),
-        content: Text(
+        content: const Text(
           'Are you sure you want to delete this chat? This action cannot be undone.',
         ),
         actions: [
@@ -409,10 +407,8 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   List<RoomWithLastMessage> _filterRooms(List<RoomWithLastMessage> rooms) {
     if (_searchQuery.isEmpty) return rooms;
 
-    return rooms.where((room) {
-      return room.name.toLowerCase().contains(_searchQuery) ||
-          (room.lastMessageText?.toLowerCase().contains(_searchQuery) ?? false);
-    }).toList();
+    return rooms.where((room) => room.name.toLowerCase().contains(_searchQuery) ||
+          (room.lastMessageText?.toLowerCase().contains(_searchQuery) ?? false)).toList();
   }
 
   void _navigateToNewChat() {
@@ -435,8 +431,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   }
 
   /// Mobile layout: Single-pane with stack navigation
-  Widget _buildMobileLayout(AsyncValue<List<RoomWithLastMessage>> roomsAsync) {
-    return Scaffold(
+  Widget _buildMobileLayout(AsyncValue<List<RoomWithLastMessage>> roomsAsync) => Scaffold(
       body: CustomScrollView(
         slivers: [
           // Floating app bar that hides on scroll
@@ -464,7 +459,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
               if (_isSearching)
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: TextField(
                       controller: _searchController,
                       autofocus: true,
@@ -602,11 +597,9 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
       ),
     );
-  }
 
   /// Tablet layout: 2-panel (Rooms | Chat)
-  Widget _buildTabletLayout(AsyncValue<List<RoomWithLastMessage>> roomsAsync) {
-    return Scaffold(
+  Widget _buildTabletLayout(AsyncValue<List<RoomWithLastMessage>> roomsAsync) => Scaffold(
       body: Stack(
         children: [
           Column(
@@ -623,14 +616,12 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         ],
       ),
     );
-  }
 
   /// Desktop layout: 3-panel (Rooms | Chat | Details)
   Widget _buildDesktopLayout(
     AsyncValue<List<RoomWithLastMessage>> roomsAsync,
     bool showDetailPanel,
-  ) {
-    return Scaffold(
+  ) => Scaffold(
       body: Stack(
         children: [
           Column(
@@ -648,11 +639,9 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         ],
       ),
     );
-  }
 
   /// Room list panel for tablet/desktop layouts
-  Widget _buildRoomListPanel(AsyncValue<List<RoomWithLastMessage>> roomsAsync) {
-    return Scaffold(
+  Widget _buildRoomListPanel(AsyncValue<List<RoomWithLastMessage>> roomsAsync) => Scaffold(
       appBar: AppBar(title: const Text('Chats')),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton(
@@ -662,7 +651,6 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
       ),
       body: _buildRoomList(roomsAsync, isMobile: false),
     );
-  }
 
   /// Chat panel for tablet/desktop layouts
   Widget _buildChatPanel() {
@@ -701,8 +689,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   Widget _buildRoomList(
     AsyncValue<List<RoomWithLastMessage>> roomsAsync, {
     required bool isMobile,
-  }) {
-    return Column(
+  }) => Column(
       children: [
         Expanded(
           child: roomsAsync.when(
@@ -774,5 +761,4 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         ),
       ],
     );
-  }
 }

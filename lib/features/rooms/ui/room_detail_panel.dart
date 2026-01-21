@@ -10,14 +10,12 @@ import '../data/room_providers.dart';
 /// Room detail panel showing room information, motions, transactions, and media
 /// Displayed in the right panel on desktop layouts
 class RoomDetailPanel extends ConsumerStatefulWidget {
-  final String roomId;
-  final String roomName;
 
   const RoomDetailPanel({
-    super.key,
-    required this.roomId,
-    required this.roomName,
+    required this.roomId, required this.roomName, super.key,
   });
+  final String roomId;
+  final String roomName;
 
   @override
   ConsumerState<RoomDetailPanel> createState() => _RoomDetailPanelState();
@@ -492,8 +490,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
+  Widget _buildSectionHeader(String title) => Text(
       title,
       style: const TextStyle(
         fontSize: 14,
@@ -501,23 +498,19 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
         letterSpacing: 0.5,
       ),
     );
-  }
 
   Widget _buildInfoTile({
     required IconData icon,
     required String title,
     required String subtitle,
-  }) {
-    return ListTile(
+  }) => ListTile(
       leading: Icon(icon, size: 20),
       title: Text(title, style: const TextStyle(fontSize: 14)),
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     );
-  }
 
-  Widget _buildMembersList(AsyncValue<List<RoomMemberInfo>> membersAsync) {
-    return membersAsync.when(
+  Widget _buildMembersList(AsyncValue<List<RoomMemberInfo>> membersAsync) => membersAsync.when(
       data: (members) {
         if (members.isEmpty) {
           return const Text('No members found');
@@ -588,7 +581,6 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
       ),
       error: (e, _) => Text('Error loading members: $e'),
     );
-  }
 
   void _openMemberProfile(BuildContext context, RoomMemberInfo member) {
     if (member.profileId != null) {
@@ -608,8 +600,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
     required IconData icon,
     required String title,
     required String subtitle,
-  }) {
-    return Center(
+  }) => Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -632,7 +623,6 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
         ),
       ),
     );
-  }
 
   Color _getColorForName(String name) {
     final colors = [
@@ -665,7 +655,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
     }
   }
 
-  void _leaveRoom(BuildContext context, WidgetRef ref) async {
+  Future<void> _leaveRoom(BuildContext context, WidgetRef ref) async {
     try {
       // Show loading indicator
       ScaffoldMessenger.of(
@@ -725,13 +715,13 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
 
 /// Full-screen media viewer with swipe navigation
 class _MediaViewerScreen extends StatefulWidget {
-  final List<RoomEvent> mediaList;
-  final int initialIndex;
 
   const _MediaViewerScreen({
     required this.mediaList,
     required this.initialIndex,
   });
+  final List<RoomEvent> mediaList;
+  final int initialIndex;
 
   @override
   State<_MediaViewerScreen> createState() => _MediaViewerScreenState();
@@ -755,8 +745,7 @@ class _MediaViewerScreenState extends State<_MediaViewerScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
@@ -806,7 +795,7 @@ class _MediaViewerScreenState extends State<_MediaViewerScreen> {
 
           return InteractiveViewer(
             minScale: 0.5,
-            maxScale: 4.0,
+            maxScale: 4,
             child: Center(
               child: Image.network(
                 url,
@@ -831,5 +820,4 @@ class _MediaViewerScreenState extends State<_MediaViewerScreen> {
         },
       ),
     );
-  }
 }

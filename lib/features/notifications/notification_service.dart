@@ -27,9 +27,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Provider for NotificationService
-final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService(ref);
-});
+final notificationServiceProvider = Provider<NotificationService>(NotificationService.new);
 
 /// Service for handling push notifications via Firebase Cloud Messaging
 ///
@@ -40,12 +38,12 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 /// - Background notification handling
 /// - Deep linking from notification taps
 class NotificationService {
+
+  NotificationService(this._ref);
   final Ref _ref;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   String? _fcmToken;
   bool _initialized = false;
-
-  NotificationService(this._ref);
 
   /// Whether the notification service has been initialized
   bool get isInitialized => _initialized;
@@ -93,13 +91,7 @@ class NotificationService {
   /// Request notification permissions from the user
   Future<NotificationSettings> _requestPermissions() async {
     final settings = await _messaging.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
+      
     );
 
     AppLogger.info(
@@ -208,7 +200,7 @@ class NotificationService {
     );
 
     // For now, foreground messages are logged
-    // TODO: Show as local notification using flutter_local_notifications
+    // TODO(antinvestor): Show as local notification using flutter_local_notifications
     // or update UI directly via state management
   }
 
@@ -275,7 +267,5 @@ class NotificationService {
   }
 
   /// Check if notifications are supported on the current platform
-  static bool get isSupported {
-    return Platform.isAndroid || Platform.isIOS;
-  }
+  static bool get isSupported => Platform.isAndroid || Platform.isIOS;
 }

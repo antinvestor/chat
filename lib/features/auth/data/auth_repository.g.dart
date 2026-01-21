@@ -81,4 +81,4 @@ final class CurrentProfileIdProvider
   }
 }
 
-String _$currentProfileIdHash() => r'a4d0b534c881e8865df52c94f67f0f9aec8acdf0';
+String _$currentProfileIdHash() => r'8ad5de46d40d2ef6ed2b289aaac91824d12f38a7';

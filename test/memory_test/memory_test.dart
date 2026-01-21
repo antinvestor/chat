@@ -1,12 +1,11 @@
 import 'dart:developer' as developer;
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
 import 'package:chat/main.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import '../test_helpers/test_helpers.dart';
 
 /// Memory log buffer for CI analysis
@@ -37,9 +36,7 @@ Future<void> _writeMemoryLogs() async {
 }
 
 void main() {
-  setUp(() {
-    TestHelpers.resetMocks();
-  });
+  setUp(TestHelpers.resetMocks);
 
   tearDownAll(() async {
     // Write memory logs at the end of all tests
@@ -208,21 +205,21 @@ void main() {
       await tester.pumpAndSettle();
 
       // Log initial memory state
-      _logMemory(45.0); // Initial heap size
+      _logMemory(45); // Initial heap size
 
       // Simulate app usage over time with memory logging
-      for (int i = 0; i < 10; i++) {
+      for (var i = 0; i < 10; i++) {
         await tester.pump();
         // Simulate stable memory usage with minor fluctuations
         _logMemory(45.0 + (i * 0.5)); // Small growth
         if (i % 3 == 0) {
           _gcCount++;
-          _logMemory(44.0); // Memory after GC
+          _logMemory(44); // Memory after GC
         }
       }
 
       // Final memory state
-      _logMemory(48.0); // Final heap size (within thresholds)
+      _logMemory(48); // Final heap size (within thresholds)
 
       // Memory should not grow excessively
       expect(find.byType(MaterialApp), findsOneWidget);

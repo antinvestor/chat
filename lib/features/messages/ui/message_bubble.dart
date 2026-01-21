@@ -10,6 +10,18 @@ import '../../../features/contacts/data/contact_sync_repository.dart';
 import '../domain/room_event.dart';
 
 class MessageBubble extends ConsumerWidget {
+
+  const MessageBubble({
+    required this.message, required this.isMe, super.key,
+    this.shouldGroupWithPrevious = false,
+    this.removeTail = false,
+    this.onReply,
+    this.onRetry,
+    this.onEdit,
+    this.canEdit = false,
+    this.onDelete,
+    this.canDelete = false,
+  });
   final RoomEvent message;
   final bool isMe;
   final bool shouldGroupWithPrevious;
@@ -20,20 +32,6 @@ class MessageBubble extends ConsumerWidget {
   final bool canEdit;
   final Function(String messageId, {required bool forEveryone})? onDelete;
   final bool canDelete;
-
-  const MessageBubble({
-    super.key,
-    required this.message,
-    required this.isMe,
-    this.shouldGroupWithPrevious = false,
-    this.removeTail = false,
-    this.onReply,
-    this.onRetry,
-    this.onEdit,
-    this.canEdit = false,
-    this.onDelete,
-    this.canDelete = false,
-  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -177,8 +175,7 @@ class MessageBubble extends ConsumerWidget {
     BuildContext context,
     String timestamp,
     bool isDarkMode,
-  ) {
-    return Align(
+  ) => Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
@@ -221,7 +218,6 @@ class MessageBubble extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Color _getBubbleColor(bool isMe, bool isDarkMode) {
     if (isMe) {
@@ -246,7 +242,7 @@ class MessageBubble extends ConsumerWidget {
     const tailRadius = Radius.circular(4);
 
     if (removeTail) {
-      return BorderRadius.only(
+      return const BorderRadius.only(
         topLeft: radius,
         topRight: radius,
         bottomLeft: radius,
@@ -595,14 +591,12 @@ class MessageBubble extends ConsumerWidget {
     return Text(emoji, style: const TextStyle(fontSize: 24));
   }
 
-  Widget _buildMediaPlaceholder(IconData icon) {
-    return Container(
+  Widget _buildMediaPlaceholder(IconData icon) => Container(
       width: 150,
       height: 100,
       color: Colors.grey.shade300,
       child: Icon(icon, size: 40, color: Colors.grey.shade600),
     );
-  }
 
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
@@ -663,8 +657,7 @@ class MessageBubble extends ConsumerWidget {
   }
 
   /// Retry button for failed messages
-  Widget _buildRetryButton(BuildContext context) {
-    return GestureDetector(
+  Widget _buildRetryButton(BuildContext context) => GestureDetector(
       onTap: onRetry,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -694,7 +687,6 @@ class MessageBubble extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   /// Show context menu for message actions (reply, edit, copy)
   void _showMessageMenu(BuildContext context, String text) {
@@ -745,7 +737,7 @@ class MessageBubble extends ConsumerWidget {
               // Delete for me option (available for all messages)
               if (onDelete != null)
                 ListTile(
-                  leading: Icon(Icons.delete_outline, color: Colors.orange),
+                  leading: const Icon(Icons.delete_outline, color: Colors.orange),
                   title: const Text('Delete for me'),
                   onTap: () {
                     Navigator.pop(context);
@@ -755,7 +747,7 @@ class MessageBubble extends ConsumerWidget {
               // Delete for everyone option (only for own messages within window)
               if (isMe && canDelete && onDelete != null)
                 ListTile(
-                  leading: Icon(Icons.delete_forever, color: Colors.red),
+                  leading: const Icon(Icons.delete_forever, color: Colors.red),
                   title: const Text('Delete for everyone'),
                   onTap: () {
                     Navigator.pop(context);
@@ -848,10 +840,10 @@ class MessageBubble extends ConsumerWidget {
         );
       case EventStatus.read:
         // Double check for read (blue/green)
-        return Icon(
+        return const Icon(
           Icons.done_all,
           size: 16,
-          color: const Color(0xFF53BDEB), // WhatsApp blue
+          color: Color(0xFF53BDEB), // WhatsApp blue
         );
       case EventStatus.failed:
         // Error icon for failed

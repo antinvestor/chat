@@ -38,7 +38,6 @@ class ErrorHandler {
                   onPressed: onRetry,
                 )
               : null,
-          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -96,8 +95,8 @@ class ErrorHandler {
 
 /// Custom exception for validation errors
 class ValidationException implements Exception {
-  final String message;
   ValidationException(this.message);
+  final String message;
 
   @override
   String toString() => message;
@@ -105,8 +104,8 @@ class ValidationException implements Exception {
 
 /// Custom exception for permission denied errors
 class PermissionDeniedException implements Exception {
-  final String message;
   PermissionDeniedException(this.message);
+  final String message;
 
   @override
   String toString() => message;
@@ -114,8 +113,8 @@ class PermissionDeniedException implements Exception {
 
 /// Custom exception for network errors
 class NetworkException implements Exception {
-  final String message;
   NetworkException(this.message);
+  final String message;
 
   @override
   String toString() => message;
@@ -123,8 +122,8 @@ class NetworkException implements Exception {
 
 /// Custom exception for timeout errors
 class TimeoutException implements Exception {
-  final String message;
   TimeoutException(this.message);
+  final String message;
 
   @override
   String toString() => message;

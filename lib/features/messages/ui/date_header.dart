@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class DateHeader extends StatelessWidget {
-  final int timestamp;
 
-  const DateHeader({super.key, required this.timestamp});
+  const DateHeader({required this.timestamp, super.key});
+  final int timestamp;
 
   @override
   Widget build(BuildContext context) {

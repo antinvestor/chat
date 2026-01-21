@@ -13,9 +13,7 @@ import 'message_repository.dart';
 part 'message_providers.g.dart';
 
 @riverpod
-MessageRepository messageRepository(Ref ref) {
-  return MessageRepository(AppDatabase.instance);
-}
+MessageRepository messageRepository(Ref ref) => MessageRepository(AppDatabase.instance);
 
 /// Reactive stream provider for messages - provides instant UI updates
 /// when messages are added, updated, or deleted from the local database
@@ -78,7 +76,7 @@ class MessageList extends _$MessageList {
       // No messages yet, try to fetch from server
       try {
         final syncEngine = await ref.read(syncEngineProvider.future);
-        final fetchedCount = await syncEngine.getHistory(roomId, limit: 50);
+        final fetchedCount = await syncEngine.getHistory(roomId);
         if (fetchedCount > 0) {
           ref.invalidateSelf();
           return true;
@@ -93,7 +91,6 @@ class MessageList extends _$MessageList {
     final olderLocalMessages = await repo.getMessagesBeforeTimestamp(
       roomId,
       beforeTimestamp: oldestTimestamp,
-      limit: 50,
     );
 
     if (olderLocalMessages.isNotEmpty) {
@@ -110,7 +107,6 @@ class MessageList extends _$MessageList {
       final fetchedCount = await syncEngine.getHistory(
         roomId,
         cursor: cursorTimestamp,
-        limit: 50,
       );
 
       if (fetchedCount > 0) {

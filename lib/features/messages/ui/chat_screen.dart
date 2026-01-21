@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -29,10 +28,10 @@ import 'input_bar.dart';
 import 'message_bubble.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
+
+  const ChatScreen({required this.roomId, required this.roomName, super.key});
   final String roomId;
   final String roomName;
-
-  const ChatScreen({super.key, required this.roomId, required this.roomName});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -127,7 +126,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
-  void _sendMessage(String text, {String? replyToMessageId}) async {
+  Future<void> _sendMessage(String text, {String? replyToMessageId}) async {
     if (text.trim().isEmpty) return;
 
     final messagingService = ref.read(messageSendingServiceProvider);
@@ -174,7 +173,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       currentText: currentText,
       onSave: (id, newText) async {
         final messagingService = ref.read(messageSendingServiceProvider);
-        return await messagingService.editTextMessage(
+        return messagingService.editTextMessage(
           messageId: id,
           newText: newText,
         );
@@ -211,7 +210,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _pickAndSendImage() async {
-    final XFile? image = await _imagePicker.pickImage(
+    final image = await _imagePicker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
     );
@@ -221,7 +220,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _takeAndSendPhoto() async {
-    final XFile? photo = await _imagePicker.pickImage(
+    final photo = await _imagePicker.pickImage(
       source: ImageSource.camera,
       imageQuality: 80,
     );
@@ -231,7 +230,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _pickAndSendVideo() async {
-    final XFile? video = await _imagePicker.pickVideo(
+    final video = await _imagePicker.pickVideo(
       source: ImageSource.gallery,
       maxDuration: const Duration(minutes: 5),
     );
@@ -371,9 +370,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 child: Stack(
                   children: [
                     messagesAsync.when(
-                      data: (messages) => _buildMessageList(messages),
-                      loading: () => _buildLoadingState(),
-                      error: (error, stack) => _buildErrorState(error, stack),
+                      data: _buildMessageList,
+                      loading: _buildLoadingState,
+                      error: _buildErrorState,
                     ),
                     // Enhanced typing indicator overlay
                     Consumer(
@@ -411,7 +410,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      SizedBox(
+                                      const SizedBox(
                                         width: 16,
                                         height: 16,
                                         child: CircularProgressIndicator(
@@ -471,10 +470,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
+  PreferredSizeWidget _buildAppBar(BuildContext context) => AppBar(
       title: GestureDetector(
-        onTap: () => _openContactInfo(),
+        onTap: _openContactInfo,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -538,7 +536,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         IconButton(icon: const Icon(Icons.video_call), onPressed: _startCall),
       ],
     );
-  }
 
   Widget _buildMessageList(List<RoomEvent> messages) {
     if (messages.isEmpty) {
@@ -574,7 +571,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         // Performance optimizations for smooth scrolling
         cacheExtent: MediaQuery.of(context).size.height * 2, // Cache 2 screens
         addAutomaticKeepAlives: false, // Reduce memory for off-screen items
-        addRepaintBoundaries: true, // Isolate repaints
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
@@ -586,9 +582,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           final isMe = message.senderId == currentProfileId.value;
 
           // Enhanced message grouping with better performance
-          bool showDateHeader = false;
-          bool shouldGroupWithPrevious = false;
-          bool removeTail = false;
+          var showDateHeader = false;
+          var shouldGroupWithPrevious = false;
+          var removeTail = false;
 
           if (reversedIndex < messages.length - 1) {
             final nextMessage = messages[reversedIndex + 1];
@@ -617,8 +613,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
+  Widget _buildEmptyState() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -675,10 +670,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildLoadingState() {
-    return Center(
+  Widget _buildLoadingState() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -716,10 +709,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildErrorState(Object error, StackTrace stack) {
-    return Center(
+  Widget _buildErrorState(Object error, StackTrace stack) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -729,7 +720,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               color: Colors.red.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.error_outline, size: 64, color: Colors.red),
+            child: const Icon(Icons.error_outline, size: 64, color: Colors.red),
           ),
           const SizedBox(height: 24),
           Text(
@@ -762,7 +753,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
-  }
 
   void _toggleEncryption() {
     setState(() => _isEncryptionEnabled = !_isEncryptionEnabled);
@@ -778,7 +768,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  void _startCall() async {
+  Future<void> _startCall() async {
     final callManager = await ref.read(callManagerProvider.future);
     await callManager.startCall(widget.roomId);
     if (mounted) {
@@ -819,7 +809,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           'mimeType': recording.mimeType,
           'fileName': recording.fileName,
         },
-        status: EventStatus.pending,
         createdAt: DateTime.now().millisecondsSinceEpoch,
         localId: Xid().toString(),
       );
@@ -891,8 +880,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               : null,
           onEdit: _onEditMessage,
           canEdit: canEdit,
-          onDelete: (messageId, {required forEveryone}) =>
-              _onDeleteMessage(messageId, forEveryone: forEveryone),
+          onDelete: _onDeleteMessage,
           canDelete: canDelete,
         );
     }
@@ -946,8 +934,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Widget _buildScrollToBottomButton() {
-    return GestureDetector(
+  Widget _buildScrollToBottomButton() => GestureDetector(
       onTap: _scrollToBottom,
       child: Container(
         width: 40,
@@ -977,7 +964,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 right: 2,
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppTheme.primaryGreen,
                     shape: BoxShape.circle,
                   ),
@@ -1000,5 +987,4 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       ),
     );
-  }
 }

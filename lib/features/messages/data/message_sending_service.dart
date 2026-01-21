@@ -22,11 +22,6 @@ import 'message_repository.dart';
 /// - Encrypted messages (E2E)
 /// - Offline queue with retry
 class MessageSendingService {
-  final MessageRepository _messageRepo;
-  final PendingJobRepository _jobRepo;
-  final FileUploadService _fileUploadService;
-  final E2EEncryptionService _encryptionService;
-  final Future<String> Function() _getCurrentProfileId;
 
   MessageSendingService(
     this._messageRepo,
@@ -35,6 +30,11 @@ class MessageSendingService {
     this._encryptionService,
     this._getCurrentProfileId,
   );
+  final MessageRepository _messageRepo;
+  final PendingJobRepository _jobRepo;
+  final FileUploadService _fileUploadService;
+  final E2EEncryptionService _encryptionService;
+  final Future<String> Function() _getCurrentProfileId;
 
   /// Send a text message
   Future<domain.RoomEvent> sendTextMessage({
@@ -47,7 +47,7 @@ class MessageSendingService {
     final now = DateTime.now().millisecondsSinceEpoch;
     final senderId = await _getCurrentProfileId();
 
-    Map<String, dynamic> content = {'text': text};
+    var content = <String, dynamic>{'text': text};
 
     // Encrypt if requested
     if (encrypt) {
@@ -74,7 +74,6 @@ class MessageSendingService {
       type: domain.RoomEventType.text,
       content: content,
       parentId: replyToId,
-      status: domain.EventStatus.pending,
       createdAt: now,
       localId: localId,
     );
@@ -106,8 +105,7 @@ class MessageSendingService {
     String? replyToId,
     bool encrypt = false,
     void Function(double progress)? onProgress,
-  }) async {
-    return _sendMediaMessage(
+  }) async => _sendMediaMessage(
       roomId: roomId,
       file: imageFile,
       type: domain.RoomEventType.image,
@@ -116,7 +114,6 @@ class MessageSendingService {
       encrypt: encrypt,
       onProgress: onProgress,
     );
-  }
 
   /// Send a video message
   Future<domain.RoomEvent> sendVideoMessage({
@@ -126,8 +123,7 @@ class MessageSendingService {
     String? replyToId,
     bool encrypt = false,
     void Function(double progress)? onProgress,
-  }) async {
-    return _sendMediaMessage(
+  }) async => _sendMediaMessage(
       roomId: roomId,
       file: videoFile,
       type: domain.RoomEventType.video,
@@ -136,7 +132,6 @@ class MessageSendingService {
       encrypt: encrypt,
       onProgress: onProgress,
     );
-  }
 
   /// Send an audio message
   Future<domain.RoomEvent> sendAudioMessage({
@@ -146,8 +141,7 @@ class MessageSendingService {
     String? replyToId,
     bool encrypt = false,
     void Function(double progress)? onProgress,
-  }) async {
-    return _sendMediaMessage(
+  }) async => _sendMediaMessage(
       roomId: roomId,
       file: audioFile,
       type: domain.RoomEventType.audio,
@@ -156,7 +150,6 @@ class MessageSendingService {
       encrypt: encrypt,
       onProgress: onProgress,
     );
-  }
 
   /// Send a file message
   Future<domain.RoomEvent> sendFileMessage({
@@ -165,8 +158,7 @@ class MessageSendingService {
     String? replyToId,
     bool encrypt = false,
     void Function(double progress)? onProgress,
-  }) async {
-    return _sendMediaMessage(
+  }) async => _sendMediaMessage(
       roomId: roomId,
       file: file,
       type: domain.RoomEventType.file,
@@ -174,7 +166,6 @@ class MessageSendingService {
       encrypt: encrypt,
       onProgress: onProgress,
     );
-  }
 
   /// Internal method for sending media messages
   Future<domain.RoomEvent> _sendMediaMessage({
@@ -194,7 +185,7 @@ class MessageSendingService {
     final fileSize = await file.length();
 
     // Create initial content with local file path
-    Map<String, dynamic> content = {
+    var content = <String, dynamic>{
       'localPath': file.path,
       'fileName': fileName,
       'fileSize': fileSize,
@@ -210,7 +201,6 @@ class MessageSendingService {
       type: type,
       content: content,
       parentId: replyToId,
-      status: domain.EventStatus.pending,
       createdAt: now,
       localId: localId,
     );
@@ -315,7 +305,6 @@ class MessageSendingService {
       type: domain.RoomEventType.reaction,
       content: {'emoji': emoji},
       parentId: targetEventId,
-      status: domain.EventStatus.pending,
       createdAt: now,
       localId: localId,
     );
@@ -570,12 +559,10 @@ class MessageSendingService {
     return true;
   }
 
-  bool _isMediaType(domain.RoomEventType type) {
-    return type == domain.RoomEventType.image ||
+  bool _isMediaType(domain.RoomEventType type) => type == domain.RoomEventType.image ||
         type == domain.RoomEventType.video ||
         type == domain.RoomEventType.audio ||
         type == domain.RoomEventType.file;
-  }
 }
 
 // Provider

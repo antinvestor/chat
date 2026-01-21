@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openid_client/openid_client.dart';
 
 import '../../../core/logging/app_logger.dart';
 import 'platform/auth_platform.dart';
-
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenRefreshResult;
-
 import 'platform/auth_platform_stub.dart'
     if (dart.library.io) 'platform/auth_platform_io.dart'
     if (dart.library.html) 'platform/auth_platform_web.dart';
@@ -37,10 +35,6 @@ import 'platform/auth_platform_stub.dart'
 /// final token = await authService.getAccessToken();
 /// ```
 class AuthService {
-  final FlutterSecureStorage _storage;
-  final String _issuerUrl;
-  final String _clientId;
-  final AuthPlatform _platform = getAuthPlatform();
 
   AuthService(
     this._storage, {
@@ -48,6 +42,10 @@ class AuthService {
     required String clientId,
   }) : _issuerUrl = issuerUrl,
        _clientId = clientId;
+  final FlutterSecureStorage _storage;
+  final String _issuerUrl;
+  final String _clientId;
+  final AuthPlatform _platform = getAuthPlatform();
 
   /// Initialize OIDC issuer and client
   Future<void> _ensureInitialized() async {
@@ -161,19 +159,13 @@ class AuthService {
   }
 
   /// Get current access token
-  Future<String?> getAccessToken() async {
-    return await _storage.read(key: 'access_token');
-  }
+  Future<String?> getAccessToken() async => _storage.read(key: 'access_token');
 
   /// Get current refresh token
-  Future<String?> getRefreshToken() async {
-    return await _storage.read(key: 'refresh_token');
-  }
+  Future<String?> getRefreshToken() async => _storage.read(key: 'refresh_token');
 
   /// Get ID token
-  Future<String?> getIdToken() async {
-    return await _storage.read(key: 'id_token');
-  }
+  Future<String?> getIdToken() async => _storage.read(key: 'id_token');
 
   /// Check if access token is expired or about to expire
   /// Returns true if token expires within the specified buffer time
@@ -225,7 +217,7 @@ class AuthService {
       final now = DateTime.now();
 
       // Refresh 5 minutes before expiry
-      final refreshBuffer = const Duration(minutes: 5);
+      const refreshBuffer = Duration(minutes: 5);
       final refreshAt = expiresAt.subtract(refreshBuffer);
 
       if (now.isAfter(refreshAt)) {
@@ -275,7 +267,7 @@ class AuthService {
       final refreshTokenValue = await getRefreshToken();
       if (refreshTokenValue == null) {
         AppLogger.warning('No refresh token available for token refresh');
-        final noTokenResult = (
+        const noTokenResult = (
           result: TokenRefreshResult.permanentError,
           token: null as TokenResponse?,
           error: 'No refresh token',
@@ -314,7 +306,7 @@ class AuthService {
       }
 
       if (_platform.client == null) {
-        final clientNullResult = (
+        const clientNullResult = (
           result: TokenRefreshResult.transientError,
           token: null as TokenResponse?,
           error: 'Auth client not initialized',
@@ -344,7 +336,7 @@ class AuthService {
             'refreshTokenUsed': maskedRefreshToken,
           },
         );
-        final emptyTokenResult = (
+        const emptyTokenResult = (
           result: TokenRefreshResult.permanentError,
           token: null as TokenResponse?,
           error: 'Refresh returned empty access token',
@@ -363,7 +355,7 @@ class AuthService {
           'Failed to save refreshed token to storage',
           data: {'refreshTokenUsed': maskedRefreshToken},
         );
-        final saveFailResult = (
+        const saveFailResult = (
           result: TokenRefreshResult.transientError,
           token: null as TokenResponse?,
           error: 'Failed to save refreshed token',
@@ -393,7 +385,7 @@ class AuthService {
       return successResult;
     } on TimeoutException {
       AppLogger.warning('Token refresh timed out');
-      final timeoutResult = (
+      const timeoutResult = (
         result: TokenRefreshResult.transientError,
         token: null as TokenResponse?,
         error: 'Refresh timed out',
@@ -527,7 +519,7 @@ class AuthService {
       final payload = parts[1];
 
       // Add padding if needed for base64 decoding
-      var normalized = base64.normalize(payload);
+      final normalized = base64.normalize(payload);
       final decoded = utf8.decode(base64.decode(normalized));
 
       return json.decode(decoded) as Map<String, dynamic>;
@@ -597,7 +589,7 @@ class AuthService {
     }
 
     // Attempt refresh with retries for transient errors
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+    for (var attempt = 1; attempt <= maxRetries; attempt++) {
       AppLogger.debug(
         'Access token missing/expired, attempting refresh',
         data: {'attempt': attempt, 'maxRetries': maxRetries},

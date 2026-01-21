@@ -9,8 +9,7 @@ class AccountSettingsScreen extends ConsumerWidget {
   const AccountSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
       appBar: AppBar(
         title: const Text('Account'),
         backgroundColor: AppTheme.primaryGreen,
@@ -62,18 +61,17 @@ class AccountSettingsScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   void _showComingSoonDialog(BuildContext context, String feature) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Coming Soon'),
+        title: const Text('Coming Soon'),
         content: Text('$feature feature will be available in a future update.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK'),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -84,8 +82,7 @@ class AccountSettingsScreen extends ConsumerWidget {
     BuildContext context, {
     required String title,
     required List<Widget> items,
-  }) {
-    return Column(
+  }) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -101,15 +98,13 @@ class AccountSettingsScreen extends ConsumerWidget {
         ...items,
       ],
     );
-  }
 
   Widget _buildSettingsItem(
     BuildContext context, {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-  }) {
-    return Container(
+  }) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -144,5 +139,4 @@ class AccountSettingsScreen extends ConsumerWidget {
         onTap: onTap,
       ),
     );
-  }
 }

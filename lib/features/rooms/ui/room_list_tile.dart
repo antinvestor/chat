@@ -5,10 +5,10 @@ import '../../../core/theme/app_theme.dart';
 import '../domain/room_with_last_message.dart';
 
 class RoomListTile extends StatelessWidget {
+
+  const RoomListTile({required this.room, required this.onTap, super.key});
   final RoomWithLastMessage room;
   final VoidCallback onTap;
-
-  const RoomListTile({super.key, required this.room, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +42,7 @@ class RoomListTile extends StatelessWidget {
                   child: Container(
                     width: AppTheme.minTouchTarget,
                     height: AppTheme.minTouchTarget,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppTheme.primaryGreen,
                       shape: BoxShape.circle,
                     ),

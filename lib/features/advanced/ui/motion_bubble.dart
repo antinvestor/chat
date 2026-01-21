@@ -8,10 +8,10 @@ import '../../messages/domain/room_event.dart';
 import '../services/motion_service.dart';
 
 class MotionBubble extends ConsumerStatefulWidget {
+
+  const MotionBubble({required this.event, required this.isMe, super.key});
   final RoomEvent event;
   final bool isMe;
-
-  const MotionBubble({super.key, required this.event, required this.isMe});
 
   @override
   ConsumerState<MotionBubble> createState() => _MotionBubbleState();
@@ -96,7 +96,7 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
 
     // Find winner (option with most votes)
     String? winner;
-    int maxVotes = 0;
+    var maxVotes = 0;
     if (isClosed && totalVotes > 0) {
       for (final entry in voteCounts.entries) {
         if (entry.value > maxVotes) {
@@ -149,10 +149,10 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                     color: theme.colorScheme.tertiaryContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.check_circle, color: Colors.green, size: 20),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
                         'Voting Closed',
                         style: TextStyle(fontWeight: FontWeight.bold),
@@ -165,7 +165,7 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                 if (winner != null) ...[
                   Row(
                     children: [
-                      Icon(Icons.emoji_events, color: Colors.amber, size: 24),
+                      const Icon(Icons.emoji_events, color: Colors.amber, size: 24),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -316,7 +316,5 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
+  String _formatDate(DateTime date) => '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
 }

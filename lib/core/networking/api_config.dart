@@ -3,6 +3,8 @@
 /// Each service has its own dedicated endpoint for optimal routing
 /// and load balancing.
 class ApiConfig {
+
+  const ApiConfig._();
   // Service endpoints
   static const String chatBaseUrl = 'https://chat.antinvestor.com';
   static const String gatewayBaseUrl = 'https://gateway.antinvestor.com';
@@ -31,6 +33,4 @@ class ApiConfig {
   // Cache configuration
   static const Duration cacheMaxAge = Duration(hours: 1);
   static const int maxCacheEntries = 100;
-
-  const ApiConfig._();
 }

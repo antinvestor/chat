@@ -1,6 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/features/calls/services/turn_credentials_service.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 // Simple fake DeviceServiceClient for testing
 class FakeDeviceServiceClient {

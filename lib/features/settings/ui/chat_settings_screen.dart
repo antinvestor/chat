@@ -152,8 +152,7 @@ class _ChatSettingsScreenState extends ConsumerState<ChatSettingsScreen> {
     BuildContext context, {
     required String title,
     required List<Widget> items,
-  }) {
-    return Column(
+  }) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -169,15 +168,13 @@ class _ChatSettingsScreenState extends ConsumerState<ChatSettingsScreen> {
         ...items,
       ],
     );
-  }
 
   Widget _buildSettingsItem(
     BuildContext context, {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-  }) {
-    return Container(
+  }) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -212,7 +209,6 @@ class _ChatSettingsScreenState extends ConsumerState<ChatSettingsScreen> {
         onTap: onTap,
       ),
     );
-  }
 
   Widget _buildSwitchItem(
     BuildContext context, {
@@ -220,8 +216,7 @@ class _ChatSettingsScreenState extends ConsumerState<ChatSettingsScreen> {
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
+  }) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -255,5 +250,4 @@ class _ChatSettingsScreenState extends ConsumerState<ChatSettingsScreen> {
         ),
       ),
     );
-  }
 }

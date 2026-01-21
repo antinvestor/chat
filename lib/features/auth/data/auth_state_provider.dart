@@ -21,8 +21,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
       // Ensure we have a valid access token (will refresh if expired)
       // Use the status-returning version to distinguish between transient and permanent errors
       final result = await authRepo.ensureValidAccessTokenWithStatus(
-        maxRetries: 3,
-        retryDelay: const Duration(seconds: 2),
+        
       );
 
       if (result.token != null) {

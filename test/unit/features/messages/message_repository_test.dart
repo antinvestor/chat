@@ -1,9 +1,9 @@
-import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/core/db/database.dart' hide RoomEvent;
 import 'package:chat/features/messages/data/message_repository.dart';
 import 'package:chat/features/messages/domain/room_event.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:flutter_test/flutter_test.dart';
+
 import '../../../test_helpers/test_database.dart';
 
 void main() {
@@ -67,7 +67,6 @@ void main() {
           senderId: 'sender-1',
           type: RoomEventType.text,
           content: {'text': 'Original'},
-          status: EventStatus.pending,
           createdAt: DateTime.now().millisecondsSinceEpoch,
         );
 
@@ -334,7 +333,6 @@ void main() {
             senderId: 'sender-1',
             type: RoomEventType.text,
             content: {'text': 'Test'},
-            status: EventStatus.pending,
             createdAt: DateTime.now().millisecondsSinceEpoch,
           ),
         );
@@ -355,7 +353,6 @@ void main() {
             senderId: 'sender-1',
             type: RoomEventType.text,
             content: {'text': 'Test'},
-            status: EventStatus.pending,
             createdAt: DateTime.now().millisecondsSinceEpoch,
           ),
         );
@@ -389,7 +386,6 @@ void main() {
               senderId: 'sender-1',
               type: RoomEventType.text,
               content: {'text': 'Message $i'},
-              status: EventStatus.pending,
               createdAt: DateTime.now().millisecondsSinceEpoch + i,
             ),
           );
@@ -779,7 +775,6 @@ void main() {
             senderId: 'current-user',
             type: RoomEventType.text,
             content: {'text': 'Pending message'},
-            status: EventStatus.pending,
             createdAt: now,
           ),
         );
@@ -1198,7 +1193,6 @@ void main() {
             senderId: 'current-user',
             type: RoomEventType.text,
             content: {'text': 'Pending message'},
-            status: EventStatus.pending,
             createdAt: now,
           ),
         );

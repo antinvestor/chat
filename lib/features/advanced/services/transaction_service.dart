@@ -14,10 +14,10 @@ final transactionServiceProvider = FutureProvider<TransactionService>((
 });
 
 class TransactionService {
-  final SyncEngine _syncEngine;
-  final AuthRepository _authRepository;
 
   TransactionService(this._syncEngine, this._authRepository);
+  final SyncEngine _syncEngine;
+  final AuthRepository _authRepository;
 
   Future<void> sendMoney({
     required String roomId,

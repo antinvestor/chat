@@ -1,10 +1,10 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/core/db/database.dart' hide RoomEvent, Room;
 import 'package:chat/features/messages/data/message_repository.dart';
 import 'package:chat/features/messages/domain/room_event.dart';
 import 'package:chat/features/rooms/data/room_repository.dart';
 import 'package:chat/features/rooms/domain/room.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import '../../../test_helpers/test_database.dart';
 
 void main() {
@@ -29,7 +29,6 @@ void main() {
           id: 'room-1',
           name: 'Test Room',
           type: 'group',
-          unreadCount: 0,
         );
 
         await repository.insertRoom(room);
@@ -42,7 +41,7 @@ void main() {
       });
 
       test('inserts direct message room', () async {
-        const room = Room(id: 'dm-1', name: '', type: 'direct', unreadCount: 0);
+        const room = Room(id: 'dm-1', name: '', type: 'direct');
 
         await repository.insertRoom(room);
 
@@ -83,7 +82,6 @@ void main() {
           id: 'room-1',
           name: 'Original Name',
           type: 'group',
-          unreadCount: 0,
         );
 
         const room2 = Room(
@@ -215,7 +213,6 @@ void main() {
             id: 'room-1',
             name: 'Test Room',
             type: 'group',
-            unreadCount: 0,
           ),
         );
 
@@ -420,11 +417,12 @@ void main() {
         await repository.insertRoom(room);
 
         final result = await repository.getRoomById('room-1');
-        expect(
-          result!.metadata!['nested']['level1']['level2'],
-          equals('deep value'),
-        );
-        expect(result.metadata!['array'][3], equals('four'));
+        final nested =
+            result!.metadata!['nested'] as Map<String, dynamic>;
+        final level1 = nested['level1'] as Map<String, dynamic>;
+        expect(level1['level2'], equals('deep value'));
+        final array = result.metadata!['array'] as List<dynamic>;
+        expect(array[3], equals('four'));
         expect(result.metadata!['boolean'], equals(true));
       });
     });

@@ -1,9 +1,7 @@
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final contactServiceProvider = Provider<ContactService>((ref) {
-  return ContactService();
-});
+final contactServiceProvider = Provider<ContactService>((ref) => ContactService());
 
 final contactsProvider = FutureProvider<List<Contact>>((ref) async {
   final service = ref.watch(contactServiceProvider);
@@ -13,7 +11,7 @@ final contactsProvider = FutureProvider<List<Contact>>((ref) async {
 class ContactService {
   Future<List<Contact>> getContacts() async {
     if (await FlutterContacts.requestPermission()) {
-      return await FlutterContacts.getContacts(
+      return FlutterContacts.getContacts(
         withProperties: true,
         withPhoto: true,
       );

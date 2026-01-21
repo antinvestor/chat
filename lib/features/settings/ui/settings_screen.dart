@@ -80,13 +80,12 @@ class SettingsScreen extends ConsumerWidget {
   Widget _buildProfileHeader(
     BuildContext context,
     AsyncValue<UserInfo?> userInfoAsync,
-  ) {
-    return Container(
+  ) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.primaryGreen,
-        image: const DecorationImage(
+        image: DecorationImage(
           image: AssetImage('assets/chat_pattern.webp'),
           repeat: ImageRepeat.repeat,
           opacity: 0.1,
@@ -141,12 +140,12 @@ class SettingsScreen extends ConsumerWidget {
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.white.withValues(alpha: 0.2),
-              child: CircularProgressIndicator(
+              child: const CircularProgressIndicator(
                 color: Colors.white,
                 strokeWidth: 3,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               'Loading...',
               style: TextStyle(
@@ -162,9 +161,9 @@ class SettingsScreen extends ConsumerWidget {
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.white.withValues(alpha: 0.2),
-              child: Icon(Icons.error_outline, size: 50, color: Colors.white),
+              child: const Icon(Icons.error_outline, size: 50, color: Colors.white),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               'Error loading profile',
               style: TextStyle(
@@ -177,7 +176,6 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Widget _buildSettingsItem(
     BuildContext context, {
@@ -185,8 +183,7 @@ class SettingsScreen extends ConsumerWidget {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-  }) {
-    return Container(
+  }) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -230,5 +227,4 @@ class SettingsScreen extends ConsumerWidget {
         onTap: onTap,
       ),
     );
-  }
 }

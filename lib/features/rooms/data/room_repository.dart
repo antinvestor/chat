@@ -21,16 +21,16 @@ import '../domain/room_with_last_message.dart';
 /// final room = await repo.getRoomById('room-123');
 /// ```
 class RoomRepository {
-  final AppDatabase _database;
 
   RoomRepository(this._database);
+  final AppDatabase _database;
 
   Future<List<domain.Room>> getAllRooms() async {
     final query = _database.select(_database.rooms)
       ..orderBy([(t) => OrderingTerm.desc(t.lastEventIndex)]);
     final results = await query.get();
 
-    return results.map((row) => _toRoom(row)).toList();
+    return results.map(_toRoom).toList();
   }
 
   Future<List<RoomWithLastMessage>> getRoomsWithLastMessage() async {
@@ -105,8 +105,7 @@ class RoomRepository {
         .write(RoomsCompanion(unreadCount: Value(count)));
   }
 
-  domain.Room _toRoom(Room row) {
-    return domain.Room(
+  domain.Room _toRoom(Room row) => domain.Room(
       id: row.id,
       name: row.name ?? '',
       type: row.type ?? '',
@@ -115,5 +114,4 @@ class RoomRepository {
       unreadCount: row.unreadCount,
       metadata: row.metadata != null ? jsonDecode(row.metadata!) : null,
     );
-  }
 }

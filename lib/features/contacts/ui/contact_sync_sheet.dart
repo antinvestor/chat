@@ -20,8 +20,6 @@ Future<void> showContactSyncSheet({
 
   showModalBottomSheet(
     context: context,
-    isDismissible: true,
-    enableDrag: true,
     backgroundColor: Colors.transparent,
     builder: (sheetContext) => _ContactSyncSheet(
       repository: repository,
@@ -51,10 +49,6 @@ Future<void> showContactSyncSheet({
 }
 
 class _ContactSyncSheet extends StatefulWidget {
-  final RosterRepository repository;
-  final Duration autoDismissDelay;
-  final VoidCallback onComplete;
-  final VoidCallback onDismiss;
 
   const _ContactSyncSheet({
     required this.repository,
@@ -62,6 +56,10 @@ class _ContactSyncSheet extends StatefulWidget {
     required this.onComplete,
     required this.onDismiss,
   });
+  final RosterRepository repository;
+  final Duration autoDismissDelay;
+  final VoidCallback onComplete;
+  final VoidCallback onDismiss;
 
   @override
   State<_ContactSyncSheet> createState() => _ContactSyncSheetState();
@@ -414,7 +412,7 @@ class _ContactSyncSheetState extends State<_ContactSyncSheet> {
   Widget _buildIcon(ThemeData theme) {
     IconData icon;
     Color color;
-    bool showSpinner = false;
+    var showSpinner = false;
 
     switch (_progress.state) {
       case SyncState.idle:

@@ -12,20 +12,17 @@ import 'breakpoints.dart';
 /// On tablet (2-panel mode), only left and center panels are shown.
 /// On desktop (3-panel mode), all three panels are shown.
 class ThreePanelLayout extends StatelessWidget {
+
+  const ThreePanelLayout({
+    required this.leftPanel, required this.centerPanel, super.key,
+    this.rightPanel,
+  });
   final Widget leftPanel;
   final Widget centerPanel;
   final Widget? rightPanel;
 
-  const ThreePanelLayout({
-    super.key,
-    required this.leftPanel,
-    required this.centerPanel,
-    this.rightPanel,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         // Left panel (room list)
         SizedBox(width: AppBreakpoints.roomListWidth, child: leftPanel),
@@ -39,9 +36,8 @@ class ThreePanelLayout extends StatelessWidget {
         // Right panel (details) - only shown if provided
         if (rightPanel != null) ...[
           const VerticalDivider(width: 1),
-          SizedBox(width: AppBreakpoints.detailPanelWidth, child: rightPanel!),
+          SizedBox(width: AppBreakpoints.detailPanelWidth, child: rightPanel),
         ],
       ],
     );
-  }
 }

@@ -1,14 +1,11 @@
+import 'package:chat/features/messages/ui/chat_input_bar.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:chat/features/messages/ui/chat_input_bar.dart';
 import '../test_helpers/test_helpers.dart';
 
 void main() {
-  setUp(() {
-    TestHelpers.resetMocks();
-  });
+  setUp(TestHelpers.resetMocks);
 
   group('Accessibility Tests', () {
     testWidgets('Chat input bar has proper semantic labels', (

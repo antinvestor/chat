@@ -3,10 +3,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Repository for tracking onboarding state
 class OnboardingRepository {
-  static const _contactsSyncedKey = 'contacts_synced';
-  final FlutterSecureStorage _storage;
 
   OnboardingRepository(this._storage);
+  static const _contactsSyncedKey = 'contacts_synced';
+  final FlutterSecureStorage _storage;
 
   /// Check if contacts have been synced
   Future<bool> hasContactsSynced() async {
@@ -26,9 +26,7 @@ class OnboardingRepository {
 }
 
 /// Provider for OnboardingRepository
-final onboardingRepositoryProvider = Provider<OnboardingRepository>((ref) {
-  return OnboardingRepository(const FlutterSecureStorage());
-});
+final onboardingRepositoryProvider = Provider<OnboardingRepository>((ref) => OnboardingRepository(const FlutterSecureStorage()));
 
 /// Provider to check if contacts sync is needed
 final needsContactSyncProvider = FutureProvider<bool>((ref) async {

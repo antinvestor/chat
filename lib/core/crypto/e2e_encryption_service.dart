@@ -12,6 +12,8 @@ import '../logging/app_logger.dart';
 /// Uses AES-like encryption for messages and files
 /// Note: vodozemac integration will be implemented when stable API is available
 class E2EEncryptionService {
+
+  E2EEncryptionService(this._storage, this._database);
   final FlutterSecureStorage _storage;
   final AppDatabase _database;
   final Random _random = Random.secure();
@@ -21,8 +23,6 @@ class E2EEncryptionService {
   final Map<String, GroupSessionState> _groupSessions = {};
 
   bool _isInitialized = false;
-
-  E2EEncryptionService(this._storage, this._database);
 
   /// Initialize the encryption service
   Future<void> initialize() async {
@@ -236,9 +236,7 @@ class E2EEncryptionService {
   }
 
   /// Decrypt arbitrary data
-  Future<Uint8List> decryptData(EncryptedData encryptedData) async {
-    return _xorEncrypt(encryptedData.data, utf8.encode(encryptedData.key));
-  }
+  Future<Uint8List> decryptData(EncryptedData encryptedData) async => _xorEncrypt(encryptedData.data, utf8.encode(encryptedData.key));
 
   // Private helper methods
 
@@ -371,34 +369,31 @@ class E2EEncryptionService {
 }
 
 class _SessionState {
-  final String sessionId;
-  final String sharedKey;
-  int messageIndex;
 
   _SessionState({
     required this.sessionId,
     required this.sharedKey,
     required this.messageIndex,
   });
+  final String sessionId;
+  final String sharedKey;
+  int messageIndex;
 }
 
 class GroupSessionState {
-  final String sessionId;
-  final String sessionKey;
-  int messageIndex;
 
   GroupSessionState({
     required this.sessionId,
     required this.sessionKey,
     required this.messageIndex,
   });
+  final String sessionId;
+  final String sessionKey;
+  int messageIndex;
 }
 
 /// Encrypted message for 1:1 communication
 class EncryptedMessage {
-  final String ciphertext;
-  final int messageType;
-  final String sessionId;
 
   EncryptedMessage({
     required this.ciphertext,
@@ -406,26 +401,24 @@ class EncryptedMessage {
     required this.sessionId,
   });
 
+  factory EncryptedMessage.fromJson(Map<String, dynamic> json) => EncryptedMessage(
+      ciphertext: json['ciphertext'] as String,
+      messageType: json['messageType'] as int,
+      sessionId: json['sessionId'] as String,
+    );
+  final String ciphertext;
+  final int messageType;
+  final String sessionId;
+
   Map<String, dynamic> toJson() => {
     'ciphertext': ciphertext,
     'messageType': messageType,
     'sessionId': sessionId,
   };
-
-  factory EncryptedMessage.fromJson(Map<String, dynamic> json) {
-    return EncryptedMessage(
-      ciphertext: json['ciphertext'] as String,
-      messageType: json['messageType'] as int,
-      sessionId: json['sessionId'] as String,
-    );
-  }
 }
 
 /// Encrypted message for group communication
 class GroupEncryptedMessage {
-  final String ciphertext;
-  final String sessionId;
-  final int messageIndex;
 
   GroupEncryptedMessage({
     required this.ciphertext,
@@ -433,28 +426,29 @@ class GroupEncryptedMessage {
     required this.messageIndex,
   });
 
+  factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) => GroupEncryptedMessage(
+      ciphertext: json['ciphertext'] as String,
+      sessionId: json['sessionId'] as String,
+      messageIndex: json['messageIndex'] as int,
+    );
+  final String ciphertext;
+  final String sessionId;
+  final int messageIndex;
+
   Map<String, dynamic> toJson() => {
     'ciphertext': ciphertext,
     'sessionId': sessionId,
     'messageIndex': messageIndex,
   };
-
-  factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) {
-    return GroupEncryptedMessage(
-      ciphertext: json['ciphertext'] as String,
-      sessionId: json['sessionId'] as String,
-      messageIndex: json['messageIndex'] as int,
-    );
-  }
 }
 
 /// Encrypted data with key
 class EncryptedData {
+
+  EncryptedData({required this.data, required this.key, required this.iv});
   final Uint8List data;
   final String key;
   final String iv;
-
-  EncryptedData({required this.data, required this.key, required this.iv});
 }
 
 // Provider

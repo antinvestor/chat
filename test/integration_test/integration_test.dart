@@ -1,14 +1,11 @@
+import 'package:chat/main.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:chat/main.dart';
 import '../test_helpers/test_helpers.dart';
 
 void main() {
-  setUp(() {
-    TestHelpers.resetMocks();
-  });
+  setUp(TestHelpers.resetMocks);
 
   group('Integration Tests', () {
     testWidgets('Complete message flow integration test', (

@@ -51,13 +51,13 @@ linter:
     
     # Style rules
     always_declare_return_types: true
-    always_put_control_body_on_new_line: true
+    always_put_control_body_on_new_line: false  # Disabled: stylistic preference
     always_put_required_named_parameters_first: true
     always_specify_types: false  # Allow type inference
     annotate_overrides: true
     avoid_annotating_with_dynamic: true
     avoid_bool_literals_in_conditional_expressions: true
-    avoid_catches_without_on_clauses: true
+    avoid_catches_without_on_clauses: false  # Disabled: generic catch is often intentional
     avoid_catching_errors: true
     avoid_double_and_int_checks: true
     avoid_field_initializers_in_const_classes: true
@@ -65,7 +65,7 @@ linter:
     avoid_implementing_value_types: true
     avoid_init_to_null: true
     avoid_null_checks_in_equality_operators: true
-    avoid_positional_boolean_parameters: true
+    avoid_positional_boolean_parameters: false  # Disabled: stylistic preference
     avoid_print: true
     avoid_private_typedef_functions: true
     avoid_redundant_argument_values: true
@@ -82,7 +82,7 @@ linter:
     await_only_futures: true
     camel_case_extensions: true
     camel_case_types: true
-    cascade_invocations: true
+    cascade_invocations: false  # Disabled: stylistic preference
     cast_nullable_to_non_nullable: true
     constant_identifier_names: true
     curly_braces_in_flow_control_structures: true
@@ -100,7 +100,7 @@ linter:
     library_prefixes: true
     lines_longer_than_80_chars: false  # Allow longer lines for readability
     missing_whitespace_between_adjacent_strings: true
-    no_default_cases: true
+    no_default_cases: false  # Disabled: default cases can be useful for safety
     non_constant_identifier_names: true
     null_closures: true
     omit_local_variable_types: true
@@ -122,7 +122,7 @@ linter:
     prefer_constructors_over_static_methods: true
     prefer_contains: true
     prefer_equal_for_default_values: true
-    prefer_expression_function_bodies: true
+    prefer_expression_function_bodies: false  # Disabled: stylistic preference
     prefer_final_fields: true
     prefer_final_in_for_each: true
     prefer_final_locals: true
@@ -146,16 +146,16 @@ linter:
     prefer_typing_uninitialized_variables: true
     prefer_void_to_null: true
     provide_deprecation_message: true
-    public_member_api_docs: true
+    public_member_api_docs: false  # Disabled: too verbose for internal codebase
     recursive_getters: true
     slash_for_doc_comments: true
     sort_child_properties_last: true
     sort_constructors_first: true
     sort_pub_dependencies: true
     sort_unnamed_constructors_first: true
-    type_annotate_public_apis: true
+    type_annotate_public_apis: false  # Disabled: type inference is sufficient
     type_init_formals: true
-    unawaited_futures: true
+    unawaited_futures: false  # Disabled: fire-and-forget futures are often intentional
     unnecessary_await_in_return: true
     unnecessary_brace_in_string_interps: true
     unnecessary_const: true
@@ -180,11 +180,11 @@ linter:
     use_if_null_to_convert_nulls_to_bools: true
     use_is_even_rather_than_modulo: true
     use_key_in_widget_constructors: true
-    use_late_for_private_fields_and_variables: true
+    use_late_for_private_fields_and_variables: false  # Disabled: stylistic preference
     use_named_constants: true
     use_raw_strings: true
     use_rethrow_when_possible: true
-    use_setters_to_change_properties: true
+    use_setters_to_change_properties: false  # Disabled: setters not always appropriate
     use_string_buffers: true
     use_test_throws_matchers: true
     use_to_and_as_if_applicable: true

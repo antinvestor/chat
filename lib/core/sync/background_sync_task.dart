@@ -466,7 +466,7 @@ class BackgroundSyncTask {
     return struct;
   }
 
-  static common.Value _objectToValue(dynamic obj) {
+  static common.Value _objectToValue(Object? obj) {
     final value = common.Value();
 
     if (obj == null) {

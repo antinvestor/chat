@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    as common_types;
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,17 +18,12 @@ import '../networking/client.dart';
 import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
 
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    as common_types;
-
-final pendingJobRepositoryProvider = Provider<PendingJobRepository>((ref) {
-  return PendingJobRepository(AppDatabase.instance);
-});
+final pendingJobRepositoryProvider = Provider<PendingJobRepository>((ref) => PendingJobRepository(AppDatabase.instance));
 
 /// Exception thrown when token refresh fails permanently and user must re-authenticate
 class TokenRefreshPermanentError implements Exception {
-  final String message;
   TokenRefreshPermanentError(this.message);
+  final String message;
 
   @override
   String toString() => 'TokenRefreshPermanentError: $message';
@@ -129,6 +126,17 @@ typedef TokenRefreshCallback = Future<String?> Function();
 /// await syncEngine.sendSignal(event);
 /// ```
 class SyncEngine {
+
+  SyncEngine(
+    this._gatewayClient,
+    this._chatClient,
+    this._messageRepo,
+    this._jobRepo,
+    this._authRepository,
+    this._roomMemberRepository,
+    this._subscriptionService, {
+    TokenRefreshCallback? onTokenRefresh,
+  }) : _onTokenRefresh = onTokenRefresh;
   final pb.GatewayServiceClient _gatewayClient;
   final pb.ChatServiceClient _chatClient;
   final MessageRepository _messageRepo;
@@ -167,17 +175,6 @@ class SyncEngine {
   static const _initialBackoffMs = 1000; // 1 second
   static const _maxBackoffMs = 30000; // 30 seconds
   static const _maxReconnectAttempts = 5;
-
-  SyncEngine(
-    this._gatewayClient,
-    this._chatClient,
-    this._messageRepo,
-    this._jobRepo,
-    this._authRepository,
-    this._roomMemberRepository,
-    this._subscriptionService, {
-    TokenRefreshCallback? onTokenRefresh,
-  }) : _onTokenRefresh = onTokenRefresh;
 
   void start() {
     _shouldStop = false;
@@ -446,7 +443,7 @@ class SyncEngine {
   }
 
   Duration _getBackoffDelay() {
-    int delay = _initialBackoffMs * (1 << _reconnectAttempts);
+    var delay = _initialBackoffMs * (1 << _reconnectAttempts);
     if (delay > _maxBackoffMs) {
       delay = _maxBackoffMs;
     }
@@ -500,7 +497,7 @@ class SyncEngine {
     }
 
     // Extract content from typed payload fields
-    Map<String, dynamic> content = {};
+    var content = <String, dynamic>{};
     if (event.hasPayload()) {
       final payload = event.payload;
       if (payload.hasText()) {
@@ -1163,7 +1160,7 @@ class SyncEngine {
     return struct;
   }
 
-  common_types.Value _objectToValue(dynamic obj) {
+  common_types.Value _objectToValue(Object? obj) {
     final value = common_types.Value();
     if (obj == null) {
       value.nullValue = common_types.NullValue.NULL_VALUE;
@@ -1198,7 +1195,7 @@ class SyncEngine {
 
     // Use repository to find the subscription ID for the current profile
     // Pass empty string for profileId if null to handle anonymous subscriptions
-    return await _roomMemberRepository.getCurrentSubscriptionId(
+    return _roomMemberRepository.getCurrentSubscriptionId(
       roomId,
       currentProfileId ?? '', // Empty string for anonymous subscriptions
       currentContactId,
@@ -1223,7 +1220,7 @@ class SyncEngine {
 
     // Use repository to check if this subscription belongs to current profile's contact
     // Pass empty string for profileId if null to handle anonymous subscriptions
-    return await _roomMemberRepository.isCurrentUserSubscription(
+    return _roomMemberRepository.isCurrentUserSubscription(
       roomId,
       subscriptionId,
       currentProfileId ?? '', // Empty string for anonymous subscriptions
@@ -1242,13 +1239,11 @@ class SyncEngine {
     required String subscriptionId,
     required String profileId,
     String? contactId,
-  }) async {
-    return await _subscriptionService.updateSubscriptionProfile(
+  }) async => _subscriptionService.updateSubscriptionProfile(
       subscriptionId: subscriptionId,
       profileId: profileId,
       contactId: contactId,
     );
-  }
 
   /// Get all subscriptions without a profile ID (anonymous subscriptions)
   /// Useful for finding subscriptions that need profile assignment

@@ -46,7 +46,7 @@ class AppLogger {
   /// Use for very granular debugging information
   static void verbose(
     String message, {
-    dynamic error,
+    error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data,
   }) {
@@ -61,7 +61,7 @@ class AppLogger {
   /// Use for debugging flow and state changes
   static void debug(
     String message, {
-    dynamic error,
+    error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data,
   }) {
@@ -76,7 +76,7 @@ class AppLogger {
   /// Use for important events and state changes
   static void info(
     String message, {
-    dynamic error,
+    error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data,
   }) {
@@ -91,7 +91,7 @@ class AppLogger {
   /// Use for recoverable errors or unexpected situations
   static void warning(
     String message, {
-    dynamic error,
+    error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data,
   }) {
@@ -106,7 +106,7 @@ class AppLogger {
   /// Use for errors that don't crash the app but need attention
   static void error(
     String message, {
-    dynamic error,
+    error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data,
   }) {
@@ -124,7 +124,7 @@ class AppLogger {
   /// Use for critical errors that might lead to application crash
   static void fatal(
     String message, {
-    dynamic error,
+    error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data,
   }) {
@@ -153,7 +153,7 @@ class AppLogger {
   /// This is a placeholder for integration with services like Sentry, Firebase Crashlytics, etc.
   static void _reportError(
     String message,
-    dynamic error,
+    error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data, {
     bool isFatal = false,

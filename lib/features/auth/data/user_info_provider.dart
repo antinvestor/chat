@@ -6,16 +6,10 @@ part 'user_info_provider.g.dart';
 
 /// User profile information from ID token
 class UserInfo {
-  final String? id;
-  final String? name;
-  final String? email;
-  final String? picture;
-  final String? phone;
 
   const UserInfo({this.id, this.name, this.email, this.picture, this.phone});
 
-  factory UserInfo.fromClaims(Map<String, dynamic> claims) {
-    return UserInfo(
+  factory UserInfo.fromClaims(Map<String, dynamic> claims) => UserInfo(
       id: claims['sub'] as String?,
       name:
           claims['name'] as String? ?? claims['preferred_username'] as String?,
@@ -23,7 +17,11 @@ class UserInfo {
       picture: claims['picture'] as String?,
       phone: claims['phone_number'] as String?,
     );
-  }
+  final String? id;
+  final String? name;
+  final String? email;
+  final String? picture;
+  final String? phone;
 
   String get displayName => name ?? email ?? phone ?? 'User';
 

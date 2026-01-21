@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import 'package:chat/core/logging/app_logger.dart';
-import 'package:chat/features/messages/domain/room_event.dart';
+import '../../../core/logging/app_logger.dart';
 import '../../../features/auth/data/auth_repository.dart';
+import '../../messages/domain/room_event.dart';
 import 'signaling_service.dart';
 import 'turn_credentials_service.dart';
 
@@ -26,6 +26,14 @@ enum CallState {
 }
 
 class CallManager {
+
+  CallManager(
+    this._signalingService,
+    this._authRepository,
+    this._turnCredentialsService,
+  ) {
+    _signalingService.onSignal.listen(_handleSignal);
+  }
   final SignalingService _signalingService;
   final AuthRepository _authRepository;
   final TurnCredentialsService _turnCredentialsService;
@@ -45,14 +53,6 @@ class CallManager {
 
   final _remoteStreamController = StreamController<MediaStream?>.broadcast();
   Stream<MediaStream?> get remoteStreamStream => _remoteStreamController.stream;
-
-  CallManager(
-    this._signalingService,
-    this._authRepository,
-    this._turnCredentialsService,
-  ) {
-    _signalingService.onSignal.listen(_handleSignal);
-  }
 
   void _setState(CallState newState) {
     _state = newState;

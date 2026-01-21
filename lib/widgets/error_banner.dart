@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import '../core/error/app_error.dart';
 
 class ErrorBanner extends StatelessWidget {
-  final AppError error;
-  final VoidCallback? onRetry;
-  final VoidCallback? onDismiss;
 
   const ErrorBanner({
-    super.key,
-    required this.error,
+    required this.error, super.key,
     this.onRetry,
     this.onDismiss,
   });
+  final AppError error;
+  final VoidCallback? onRetry;
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/core/error/error_tracking_service.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ErrorTrackingService', () {
@@ -13,7 +12,7 @@ void main() {
 
     test('enableDebugSend can be called without error', () {
       // Should not throw
-      expect(() => ErrorTrackingService.enableDebugSend(), returnsNormally);
+      expect(ErrorTrackingService.enableDebugSend, returnsNormally);
     });
 
     group('without Sentry initialized', () {

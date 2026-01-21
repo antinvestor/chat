@@ -66,8 +66,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       body: CustomScrollView(
         controller: _scrollController,
         slivers: [
@@ -83,16 +82,14 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         child: const Icon(Icons.person_add, color: Colors.white),
       ),
     );
-  }
 
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
+  Widget _buildSliverAppBar() => SliverAppBar(
       floating: true,
       snap: true,
       pinned: true,
       backgroundColor: AppTheme.primaryGreen,
       foregroundColor: Colors.white,
-      title: Text('Select Contact', style: AppTheme.headerText),
+      title: const Text('Select Contact', style: AppTheme.headerText),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: Container(
@@ -106,7 +103,6 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: TextField(
               controller: _searchController,
-              autofocus: false,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Search contacts...',
@@ -136,10 +132,8 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         ),
       ),
     );
-  }
 
-  Widget _buildActionButtons() {
-    return SliverToBoxAdapter(
+  Widget _buildActionButtons() => SliverToBoxAdapter(
       child: Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -180,14 +174,12 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         ),
       ),
     );
-  }
 
   Widget _buildActionButton({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-  }) {
-    return InkWell(
+  }) => InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
@@ -208,10 +200,8 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         ),
       ),
     );
-  }
 
-  Widget _buildContactsList() {
-    return Consumer(
+  Widget _buildContactsList() => Consumer(
       builder: (context, ref, child) {
         final contactsAsync = ref.watch(profilesWithContactsProvider);
 
@@ -255,7 +245,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
                     ),
                     // Contacts in this section
                     ...sectionContacts.map(
-                      (contact) => _buildContactTile(contact),
+                      _buildContactTile,
                     ),
                   ],
                 );
@@ -301,10 +291,8 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         );
       },
     );
-  }
 
-  Widget _buildEmptyState() {
-    return Center(
+  Widget _buildEmptyState() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -337,7 +325,6 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         ],
       ),
     );
-  }
 
   Widget _buildContactTile(ProfileWithContacts profileWithContacts) {
     final displayName = profileWithContacts.displayName;
@@ -372,7 +359,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
             ),
             if (hasVerified) ...[
               const SizedBox(width: 4),
-              Icon(Icons.verified, size: 16, color: AppTheme.primaryGreen),
+              const Icon(Icons.verified, size: 16, color: AppTheme.primaryGreen),
             ],
           ],
         ),
@@ -404,7 +391,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
               ),
           ],
         ),
-        trailing: Icon(
+        trailing: const Icon(
           Icons.chat_bubble_outline,
           color: AppTheme.primaryGreen,
           size: 20,
@@ -432,7 +419,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
         child: Text(
           initials,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppTheme.primaryGreen,
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -446,7 +433,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
       backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
       child: Text(
         initials,
-        style: TextStyle(
+        style: const TextStyle(
           color: AppTheme.primaryGreen,
           fontSize: 20,
           fontWeight: FontWeight.w600,
@@ -477,13 +464,13 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
     for (final contact in contacts) {
       final displayName = contact.displayName.trim();
       if (displayName.isEmpty) {
-        final defaultGroup = '#';
+        const defaultGroup = '#';
         grouped.putIfAbsent(defaultGroup, () => []).add(contact);
         continue;
       }
 
       final firstLetter = displayName[0].toUpperCase();
-      final group = RegExp(r'[A-Z]').hasMatch(firstLetter) ? firstLetter : '#';
+      final group = RegExp('[A-Z]').hasMatch(firstLetter) ? firstLetter : '#';
 
       grouped.putIfAbsent(group, () => []).add(contact);
     }

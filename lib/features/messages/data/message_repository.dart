@@ -20,9 +20,9 @@ import '../domain/room_event.dart' as domain;
 /// await repo.insertMessage(newMessage);
 /// ```
 class MessageRepository {
-  final AppDatabase _database;
 
   MessageRepository(this._database);
+  final AppDatabase _database;
 
   Future<List<domain.RoomEvent>> getMessagesForRoom(
     String roomId, {
@@ -34,7 +34,7 @@ class MessageRepository {
       ..limit(limit);
 
     final results = await query.get();
-    return results.map((row) => _toRoomEvent(row)).toList().reversed.toList();
+    return results.map(_toRoomEvent).toList().reversed.toList();
   }
 
   /// Get messages for a room before a specific timestamp (for pagination)
@@ -54,7 +54,7 @@ class MessageRepository {
       ..limit(limit);
 
     final results = await query.get();
-    return results.map((row) => _toRoomEvent(row)).toList().reversed.toList();
+    return results.map(_toRoomEvent).toList().reversed.toList();
   }
 
   /// Get the oldest message timestamp for a room (for pagination cursor)
@@ -86,9 +86,7 @@ class MessageRepository {
       ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
       ..limit(limit);
 
-    return query.watch().map((results) {
-      return results.map((row) => _toRoomEvent(row)).toList().reversed.toList();
-    });
+    return query.watch().map((results) => results.map(_toRoomEvent).toList().reversed.toList());
   }
 
   Future<void> insertMessage(domain.RoomEvent event) async {
@@ -201,7 +199,7 @@ class MessageRepository {
       );
 
     final results = await query.get();
-    return results.map((row) => _toRoomEvent(row)).toList();
+    return results.map(_toRoomEvent).toList();
   }
 
   /// Delete a message for everyone (marks as redacted)
@@ -266,8 +264,7 @@ class MessageRepository {
     return true;
   }
 
-  domain.RoomEvent _toRoomEvent(RoomEvent row) {
-    return domain.RoomEvent(
+  domain.RoomEvent _toRoomEvent(RoomEvent row) => domain.RoomEvent(
       id: row.id,
       roomId: row.roomId,
       senderId: row.senderId,
@@ -283,5 +280,4 @@ class MessageRepository {
       redactedAt: row.redactedAt,
       redactedBy: row.redactedBy,
     );
-  }
 }

@@ -1,6 +1,5 @@
-import 'package:drift/native.dart';
-
 import 'package:chat/core/db/database.dart';
+import 'package:drift/native.dart';
 
 /// Creates an in-memory database for testing
 ///
@@ -19,6 +18,4 @@ import 'package:chat/core/db/database.dart';
 ///   await testDb.close();
 /// });
 /// ```
-AppDatabase createTestDatabase() {
-  return AppDatabase.forTesting(NativeDatabase.memory());
-}
+AppDatabase createTestDatabase() => AppDatabase.forTesting(NativeDatabase.memory());

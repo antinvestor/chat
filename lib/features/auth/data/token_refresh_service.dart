@@ -1,14 +1,13 @@
 import 'dart:async';
 
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
 import 'auth_repository.dart';
 import 'auth_state_provider.dart';
-
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenRefreshResult;
 
 part 'token_refresh_service.g.dart';
 
@@ -21,6 +20,12 @@ part 'token_refresh_service.g.dart';
 /// - Graceful degradation: Only logs out on permanent errors
 /// - TokenManager sync: Updates TokenManager's in-memory cache after refresh
 class TokenRefreshService {
+
+  TokenRefreshService(
+    this._authRepository,
+    this._onLogoutNeeded, {
+    Future<void> Function(String token)? onTokenRefreshed,
+  }) : _onTokenRefreshed = onTokenRefreshed;
   final AuthRepository _authRepository;
   final Future<void> Function() _onLogoutNeeded;
   final Future<void> Function(String token)? _onTokenRefreshed;
@@ -34,12 +39,6 @@ class TokenRefreshService {
   static const _baseRetryDelay = Duration(seconds: 5);
   static const _maxRetryDelay = Duration(minutes: 2);
   static const _fallbackCheckInterval = Duration(seconds: 30);
-
-  TokenRefreshService(
-    this._authRepository,
-    this._onLogoutNeeded, {
-    Future<void> Function(String token)? onTokenRefreshed,
-  }) : _onTokenRefreshed = onTokenRefreshed;
 
   /// Start the token refresh service
   /// Uses smart scheduling based on token expiry time
@@ -102,9 +101,7 @@ class TokenRefreshService {
         },
       );
 
-      _scheduledRefreshTimer = Timer(timeUntilRefresh, () {
-        _checkAndRefreshIfNeeded();
-      });
+      _scheduledRefreshTimer = Timer(timeUntilRefresh, _checkAndRefreshIfNeeded);
     } catch (e) {
       AppLogger.warning(
         'Failed to schedule token refresh',
@@ -206,9 +203,7 @@ class TokenRefreshService {
 
         // Schedule retry
         _scheduledRefreshTimer?.cancel();
-        _scheduledRefreshTimer = Timer(retryDelay, () {
-          _checkAndRefreshIfNeeded();
-        });
+        _scheduledRefreshTimer = Timer(retryDelay, _checkAndRefreshIfNeeded);
         break;
     }
   }
@@ -275,9 +270,7 @@ TokenRefreshService tokenRefreshService(Ref ref) {
   );
 
   // Cleanup when provider is disposed
-  ref.onDispose(() {
-    service.stop();
-  });
+  ref.onDispose(service.stop);
 
   return service;
 }

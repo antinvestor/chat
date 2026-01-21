@@ -23,9 +23,7 @@ class VoiceRecordingService {
   static const maxDuration = Duration(minutes: 5);
 
   /// Check if microphone permission is granted
-  Future<bool> hasPermission() async {
-    return await _recorder.hasPermission();
-  }
+  Future<bool> hasPermission() async => _recorder.hasPermission();
 
   /// Request microphone permission
   Future<bool> requestPermission() async {
@@ -58,9 +56,6 @@ class VoiceRecordingService {
 
       // Configure and start recording
       const config = RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        bitRate: 128000,
-        sampleRate: 44100,
         numChannels: 1,
       );
 
@@ -122,6 +117,7 @@ class VoiceRecordingService {
 
       // Verify the file exists and has content
       final file = File(path);
+      // ignore: avoid_slow_async_io
       if (!await file.exists()) {
         AppLogger.warning(
           'Recording file does not exist',
@@ -180,6 +176,7 @@ class VoiceRecordingService {
 
       if (_currentRecordingPath != null) {
         final file = File(_currentRecordingPath!);
+        // ignore: avoid_slow_async_io
         if (await file.exists()) {
           await file.delete();
         }
@@ -197,9 +194,7 @@ class VoiceRecordingService {
   }
 
   /// Check if currently recording
-  Future<bool> isRecording() async {
-    return await _recorder.isRecording();
-  }
+  Future<bool> isRecording() async => _recorder.isRecording();
 
   /// Get the current recording amplitude (for waveform visualization)
   Future<double> getAmplitude() async {
@@ -223,15 +218,15 @@ class VoiceRecordingService {
 
 /// Result of a voice recording
 class VoiceRecordingResult {
-  final String path;
-  final Duration duration;
-  final int sizeBytes;
 
   const VoiceRecordingResult({
     required this.path,
     required this.duration,
     required this.sizeBytes,
   });
+  final String path;
+  final Duration duration;
+  final int sizeBytes;
 
   /// Get formatted duration string (MM:SS)
   String get formattedDuration {
@@ -250,6 +245,6 @@ class VoiceRecordingResult {
 /// Provider for voice recording service
 final voiceRecordingServiceProvider = Provider<VoiceRecordingService>((ref) {
   final service = VoiceRecordingService();
-  ref.onDispose(() => service.dispose());
+  ref.onDispose(service.dispose);
   return service;
 });

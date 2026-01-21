@@ -22,7 +22,7 @@ class ContactSyncScreen extends ConsumerStatefulWidget {
 class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
   ContactSyncState _state = ContactSyncState.initial;
   String _statusMessage = 'Sync your contacts to find friends on the app';
-  double _progress = 0.0;
+  double _progress = 0;
   int _syncedCount = 0;
   bool _permissionPermanentlyDenied = false;
 
@@ -130,7 +130,6 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
       // Get device contacts
       final deviceContacts = await FlutterContacts.getContacts(
         withProperties: true,
-        withPhoto: false,
       );
 
       if (!mounted) return;
@@ -185,7 +184,7 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
     }
   }
 
-  void _skipSync() async {
+  Future<void> _skipSync() async {
     // Mark as skipped so we don't show this screen again
     await ref.read(onboardingRepositoryProvider).markContactsSynced();
     if (mounted) {
@@ -200,7 +199,7 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Column(
             children: [
               const Spacer(),

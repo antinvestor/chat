@@ -53,8 +53,7 @@ class TypingNotifier extends _$TypingNotifier {
 }
 
 @riverpod
-Future<void> Function(String) sendMessageProvider(Ref ref) {
-  return (text) async {
+Future<void> Function(String) sendMessageProvider(Ref ref) => (text) async {
     if (text.trim().isEmpty) return;
 
     // Create message event
@@ -65,7 +64,6 @@ Future<void> Function(String) sendMessageProvider(Ref ref) {
       type: domain.RoomEventType.text,
       content: {'text': text.trim()},
       createdAt: DateTime.now().millisecondsSinceEpoch,
-      status: domain.EventStatus.pending,
     );
 
     // Send via existing message infrastructure
@@ -88,4 +86,3 @@ Future<void> Function(String) sendMessageProvider(Ref ref) {
       );
     }
   };
-}

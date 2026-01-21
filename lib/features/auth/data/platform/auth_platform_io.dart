@@ -14,17 +14,17 @@ const String _customHost = 'sso';
 
 /// Desktop authenticator using loopback interface
 class _DesktopAuthenticator {
-  final Flow flow;
-  final Future<void> Function(String url) urlLauncher;
-  final String successHtml;
-  HttpServer? _server;
-  bool _cancelled = false;
 
   _DesktopAuthenticator({
     required this.flow,
     required this.urlLauncher,
     required this.successHtml,
   });
+  final Flow flow;
+  final Future<void> Function(String url) urlLauncher;
+  final String successHtml;
+  HttpServer? _server;
+  bool _cancelled = false;
 
   Future<Credential> authorize() async {
     final completer = Completer<Credential>();
@@ -164,13 +164,13 @@ class _DesktopAuthenticator {
 
 /// Mobile authenticator using custom URL scheme (RFC 8252)
 class _MobileAuthenticator {
+
+  _MobileAuthenticator({required this.flow, required this.urlLauncher});
   final Flow flow;
   final Future<void> Function(String url) urlLauncher;
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   bool _cancelled = false;
-
-  _MobileAuthenticator({required this.flow, required this.urlLauncher});
 
   Future<Credential> authorize() async {
     final completer = Completer<Credential>();
@@ -568,9 +568,9 @@ class AuthPlatformIO implements AuthPlatform {
     required int maxAttempts,
     required Duration initialDelay,
   }) async {
-    Duration delay = initialDelay;
+    var delay = initialDelay;
 
-    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await operation().timeout(
           const Duration(seconds: 30),

@@ -67,8 +67,7 @@ class AppDrawer extends ConsumerWidget {
     BuildContext context,
     ThemeData theme,
     AsyncValue<UserInfo?> userInfoAsync,
-  ) {
-    return Container(
+  ) => Container(
       width: double.infinity,
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 24,
@@ -149,15 +148,13 @@ class AppDrawer extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Widget _buildBottomSection(
     BuildContext context,
     WidgetRef ref,
     ThemeData theme,
     AsyncValue<UserInfo?> userInfoAsync,
-  ) {
-    return SafeArea(
+  ) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Column(
@@ -214,7 +211,6 @@ class AppDrawer extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
@@ -235,7 +231,7 @@ class AppDrawer extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       Navigator.of(context).pop(); // Close drawer
       await ref.read(authStateProvider.notifier).logout();
     }

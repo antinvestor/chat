@@ -11,9 +11,9 @@ import '../../../core/networking/client.dart';
 
 /// Service for uploading files, images, and videos to the server
 class FileUploadService {
-  final Future<String?> Function() _getAccessToken;
 
   FileUploadService(this._getAccessToken);
+  final Future<String?> Function() _getAccessToken;
 
   /// Upload a file and return the file URL
   Future<UploadResult> uploadFile(
@@ -135,7 +135,7 @@ class FileUploadService {
   }) async {
     // For now, upload as-is. Image compression can be added later
     // using image package if needed
-    return await uploadFile(
+    return uploadFile(
       imageFile,
       mimeType: _detectMimeType(imageFile.path),
       onProgress: onProgress,
@@ -146,13 +146,11 @@ class FileUploadService {
   Future<UploadResult> uploadVideo(
     File videoFile, {
     void Function(double progress)? onProgress,
-  }) async {
-    return await uploadFile(
+  }) async => uploadFile(
       videoFile,
       mimeType: _detectMimeType(videoFile.path),
       onProgress: onProgress,
     );
-  }
 
   /// Download a file
   Future<Uint8List?> downloadFile(String fileUrl) async {
@@ -232,13 +230,6 @@ class FileUploadService {
 }
 
 class UploadResult {
-  final bool isSuccess;
-  final String? fileId;
-  final String? fileUrl;
-  final String? thumbnailUrl;
-  final String? mimeType;
-  final int? size;
-  final String? errorMessage;
 
   UploadResult._({
     required this.isSuccess,
@@ -256,8 +247,7 @@ class UploadResult {
     String? thumbnailUrl,
     String? mimeType,
     int? size,
-  }) {
-    return UploadResult._(
+  }) => UploadResult._(
       isSuccess: true,
       fileId: fileId,
       fileUrl: fileUrl,
@@ -265,18 +255,20 @@ class UploadResult {
       mimeType: mimeType,
       size: size,
     );
-  }
 
-  factory UploadResult.failure(String message) {
-    return UploadResult._(isSuccess: false, errorMessage: message);
-  }
+  factory UploadResult.failure(String message) => UploadResult._(isSuccess: false, errorMessage: message);
+  final bool isSuccess;
+  final String? fileId;
+  final String? fileUrl;
+  final String? thumbnailUrl;
+  final String? mimeType;
+  final int? size;
+  final String? errorMessage;
 }
 
 // Providers
 final fileUploadServiceProvider = Provider<FileUploadService>((ref) {
   final tokenManager = ref.watch(tokenManagerProvider);
 
-  return FileUploadService(() async {
-    return tokenManager.accessToken;
-  });
+  return FileUploadService(() async => tokenManager.accessToken);
 });

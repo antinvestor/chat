@@ -59,4 +59,4 @@ final class RoomSubscriptionServiceProvider
 }
 
 String _$roomSubscriptionServiceHash() =>
-    r'5f5dd3d1b081216e469ae9ab8cc70b2e87b1c345';
+    r'a4131d399bff894e97b638b2ecde52d854e6312c';

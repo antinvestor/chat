@@ -3,10 +3,6 @@ enum ErrorType { network, authentication, validation, server, unknown }
 
 /// Application error with user-friendly messaging
 class AppError {
-  final ErrorType type;
-  final String message;
-  final String? technicalDetails;
-  final StackTrace? stackTrace;
 
   const AppError({
     required this.type,
@@ -16,7 +12,7 @@ class AppError {
   });
 
   /// Create error from exception
-  factory AppError.fromException(dynamic error, [StackTrace? stack]) {
+  factory AppError.fromException(Object error, [StackTrace? stack]) {
     if (error is AppError) return error;
 
     // Network errors
@@ -63,6 +59,10 @@ class AppError {
       stackTrace: stack,
     );
   }
+  final ErrorType type;
+  final String message;
+  final String? technicalDetails;
+  final StackTrace? stackTrace;
 
   @override
   String toString() => message;

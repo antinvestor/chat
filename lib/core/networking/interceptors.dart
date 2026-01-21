@@ -6,12 +6,12 @@ import '../logging/app_logger.dart';
 /// Auth interceptor for Connect RPC
 /// Provides JWT authorization headers for all API calls
 class AuthInterceptor {
+
+  AuthInterceptor(this._storage);
   final FlutterSecureStorage _storage;
   String? _cachedToken;
   DateTime? _cacheTime;
   static const _cacheValidDuration = Duration(seconds: 30);
-
-  AuthInterceptor(this._storage);
 
   /// Get auth headers with token caching for performance
   /// Caches token for 30 seconds to reduce secure storage reads

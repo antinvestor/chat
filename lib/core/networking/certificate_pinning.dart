@@ -9,9 +9,7 @@ import '../logging/app_logger.dart';
 import 'api_config.dart';
 
 /// Provider for certificate pinning service
-final certificatePinningProvider = Provider<CertificatePinning>((ref) {
-  return CertificatePinning();
-});
+final certificatePinningProvider = Provider<CertificatePinning>((ref) => CertificatePinning());
 
 /// Service for TLS certificate pinning to prevent MITM attacks
 ///
@@ -40,7 +38,7 @@ final certificatePinningProvider = Provider<CertificatePinning>((ref) {
 class CertificatePinning {
   /// SHA-256 hashes of pinned certificates per domain
   ///
-  /// Format: Map<hostname, List<base64-encoded SHA-256 hash>>
+  /// Format: `Map<hostname, List<base64-encoded SHA-256 hash>>`
   /// Multiple pins per domain support certificate rotation
   ///
   /// **WARNING**: These are placeholder values. Replace with actual certificate
@@ -199,12 +197,10 @@ class CertificatePinning {
   /// Check if pinning should be bypassed for a host in debug mode
   ///
   /// Used for localhost and test environments
-  bool _shouldBypassPinning(String host) {
-    return host == 'localhost' ||
+  bool _shouldBypassPinning(String host) => host == 'localhost' ||
         host == '127.0.0.1' ||
         host.endsWith('.local') ||
         host.endsWith('.test');
-  }
 
   /// Validate that a host has pins configured
   ///

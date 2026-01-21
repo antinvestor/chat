@@ -18,8 +18,7 @@ class SettingsNotifier extends _$SettingsNotifier {
   final _storage = const FlutterSecureStorage();
 
   @override
-  Future<Map<String, dynamic>> build() async {
-    return {
+  Future<Map<String, dynamic>> build() async => {
       _keyMessageNotifications: await _getBool(_keyMessageNotifications, true),
       _keyNotificationPreview: await _getBool(_keyNotificationPreview, true),
       _keyGroupNotifications: await _getBool(_keyGroupNotifications, true),
@@ -33,18 +32,15 @@ class SettingsNotifier extends _$SettingsNotifier {
       ),
       _keyCallDataUsage: await _getString(_keyCallDataUsage, 'Low data usage'),
     };
-  }
 
   Future<bool> _getBool(String key, bool defaultValue) async {
     final value = await _storage.read(key: key);
     return value != null ? value.toLowerCase() == 'true' : defaultValue;
   }
 
-  Future<String> _getString(String key, String defaultValue) async {
-    return await _storage.read(key: key) ?? defaultValue;
-  }
+  Future<String> _getString(String key, String defaultValue) async => await _storage.read(key: key) ?? defaultValue;
 
-  Future<void> updateSetting(String key, dynamic value) async {
+  Future<void> updateSetting(String key, value) async {
     if (value is bool) {
       await _storage.write(key: key, value: value.toString());
     } else if (value is String) {

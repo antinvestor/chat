@@ -1,8 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/app_logger.dart';
@@ -71,7 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       // Provide better error messages based on error type
-      String errorMessage = 'Authentication failed. Please try again.';
+      var errorMessage = 'Authentication failed. Please try again.';
 
       final errorStr = e.toString().toLowerCase();
 
@@ -94,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             'Unable to open web browser. Please check your device settings.';
       } else if (errorStr.contains('oauth error')) {
         // Extract the actual OAuth error message
-        final match = RegExp(r'oauth error: (.+)').firstMatch(errorStr);
+        final match = RegExp('oauth error: (.+)').firstMatch(errorStr);
         errorMessage = match != null
             ? 'Authentication error: ${match.group(1)}'
             : 'Authentication was denied. Please try again.';
@@ -128,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,

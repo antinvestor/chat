@@ -9,9 +9,9 @@ import '../data/profile_providers.dart';
 
 /// Profile details screen showing user information
 class ProfileScreen extends ConsumerWidget {
-  final String profileId;
 
-  const ProfileScreen({super.key, required this.profileId});
+  const ProfileScreen({required this.profileId, super.key});
+  final String profileId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,8 +31,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotFoundScreen(BuildContext context) {
-    return Scaffold(
+  Widget _buildNotFoundScreen(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
         leading: IconButton(
@@ -64,7 +63,6 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Widget _buildProfileContent(
     BuildContext context,
@@ -289,8 +287,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
+  Widget _buildSectionHeader(BuildContext context, String title) => Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
         title,
@@ -302,7 +299,6 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Widget _buildActionButton(
     BuildContext context, {
@@ -414,7 +410,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _startChat(BuildContext context, WidgetRef ref, Profile profile) async {
+  Future<void> _startChat(BuildContext context, WidgetRef ref, Profile profile) async {
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(

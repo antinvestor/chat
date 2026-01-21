@@ -102,7 +102,7 @@ class ErrorTrackingService {
 
   /// Capture an exception with optional stack trace
   static Future<void> captureException(
-    dynamic exception, {
+    Object exception, {
     StackTrace? stackTrace,
     Map<String, dynamic>? extra,
     SentryLevel level = SentryLevel.error,
@@ -132,14 +132,12 @@ class ErrorTrackingService {
     required String name,
     required String operation,
     String? description,
-  }) {
-    return Sentry.startTransaction(
+  }) => Sentry.startTransaction(
       name,
       operation,
       description: description,
       bindToScope: true,
     );
-  }
 
   /// Set a tag for filtering in Sentry
   static Future<void> setTag(String key, String value) async {
@@ -149,9 +147,9 @@ class ErrorTrackingService {
   }
 
   /// Set extra context data
-  static Future<void> setExtra(String key, dynamic value) async {
+  static Future<void> setExtra(String key, Object value) async {
     await Sentry.configureScope((scope) {
-      scope.setExtra(key, value);
+      scope.setContexts(key, value);
     });
   }
 
@@ -166,9 +164,7 @@ class ErrorTrackingService {
     if (extra == null && level == null) return null;
     return (scope) {
       if (extra != null) {
-        for (final entry in extra.entries) {
-          scope.setExtra(entry.key, entry.value);
-        }
+        scope.setContexts('extra', extra);
       }
       if (level != null) {
         scope.level = level;

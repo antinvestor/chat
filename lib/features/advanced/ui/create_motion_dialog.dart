@@ -8,9 +8,9 @@ import '../services/motion_service.dart';
 /// Dialog for creating a new motion
 /// Includes input validation and admin permission checking
 class CreateMotionDialog extends ConsumerStatefulWidget {
-  final String roomId;
 
-  const CreateMotionDialog({super.key, required this.roomId});
+  const CreateMotionDialog({required this.roomId, super.key});
+  final String roomId;
 
   @override
   ConsumerState<CreateMotionDialog> createState() => _CreateMotionDialogState();
@@ -129,8 +129,7 @@ class _CreateMotionDialogState extends ConsumerState<CreateMotionDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Create Motion'),
       content: SingleChildScrollView(
         child: Form(
@@ -269,9 +268,6 @@ class _CreateMotionDialogState extends ConsumerState<CreateMotionDialog> {
         ),
       ],
     );
-  }
 
-  String _formatDeadline(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
+  String _formatDeadline(DateTime date) => '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
 }

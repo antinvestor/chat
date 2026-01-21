@@ -279,8 +279,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
-    return Center(
+  Widget _buildEmptyState(ThemeData theme) => Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -316,7 +315,6 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
         ),
       ),
     );
-  }
 
   List<RosterEntry> _filterContacts(List<RosterEntry> contacts) {
     if (_searchQuery.isEmpty) {
@@ -368,7 +366,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
       // Get all contact identifiers using priority logic - server will handle routing
       final contactIds = _selectedContacts
-          .map((c) => _getContactIdentifier(c))
+          .map(_getContactIdentifier)
           .toList();
 
       // Generate room name

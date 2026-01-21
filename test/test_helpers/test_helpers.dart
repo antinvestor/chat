@@ -1,21 +1,16 @@
+import 'package:antinvestor_api_common/antinvestor_api_common.dart'
+    show TokenRefreshResult;
+import 'package:chat/features/auth/data/auth_repository.dart';
+import 'package:chat/features/auth/data/auth_service.dart';
 import 'package:flutter/widgets.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openid_client/openid_client.dart' show TokenResponse;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:chat/features/auth/data/auth_repository.dart';
-import 'package:chat/features/auth/data/auth_service.dart';
-
-import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenRefreshResult;
-
 /// Mock AuthService for testing
 class MockAuthService extends AuthService {
-  bool _isAuthenticated = false;
-  bool _shouldThrowError = false;
 
   MockAuthService()
     : super(
@@ -23,6 +18,8 @@ class MockAuthService extends AuthService {
         issuerUrl: 'https://mock-oauth.com',
         clientId: 'mock-client-id',
       );
+  bool _isAuthenticated = false;
+  bool _shouldThrowError = false;
 
   void setAuthenticated(bool authenticated) {
     _isAuthenticated = authenticated;
@@ -60,13 +57,11 @@ class MockAuthService extends AuthService {
 
   @override
   Future<({TokenRefreshResult result, TokenResponse? token, String? error})>
-  refreshTokenWithResult() async {
-    return (
+  refreshTokenWithResult() async => (
       result: TokenRefreshResult.success,
       token: _isAuthenticated ? null : null,
       error: null,
     );
-  }
 
   @override
   Future<Duration?> getTimeUntilRefreshNeeded() async {
@@ -74,9 +69,7 @@ class MockAuthService extends AuthService {
   }
 
   @override
-  Future<bool> hasValidAccessToken() async {
-    return _isAuthenticated;
-  }
+  Future<bool> hasValidAccessToken() async => _isAuthenticated;
 
   @override
   Future<({String? token, bool needsRelogin})>
@@ -90,16 +83,14 @@ class MockAuthService extends AuthService {
     return (token: _isAuthenticated ? 'mock-token' : null, needsRelogin: false);
   }
 
-  Future<String?> getCurrentProfileId() async {
-    return _isAuthenticated ? 'mock-profile-id' : null;
-  }
+  Future<String?> getCurrentProfileId() async => _isAuthenticated ? 'mock-profile-id' : null;
 }
 
 /// Mock AuthRepository for testing
 class MockAuthRepository extends AuthRepository {
-  final MockAuthService _mockAuthService;
 
   MockAuthRepository(this._mockAuthService) : super(_mockAuthService);
+  final MockAuthService _mockAuthService;
 
   void setAuthenticated(bool authenticated) {
     _mockAuthService.setAuthenticated(authenticated);

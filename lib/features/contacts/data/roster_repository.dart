@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
-
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart' as pb;
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:libphonenumber_plugin/libphonenumber_plugin.dart';
@@ -134,14 +133,14 @@ String? _normalizePhoneNumber(String phone, String regionCode) {
   if (phone.isEmpty) return null;
 
   // Remove all non-digit characters first
-  String digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+  var digits = phone.replaceAll(RegExp(r'[^\d]'), '');
 
   // Handle special cases
   if (digits.isEmpty) return null;
 
   // Remove leading zeros if present (except for single 0)
   if (digits.length > 1 && digits.startsWith('0')) {
-    digits = digits.replaceFirst(RegExp(r'^0+'), '');
+    digits = digits.replaceFirst(RegExp('^0+'), '');
   }
 
   // If still empty after removing zeros, return null
@@ -329,28 +328,20 @@ enum RosterContactType {
   email(0),
   msisdn(1);
 
-  final int value;
   const RosterContactType(this.value);
 
-  static RosterContactType fromValue(int value) {
-    return RosterContactType.values.firstWhere(
+  final int value;
+
+  static RosterContactType fromValue(int value) => RosterContactType.values.firstWhere(
       (e) => e.value == value,
       orElse: () => RosterContactType.email,
     );
-  }
 
-  static RosterContactType fromProto(pb.ContactType type) {
-    return type == pb.ContactType.MSISDN ? msisdn : email;
-  }
+  static RosterContactType fromProto(pb.ContactType type) => type == pb.ContactType.MSISDN ? msisdn : email;
 }
 
 /// Profile data model for local storage
 class ProfileData {
-  final String id;
-  final String? name;
-  final String? avatarUrl;
-  final DateTime? updatedAt;
-  final Map<String, dynamic>? metadata;
 
   ProfileData({
     required this.id,
@@ -377,16 +368,19 @@ class ProfileData {
       metadata: meta,
     );
   }
+  final String id;
+  final String? name;
+  final String? avatarUrl;
+  final DateTime? updatedAt;
+  final Map<String, dynamic>? metadata;
 
-  ProfilesCompanion toCompanion() {
-    return ProfilesCompanion(
+  ProfilesCompanion toCompanion() => ProfilesCompanion(
       id: Value(id),
       name: Value(name),
       avatarUrl: Value(avatarUrl),
       updatedAt: Value(updatedAt?.millisecondsSinceEpoch),
       metadata: Value(metadata != null ? json.encode(metadata) : null),
     );
-  }
 }
 
 /// Local roster entry model representing a contact link
@@ -396,25 +390,12 @@ class ProfileData {
 /// - contactId: Contact's unique ID from server (available after successful sync)
 /// - contactDetail: Email/phone number for display and local reference
 class RosterEntry {
-  final String id; // Stable local UUID
-  final String? rosterId; // Server roster entry ID (synced)
-  final String? profileId; // Profile ID (null if user hasn't logged in)
-  final String? contactId; // Contact's unique ID from server
-  final RosterContactType contactType;
-  final String contactDetail; // Email/phone for local display
-  final bool isVerified;
-  final String? displayName;
-  final bool isBlocked;
-  final DateTime? syncedAt;
-  final DateTime? createdAt;
 
   RosterEntry({
     required this.id,
-    this.rosterId,
+    required this.contactType, required this.contactDetail, this.rosterId,
     this.profileId,
     this.contactId,
-    required this.contactType,
-    required this.contactDetail,
     this.isVerified = false,
     this.displayName,
     this.isBlocked = false,
@@ -422,8 +403,7 @@ class RosterEntry {
     this.createdAt,
   });
 
-  factory RosterEntry.fromDbRow(RosterData row) {
-    return RosterEntry(
+  factory RosterEntry.fromDbRow(RosterData row) => RosterEntry(
       id: row.id,
       rosterId: row.rosterId, // Server roster ID
       profileId: row.profileId, // Now nullable
@@ -440,7 +420,6 @@ class RosterEntry {
           ? DateTime.fromMillisecondsSinceEpoch(row.createdAt!)
           : null,
     );
-  }
 
   factory RosterEntry.fromProto(
     pb.RosterObject roster, {
@@ -466,9 +445,19 @@ class RosterEntry {
       syncedAt: DateTime.now(),
     );
   }
+  final String id; // Stable local UUID
+  final String? rosterId; // Server roster entry ID (synced)
+  final String? profileId; // Profile ID (null if user hasn't logged in)
+  final String? contactId; // Contact's unique ID from server
+  final RosterContactType contactType;
+  final String contactDetail; // Email/phone for local display
+  final bool isVerified;
+  final String? displayName;
+  final bool isBlocked;
+  final DateTime? syncedAt;
+  final DateTime? createdAt;
 
-  RosterCompanion toCompanion() {
-    return RosterCompanion(
+  RosterCompanion toCompanion() => RosterCompanion(
       id: Value(id),
       rosterId: Value(rosterId), // Server roster ID
       profileId: Value(profileId), // Now nullable
@@ -484,22 +473,19 @@ class RosterEntry {
             DateTime.now().millisecondsSinceEpoch,
       ),
     );
-  }
 
   /// Generate a stable local UUID for new roster entries
-  static String _generateLocalUuid() {
-    return Xid().toString();
-  }
+  static String _generateLocalUuid() => Xid().toString();
 }
 
 /// Profile with associated contacts (roster entries)
 /// This is the primary display model - profile is the person,
 /// contacts are the ways to reach them
 class ProfileWithContacts {
-  final ProfileData profile;
-  final List<RosterEntry> contacts;
 
   ProfileWithContacts({required this.profile, required this.contacts});
+  final ProfileData profile;
+  final List<RosterEntry> contacts;
 
   /// Get display name - prefer profile name, fallback to first contact display name
   String get displayName {
@@ -543,13 +529,6 @@ typedef SyncProgressCallback = void Function(SyncProgress progress);
 
 /// Sync progress information
 class SyncProgress {
-  final SyncState state;
-  final int totalContacts;
-  final int processedContacts;
-  final int foundOnPlatform;
-  final int currentBatch;
-  final int totalBatches;
-  final String? message;
 
   const SyncProgress({
     required this.state,
@@ -560,6 +539,13 @@ class SyncProgress {
     this.totalBatches = 0,
     this.message,
   });
+  final SyncState state;
+  final int totalContacts;
+  final int processedContacts;
+  final int foundOnPlatform;
+  final int currentBatch;
+  final int totalBatches;
+  final String? message;
 
   double get progress =>
       totalContacts > 0 ? processedContacts / totalContacts : 0;
@@ -587,6 +573,8 @@ enum SyncState {
 /// - Reconciliation with server roster
 /// - Proper error handling and logging
 class RosterRepository {
+
+  RosterRepository(this._profileClient, this._database);
   final ProfileServiceClient _profileClient;
   final AppDatabase _database;
 
@@ -596,8 +584,6 @@ class RosterRepository {
 
   // Configuration
   static const _batchSize = 20;
-
-  RosterRepository(this._profileClient, this._database);
 
   // ============================================================================
   // Sync Metadata Management
@@ -672,7 +658,6 @@ class RosterRepository {
 
       final deviceContacts = await flutter_contacts.FlutterContacts.getContacts(
         withProperties: true,
-        withPhoto: false,
       );
 
       final currentHash = _computeContactsHash(deviceContacts);
@@ -710,18 +695,18 @@ class RosterRepository {
     if (_isSyncing && _syncCompleter != null) {
       AppLogger.debug('Sync already in progress, waiting...');
       await _syncCompleter!.future;
-      return await getLocalRoster();
+      return getLocalRoster();
     }
 
     if (!force) {
       final syncNeeded = await needsSync();
       if (!syncNeeded) {
         AppLogger.debug('Contacts unchanged, skipping sync');
-        return await getLocalRoster();
+        return getLocalRoster();
       }
     }
 
-    return await syncContacts();
+    return syncContacts();
   }
 
   /// Full sync of device contacts with server
@@ -738,7 +723,7 @@ class RosterRepository {
       if (_syncCompleter != null) {
         await _syncCompleter!.future;
       }
-      return await getLocalRoster();
+      return getLocalRoster();
     }
 
     _isSyncing = true;
@@ -822,7 +807,6 @@ class RosterRepository {
 
       final deviceContacts = await flutter_contacts.FlutterContacts.getContacts(
         withProperties: true,
-        withPhoto: false,
       );
 
       AppLogger.info(
@@ -1050,7 +1034,6 @@ class RosterRepository {
         SyncProgress(
           state: SyncState.uploading,
           totalContacts: deduplicatedRequests.length,
-          processedContacts: 0,
           message: 'Syncing with server...',
         ),
       );
@@ -1290,7 +1273,6 @@ class RosterRepository {
 
       final deviceContacts = await flutter_contacts.FlutterContacts.getContacts(
         withProperties: true,
-        withPhoto: false,
       );
 
       AppLogger.info(
@@ -1329,16 +1311,11 @@ class RosterRepository {
             localEntries.add(
               RosterEntry(
                 id: id,
-                profileId: null, // Null until server sync (fixes FK constraint)
-                contactId: null, // Null until server sync
                 contactType: RosterContactType.msisdn,
                 contactDetail: validatedPhone,
                 displayName: contact.displayName.isNotEmpty
                     ? contact.displayName
                     : null,
-                isVerified: false,
-                isBlocked: false,
-                syncedAt: null, // Not synced to server yet
                 createdAt: now,
               ),
             );
@@ -1353,16 +1330,11 @@ class RosterRepository {
             localEntries.add(
               RosterEntry(
                 id: id,
-                profileId: null, // Null until server sync (fixes FK constraint)
-                contactId: null, // Null until server sync
                 contactType: RosterContactType.email,
                 contactDetail: normalized,
                 displayName: contact.displayName.isNotEmpty
                     ? contact.displayName
                     : null,
-                isVerified: false,
-                isBlocked: false,
-                syncedAt: null, // Not synced to server yet
                 createdAt: now,
               ),
             );
@@ -1489,15 +1461,12 @@ class RosterRepository {
       );
 
       // Build contact requests for server
-      final contactRequests = unsyncedRows.map((row) {
-        return pb.RawContact(contact: row.contactDetail);
-      }).toList();
+      final contactRequests = unsyncedRows.map((row) => pb.RawContact(contact: row.contactDetail)).toList();
 
       reportProgress(
         SyncProgress(
           state: SyncState.uploading,
           totalContacts: contactRequests.length,
-          processedContacts: 0,
           message: 'Syncing to server...',
         ),
       );
@@ -1560,7 +1529,7 @@ class RosterRepository {
                   roster.hasProfileId() ? roster.profileId : null,
                 ), // Null if user hasn't logged in
                 isVerified: Value(
-                  roster.hasContact() ? (roster.contact.verified) : false,
+                  roster.hasContact() && (roster.contact.verified),
                 ),
                 syncedAt: Value(now), // Mark as synced
               ),
@@ -1684,7 +1653,6 @@ class RosterRepository {
 
     final entry = RosterEntry(
       id: localId, // Stable local UUID
-      rosterId: null, // Server ID - will be set on sync
       profileId: profileId,
       contactId: contactId,
       contactType: contactType,
@@ -1692,7 +1660,6 @@ class RosterRepository {
       isVerified: isVerified,
       displayName: displayName,
       isBlocked: isBlocked,
-      syncedAt: null, // Not synced yet
       createdAt: DateTime.now(),
     );
 
@@ -1718,7 +1685,7 @@ class RosterRepository {
       ..orderBy([(t) => OrderingTerm.asc(t.contactDetail)]);
 
     final results = await query.get();
-    return results.map((row) => RosterEntry.fromDbRow(row)).toList();
+    return results.map(RosterEntry.fromDbRow).toList();
   }
 
   /// Search local roster by contact detail (works offline)
@@ -1735,14 +1702,14 @@ class RosterRepository {
       ..orderBy([(t) => OrderingTerm.asc(t.contactDetail)]);
 
     final results = await dbQuery.get();
-    return results.map((row) => RosterEntry.fromDbRow(row)).toList();
+    return results.map(RosterEntry.fromDbRow).toList();
   }
 
   /// Mark roster entry as needing sync (for when coming back online)
   Future<void> markRosterEntryForSync(String localId) async {
     final db = AppDatabase.instance;
     await (db.update(db.roster)..where((t) => t.id.equals(localId))).write(
-      RosterCompanion(
+      const RosterCompanion(
         syncedAt: Value(null), // Mark as needing sync
       ),
     );
@@ -2287,9 +2254,7 @@ class RosterRepository {
   }
 
   /// Watch profiles with contacts as a stream
-  Stream<List<ProfileWithContacts>> watchProfilesWithContacts() {
-    return watchRoster().asyncMap((_) => getProfilesWithContacts());
-  }
+  Stream<List<ProfileWithContacts>> watchProfilesWithContacts() => watchRoster().asyncMap((_) => getProfilesWithContacts());
 
   /// Get all roster entries for a specific profile
   Future<List<RosterEntry>> getRosterEntriesForProfile(String profileId) async {
@@ -2343,7 +2308,7 @@ final rosterSyncTriggerProvider = FutureProvider<List<RosterEntry>>((
   ref,
 ) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
-  return await repo.syncIfNeeded(force: true);
+  return repo.syncIfNeeded(force: true);
 });
 
 /// Provider to reconcile local roster with server
@@ -2355,7 +2320,7 @@ final rosterReconcileProvider = FutureProvider<void>((ref) async {
 /// Provider to check if sync is needed
 final rosterSyncNeededProvider = FutureProvider<bool>((ref) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
-  return await repo.needsSync();
+  return repo.needsSync();
 });
 
 /// Provider for blocked roster entries
@@ -2363,13 +2328,13 @@ final blockedRosterEntriesProvider = FutureProvider<List<RosterEntry>>((
   ref,
 ) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
-  return await repo.getBlockedEntries();
+  return repo.getBlockedEntries();
 });
 
 /// Provider for roster count
 final rosterCountProvider = FutureProvider<int>((ref) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
-  return await repo.getRosterCount();
+  return repo.getRosterCount();
 });
 
 /// Provider for profiles with their associated contacts
@@ -2384,7 +2349,7 @@ final profilesWithContactsProvider = FutureProvider<List<ProfileWithContacts>>((
   if (local.isEmpty) {
     // No local data, must sync first
     await repo.syncContacts();
-    return await repo.getProfilesWithContacts();
+    return repo.getProfilesWithContacts();
   }
 
   // Trigger background sync only if contacts have changed
@@ -2404,7 +2369,7 @@ final profilesWithContactsStreamProvider =
 /// This provides instant availability of contacts
 final rosterLocalSyncProvider = FutureProvider<List<RosterEntry>>((ref) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
-  return await repo.syncContactsLocal();
+  return repo.syncContactsLocal();
 });
 
 /// Provider for Phase 2: Server contact sync (background, best effort)
@@ -2412,5 +2377,5 @@ final rosterLocalSyncProvider = FutureProvider<List<RosterEntry>>((ref) async {
 /// Updates roster with server response (contactId, profileId, syncedAt)
 final rosterServerSyncProvider = FutureProvider<List<RosterEntry>>((ref) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
-  return await repo.syncContactsToServer();
+  return repo.syncContactsToServer();
 });

@@ -1,8 +1,7 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/features/notifications/notification_service.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('NotificationService', () {

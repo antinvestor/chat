@@ -46,7 +46,7 @@ Stream<List<domain.RoomEvent>> activeMotions(Ref ref, String roomId) {
                 return false;
               }
             })
-            .map((event) => _toRoomEvent(event))
+            .map(_toRoomEvent)
             .toList();
       });
 }
@@ -123,9 +123,7 @@ Stream<List<domain.RoomEvent>> roomMedia(Ref ref, String roomId) {
         ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
         ..limit(50))
       .watch()
-      .map((events) {
-        return events.map((event) => _toRoomEvent(event)).toList();
-      });
+      .map((events) => events.map(_toRoomEvent).toList());
 }
 
 /// Provider for recent transactions in a room
@@ -139,14 +137,11 @@ Stream<List<domain.RoomEvent>> roomTransactions(Ref ref, String roomId) {
         ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
         ..limit(50))
       .watch()
-      .map((events) {
-        return events.map((event) => _toRoomEvent(event)).toList();
-      });
+      .map((events) => events.map(_toRoomEvent).toList());
 }
 
 // Helper to convert database row to domain model
-domain.RoomEvent _toRoomEvent(RoomEvent row) {
-  return domain.RoomEvent(
+domain.RoomEvent _toRoomEvent(RoomEvent row) => domain.RoomEvent(
     id: row.id,
     roomId: row.roomId,
     senderId: row.senderId,
@@ -161,17 +156,9 @@ domain.RoomEvent _toRoomEvent(RoomEvent row) {
     serverTs: row.serverTs,
     localId: row.localId,
   );
-}
 
 /// Room member information for display
 class RoomMemberInfo {
-  final String subscriptionId;
-  final String? profileId;
-  final String? contactId;
-  final String name;
-  final String? avatarUrl;
-  final String role;
-  final int? joinedAt;
 
   RoomMemberInfo({
     required this.subscriptionId,
@@ -182,4 +169,11 @@ class RoomMemberInfo {
     required this.role,
     required this.joinedAt,
   });
+  final String subscriptionId;
+  final String? profileId;
+  final String? contactId;
+  final String name;
+  final String? avatarUrl;
+  final String role;
+  final int? joinedAt;
 }

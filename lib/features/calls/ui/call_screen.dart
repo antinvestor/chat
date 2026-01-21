@@ -6,10 +6,10 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../services/call_manager.dart';
 
 class CallScreen extends ConsumerStatefulWidget {
+
+  const CallScreen({required this.roomId, required this.roomName, super.key});
   final String roomId;
   final String roomName;
-
-  const CallScreen({super.key, required this.roomId, required this.roomName});
 
   @override
   ConsumerState<CallScreen> createState() => _CallScreenState();
@@ -202,7 +202,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                shadows: [Shadow(blurRadius: 4)],
               ),
             ),
           ),

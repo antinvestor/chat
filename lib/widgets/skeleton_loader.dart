@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 
 /// Loading skeleton for list items
 class SkeletonLoader extends StatefulWidget {
-  final double? height;
-  final double? width;
-  final BorderRadius? borderRadius;
 
   const SkeletonLoader({
     super.key,
@@ -12,6 +9,9 @@ class SkeletonLoader extends StatefulWidget {
     this.width = double.infinity,
     this.borderRadius,
   });
+  final double? height;
+  final double? width;
+  final BorderRadius? borderRadius;
 
   @override
   State<SkeletonLoader> createState() => _SkeletonLoaderState();
@@ -31,8 +31,8 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
     )..repeat();
 
     _animation = Tween<double>(
-      begin: -1.0,
-      end: 2.0,
+      begin: -1,
+      end: 2,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
@@ -48,8 +48,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
 
     return AnimatedBuilder(
       animation: _animation,
-      builder: (context, child) {
-        return Container(
+      builder: (context, child) => Container(
           height: widget.height,
           width: widget.width,
           decoration: BoxDecoration(
@@ -64,8 +63,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
               ],
             ),
           ),
-        );
-      },
+        ),
     );
   }
 }
@@ -75,8 +73,7 @@ class RoomListSkeleton extends StatelessWidget {
   const RoomListSkeleton({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
@@ -109,18 +106,16 @@ class RoomListSkeleton extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// Skeleton for message bubble
 class MessageSkeleton extends StatelessWidget {
-  final bool isMe;
 
   const MessageSkeleton({super.key, this.isMe = false});
+  final bool isMe;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         mainAxisAlignment: isMe
@@ -143,5 +138,4 @@ class MessageSkeleton extends StatelessWidget {
         ],
       ),
     );
-  }
 }

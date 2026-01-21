@@ -42,9 +42,9 @@ class AppTheme {
   );
 
   // Spacing constants
-  static const double standardMargin = 16.0;
-  static const double elementGap = 8.0;
-  static const double minTouchTarget = 48.0;
+  static const double standardMargin = 16;
+  static const double elementGap = 8;
+  static const double minTouchTarget = 48;
 
   // Light Theme
   static ThemeData get lightTheme => ThemeData(
@@ -52,7 +52,6 @@ class AppTheme {
     brightness: Brightness.light,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryGreen,
-      brightness: Brightness.light,
     ),
     textTheme: const TextTheme(
       bodyLarge: bodyText,
@@ -78,7 +77,7 @@ class AppTheme {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: surfaceDarkAlt, width: 1),
+        side: const BorderSide(color: surfaceDarkAlt),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -162,7 +161,7 @@ class AppTheme {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: surfaceLightAlt, width: 1),
+        side: const BorderSide(color: surfaceLightAlt),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -221,9 +220,7 @@ class AppTheme {
   }
 
   // Get subtle color (10% opacity)
-  static Color getSubtleColor(BuildContext context, Color baseColor) {
-    return baseColor.withValues(alpha: 0.1);
-  }
+  static Color getSubtleColor(BuildContext context, Color baseColor) => baseColor.withValues(alpha: 0.1);
 
   // Get text color based on theme
   static Color getTextColor(BuildContext context) {

@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/typing_provider.dart';
 
 class TypingIndicator extends ConsumerWidget {
-  final String roomId;
 
-  const TypingIndicator({super.key, required this.roomId});
+  const TypingIndicator({required this.roomId, super.key});
+  final String roomId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,9 +49,7 @@ class TypingIndicator extends ConsumerWidget {
     }
   }
 
-  Widget _buildDots(BuildContext context) {
-    return SizedBox(width: 24, height: 12, child: _TypingDotsAnimation());
-  }
+  Widget _buildDots(BuildContext context) => SizedBox(width: 24, height: 12, child: _TypingDotsAnimation());
 }
 
 class _TypingDotsAnimation extends StatefulWidget {
@@ -79,11 +77,9 @@ class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return Row(
+      builder: (context, child) => Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(3, (index) {
             final offset = index * 0.2;
@@ -101,8 +97,6 @@ class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
               ),
             );
           }),
-        );
-      },
+        ),
     );
-  }
 }

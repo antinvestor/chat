@@ -9,8 +9,7 @@ class PrivacySettingsScreen extends ConsumerWidget {
   const PrivacySettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
       appBar: AppBar(
         title: const Text('Privacy'),
         backgroundColor: AppTheme.primaryGreen,
@@ -70,7 +69,6 @@ class PrivacySettingsScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   void _showBlockedContactsScreen(BuildContext context) {
     showDialog(
@@ -100,7 +98,7 @@ class PrivacySettingsScreen extends ConsumerWidget {
 
   void _showMessageTimerOptions(BuildContext context) {
     final timers = ['Off', '5 seconds', '10 seconds', '30 seconds', '1 minute'];
-    String selectedTimer = '10 seconds'; // Default value
+    var selectedTimer = '10 seconds'; // Default value
 
     showDialog(
       context: context,
@@ -113,8 +111,7 @@ class PrivacySettingsScreen extends ConsumerWidget {
               'Choose how long messages should disappear after being read:',
             ),
             const SizedBox(height: 16),
-            ...timers.map((timer) {
-              return ListTile(
+            ...timers.map((timer) => ListTile(
                 title: Text(timer),
                 trailing: selectedTimer == timer
                     ? const Icon(Icons.check, color: Colors.blue)
@@ -122,8 +119,7 @@ class PrivacySettingsScreen extends ConsumerWidget {
                 onTap: () {
                   selectedTimer = timer;
                 },
-              );
-            }),
+              )),
           ],
         ),
         actions: [
@@ -161,8 +157,7 @@ class PrivacySettingsScreen extends ConsumerWidget {
     BuildContext context, {
     required String title,
     required List<Widget> items,
-  }) {
-    return Column(
+  }) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -178,15 +173,13 @@ class PrivacySettingsScreen extends ConsumerWidget {
         ...items,
       ],
     );
-  }
 
   Widget _buildSettingsItem(
     BuildContext context, {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-  }) {
-    return Container(
+  }) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -221,7 +214,6 @@ class PrivacySettingsScreen extends ConsumerWidget {
         onTap: onTap,
       ),
     );
-  }
 
   Widget _buildSwitchItem(
     BuildContext context, {
@@ -229,8 +221,7 @@ class PrivacySettingsScreen extends ConsumerWidget {
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
+  }) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -264,5 +255,4 @@ class PrivacySettingsScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 }

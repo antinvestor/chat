@@ -3,9 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 
 /// Provider for KeyManager
-final keyManagerProvider = Provider<KeyManager>((ref) {
-  return KeyManager();
-});
+final keyManagerProvider = Provider<KeyManager>((ref) => KeyManager());
 
 /// Manages secure storage of keys and device identifiers
 ///
@@ -16,7 +14,6 @@ class KeyManager {
   static const _deviceIdKey = 'device_id';
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 

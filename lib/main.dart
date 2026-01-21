@@ -1,11 +1,10 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -22,25 +21,22 @@ import 'features/notifications/notification_service.dart';
 /// Sentry DSN - should be configured via environment variable in production
 const String _sentryDsn = String.fromEnvironment(
   'SENTRY_DSN',
-  defaultValue: '',
 );
 
 /// Type-safe wrapper for user info from OIDC token
 class _UserInfo {
-  final String id;
-  final String? email;
-  final String? username;
 
   _UserInfo({required this.id, this.email, this.username});
 
   /// Parse user info from OIDC token claims
-  factory _UserInfo.fromOidcClaims(Map<String, dynamic> claims) {
-    return _UserInfo(
+  factory _UserInfo.fromOidcClaims(Map<String, dynamic> claims) => _UserInfo(
       id: claims['sub'] as String? ?? 'unknown',
       email: claims['email'] as String?,
       username: claims['preferred_username'] as String?,
     );
-  }
+  final String id;
+  final String? email;
+  final String? username;
 }
 
 /// Background task callback - must be top-level function
@@ -77,7 +73,7 @@ void main() async {
     await ErrorTrackingService.initialize(
       dsn: _sentryDsn,
       tracesSampleRate: kReleaseMode ? 0.2 : 1.0,
-      appRunner: () => _initializeAndRun(),
+      appRunner: _initializeAndRun,
     );
   } else {
     // Run without Sentry if DSN not configured
@@ -221,10 +217,10 @@ class _ChatAppState extends ConsumerState<ChatApp> {
   /// Wait for network connectivity before proceeding
   Future<void> _waitForNetwork() async {
     final connectivity = Connectivity();
-    var results = await connectivity.checkConnectivity();
+    final results = await connectivity.checkConnectivity();
 
     // Check if we have a connection
-    bool hasConnection = results.any(
+    var hasConnection = results.any(
       (r) =>
           r == ConnectivityResult.wifi ||
           r == ConnectivityResult.mobile ||
@@ -260,7 +256,6 @@ class _ChatAppState extends ConsumerState<ChatApp> {
       title: 'AntInvestor Chat',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // Follow system theme
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

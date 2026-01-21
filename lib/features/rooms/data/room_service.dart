@@ -16,12 +16,12 @@ import 'room_repository.dart';
 /// All operations are saved locally first, then queued for server sync
 /// Supports universal messaging: server handles routing to on/off-platform members
 class RoomService {
+
+  RoomService(this._roomRepo, this._jobRepo, this._chatClient, this._database);
   final RoomRepository _roomRepo;
   final PendingJobRepository _jobRepo;
   final pb_chat.ChatServiceClient _chatClient;
   final AppDatabase _database;
-
-  RoomService(this._roomRepo, this._jobRepo, this._chatClient, this._database);
 
   /// Create a new room (group or direct chat)
   /// Saves locally first, then queues for server sync
@@ -194,14 +194,10 @@ class RoomService {
   }
 
   /// Get a specific room by ID
-  Future<domain.Room?> getRoomById(String roomId) async {
-    return _roomRepo.getRoomById(roomId);
-  }
+  Future<domain.Room?> getRoomById(String roomId) async => _roomRepo.getRoomById(roomId);
 
   /// Check if a room has pending sync
-  bool hasPendingSync(domain.Room room) {
-    return room.metadata?['pendingSync'] == true;
-  }
+  bool hasPendingSync(domain.Room room) => room.metadata?['pendingSync'] == true;
 
   /// Leave a room (current user exits the group)
   /// Marks as left locally, then queues for server sync
@@ -235,7 +231,7 @@ class RoomService {
       // Fetch subscriptions from API (unary call returns single response)
       final response = await _chatClient.searchRoomSubscriptions(request);
 
-      int memberCount = 0;
+      var memberCount = 0;
 
       // Process each subscription from the response
       for (final subscription in response.members) {
@@ -306,6 +302,4 @@ final roomServiceProvider = FutureProvider<RoomService>((ref) async {
 });
 
 /// Provider for RoomRepository
-final roomRepositoryProvider = Provider<RoomRepository>((ref) {
-  return RoomRepository(AppDatabase.instance);
-});
+final roomRepositoryProvider = Provider<RoomRepository>((ref) => RoomRepository(AppDatabase.instance));

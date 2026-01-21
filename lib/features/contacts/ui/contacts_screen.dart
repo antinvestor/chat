@@ -56,8 +56,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Contacts'),
         actions: [
@@ -90,7 +89,6 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
         children: [_buildSyncedContactsList(), _buildDeviceContactsList()],
       ),
     );
-  }
 
   Widget _buildSyncedContactsList() {
     final profilesAsync = ref.watch(profilesWithContactsProvider);
@@ -204,7 +202,6 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: Colors.green.shade200,
-                                width: 1,
                               ),
                             ),
                             child: Row(
@@ -292,8 +289,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     );
   }
 
-  List<Widget> _buildContactChips(List<RosterEntry> contacts, ThemeData theme) {
-    return [
+  List<Widget> _buildContactChips(List<RosterEntry> contacts, ThemeData theme) => [
       const SizedBox(height: 8),
       Wrap(
         spacing: 4,
@@ -335,7 +331,6 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
         }).toList(),
       ),
     ];
-  }
 
   String _truncateContact(String detail) {
     if (detail.length <= 15) return detail;

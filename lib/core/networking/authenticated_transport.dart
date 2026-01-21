@@ -20,9 +20,6 @@ abstract class TokenProvider {
 
 /// Default token provider using FlutterSecureStorage
 class SecureStorageTokenProvider implements TokenProvider {
-  final FlutterSecureStorage _storage;
-  final Future<void> Function()? _onExpired;
-  final Future<String?> Function()? _ensureValidToken;
 
   SecureStorageTokenProvider(
     this._storage, {
@@ -30,11 +27,12 @@ class SecureStorageTokenProvider implements TokenProvider {
     Future<String?> Function()? ensureValidToken,
   }) : _onExpired = onExpired,
        _ensureValidToken = ensureValidToken;
+  final FlutterSecureStorage _storage;
+  final Future<void> Function()? _onExpired;
+  final Future<String?> Function()? _ensureValidToken;
 
   @override
-  Future<String?> getAccessToken() async {
-    return _storage.read(key: 'access_token');
-  }
+  Future<String?> getAccessToken() async => _storage.read(key: 'access_token');
 
   @override
   Future<void> onTokenExpired() async {
@@ -58,11 +56,11 @@ class SecureStorageTokenProvider implements TokenProvider {
 /// Creates an authenticated HTTP client with JWT headers
 /// Optimized for low-resource devices with connection pooling and timeouts
 class AuthenticatedHttpClient {
-  final TokenProvider _tokenProvider;
-  final io.HttpClient _httpClient;
 
   AuthenticatedHttpClient(this._tokenProvider)
     : _httpClient = _createOptimizedHttpClient();
+  final TokenProvider _tokenProvider;
+  final io.HttpClient _httpClient;
 
   static io.HttpClient _createOptimizedHttpClient() {
     final client = io.HttpClient();
@@ -101,11 +99,11 @@ class AuthenticatedHttpClient {
 
 /// Factory for creating authenticated transports for different services
 class TransportFactory {
+
+  TransportFactory(this._tokenProvider);
   final TokenProvider _tokenProvider;
   final Map<String, connect.Transport> _transports = {};
   AuthenticatedHttpClient? _httpClient;
-
-  TransportFactory(this._tokenProvider);
 
   AuthenticatedHttpClient get httpClient {
     _httpClient ??= AuthenticatedHttpClient(_tokenProvider);
@@ -113,8 +111,7 @@ class TransportFactory {
   }
 
   /// Create or get cached transport for a service
-  connect.Transport getTransport(String baseUrl) {
-    return _transports.putIfAbsent(baseUrl, () {
+  connect.Transport getTransport(String baseUrl) => _transports.putIfAbsent(baseUrl, () {
       AppLogger.debug('Creating transport for $baseUrl');
       return connect_protocol.Transport(
         baseUrl: baseUrl,
@@ -122,7 +119,6 @@ class TransportFactory {
         httpClient: connect_io.createHttpClient(httpClient.httpClient),
       );
     });
-  }
 
   /// Get transport for Chat service
   connect.Transport get chatTransport => getTransport(ApiConfig.chatBaseUrl);
@@ -155,10 +151,10 @@ class TransportFactory {
 /// Wrapper that automatically injects auth headers into API calls
 /// This provides a convenient way to make authenticated requests
 class AuthenticatedClient<T> {
-  final T _client;
-  final TransportFactory _transportFactory;
 
   AuthenticatedClient(this._client, this._transportFactory);
+  final T _client;
+  final TransportFactory _transportFactory;
 
   T get client => _client;
 

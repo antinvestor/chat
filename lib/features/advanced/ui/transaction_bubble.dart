@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../messages/domain/room_event.dart';
 
 class TransactionBubble extends StatelessWidget {
+
+  const TransactionBubble({required this.event, required this.isMe, super.key});
   final RoomEvent event;
   final bool isMe;
-
-  const TransactionBubble({super.key, required this.event, required this.isMe});
 
   @override
   Widget build(BuildContext context) {

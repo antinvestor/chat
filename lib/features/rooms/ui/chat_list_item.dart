@@ -5,22 +5,20 @@ import '../domain/room_with_last_message.dart';
 
 /// Chat list item following design specifications
 class ChatListItem extends StatelessWidget {
+
+  const ChatListItem({
+    required this.room, required this.onTap, super.key,
+    this.isSelected = false,
+    this.isMultiSelectMode = false,
+    this.onLongPress,
+    this.onSelectionChanged,
+  });
   final RoomWithLastMessage room;
   final VoidCallback onTap;
   final bool isSelected;
   final bool isMultiSelectMode;
   final VoidCallback? onLongPress;
   final ValueChanged<bool>? onSelectionChanged;
-
-  const ChatListItem({
-    super.key,
-    required this.room,
-    required this.onTap,
-    this.isSelected = false,
-    this.isMultiSelectMode = false,
-    this.onLongPress,
-    this.onSelectionChanged,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +53,7 @@ class ChatListItem extends StatelessWidget {
                     Container(
                       width: 50,
                       height: 50,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppTheme.primaryGreen,
                         shape: BoxShape.circle,
                       ),
@@ -155,7 +153,7 @@ class ChatListItem extends StatelessWidget {
                       ),
 
                       // Last message or typing indicator
-                      if (room.isTyping == true)
+                      if (room.isTyping ?? false)
                         Text(
                           'Typing...',
                           style: AppTheme.bodyText.copyWith(
@@ -187,7 +185,7 @@ class ChatListItem extends StatelessWidget {
                           horizontal: AppTheme.elementGap,
                           vertical: 4,
                         ),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: AppTheme.brightGreen,
                           shape: BoxShape.circle,
                         ),

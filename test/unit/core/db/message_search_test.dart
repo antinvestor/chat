@@ -1,10 +1,9 @@
 import 'dart:convert';
 
+import 'package:chat/core/db/database.dart';
 import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:chat/core/db/database.dart';
 
 void main() {
   group('Message Search (FTS5)', () {
@@ -106,7 +105,7 @@ void main() {
 
       test('respects limit parameter', () async {
         await insertRoom('room1');
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
           await insertTextMessage(
             id: 'msg$i',
             roomId: 'room1',

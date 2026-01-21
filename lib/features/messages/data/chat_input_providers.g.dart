@@ -202,4 +202,4 @@ final class SendMessageProviderProvider
 }
 
 String _$sendMessageProviderHash() =>
-    r'b36bb9b532d00030403063c8ad5759cb64e868c7';
+    r'143be57c96bcb5ffeeec2d6f7e084847b9b521a7';

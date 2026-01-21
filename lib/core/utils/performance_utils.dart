@@ -27,19 +27,17 @@ class PerformanceUtils {
   /// Clean up throttle timestamps to prevent memory leaks
   static void cleanupThrottles() {
     final now = DateTime.now();
-    _throttleTimestamps.removeWhere((key, timestamp) {
-      return now.difference(timestamp) > const Duration(minutes: 5);
-    });
+    _throttleTimestamps.removeWhere((key, timestamp) => now.difference(timestamp) > const Duration(minutes: 5));
   }
 }
 
 /// LRU Cache implementation for caching API responses
 /// Helps reduce memory usage on low-resource devices
 class LRUCache<K, V> {
-  final int maxSize;
-  final LinkedHashMap<K, V> _cache = LinkedHashMap();
 
   LRUCache({this.maxSize = 100});
+  final int maxSize;
+  final LinkedHashMap<K, V> _cache = LinkedHashMap();
 
   V? get(K key) {
     if (!_cache.containsKey(key)) return null;
@@ -77,6 +75,11 @@ class LRUCache<K, V> {
 /// Batch processor for reducing API calls
 /// Collects items and processes them in batches
 class BatchProcessor<T> {
+
+  BatchProcessor({
+    required this.processor, this.batchSize = 10,
+    this.maxWait = const Duration(milliseconds: 500),
+  });
   final int batchSize;
   final Duration maxWait;
   final Future<void> Function(List<T> items) processor;
@@ -84,12 +87,6 @@ class BatchProcessor<T> {
   final List<T> _pending = [];
   Timer? _timer;
   bool _isProcessing = false;
-
-  BatchProcessor({
-    this.batchSize = 10,
-    this.maxWait = const Duration(milliseconds: 500),
-    required this.processor,
-  });
 
   void add(T item) {
     _pending.add(item);
@@ -129,14 +126,14 @@ class BatchProcessor<T> {
 
 /// Rate limiter to prevent overwhelming the API
 class RateLimiter {
-  final int maxRequests;
-  final Duration window;
-  final Queue<DateTime> _requestTimes = Queue();
 
   RateLimiter({
     this.maxRequests = 10,
     this.window = const Duration(seconds: 1),
   });
+  final int maxRequests;
+  final Duration window;
+  final Queue<DateTime> _requestTimes = Queue();
 
   /// Returns true if request is allowed, false if rate limited
   bool allowRequest() {
@@ -166,9 +163,9 @@ class RateLimiter {
 
 /// Memory-efficient stream transformer that limits buffer size
 class BoundedStreamTransformer<T> extends StreamTransformerBase<T, T> {
-  final int maxBufferSize;
 
   BoundedStreamTransformer({this.maxBufferSize = 100});
+  final int maxBufferSize;
 
   @override
   Stream<T> bind(Stream<T> stream) {

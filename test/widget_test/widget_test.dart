@@ -1,15 +1,12 @@
-import 'package:flutter/material.dart';
-
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
 import 'package:chat/main.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import '../test_helpers/test_helpers.dart';
 
 void main() {
-  setUp(() {
-    TestHelpers.resetMocks();
-  });
+  setUp(TestHelpers.resetMocks);
 
   testWidgets('Chat input bar smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame with mocked authentication

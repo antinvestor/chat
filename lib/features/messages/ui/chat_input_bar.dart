@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,10 +12,10 @@ import '../data/message_providers.dart';
 
 /// WhatsApp-style chat input bar with proper Riverpod/state separation
 class ChatInputBar extends ConsumerStatefulWidget {
+
+  const ChatInputBar({required this.roomId, required this.roomName, super.key});
   final String roomId;
   final String roomName;
-
-  const ChatInputBar({super.key, required this.roomId, required this.roomName});
 
   @override
   ConsumerState<ChatInputBar> createState() => _ChatInputBarState();
@@ -93,7 +92,7 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
     }
   }
 
-  void _startRecording() async {
+  Future<void> _startRecording() async {
     setState(() => _isRecording = true);
     ref.read(typingProvider.notifier).onTyping();
 
@@ -139,7 +138,6 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
           : domain.RoomEventType.file,
       content: {'path': filePath, 'fileName': fileName},
       createdAt: DateTime.now().millisecondsSinceEpoch,
-      status: domain.EventStatus.pending,
     );
 
     // Send via existing message infrastructure
@@ -165,8 +163,8 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
   // Camera functionality
   Future<void> _captureFromCamera() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
       source: ImageSource.camera,
       maxWidth: 1920,
       maxHeight: 1080,
@@ -190,8 +188,8 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
   // Gallery functionality
   Future<void> _pickFromGallery() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 1920,
       maxHeight: 1080,
@@ -215,13 +213,12 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
   // Document functionality
   Future<void> _pickDocument() async {
-    final FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
+    final result = await FilePicker.platform.pickFiles(
+      
     );
 
     if (result != null && result.files.single.path != null) {
-      final PlatformFile file = result.files.single;
+      final file = result.files.single;
       // Process and send selected document
       await _sendMessage(ref, file.path!, 'file', file.name);
 
@@ -300,8 +297,7 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-  }) {
-    return InkWell(
+  }) => InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
@@ -329,11 +325,9 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
         ),
       ),
     );
-  }
 
   @override
-  Widget build(BuildContext context) {
-    return ProviderScope(
+  Widget build(BuildContext context) => ProviderScope(
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
@@ -480,5 +474,4 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
         ),
       ),
     );
-  }
 }

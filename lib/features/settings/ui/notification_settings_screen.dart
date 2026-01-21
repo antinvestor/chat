@@ -110,8 +110,7 @@ class _NotificationSettingsScreenState
     BuildContext context, {
     required String title,
     required List<Widget> items,
-  }) {
-    return Column(
+  }) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -127,7 +126,6 @@ class _NotificationSettingsScreenState
         ...items,
       ],
     );
-  }
 
   Widget _buildSwitchItem(
     BuildContext context, {
@@ -135,8 +133,7 @@ class _NotificationSettingsScreenState
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
+  }) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -170,5 +167,4 @@ class _NotificationSettingsScreenState
         ),
       ),
     );
-  }
 }

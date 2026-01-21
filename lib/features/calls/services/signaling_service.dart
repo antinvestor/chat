@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 
-import 'package:chat/features/messages/domain/room_event.dart' as domain;
 import '../../../core/sync/sync_engine.dart';
 import '../../../features/auth/data/auth_repository.dart';
+import '../../messages/domain/room_event.dart' as domain;
 
 final signalingServiceProvider = FutureProvider<SignalingService>((ref) async {
   final syncEngine = await ref.watch(syncEngineProvider.future);
@@ -14,10 +14,10 @@ final signalingServiceProvider = FutureProvider<SignalingService>((ref) async {
 });
 
 class SignalingService {
-  final SyncEngine _syncEngine;
-  final AuthRepository _authRepository;
 
   SignalingService(this._syncEngine, this._authRepository);
+  final SyncEngine _syncEngine;
+  final AuthRepository _authRepository;
 
   Stream<domain.RoomEvent> get onSignal => _syncEngine.signalingEvents;
 

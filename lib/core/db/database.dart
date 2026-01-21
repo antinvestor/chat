@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 part 'database.g.dart';
 
@@ -359,7 +359,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Constructor for testing with custom executor (e.g., in-memory database)
   @visibleForTesting
-  AppDatabase.forTesting(QueryExecutor executor) : super(executor);
+  AppDatabase.forTesting(super.executor);
 
   static final AppDatabase instance = AppDatabase._();
 
@@ -367,8 +367,7 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 5;
 
   @override
-  MigrationStrategy get migration {
-    return MigrationStrategy(
+  MigrationStrategy get migration => MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
         // Create FTS5 virtual table for message search on new databases
@@ -431,7 +430,6 @@ class AppDatabase extends _$AppDatabase {
         }
       },
     );
-  }
 
   /// Create the FTS5 virtual table for full-text message search
   Future<void> _createFtsTable() async {
@@ -447,23 +445,23 @@ class AppDatabase extends _$AppDatabase {
     // Create triggers to keep FTS index in sync with room_events table
 
     // Trigger for new text messages
-    await customStatement('''
+    await customStatement(r'''
       CREATE TRIGGER IF NOT EXISTS room_events_ai AFTER INSERT ON room_events
       WHEN new.type = 0 AND new.content IS NOT NULL
       BEGIN
         INSERT INTO room_events_fts(event_id, room_id, content)
-        VALUES (new.id, new.room_id, json_extract(new.content, '\$.text'));
+        VALUES (new.id, new.room_id, json_extract(new.content, '$.text'));
       END
     ''');
 
     // Trigger for updated messages (editing)
-    await customStatement('''
+    await customStatement(r'''
       CREATE TRIGGER IF NOT EXISTS room_events_au AFTER UPDATE ON room_events
       WHEN new.type = 0 AND new.content IS NOT NULL
       BEGIN
         DELETE FROM room_events_fts WHERE event_id = old.id;
         INSERT INTO room_events_fts(event_id, room_id, content)
-        VALUES (new.id, new.room_id, json_extract(new.content, '\$.text'));
+        VALUES (new.id, new.room_id, json_extract(new.content, '$.text'));
       END
     ''');
 
@@ -478,12 +476,12 @@ class AppDatabase extends _$AppDatabase {
 
   /// Populate FTS index from existing text messages
   Future<void> _populateFtsFromExistingMessages() async {
-    await customStatement('''
+    await customStatement(r'''
       INSERT INTO room_events_fts(event_id, room_id, content)
-      SELECT id, room_id, json_extract(content, '\$.text')
+      SELECT id, room_id, json_extract(content, '$.text')
       FROM room_events
       WHERE type = 0 AND content IS NOT NULL
-        AND json_extract(content, '\$.text') IS NOT NULL
+        AND json_extract(content, '$.text') IS NOT NULL
     ''');
   }
 
@@ -494,8 +492,7 @@ class AppDatabase extends _$AppDatabase {
   /// Map a QueryRow to a RoomEvent
   ///
   /// Helper method to reduce duplication in search methods.
-  RoomEvent _mapQueryRowToRoomEvent(QueryRow row) {
-    return RoomEvent(
+  RoomEvent _mapQueryRowToRoomEvent(QueryRow row) => RoomEvent(
       id: row.read<String>('id'),
       roomId: row.read<String>('room_id'),
       senderId: row.read<String>('sender_id'),
@@ -513,7 +510,6 @@ class AppDatabase extends _$AppDatabase {
       redactedAt: row.readNullable<int>('redacted_at'),
       redactedBy: row.readNullable<String>('redacted_by'),
     );
-  }
 
   /// Search messages by text content across all rooms
   ///
@@ -593,7 +589,5 @@ class AppDatabase extends _$AppDatabase {
     await _populateFtsFromExistingMessages();
   }
 
-  static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'chat_v1.db');
-  }
+  static QueryExecutor _openConnection() => driftDatabase(name: 'chat_v1.db');
 }

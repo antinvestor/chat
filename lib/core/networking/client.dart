@@ -20,9 +20,7 @@ import '../../features/auth/data/auth_repository.dart';
 import 'certificate_pinning.dart';
 
 /// Secure storage provider for token access
-final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
-  return const FlutterSecureStorage();
-});
+final secureStorageProvider = Provider<FlutterSecureStorage>((ref) => const FlutterSecureStorage());
 
 /// Token manager provider using antinvestor_api_common TokenManager
 ///
@@ -74,9 +72,7 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
     },
   );
 
-  ref.onDispose(() {
-    tokenManager.dispose();
-  });
+  ref.onDispose(tokenManager.dispose);
 
   return tokenManager;
 });
@@ -114,8 +110,7 @@ typedef CreateTransportFn = connect.Transport Function(
 /// - [certificatePinning]: The CertificatePinning instance to use
 ///
 /// Returns a function that creates transports with certificate pinning enabled.
-CreateTransportFn createTransportFactory(CertificatePinning certificatePinning) {
-  return (Uri baseUrl, List<connect.Interceptor> interceptors) {
+CreateTransportFn createTransportFactory(CertificatePinning certificatePinning) => (Uri baseUrl, List<connect.Interceptor> interceptors) {
     final httpClient = certificatePinning.createPinnedHttpClient();
     return connect_protocol.Transport(
       baseUrl: baseUrl.toString(),
@@ -124,7 +119,6 @@ CreateTransportFn createTransportFactory(CertificatePinning certificatePinning) 
       interceptors: interceptors,
     );
   };
-}
 
 /// Creates a Connect transport for API communication with certificate pinning
 ///
@@ -187,7 +181,7 @@ final chatClientProvider = FutureProvider<ChatClient>((ref) async {
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
 
-  return await newChatClient(
+  return newChatClient(
     createTransport: createTransportFactory(certificatePinning),
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
@@ -203,7 +197,7 @@ final gatewayClientProvider = FutureProvider<GatewayClient>((ref) async {
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
 
-  return await newGatewayClient(
+  return newGatewayClient(
     createTransport: createTransportFactory(certificatePinning),
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
@@ -219,7 +213,7 @@ final deviceClientProvider = FutureProvider<DeviceClient>((ref) async {
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
 
-  return await newDeviceClient(
+  return newDeviceClient(
     createTransport: createTransportFactory(certificatePinning),
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
@@ -235,7 +229,7 @@ final profileClientProvider = FutureProvider<ProfileClient>((ref) async {
   // Initialize token manager if not already initialized
   await tokenManager.initialize();
 
-  return await newProfileClient(
+  return newProfileClient(
     createTransport: createTransportFactory(certificatePinning),
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,

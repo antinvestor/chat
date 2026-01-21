@@ -2,12 +2,11 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
 import 'package:chat/main.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import '../test_helpers/test_helpers.dart';
 
 /// Performance metrics collected during tests
@@ -35,9 +34,7 @@ Future<void> _writePerformanceMetrics() async {
 }
 
 void main() {
-  setUp(() {
-    TestHelpers.resetMocks();
-  });
+  setUp(TestHelpers.resetMocks);
 
   tearDownAll(() async {
     // Write metrics at the end of all tests
@@ -95,7 +92,7 @@ void main() {
       final stopwatch = Stopwatch()..start();
 
       // Test rapid text input
-      for (int i = 0; i < 100; i++) {
+      for (var i = 0; i < 100; i++) {
         await tester.enterText(find.byType(TextField), 'Test message $i');
         await tester.pump();
       }
@@ -247,7 +244,7 @@ void main() {
       final stopwatch = Stopwatch()..start();
 
       // Test rapid state changes
-      for (int i = 0; i < 50; i++) {
+      for (var i = 0; i < 50; i++) {
         await tester.enterText(find.byType(TextField), 'Message $i');
         await tester.pump();
       }

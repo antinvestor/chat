@@ -13,6 +13,14 @@ typedef OnVoiceRecordingComplete = void Function(VoiceRecordingResult result);
 
 /// Professional WhatsApp-style input bar with clean design
 class InputBar extends ConsumerStatefulWidget {
+
+  const InputBar({
+    required this.roomId, required this.onSendMessage, required this.onAttachment, required this.onCamera, required this.onCancelReply, super.key,
+    this.onVoiceRecordingComplete,
+    this.isEncryptionEnabled = false,
+    this.replyingToMessageId,
+    this.replyingToText,
+  });
   final String roomId;
   final Function(String text, {String? replyToMessageId}) onSendMessage;
   final VoidCallback onAttachment;
@@ -22,19 +30,6 @@ class InputBar extends ConsumerStatefulWidget {
   final String? replyingToMessageId;
   final String? replyingToText;
   final VoidCallback onCancelReply;
-
-  const InputBar({
-    super.key,
-    required this.roomId,
-    required this.onSendMessage,
-    required this.onAttachment,
-    required this.onCamera,
-    this.onVoiceRecordingComplete,
-    this.isEncryptionEnabled = false,
-    this.replyingToMessageId,
-    this.replyingToText,
-    required this.onCancelReply,
-  });
 
   @override
   ConsumerState<InputBar> createState() => _InputBarState();
@@ -243,8 +238,7 @@ class _InputBarState extends ConsumerState<InputBar>
     );
   }
 
-  Widget _buildReplyPreview(ThemeData theme) {
-    return Container(
+  Widget _buildReplyPreview(ThemeData theme) => Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -298,10 +292,8 @@ class _InputBarState extends ConsumerState<InputBar>
         ),
       ),
     );
-  }
 
-  Widget _buildVoiceRecordingUI(ThemeData theme) {
-    return Container(
+  Widget _buildVoiceRecordingUI(ThemeData theme) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
@@ -342,10 +334,8 @@ class _InputBarState extends ConsumerState<InputBar>
         ],
       ),
     );
-  }
 
-  Widget _buildInputRow(ThemeData theme, bool isDark, Color primaryColor) {
-    return Padding(
+  Widget _buildInputRow(ThemeData theme, bool isDark, Color primaryColor) => Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -427,14 +417,12 @@ class _InputBarState extends ConsumerState<InputBar>
         ],
       ),
     );
-  }
 
   Widget _buildIconButton({
     required IconData icon,
     required VoidCallback onTap,
     required ThemeData theme,
-  }) {
-    return Material(
+  }) => Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -449,7 +437,6 @@ class _InputBarState extends ConsumerState<InputBar>
         ),
       ),
     );
-  }
 
   Widget _buildSendButton(ThemeData theme, {bool isRecording = false}) {
     final primaryColor = theme.colorScheme.primary;
@@ -471,9 +458,7 @@ class _InputBarState extends ConsumerState<InputBar>
         ),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
-          transitionBuilder: (child, animation) {
-            return ScaleTransition(scale: animation, child: child);
-          },
+          transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
           child: showSend
               ? Icon(
                   isRecording ? Icons.send : Icons.send,

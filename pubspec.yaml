@@ -32,74 +32,64 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  flutter:
-    sdk: flutter
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
   antinvestor_api_chat: ^1.52.24
   antinvestor_api_common: ^1.52.0
   antinvestor_api_device: ^1.52.1
   antinvestor_api_files: ^1.52.1
-  # antinvestor_api_notification: ^1.52.1  # Temporarily disabled - will add when needed
   antinvestor_api_profile: ^1.52.1
+  app_links: ^7.0.0
+  connectivity_plus: ^7.0.0
+  connectrpc: ^1.0.0
+  crypto: ^3.0.6
   cupertino_icons: ^1.0.8
-  http: ^1.6.0
   drift: ^2.30.0
   drift_flutter: ^0.2.8
-  path_provider: ^2.1.5
-  path: ^1.9.1
-  openid_client: ^0.4.9+1
-  flutter_riverpod: ^3.1.0
-  riverpod_annotation: ^4.0.0
-  firebase_messaging: ^16.0.4
-  firebase_core: ^4.2.1
-  workmanager: ^0.9.0+3
-  flutter_secure_storage: ^10.0.0
-  go_router: ^17.0.0
-  freezed_annotation: ^3.1.0
-  json_annotation: ^4.9.0
-  xid: ^1.2.1
   equatable: ^2.0.8
+  file_picker: ^10.3.8
+  firebase_core: ^4.2.1
+  firebase_messaging: ^16.0.4
+  fixnum: ^1.1.1
+  flutter:
+    sdk: flutter
+  flutter_contacts: ^1.1.9+2
+  flutter_riverpod: ^3.1.0
+  flutter_secure_storage: ^10.0.0
+  flutter_vodozemac: ^0.4.1
+  flutter_webrtc: ^1.2.1
+  freezed_annotation: ^3.1.0
+  go_router: ^17.0.0
+  http: ^1.6.0
+  image_picker: ^1.1.2
   intl: ^0.20.2
+  json_annotation: ^4.9.0
+  libphonenumber_plugin: ^0.3.3
+  logger: ^2.5.0
+  openid_client: ^0.4.9+1
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.1
+  protobuf: ^4.2.0
+  record: ^6.1.2
+  riverpod_annotation: ^4.0.0
+  sentry_flutter: ^8.12.0
   url_launcher: ^6.3.2
   uuid: ^4.5.1
-  flutter_vodozemac: ^0.4.1
-  protobuf: ^4.2.0
-  connectrpc: ^1.0.0
-  fixnum: ^1.1.1
-  flutter_webrtc: ^1.2.1
-  permission_handler: ^12.0.1
-  flutter_contacts: ^1.1.9+2
-  logger: ^2.5.0
-  image_picker: ^1.1.2
-  file_picker: ^10.3.8
-  connectivity_plus: ^7.0.0
   web: ^1.1.1
-  app_links: ^7.0.0
-  crypto: ^3.0.6
-  libphonenumber_plugin: ^0.3.3
-  record: ^6.1.2
-  sentry_flutter: ^8.12.0
+  workmanager: ^0.9.0+3
+  xid: ^1.2.1
 
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^6.0.0
   build_runner: ^2.10.4
   drift_dev: ^2.30.0
-  import_sorter: ^4.6.0
-  riverpod_generator: ^4.0.0+1
-  freezed: ^3.2.3
-  json_serializable: ^6.11.2
+  flutter_lints: ^6.0.0
   flutter_native_splash: ^2.4.7
+  flutter_test:
+    sdk: flutter
+  freezed: ^3.2.3
+  import_sorter: ^4.6.0
+  json_serializable: ^6.11.2
+  riverpod_generator: ^4.0.0+1
 
 
 import_sorter:

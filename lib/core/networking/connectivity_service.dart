@@ -8,14 +8,14 @@ import '../sync/sync_engine.dart';
 
 /// Monitors network connectivity and triggers sync when coming back online
 class ConnectivityService {
+
+  ConnectivityService(this._connectivity, this._syncEngine);
   final Connectivity _connectivity;
   final SyncEngine _syncEngine;
 
   StreamSubscription<List<ConnectivityResult>>? _subscription;
   bool _wasOffline = false;
   bool _isInitialized = false;
-
-  ConnectivityService(this._connectivity, this._syncEngine);
 
   /// Start monitoring connectivity changes
   void start() {
@@ -67,14 +67,12 @@ class ConnectivityService {
     _wasOffline = !hasConnection;
   }
 
-  bool _hasConnection(List<ConnectivityResult> results) {
-    return results.any(
+  bool _hasConnection(List<ConnectivityResult> results) => results.any(
       (result) =>
           result == ConnectivityResult.wifi ||
           result == ConnectivityResult.mobile ||
           result == ConnectivityResult.ethernet,
     );
-  }
 
   void _triggerSync() {
     // Restart the sync engine to process pending jobs
@@ -107,9 +105,7 @@ final connectivityServiceProvider = FutureProvider<ConnectivityService>((
   final syncEngine = await ref.watch(syncEngineProvider.future);
   final service = ConnectivityService(Connectivity(), syncEngine);
 
-  ref.onDispose(() {
-    service.stop();
-  });
+  ref.onDispose(service.stop);
 
   return service;
 });
@@ -124,12 +120,10 @@ final isConnectedProvider = FutureProvider<bool>((ref) async {
 final connectivityStreamProvider = StreamProvider<bool>((ref) {
   final connectivity = Connectivity();
 
-  return connectivity.onConnectivityChanged.map((results) {
-    return results.any(
+  return connectivity.onConnectivityChanged.map((results) => results.any(
       (result) =>
           result == ConnectivityResult.wifi ||
           result == ConnectivityResult.mobile ||
           result == ConnectivityResult.ethernet,
-    );
-  });
+    ));
 });

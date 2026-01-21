@@ -57,7 +57,6 @@ final sharedRoomsProvider = FutureProvider.family<List<domain.Room>, String>((
           unreadCount: r.unreadCount,
           lastEventId: r.lastEventId,
           lastEventIndex: r.lastEventIndex ?? 0,
-          metadata: null,
         ),
       )
       .toList();

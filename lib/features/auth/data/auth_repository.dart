@@ -22,9 +22,9 @@ part 'auth_repository.g.dart';
 /// final isLoggedIn = await authRepo.isLoggedIn();
 /// ```
 class AuthRepository {
-  final AuthService _authService;
 
   AuthRepository(this._authService);
+  final AuthService _authService;
 
   Future<void> login() async {
     final token = await _authService.authenticate();
@@ -39,13 +39,9 @@ class AuthRepository {
     await _authService.logout();
   }
 
-  Future<bool> isLoggedIn() async {
-    return await _authService.isAuthenticated();
-  }
+  Future<bool> isLoggedIn() async => _authService.isAuthenticated();
 
-  Future<bool> isTokenExpired() async {
-    return await _authService.isTokenExpired();
-  }
+  Future<bool> isTokenExpired() async => _authService.isTokenExpired();
 
   Future<void> refreshToken() async {
     await _authService.refreshToken();
@@ -54,24 +50,16 @@ class AuthRepository {
   /// Refresh token with detailed result information
   /// Returns result type, token if successful, and error message if failed
   Future<({TokenRefreshResult result, dynamic token, String? error})>
-  refreshTokenWithResult() async {
-    return await _authService.refreshTokenWithResult();
-  }
+  refreshTokenWithResult() async => _authService.refreshTokenWithResult();
 
   /// Get the time until a token refresh is needed
   /// Returns null if no expiry info available
-  Future<Duration?> getTimeUntilRefreshNeeded() async {
-    return await _authService.getTimeUntilRefreshNeeded();
-  }
+  Future<Duration?> getTimeUntilRefreshNeeded() async => _authService.getTimeUntilRefreshNeeded();
 
   /// Get the token expiry time
-  Future<DateTime?> getTokenExpiryTime() async {
-    return await _authService.getTokenExpiryTime();
-  }
+  Future<DateTime?> getTokenExpiryTime() async => _authService.getTokenExpiryTime();
 
-  Future<Map<String, dynamic>?> getUserInfo() async {
-    return await _authService.getUserInfo();
-  }
+  Future<Map<String, dynamic>?> getUserInfo() async => _authService.getUserInfo();
 
   /// Get the current profile ID from the JWT token ('sub' claim)
   /// Returns the profile ID of the authenticated profile, or null if not authenticated
@@ -87,15 +75,11 @@ class AuthRepository {
     return claims?['contact_id'] as String?;
   }
 
-  Future<String?> getAccessToken() async {
-    return await _authService.getAccessToken();
-  }
+  Future<String?> getAccessToken() async => _authService.getAccessToken();
 
   /// Ensure we have a valid access token, refreshing if necessary
   /// Returns the access token if successful, null if user needs to re-login
-  Future<String?> ensureValidAccessToken() async {
-    return await _authService.ensureValidAccessToken();
-  }
+  Future<String?> ensureValidAccessToken() async => _authService.ensureValidAccessToken();
 
   /// Ensure valid access token with detailed status
   /// Returns token and whether re-login is needed
@@ -103,17 +87,13 @@ class AuthRepository {
   ensureValidAccessTokenWithStatus({
     int maxRetries = 3,
     Duration retryDelay = const Duration(seconds: 2),
-  }) async {
-    return await _authService.ensureValidAccessTokenWithStatus(
+  }) async => _authService.ensureValidAccessTokenWithStatus(
       maxRetries: maxRetries,
       retryDelay: retryDelay,
     );
-  }
 
   /// Check if we have a valid, usable access token right now
-  Future<bool> hasValidAccessToken() async {
-    return await _authService.hasValidAccessToken();
-  }
+  Future<bool> hasValidAccessToken() async => _authService.hasValidAccessToken();
 }
 
 @riverpod
@@ -135,5 +115,5 @@ AuthRepository authRepository(Ref ref) {
 @riverpod
 Future<String?> currentProfileId(Ref ref) async {
   final authRepo = ref.watch(authRepositoryProvider);
-  return await authRepo.getCurrentProfileId();
+  return authRepo.getCurrentProfileId();
 }

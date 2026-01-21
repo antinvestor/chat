@@ -13,18 +13,14 @@ import '../../messages/domain/room_event.dart' as domain;
 /// Provider for motion service
 final motionServiceProvider = FutureProvider<MotionService>((ref) async {
   final syncEngine = await ref.watch(syncEngineProvider.future);
-  final authRepo = await ref.watch(authRepositoryProvider);
-  final messageRepo = await ref.watch(messageRepositoryProvider);
+  final authRepo = ref.watch(authRepositoryProvider);
+  final messageRepo = ref.watch(messageRepositoryProvider);
   final db = AppDatabase.instance;
   return MotionService(syncEngine, authRepo, messageRepo, db);
 });
 
 /// Service for handling motion transactions and payments
 class MotionService {
-  final SyncEngine _syncEngine;
-  final AuthRepository _authRepository;
-  final MessageRepository _messageRepository;
-  final AppDatabase _database;
 
   /// Creates a motion service
   MotionService(
@@ -33,6 +29,10 @@ class MotionService {
     this._messageRepository,
     this._database,
   );
+  final SyncEngine _syncEngine;
+  final AuthRepository _authRepository;
+  final MessageRepository _messageRepository;
+  final AppDatabase _database;
 
   /// Helper method to check if user has admin/owner role in room
   Future<String?> _getRoomRole(String roomId, String profileId) async {

@@ -5,16 +5,13 @@ import 'package:flutter/material.dart';
 /// Shows the current message text in an editable field and provides
 /// Save and Cancel buttons.
 class EditMessageSheet extends StatefulWidget {
+
+  const EditMessageSheet({
+    required this.messageId, required this.currentText, required this.onSave, super.key,
+  });
   final String messageId;
   final String currentText;
   final Future<bool> Function(String messageId, String newText) onSave;
-
-  const EditMessageSheet({
-    super.key,
-    required this.messageId,
-    required this.currentText,
-    required this.onSave,
-  });
 
   @override
   State<EditMessageSheet> createState() => _EditMessageSheetState();
