@@ -491,9 +491,7 @@ void main() {
 
     test('simulated reconnection flow', () {
       // Start with good connection
-      var stats = const CallStats(
-        quality: ConnectionQuality.good,
-      );
+      var stats = const CallStats(quality: ConnectionQuality.good);
       expect(stats.shouldShowWarning, isFalse);
 
       // Connection drops - start reconnecting
@@ -572,9 +570,7 @@ void main() {
 
     test('video disable flow when quality degrades', () {
       // Start with excellent quality and video enabled
-      var stats = const CallStats(
-        quality: ConnectionQuality.excellent,
-      );
+      var stats = const CallStats(quality: ConnectionQuality.excellent);
       expect(stats.isVideoQualityAcceptable, isTrue);
 
       // Quality degrades to good - still acceptable
@@ -712,9 +708,7 @@ void main() {
     });
 
     test('all stat values can be set to zero', () {
-      const stats = CallStats(
-        
-      );
+      const stats = CallStats();
 
       expect(stats.roundTripTimeMs, equals(0));
       expect(stats.jitterMs, equals(0));
