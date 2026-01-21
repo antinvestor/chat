@@ -5,6 +5,9 @@ import 'dart:collection';
 /// Items are evicted from the cache when the maximum size is exceeded,
 /// with the least recently accessed items being removed first.
 class LRUCache<K, V> {
+  LRUCache({required this.maxSize, this.onEvict})
+    : assert(maxSize > 0, 'maxSize must be greater than 0');
+
   /// Maximum number of items in the cache
   final int maxSize;
 
@@ -13,11 +16,6 @@ class LRUCache<K, V> {
 
   /// Callback invoked when an item is evicted from the cache
   final void Function(K key, V value)? onEvict;
-
-  LRUCache({
-    required this.maxSize,
-    this.onEvict,
-  }) : assert(maxSize > 0, 'maxSize must be greater than 0');
 
   /// Gets an item from the cache.
   ///
@@ -99,6 +97,12 @@ class LRUCache<K, V> {
 /// Each item has an associated size, and items are evicted when
 /// the total size exceeds the maximum allowed size.
 class SizedLRUCache<K, V> {
+  SizedLRUCache({
+    required this.maxSizeBytes,
+    required this.sizeCalculator,
+    this.onEvict,
+  }) : assert(maxSizeBytes > 0, 'maxSizeBytes must be greater than 0');
+
   /// Maximum total size of all items in bytes
   final int maxSizeBytes;
 
@@ -114,12 +118,6 @@ class SizedLRUCache<K, V> {
 
   /// Current total size in bytes
   int _currentSizeBytes = 0;
-
-  SizedLRUCache({
-    required this.maxSizeBytes,
-    required this.sizeCalculator,
-    this.onEvict,
-  }) : assert(maxSizeBytes > 0, 'maxSizeBytes must be greater than 0');
 
   /// Gets an item from the cache.
   V? get(K key) {
@@ -203,8 +201,7 @@ class SizedLRUCache<K, V> {
 }
 
 class _SizedEntry<V> {
+  _SizedEntry(this.value, this.size);
   final V value;
   final int size;
-
-  _SizedEntry(this.value, this.size);
 }

@@ -42,24 +42,32 @@ final mediaCacheManagerProvider = Provider<CacheManager>((ref) {
 /// - Cache invalidation support
 /// - Preloading capabilities
 class ImageCacheService {
+  ImageCacheService({int memoryLimitBytes = _defaultMemoryLimitBytes})
+    : _memoryCache = SizedLRUCache<String, Uint8List>(
+        maxSizeBytes: memoryLimitBytes,
+        sizeCalculator: (bytes) => bytes.length,
+        onEvict: (key, value) {
+          AppLogger.debug(
+            'Image evicted from memory cache',
+            data: {
+              'url': key.length > 50 ? '${key.substring(0, 50)}...' : key,
+              'size': value.length,
+            },
+          );
+        },
+      );
+
   /// Memory cache for decoded image data
   final SizedLRUCache<String, Uint8List> _memoryCache;
 
   /// Tracks URLs being preloaded to avoid duplicates
   final Set<String> _preloadingUrls = {};
 
-  ImageCacheService({
-    int memoryLimitBytes = _defaultMemoryLimitBytes,
-  }) : _memoryCache = SizedLRUCache<String, Uint8List>(
-          maxSizeBytes: memoryLimitBytes,
-          sizeCalculator: (bytes) => bytes.length,
-          onEvict: (key, value) {
-            AppLogger.debug('Image evicted from memory cache', data: {
-              'url': key.length > 50 ? '${key.substring(0, 50)}...' : key,
-              'size': value.length,
-            });
-          },
-        );
+  /// Tracks which URLs are profile images (for selective cache clearing)
+  final Set<String> _profileImageUrls = {};
+
+  /// Tracks which URLs are media thumbnails (for selective cache clearing)
+  final Set<String> _mediaImageUrls = {};
 
   /// Cache manager for profile images (avatars)
   static final CacheManager profileCacheManager = CacheManager(
@@ -98,8 +106,10 @@ class ImageCacheService {
     try {
       return await profileCacheManager.getFileFromCache(url);
     } catch (e) {
-      AppLogger.warning('Failed to get profile image from cache',
-          data: {'error': e.toString()});
+      AppLogger.warning(
+        'Failed to get profile image from cache',
+        data: {'error': e.toString()},
+      );
       return null;
     }
   }
@@ -109,8 +119,10 @@ class ImageCacheService {
     try {
       return await mediaCacheManager.getFileFromCache(url);
     } catch (e) {
-      AppLogger.warning('Failed to get media thumbnail from cache',
-          data: {'error': e.toString()});
+      AppLogger.warning(
+        'Failed to get media thumbnail from cache',
+        data: {'error': e.toString()},
+      );
       return null;
     }
   }
@@ -128,6 +140,7 @@ class ImageCacheService {
   /// Invalidates a specific profile image from cache.
   Future<void> invalidateProfileImage(String url) async {
     _memoryCache.remove(url);
+    _profileImageUrls.remove(url);
     await profileCacheManager.removeFile(url);
     AppLogger.debug('Profile image invalidated', data: {'url': url});
   }
@@ -135,6 +148,7 @@ class ImageCacheService {
   /// Invalidates a specific media thumbnail from cache.
   Future<void> invalidateMediaThumbnail(String url) async {
     _memoryCache.remove(url);
+    _mediaImageUrls.remove(url);
     await mediaCacheManager.removeFile(url);
     AppLogger.debug('Media thumbnail invalidated', data: {'url': url});
   }
@@ -142,20 +156,30 @@ class ImageCacheService {
   /// Invalidates all profile images.
   Future<void> clearProfileCache() async {
     await profileCacheManager.emptyCache();
-    _clearMemoryCacheByPrefix('profile');
+    // Clear tracked profile URLs from memory cache
+    for (final url in _profileImageUrls) {
+      _memoryCache.remove(url);
+    }
+    _profileImageUrls.clear();
     AppLogger.info('Profile image cache cleared');
   }
 
   /// Invalidates all media thumbnails.
   Future<void> clearMediaCache() async {
     await mediaCacheManager.emptyCache();
-    _clearMemoryCacheByPrefix('media');
+    // Clear tracked media URLs from memory cache
+    for (final url in _mediaImageUrls) {
+      _memoryCache.remove(url);
+    }
+    _mediaImageUrls.clear();
     AppLogger.info('Media thumbnail cache cleared');
   }
 
   /// Clears all image caches.
   Future<void> clearAll() async {
     _memoryCache.clear();
+    _profileImageUrls.clear();
+    _mediaImageUrls.clear();
     await Future.wait([
       profileCacheManager.emptyCache(),
       mediaCacheManager.emptyCache(),
@@ -167,17 +191,18 @@ class ImageCacheService {
   ///
   /// Useful for preloading visible contact avatars.
   Future<void> preloadProfileImages(List<String> urls) async {
-    final urlsToLoad =
-        urls.where((url) => !_preloadingUrls.contains(url)).toList();
+    final urlsToLoad = urls
+        .where((url) => !_preloadingUrls.contains(url))
+        .toList();
 
     for (final url in urlsToLoad) {
       _preloadingUrls.add(url);
+      _profileImageUrls.add(url); // Track for selective cache clearing
     }
 
     try {
       await Future.wait(
         urlsToLoad.map((url) => _preloadSingle(url, profileCacheManager)),
-        eagerError: false,
       );
     } finally {
       for (final url in urlsToLoad) {
@@ -190,17 +215,18 @@ class ImageCacheService {
   ///
   /// Useful for preloading visible message thumbnails.
   Future<void> preloadMediaThumbnails(List<String> urls) async {
-    final urlsToLoad =
-        urls.where((url) => !_preloadingUrls.contains(url)).toList();
+    final urlsToLoad = urls
+        .where((url) => !_preloadingUrls.contains(url))
+        .toList();
 
     for (final url in urlsToLoad) {
       _preloadingUrls.add(url);
+      _mediaImageUrls.add(url); // Track for selective cache clearing
     }
 
     try {
       await Future.wait(
         urlsToLoad.map((url) => _preloadSingle(url, mediaCacheManager)),
-        eagerError: false,
       );
     } finally {
       for (final url in urlsToLoad) {
@@ -222,16 +248,10 @@ class ImageCacheService {
       AppLogger.debug('Image preloaded', data: {'url': url});
     } catch (e) {
       // Silent failure for preloading
-      AppLogger.debug('Failed to preload image',
-          data: {'url': url, 'error': e.toString()});
-    }
-  }
-
-  void _clearMemoryCacheByPrefix(String prefix) {
-    final keysToRemove =
-        _memoryCache.keys.where((key) => key.contains(prefix)).toList();
-    for (final key in keysToRemove) {
-      _memoryCache.remove(key);
+      AppLogger.debug(
+        'Failed to preload image',
+        data: {'url': url, 'error': e.toString()},
+      );
     }
   }
 
@@ -241,7 +261,7 @@ class ImageCacheService {
       'memoryUsedBytes': _memoryCache.currentSizeBytes,
       'memoryMaxBytes': _memoryCache.maxSize,
       'memoryUsagePercent':
-          (_memoryCache.usageRatio * 100).toStringAsFixed(1) + '%',
+          '${(_memoryCache.usageRatio * 100).toStringAsFixed(1)}%',
       'memoryCacheCount': _memoryCache.length,
     };
   }
@@ -250,28 +270,32 @@ class ImageCacheService {
   Future<int> getDiskCacheSize() async {
     try {
       final cacheDir = await getApplicationCacheDirectory();
-      final cacheEntities = cacheDir.listSync().where((e) =>
-          e.path.contains('profile_image_cache') ||
-          e.path.contains('media_thumbnail_cache'));
 
-      int totalSize = 0;
-      for (final entity in cacheEntities) {
-        final dir = Directory(entity.path);
+      Future<int> calculateDirSize(String dirName) async {
+        final dir = Directory('${cacheDir.path}/$dirName');
+        var dirSize = 0;
+        // ignore: avoid_slow_async_io - async version is correct here
         if (await dir.exists()) {
-          final files = dir.listSync(recursive: true);
-          for (final file in files) {
-            final f = File(file.path);
-            if (await f.exists()) {
-              final stat = await f.stat();
-              totalSize += stat.size;
+          await for (final entity in dir.list(recursive: true)) {
+            if (entity is File) {
+              dirSize += await entity.length();
             }
           }
         }
+        return dirSize;
       }
-      return totalSize;
+
+      final sizes = await Future.wait([
+        calculateDirSize('profile_image_cache'),
+        calculateDirSize('media_thumbnail_cache'),
+      ]);
+
+      return sizes.reduce((a, b) => a + b);
     } catch (e) {
-      AppLogger.warning('Failed to calculate disk cache size',
-          data: {'error': e.toString()});
+      AppLogger.warning(
+        'Failed to calculate disk cache size',
+        data: {'error': e.toString()},
+      );
       return 0;
     }
   }
@@ -292,52 +316,87 @@ Future<void> precacheNetworkImage(
       await precacheImage(FileImage(file), context);
     }
   } catch (e) {
-    AppLogger.debug('Failed to precache image',
-        data: {'url': url, 'error': e.toString()});
+    AppLogger.debug(
+      'Failed to precache image',
+      data: {'url': url, 'error': e.toString()},
+    );
   }
 }
 
-/// Extension for preloading images in a scroll view.
-extension ImagePreloadExtension on ScrollController {
-  /// Preloads images for items that will soon be visible.
-  ///
-  /// [getUrls] should return URLs for items at the given indices.
-  /// [preloadCount] is the number of items to preload ahead.
-  void setupImagePreloading({
-    required List<String?> Function(int startIndex, int endIndex) getUrls,
-    required ImageCacheService cacheService,
-    int preloadCount = 5,
-    bool isProfileImages = false,
+/// Helper class for managing image preloading with scroll controllers.
+///
+/// Use this instead of an extension to ensure proper listener cleanup:
+/// ```dart
+/// late final ImagePreloadHelper _preloadHelper;
+///
+/// @override
+/// void initState() {
+///   super.initState();
+///   _preloadHelper = ImagePreloadHelper(
+///     controller: _scrollController,
+///     cacheService: imageCacheService,
+///     getUrls: (start, end) => messages.sublist(start, end).map((m) => m.imageUrl).toList(),
+///   );
+/// }
+///
+/// @override
+/// void dispose() {
+///   _preloadHelper.dispose();
+///   _scrollController.dispose();
+///   super.dispose();
+/// }
+/// ```
+class ImagePreloadHelper {
+  ImagePreloadHelper({
+    required this.controller,
+    required this.cacheService,
+    required this.getUrls,
+    this.itemHeight = 80.0,
+    this.preloadCount = 5,
+    this.isProfileImages = false,
   }) {
-    addListener(() {
-      if (!hasClients) return;
+    _listener = _onScroll;
+    controller.addListener(_listener);
+  }
+  final ScrollController controller;
+  final ImageCacheService cacheService;
+  final List<String?> Function(int startIndex, int endIndex) getUrls;
+  final double itemHeight;
+  final int preloadCount;
+  final bool isProfileImages;
 
-      final scrollPosition = position;
-      final viewportHeight = scrollPosition.viewportDimension;
-      final scrollOffset = scrollPosition.pixels;
-      final maxScroll = scrollPosition.maxScrollExtent;
+  late final VoidCallback _listener;
 
-      // Calculate visible range and preload range
-      final itemHeight = 80.0; // Approximate item height
-      final firstVisible = (scrollOffset / itemHeight).floor();
-      final lastVisible = ((scrollOffset + viewportHeight) / itemHeight).ceil();
+  void _onScroll() {
+    if (!controller.hasClients) return;
 
-      // Preload items ahead of current view
-      final preloadStart = lastVisible;
-      final preloadEnd = lastVisible + preloadCount;
+    final scrollPosition = controller.position;
+    final viewportHeight = scrollPosition.viewportDimension;
+    final scrollOffset = scrollPosition.pixels;
 
-      final urls = getUrls(preloadStart, preloadEnd)
-          .where((url) => url != null)
-          .cast<String>()
-          .toList();
+    // Calculate visible range and preload range
+    final lastVisible = ((scrollOffset + viewportHeight) / itemHeight).ceil();
 
-      if (urls.isNotEmpty) {
-        if (isProfileImages) {
-          cacheService.preloadProfileImages(urls);
-        } else {
-          cacheService.preloadMediaThumbnails(urls);
-        }
+    // Preload items ahead of current view
+    final preloadStart = lastVisible;
+    final preloadEnd = lastVisible + preloadCount;
+
+    final urls = getUrls(
+      preloadStart,
+      preloadEnd,
+    ).where((url) => url != null).cast<String>().toList();
+
+    if (urls.isNotEmpty) {
+      if (isProfileImages) {
+        cacheService.preloadProfileImages(urls);
+      } else {
+        cacheService.preloadMediaThumbnails(urls);
       }
-    });
+    }
+  }
+
+  /// Removes the scroll listener. Call this in dispose().
+  void dispose() {
+    controller.removeListener(_listener);
   }
 }
