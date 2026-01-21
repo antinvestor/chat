@@ -9,6 +9,20 @@ import '../core/cache/image_cache_service.dart';
 /// Uses the media thumbnail cache manager for efficient caching.
 /// Provides loading and error states with customizable placeholders.
 class CachedMediaImage extends ConsumerWidget {
+  const CachedMediaImage({
+    required this.imageUrl,
+    super.key,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.borderRadius,
+    this.placeholder,
+    this.errorWidget,
+    this.showProgress = true,
+    this.onTap,
+    this.onLoaded,
+  });
+
   /// The URL of the image
   final String imageUrl;
 
@@ -39,20 +53,6 @@ class CachedMediaImage extends ConsumerWidget {
   /// Called when the image finishes loading
   final VoidCallback? onLoaded;
 
-  const CachedMediaImage({
-    super.key,
-    required this.imageUrl,
-    this.width,
-    this.height,
-    this.fit = BoxFit.cover,
-    this.borderRadius,
-    this.placeholder,
-    this.errorWidget,
-    this.showProgress = true,
-    this.onTap,
-    this.onLoaded,
-  });
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Widget image = CachedNetworkImage(
@@ -78,27 +78,18 @@ class CachedMediaImage extends ConsumerWidget {
           height: height,
           decoration: BoxDecoration(
             borderRadius: borderRadius,
-            image: DecorationImage(
-              image: imageProvider,
-              fit: fit,
-            ),
+            image: DecorationImage(image: imageProvider, fit: fit),
           ),
         );
       },
     );
 
     if (borderRadius != null) {
-      image = ClipRRect(
-        borderRadius: borderRadius!,
-        child: image,
-      );
+      image = ClipRRect(borderRadius: borderRadius!, child: image);
     }
 
     if (onTap != null) {
-      return GestureDetector(
-        onTap: onTap,
-        child: image,
-      );
+      return GestureDetector(onTap: onTap, child: image);
     }
 
     return image;
@@ -113,9 +104,7 @@ class CachedMediaImage extends ConsumerWidget {
         borderRadius: borderRadius,
       ),
       child: showProgress
-          ? const Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : null,
     );
   }
@@ -141,6 +130,16 @@ class CachedMediaImage extends ConsumerWidget {
 
 /// A cached video thumbnail with a play overlay.
 class CachedVideoThumbnail extends ConsumerWidget {
+  const CachedVideoThumbnail({
+    required this.thumbnailUrl,
+    super.key,
+    this.width,
+    this.height,
+    this.borderRadius,
+    this.onTap,
+    this.duration,
+  });
+
   /// The URL of the thumbnail image
   final String thumbnailUrl;
 
@@ -159,16 +158,6 @@ class CachedVideoThumbnail extends ConsumerWidget {
   /// Duration of the video (optional, shown as overlay)
   final Duration? duration;
 
-  const CachedVideoThumbnail({
-    super.key,
-    required this.thumbnailUrl,
-    this.width,
-    this.height,
-    this.borderRadius,
-    this.onTap,
-    this.duration,
-  });
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
@@ -181,14 +170,13 @@ class CachedVideoThumbnail extends ConsumerWidget {
             width: width,
             height: height,
             borderRadius: borderRadius,
-            fit: BoxFit.cover,
           ),
           // Play button overlay
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -205,7 +193,7 @@ class CachedVideoThumbnail extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: Colors.black.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -232,6 +220,16 @@ class CachedVideoThumbnail extends ConsumerWidget {
 
 /// A grid of cached media images with lazy loading.
 class CachedMediaGrid extends StatelessWidget {
+  const CachedMediaGrid({
+    required this.imageUrls,
+    super.key,
+    this.crossAxisCount = 3,
+    this.spacing = 2,
+    this.childAspectRatio = 1,
+    this.onImageTap,
+    this.borderRadius,
+  });
+
   /// List of image URLs
   final List<String> imageUrls;
 
@@ -250,16 +248,6 @@ class CachedMediaGrid extends StatelessWidget {
   /// Border radius for images
   final BorderRadius? borderRadius;
 
-  const CachedMediaGrid({
-    super.key,
-    required this.imageUrls,
-    this.crossAxisCount = 3,
-    this.spacing = 2,
-    this.childAspectRatio = 1,
-    this.onImageTap,
-    this.borderRadius,
-  });
-
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
@@ -273,7 +261,6 @@ class CachedMediaGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         return CachedMediaImage(
           imageUrl: imageUrls[index],
-          fit: BoxFit.cover,
           borderRadius: borderRadius,
           onTap: onImageTap != null
               ? () => onImageTap!(index, imageUrls[index])

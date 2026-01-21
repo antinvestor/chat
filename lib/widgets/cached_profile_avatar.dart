@@ -9,6 +9,17 @@ import '../core/cache/image_cache_service.dart';
 /// Uses the profile image cache manager for efficient caching.
 /// Shows initials as fallback when image is not available.
 class CachedProfileAvatar extends ConsumerWidget {
+  const CachedProfileAvatar({
+    super.key,
+    this.imageUrl,
+    this.name,
+    this.radius = 20,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.onTap,
+    this.showLoading = false,
+  });
+
   /// The URL of the profile image
   final String? imageUrl;
 
@@ -30,17 +41,6 @@ class CachedProfileAvatar extends ConsumerWidget {
   /// Whether to show a loading indicator while loading
   final bool showLoading;
 
-  const CachedProfileAvatar({
-    super.key,
-    this.imageUrl,
-    this.name,
-    this.radius = 20,
-    this.backgroundColor,
-    this.foregroundColor,
-    this.onTap,
-    this.showLoading = false,
-  });
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -60,17 +60,17 @@ class CachedProfileAvatar extends ConsumerWidget {
         ),
         placeholder: showLoading
             ? (context, url) => CircleAvatar(
-                  radius: radius,
-                  backgroundColor: bgColor,
-                  child: SizedBox(
-                    width: radius,
-                    height: radius,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: fgColor,
-                    ),
+                radius: radius,
+                backgroundColor: bgColor,
+                child: SizedBox(
+                  width: radius,
+                  height: radius,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: fgColor,
                   ),
-                )
+                ),
+              )
             : (context, url) => _buildInitialsAvatar(bgColor, fgColor),
         errorWidget: (context, url, error) =>
             _buildInitialsAvatar(bgColor, fgColor),
@@ -82,10 +82,7 @@ class CachedProfileAvatar extends ConsumerWidget {
     }
 
     if (onTap != null) {
-      return GestureDetector(
-        onTap: onTap,
-        child: avatar,
-      );
+      return GestureDetector(onTap: onTap, child: avatar);
     }
 
     return avatar;
@@ -121,6 +118,15 @@ class CachedProfileAvatar extends ConsumerWidget {
 
 /// A row of stacked profile avatars for group displays.
 class CachedProfileAvatarGroup extends StatelessWidget {
+  const CachedProfileAvatarGroup({
+    required this.imageUrls,
+    super.key,
+    this.names = const [],
+    this.maxAvatars = 3,
+    this.radius = 16,
+    this.overlap = 8,
+  });
+
   /// List of image URLs (null entries show initials)
   final List<String?> imageUrls;
 
@@ -136,22 +142,14 @@ class CachedProfileAvatarGroup extends StatelessWidget {
   /// Overlap amount between avatars
   final double overlap;
 
-  const CachedProfileAvatarGroup({
-    super.key,
-    required this.imageUrls,
-    this.names = const [],
-    this.maxAvatars = 3,
-    this.radius = 16,
-    this.overlap = 8,
-  });
-
   @override
   Widget build(BuildContext context) {
     final displayCount = imageUrls.length.clamp(0, maxAvatars);
     final extraCount = imageUrls.length - displayCount;
 
     return SizedBox(
-      width: (radius * 2 * displayCount) -
+      width:
+          (radius * 2 * displayCount) -
           (overlap * (displayCount - 1)) +
           (extraCount > 0 ? radius * 2 - overlap : 0),
       height: radius * 2,
@@ -188,8 +186,9 @@ class CachedProfileAvatarGroup extends StatelessWidget {
                 ),
                 child: CircleAvatar(
                   radius: radius - 2,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.secondaryContainer,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.secondaryContainer,
                   child: Text(
                     '+$extraCount',
                     style: TextStyle(

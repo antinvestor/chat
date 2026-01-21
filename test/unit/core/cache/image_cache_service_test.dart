@@ -1,9 +1,6 @@
-import 'dart:typed_data';
-
+import 'package:chat/core/cache/image_cache_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:chat/core/cache/image_cache_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -12,24 +9,24 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'getApplicationSupportDirectory' ||
-            methodCall.method == 'getApplicationCacheDirectory' ||
-            methodCall.method == 'getTemporaryDirectory') {
-          return '/tmp/test_cache';
-        }
-        return null;
-      },
-    );
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (MethodCall methodCall) async {
+            if (methodCall.method == 'getApplicationSupportDirectory' ||
+                methodCall.method == 'getApplicationCacheDirectory' ||
+                methodCall.method == 'getTemporaryDirectory') {
+              return '/tmp/test_cache';
+            }
+            return null;
+          },
+        );
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      null,
-    );
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          null,
+        );
   });
   group('ImageCacheService', () {
     late ImageCacheService service;
@@ -50,7 +47,10 @@ void main() {
       });
 
       test('getFromMemory returns null for missing URL', () {
-        expect(service.getFromMemory('https://example.com/missing.jpg'), isNull);
+        expect(
+          service.getFromMemory('https://example.com/missing.jpg'),
+          isNull,
+        );
       });
 
       test('memory cache respects size limit', () {
@@ -58,7 +58,7 @@ void main() {
         final smallService = ImageCacheService(memoryLimitBytes: 100);
 
         // Add items totaling more than 100 bytes
-        for (int i = 0; i < 20; i++) {
+        for (var i = 0; i < 20; i++) {
           smallService.putInMemory(
             'https://example.com/image$i.jpg',
             Uint8List(10), // 10 bytes each
@@ -94,7 +94,10 @@ void main() {
         final stats = service.getStats();
 
         expect(stats['memoryUsagePercent'], isNotNull);
-        expect(stats['memoryMaxBytes'], equals(50 * 1024 * 1024)); // 50MB default
+        expect(
+          stats['memoryMaxBytes'],
+          equals(50 * 1024 * 1024),
+        ); // 50MB default
       });
     });
 
@@ -142,11 +145,8 @@ void main() {
       final service = ImageCacheService(memoryLimitBytes: 50);
 
       // Add 10 items of 10 bytes each (100 bytes total)
-      for (int i = 0; i < 10; i++) {
-        service.putInMemory(
-          'https://example.com/img$i.jpg',
-          Uint8List(10),
-        );
+      for (var i = 0; i < 10; i++) {
+        service.putInMemory('https://example.com/img$i.jpg', Uint8List(10));
       }
 
       // Should have evicted to stay under 50 bytes

@@ -1,8 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/core/cache/lru_cache.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('LRUCache', () {
@@ -269,7 +268,10 @@ void main() {
 
         cache.put('a', Uint8List.fromList([1, 2, 3])); // 3 bytes
         cache.put('b', Uint8List.fromList([4, 5, 6])); // 3 bytes
-        cache.put('c', Uint8List.fromList([7, 8, 9, 10, 11])); // 5 bytes, evicts 'a'
+        cache.put(
+          'c',
+          Uint8List.fromList([7, 8, 9, 10, 11]),
+        ); // 5 bytes, evicts 'a'
 
         expect(cache.get('a'), isNull);
         expect(cache.get('b'), isNotNull);
@@ -288,7 +290,10 @@ void main() {
 
         cache.get('a'); // Access 'a', making it most recent
 
-        cache.put('c', Uint8List.fromList([7, 8, 9, 10, 11])); // 5 bytes, evicts 'b'
+        cache.put(
+          'c',
+          Uint8List.fromList([7, 8, 9, 10, 11]),
+        ); // 5 bytes, evicts 'b'
 
         expect(cache.get('a'), isNotNull);
         expect(cache.get('b'), isNull);
@@ -371,7 +376,7 @@ void main() {
         );
 
         // Add items totaling 60MB
-        for (int i = 0; i < 6; i++) {
+        for (var i = 0; i < 6; i++) {
           cache.put('item$i', Uint8List(10 * 1024 * 1024)); // 10MB each
         }
 
