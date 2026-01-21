@@ -58,6 +58,30 @@ class TurnCredentialsService {
   static const List<Map<String, dynamic>> _defaultStunServers = [
     {'urls': 'stun:stun.l.google.com:19302'},
     {'urls': 'stun:stun1.l.google.com:19302'},
+    {'urls': 'stun:stun2.l.google.com:19302'},
+    {'urls': 'stun:stun3.l.google.com:19302'},
+    {'urls': 'stun:stun4.l.google.com:19302'},
+  ];
+
+  /// Public TURN servers for testing/development
+  /// These provide relay functionality when direct connections fail
+  static const List<Map<String, dynamic>> _publicTurnServers = [
+    // OpenRelay public TURN server (metered.ca)
+    {
+      'urls': 'turn:openrelay.metered.ca:80',
+      'username': 'openrelayproject',
+      'credential': 'openrelayproject',
+    },
+    {
+      'urls': 'turn:openrelay.metered.ca:443',
+      'username': 'openrelayproject',
+      'credential': 'openrelayproject',
+    },
+    {
+      'urls': 'turn:openrelay.metered.ca:443?transport=tcp',
+      'username': 'openrelayproject',
+      'credential': 'openrelayproject',
+    },
   ];
 
   /// Get ICE server configuration for WebRTC
@@ -82,7 +106,7 @@ class TurnCredentialsService {
       final turnCredentials = await _getTurnCredentials();
 
       if (turnCredentials.isNotEmpty) {
-        // Add TURN servers with credentials
+        // Add TURN servers with API credentials
         for (final cred in turnCredentials) {
           iceServers.add(cred.toIceServer());
         }
@@ -92,7 +116,12 @@ class TurnCredentialsService {
           data: {'turnServerCount': turnCredentials.length},
         );
       } else {
-        AppLogger.warning('No TURN credentials available, using STUN only');
+        // Use public TURN servers as fallback
+        iceServers.addAll(_publicTurnServers);
+        AppLogger.info(
+          'Using public TURN servers',
+          data: {'turnServerCount': _publicTurnServers.length},
+        );
       }
     } catch (e, stackTrace) {
       AppLogger.error(
