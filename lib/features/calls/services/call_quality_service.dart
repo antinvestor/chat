@@ -7,6 +7,13 @@ import '../domain/call_stats.dart';
 
 /// Service for monitoring and managing call quality
 class CallQualityService {
+  CallQualityService({
+    required RTCPeerConnection peerConnection,
+    required this.onStatsUpdate,
+    required this.onVideoStateChange,
+    required this.onReconnectNeeded,
+    required this.onWarning,
+  }) : _peerConnection = peerConnection;
   static const Duration _statsInterval = Duration(seconds: 2);
   static const Duration _reconnectTimeout = Duration(seconds: 30);
   static const int _maxReconnectAttempts = 5;
@@ -32,14 +39,6 @@ class CallQualityService {
   int _lastPacketsReceived = 0;
   int _lastPacketsLost = 0;
   DateTime? _lastStatsTime;
-
-  CallQualityService({
-    required RTCPeerConnection peerConnection,
-    required this.onStatsUpdate,
-    required this.onVideoStateChange,
-    required this.onReconnectNeeded,
-    required this.onWarning,
-  }) : _peerConnection = peerConnection;
 
   /// Current call statistics
   CallStats get currentStats => _currentStats;
@@ -118,7 +117,9 @@ class CallQualityService {
 
       if (elapsed > _reconnectTimeout ||
           _reconnectAttempts >= _maxReconnectAttempts) {
-        AppLogger.warning('Reconnection failed after $_reconnectAttempts attempts');
+        AppLogger.warning(
+          'Reconnection failed after $_reconnectAttempts attempts',
+        );
         _currentStats = _currentStats.copyWith(
           isReconnecting: false,
           quality: ConnectionQuality.veryPoor,
@@ -135,15 +136,15 @@ class CallQualityService {
 
       double roundTripTime = 0;
       double jitter = 0;
-      int packetsLost = 0;
-      int packetsSent = 0;
-      int packetsReceived = 0;
-      int bytesSent = 0;
-      int bytesReceived = 0;
-      int videoWidthSent = 0;
-      int videoHeightSent = 0;
-      int videoWidthReceived = 0;
-      int videoHeightReceived = 0;
+      var packetsLost = 0;
+      var packetsSent = 0;
+      var packetsReceived = 0;
+      var bytesSent = 0;
+      var bytesReceived = 0;
+      var videoWidthSent = 0;
+      var videoHeightSent = 0;
+      var videoWidthReceived = 0;
+      var videoHeightReceived = 0;
       double framesPerSecondSent = 0;
       double framesPerSecondReceived = 0;
 
@@ -156,26 +157,28 @@ class CallQualityService {
             if (values['state'] == 'succeeded') {
               roundTripTime =
                   (values['currentRoundTripTime'] as num? ?? 0).toDouble() *
-                      1000;
+                  1000;
             }
             break;
 
           case 'inbound-rtp':
-            if (values['mediaType'] == 'video' ||
-                values['kind'] == 'video') {
-              packetsReceived += (values['packetsReceived'] as num? ?? 0).toInt();
+            if (values['mediaType'] == 'video' || values['kind'] == 'video') {
+              packetsReceived += (values['packetsReceived'] as num? ?? 0)
+                  .toInt();
               packetsLost += (values['packetsLost'] as num? ?? 0).toInt();
               bytesReceived += (values['bytesReceived'] as num? ?? 0).toInt();
               jitter = (values['jitter'] as num? ?? 0).toDouble() * 1000;
               if (values['frameWidth'] != null) {
                 videoWidthReceived = (values['frameWidth'] as num).toInt();
-                videoHeightReceived = (values['frameHeight'] as num? ?? 0).toInt();
+                videoHeightReceived = (values['frameHeight'] as num? ?? 0)
+                    .toInt();
               }
-              framesPerSecondReceived =
-                  (values['framesPerSecond'] as num? ?? 0).toDouble();
+              framesPerSecondReceived = (values['framesPerSecond'] as num? ?? 0)
+                  .toDouble();
             } else if (values['mediaType'] == 'audio' ||
                 values['kind'] == 'audio') {
-              packetsReceived += (values['packetsReceived'] as num? ?? 0).toInt();
+              packetsReceived += (values['packetsReceived'] as num? ?? 0)
+                  .toInt();
               packetsLost += (values['packetsLost'] as num? ?? 0).toInt();
               bytesReceived += (values['bytesReceived'] as num? ?? 0).toInt();
               if (jitter == 0) {
@@ -185,16 +188,15 @@ class CallQualityService {
             break;
 
           case 'outbound-rtp':
-            if (values['mediaType'] == 'video' ||
-                values['kind'] == 'video') {
+            if (values['mediaType'] == 'video' || values['kind'] == 'video') {
               packetsSent += (values['packetsSent'] as num? ?? 0).toInt();
               bytesSent += (values['bytesSent'] as num? ?? 0).toInt();
               if (values['frameWidth'] != null) {
                 videoWidthSent = (values['frameWidth'] as num).toInt();
                 videoHeightSent = (values['frameHeight'] as num? ?? 0).toInt();
               }
-              framesPerSecondSent =
-                  (values['framesPerSecond'] as num? ?? 0).toDouble();
+              framesPerSecondSent = (values['framesPerSecond'] as num? ?? 0)
+                  .toDouble();
             } else if (values['mediaType'] == 'audio' ||
                 values['kind'] == 'audio') {
               packetsSent += (values['packetsSent'] as num? ?? 0).toInt();
@@ -211,13 +213,14 @@ class CallQualityService {
           : 0.0;
 
       // Calculate bitrate from deltas
-      int videoBitrate = 0;
-      int audioBitrate = 0;
+      var videoBitrate = 0;
+      var audioBitrate = 0;
       final now = DateTime.now();
       if (_lastStatsTime != null) {
         final elapsed = now.difference(_lastStatsTime!).inSeconds;
         if (elapsed > 0) {
-          final bytesDelta = (bytesSent - _lastBytesSent) +
+          final bytesDelta =
+              (bytesSent - _lastBytesSent) +
               (bytesReceived - _lastBytesReceived);
           final bitrate = (bytesDelta * 8) ~/ elapsed;
           // Rough split between video and audio

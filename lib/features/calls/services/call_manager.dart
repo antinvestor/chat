@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../../features/auth/data/auth_repository.dart';
+import '../../messages/domain/room_event.dart';
 import '../domain/call_stats.dart';
 import 'call_quality_service.dart';
 import 'signaling_service.dart';
@@ -80,14 +81,6 @@ class CallManager {
   bool get isMicMuted => _isMicMuted;
   bool get isCameraOff => _isCameraOff || _isVideoDisabledByQuality;
   bool get isVideoDisabledByQuality => _isVideoDisabledByQuality;
-
-  CallManager(
-    this._signalingService,
-    this._authRepository,
-    this._turnCredentialsService,
-  ) {
-    _signalingService.onSignal.listen(_handleSignal);
-  }
 
   void _setState(CallState newState) {
     _state = newState;
@@ -321,9 +314,7 @@ class CallManager {
           _attemptReconnect();
         }
       },
-      onWarning: (message) {
-        _warningController.add(message);
-      },
+      onWarning: _warningController.add,
     );
 
     _qualityService!.start();
@@ -350,7 +341,9 @@ class CallManager {
     if (_reconnectAttempts < _maxReconnectAttempts) {
       _attemptReconnect();
     } else {
-      AppLogger.error('Connection failed after $_maxReconnectAttempts attempts');
+      AppLogger.error(
+        'Connection failed after $_maxReconnectAttempts attempts',
+      );
       _warningController.add('Call ended due to connection failure');
       endCall();
     }
@@ -366,7 +359,10 @@ class CallManager {
 
     AppLogger.info(
       'Reconnection attempt',
-      data: {'attempt': _reconnectAttempts, 'maxAttempts': _maxReconnectAttempts},
+      data: {
+        'attempt': _reconnectAttempts,
+        'maxAttempts': _maxReconnectAttempts,
+      },
     );
 
     _warningController.add('Reconnecting... (attempt $_reconnectAttempts)');
@@ -396,9 +392,7 @@ class CallManager {
       AppLogger.debug('Attempting ICE restart');
 
       // Create a new offer with ICE restart flag
-      final offer = await _peerConnection!.createOffer({
-        'iceRestart': true,
-      });
+      final offer = await _peerConnection!.createOffer({'iceRestart': true});
 
       await _peerConnection!.setLocalDescription(offer);
 
@@ -408,11 +402,7 @@ class CallManager {
         'iceRestart': true,
       });
     } catch (e, stackTrace) {
-      AppLogger.error(
-        'ICE restart failed',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      AppLogger.error('ICE restart failed', error: e, stackTrace: stackTrace);
       _qualityService?.notifyReconnectCompleted(false);
     }
   }
@@ -431,7 +421,7 @@ class CallManager {
           final params = sender.parameters;
           if (params.encodings != null && params.encodings!.isNotEmpty) {
             params.encodings![0].maxBitrate = recommendedBitrate;
-            params.encodings![0].maxFramerate = recommendedFrameRate.toDouble();
+            params.encodings![0].maxFramerate = recommendedFrameRate;
             await sender.setParameters(params);
 
             AppLogger.debug(

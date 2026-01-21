@@ -4,16 +4,15 @@ import '../../domain/call_stats.dart';
 
 /// Displays call quality indicator during a call
 class CallQualityIndicator extends StatelessWidget {
-  final CallStats stats;
-  final bool showDetails;
-  final VoidCallback? onTap;
-
   const CallQualityIndicator({
-    super.key,
     required this.stats,
+    super.key,
     this.showDetails = false,
     this.onTap,
   });
+  final CallStats stats;
+  final bool showDetails;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -77,9 +76,8 @@ class CallQualityIndicator extends StatelessWidget {
 
 /// Visual bars indicating connection quality
 class _QualityBars extends StatelessWidget {
-  final ConnectionQuality quality;
-
   const _QualityBars({required this.quality});
+  final ConnectionQuality quality;
 
   @override
   Widget build(BuildContext context) {
@@ -137,15 +135,14 @@ class _QualityBars extends StatelessWidget {
 }
 
 class _Bar extends StatelessWidget {
-  final double height;
-  final bool isActive;
-  final Color color;
-
   const _Bar({
     required this.height,
     required this.isActive,
     required this.color,
   });
+  final double height;
+  final bool isActive;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -162,14 +159,9 @@ class _Bar extends StatelessWidget {
 
 /// Expanded stats panel shown when indicator is tapped
 class CallStatsPanel extends StatelessWidget {
+  const CallStatsPanel({required this.stats, super.key, this.onClose});
   final CallStats stats;
   final VoidCallback? onClose;
-
-  const CallStatsPanel({
-    super.key,
-    required this.stats,
-    this.onClose,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -215,16 +207,10 @@ class CallStatsPanel extends StatelessWidget {
           ),
 
           // Latency
-          _StatRow(
-            label: 'Latency',
-            value: stats.latencyDescription,
-          ),
+          _StatRow(label: 'Latency', value: stats.latencyDescription),
 
           // Packet Loss
-          _StatRow(
-            label: 'Packet Loss',
-            value: stats.packetLossDescription,
-          ),
+          _StatRow(label: 'Packet Loss', value: stats.packetLossDescription),
 
           // Jitter
           _StatRow(
@@ -256,7 +242,8 @@ class CallStatsPanel extends StatelessWidget {
           if (stats.videoBitrateBps > 0)
             _StatRow(
               label: 'Bitrate',
-              value: '${(stats.videoBitrateBps / 1000).toStringAsFixed(0)} Kbps',
+              value:
+                  '${(stats.videoBitrateBps / 1000).toStringAsFixed(0)} Kbps',
             ),
 
           // Data transferred
@@ -346,15 +333,10 @@ class CallStatsPanel extends StatelessWidget {
 }
 
 class _StatRow extends StatelessWidget {
+  const _StatRow({required this.label, required this.value, this.valueColor});
   final String label;
   final String value;
   final Color? valueColor;
-
-  const _StatRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -365,10 +347,7 @@ class _StatRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           Text(
             value,
@@ -386,14 +365,13 @@ class _StatRow extends StatelessWidget {
 
 /// Banner showing poor connection warning
 class PoorConnectionBanner extends StatelessWidget {
-  final String message;
-  final VoidCallback? onDismiss;
-
   const PoorConnectionBanner({
-    super.key,
     required this.message,
+    super.key,
     this.onDismiss,
   });
+  final String message;
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -422,10 +400,7 @@ class PoorConnectionBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
           if (onDismiss != null)

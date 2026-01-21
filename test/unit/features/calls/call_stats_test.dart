@@ -1,6 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/features/calls/domain/call_stats.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ConnectionQuality', () {
@@ -14,10 +13,22 @@ void main() {
     });
 
     test('quality levels are ordered from best to worst', () {
-      expect(ConnectionQuality.excellent.index, lessThan(ConnectionQuality.good.index));
-      expect(ConnectionQuality.good.index, lessThan(ConnectionQuality.fair.index));
-      expect(ConnectionQuality.fair.index, lessThan(ConnectionQuality.poor.index));
-      expect(ConnectionQuality.poor.index, lessThan(ConnectionQuality.veryPoor.index));
+      expect(
+        ConnectionQuality.excellent.index,
+        lessThan(ConnectionQuality.good.index),
+      );
+      expect(
+        ConnectionQuality.good.index,
+        lessThan(ConnectionQuality.fair.index),
+      );
+      expect(
+        ConnectionQuality.fair.index,
+        lessThan(ConnectionQuality.poor.index),
+      );
+      expect(
+        ConnectionQuality.poor.index,
+        lessThan(ConnectionQuality.veryPoor.index),
+      );
     });
   });
 
@@ -51,28 +62,36 @@ void main() {
 
     test('isVideoQualityAcceptable returns true for good qualities', () {
       expect(
-        const CallStats(quality: ConnectionQuality.excellent)
-            .isVideoQualityAcceptable,
+        const CallStats(
+          quality: ConnectionQuality.excellent,
+        ).isVideoQualityAcceptable,
         isTrue,
       );
       expect(
-        const CallStats(quality: ConnectionQuality.good).isVideoQualityAcceptable,
+        const CallStats(
+          quality: ConnectionQuality.good,
+        ).isVideoQualityAcceptable,
         isTrue,
       );
       expect(
-        const CallStats(quality: ConnectionQuality.fair).isVideoQualityAcceptable,
+        const CallStats(
+          quality: ConnectionQuality.fair,
+        ).isVideoQualityAcceptable,
         isTrue,
       );
     });
 
     test('isVideoQualityAcceptable returns false for poor qualities', () {
       expect(
-        const CallStats(quality: ConnectionQuality.poor).isVideoQualityAcceptable,
+        const CallStats(
+          quality: ConnectionQuality.poor,
+        ).isVideoQualityAcceptable,
         isFalse,
       );
       expect(
-        const CallStats(quality: ConnectionQuality.veryPoor)
-            .isVideoQualityAcceptable,
+        const CallStats(
+          quality: ConnectionQuality.veryPoor,
+        ).isVideoQualityAcceptable,
         isFalse,
       );
     });
@@ -98,20 +117,27 @@ void main() {
       );
     });
 
-    test('shouldShowWarning returns false for good quality and not reconnecting', () {
-      expect(
-        const CallStats(quality: ConnectionQuality.excellent).shouldShowWarning,
-        isFalse,
-      );
-      expect(
-        const CallStats(quality: ConnectionQuality.good).shouldShowWarning,
-        isFalse,
-      );
-    });
+    test(
+      'shouldShowWarning returns false for good quality and not reconnecting',
+      () {
+        expect(
+          const CallStats(
+            quality: ConnectionQuality.excellent,
+          ).shouldShowWarning,
+          isFalse,
+        );
+        expect(
+          const CallStats(quality: ConnectionQuality.good).shouldShowWarning,
+          isFalse,
+        );
+      },
+    );
 
     test('qualityDescription returns correct strings', () {
       expect(
-        const CallStats(quality: ConnectionQuality.excellent).qualityDescription,
+        const CallStats(
+          quality: ConnectionQuality.excellent,
+        ).qualityDescription,
         equals('Excellent'),
       );
       expect(
@@ -130,10 +156,7 @@ void main() {
         const CallStats(quality: ConnectionQuality.veryPoor).qualityDescription,
         equals('Very Poor'),
       );
-      expect(
-        const CallStats(quality: ConnectionQuality.unknown).qualityDescription,
-        equals('Checking...'),
-      );
+      expect(const CallStats().qualityDescription, equals('Checking...'));
     });
 
     test('latencyDescription formats correctly', () {
@@ -161,15 +184,15 @@ void main() {
         equals('< 1%'),
       );
       expect(
-        const CallStats(packetLossPercent: 2.0).packetLossDescription,
+        const CallStats(packetLossPercent: 2).packetLossDescription,
         equals('2.0%'),
       );
       expect(
-        const CallStats(packetLossPercent: 4.0).packetLossDescription,
+        const CallStats(packetLossPercent: 4).packetLossDescription,
         equals('4.0% (high)'),
       );
       expect(
-        const CallStats(packetLossPercent: 8.0).packetLossDescription,
+        const CallStats(packetLossPercent: 8).packetLossDescription,
         equals('8.0% (very high)'),
       );
     });
@@ -234,7 +257,10 @@ void main() {
   group('BitrateConfig', () {
     test('minVideoBitrate is reasonable', () {
       expect(BitrateConfig.minVideoBitrate, greaterThan(0));
-      expect(BitrateConfig.minVideoBitrate, lessThan(BitrateConfig.maxVideoBitrate));
+      expect(
+        BitrateConfig.minVideoBitrate,
+        lessThan(BitrateConfig.maxVideoBitrate),
+      );
     });
 
     test('maxVideoBitrate allows HD video', () {
@@ -296,7 +322,9 @@ void main() {
       final excellent = BitrateConfig.getRecommendedFrameRate(
         ConnectionQuality.excellent,
       );
-      final poor = BitrateConfig.getRecommendedFrameRate(ConnectionQuality.poor);
+      final poor = BitrateConfig.getRecommendedFrameRate(
+        ConnectionQuality.poor,
+      );
 
       expect(excellent, greaterThan(poor));
     });

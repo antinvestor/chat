@@ -27,7 +27,6 @@ enum ConnectionQuality {
 /// Represents WebRTC call statistics
 @freezed
 abstract class CallStats with _$CallStats {
-
   const factory CallStats({
     /// Round-trip time in milliseconds
     @Default(0) double roundTripTimeMs,
