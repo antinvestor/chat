@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../db/database.dart';
@@ -76,6 +75,8 @@ class SettingsDefaults {
 /// Provides typed getters/setters for all application settings
 /// with automatic caching and database persistence.
 class SettingsService {
+
+  SettingsService(this._database);
   final AppDatabase _database;
 
   /// In-memory cache of settings
@@ -83,8 +84,6 @@ class SettingsService {
 
   /// Whether the service has been initialized
   bool _initialized = false;
-
-  SettingsService(this._database);
 
   /// Initialize the service by loading all settings from database
   Future<void> initialize() async {
@@ -98,7 +97,11 @@ class SettingsService {
       _initialized = true;
       AppLogger.debug('Settings loaded', data: {'count': settings.length});
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to load settings', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to load settings',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _initialized = true; // Continue with defaults
     }
   }
@@ -158,7 +161,9 @@ class SettingsService {
     _cache[key] = value;
 
     try {
-      await _database.into(_database.userSettings).insertOnConflictUpdate(
+      await _database
+          .into(_database.userSettings)
+          .insertOnConflictUpdate(
             UserSettingsCompanion.insert(
               key: key,
               value: value,
@@ -167,7 +172,11 @@ class SettingsService {
           );
       AppLogger.debug('Setting saved', data: {'key': key});
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to save setting', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to save setting',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -175,11 +184,15 @@ class SettingsService {
   Future<void> remove(String key) async {
     _cache.remove(key);
     try {
-      await (_database.delete(_database.userSettings)
-            ..where((s) => s.key.equals(key)))
-          .go();
+      await (_database.delete(
+        _database.userSettings,
+      )..where((s) => s.key.equals(key))).go();
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to remove setting', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to remove setting',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -190,7 +203,11 @@ class SettingsService {
       await _database.delete(_database.userSettings).go();
       AppLogger.info('All settings cleared');
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to clear settings', error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to clear settings',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -212,76 +229,124 @@ class SettingsService {
   // ============================================================================
 
   // Theme
-  String get themeMode => getString(SettingsKeys.themeMode, defaultValue: SettingsDefaults.themeMode);
-  Future<void> setThemeMode(String value) => setString(SettingsKeys.themeMode, value);
+  String get themeMode => getString(
+    SettingsKeys.themeMode,
+    defaultValue: SettingsDefaults.themeMode,
+  );
+  Future<void> setThemeMode(String value) =>
+      setString(SettingsKeys.themeMode, value);
 
-  String get fontSize => getString(SettingsKeys.fontSize, defaultValue: SettingsDefaults.fontSize);
-  Future<void> setFontSize(String value) => setString(SettingsKeys.fontSize, value);
+  String get fontSize =>
+      getString(SettingsKeys.fontSize, defaultValue: SettingsDefaults.fontSize);
+  Future<void> setFontSize(String value) =>
+      setString(SettingsKeys.fontSize, value);
 
-  String? get chatWallpaper => getString(SettingsKeys.chatWallpaper);
-  Future<void> setChatWallpaper(String? value) =>
-      value != null ? setString(SettingsKeys.chatWallpaper, value) : remove(SettingsKeys.chatWallpaper);
+  String? get chatWallpaper => _cache[SettingsKeys.chatWallpaper];
+  Future<void> setChatWallpaper(String? value) => value != null
+      ? setString(SettingsKeys.chatWallpaper, value)
+      : remove(SettingsKeys.chatWallpaper);
 
-  String? get accentColor => getString(SettingsKeys.accentColor);
-  Future<void> setAccentColor(String? value) =>
-      value != null ? setString(SettingsKeys.accentColor, value) : remove(SettingsKeys.accentColor);
+  String? get accentColor => _cache[SettingsKeys.accentColor];
+  Future<void> setAccentColor(String? value) => value != null
+      ? setString(SettingsKeys.accentColor, value)
+      : remove(SettingsKeys.accentColor);
 
   // Notifications
-  bool get notificationSound =>
-      getBool(SettingsKeys.notificationSound, defaultValue: SettingsDefaults.notificationSound);
-  Future<void> setNotificationSound(bool value) => setBool(SettingsKeys.notificationSound, value);
+  bool get notificationSound => getBool(
+    SettingsKeys.notificationSound,
+    defaultValue: SettingsDefaults.notificationSound,
+  );
+  Future<void> setNotificationSound(bool value) =>
+      setBool(SettingsKeys.notificationSound, value);
 
-  bool get notificationVibrate =>
-      getBool(SettingsKeys.notificationVibrate, defaultValue: SettingsDefaults.notificationVibrate);
-  Future<void> setNotificationVibrate(bool value) => setBool(SettingsKeys.notificationVibrate, value);
+  bool get notificationVibrate => getBool(
+    SettingsKeys.notificationVibrate,
+    defaultValue: SettingsDefaults.notificationVibrate,
+  );
+  Future<void> setNotificationVibrate(bool value) =>
+      setBool(SettingsKeys.notificationVibrate, value);
 
   // Media
-  bool get autoDownloadWifi =>
-      getBool(SettingsKeys.autoDownloadWifi, defaultValue: SettingsDefaults.autoDownloadWifi);
-  Future<void> setAutoDownloadWifi(bool value) => setBool(SettingsKeys.autoDownloadWifi, value);
+  bool get autoDownloadWifi => getBool(
+    SettingsKeys.autoDownloadWifi,
+    defaultValue: SettingsDefaults.autoDownloadWifi,
+  );
+  Future<void> setAutoDownloadWifi(bool value) =>
+      setBool(SettingsKeys.autoDownloadWifi, value);
 
-  bool get autoDownloadMobile =>
-      getBool(SettingsKeys.autoDownloadMobile, defaultValue: SettingsDefaults.autoDownloadMobile);
-  Future<void> setAutoDownloadMobile(bool value) => setBool(SettingsKeys.autoDownloadMobile, value);
+  bool get autoDownloadMobile => getBool(
+    SettingsKeys.autoDownloadMobile,
+  );
+  Future<void> setAutoDownloadMobile(bool value) =>
+      setBool(SettingsKeys.autoDownloadMobile, value);
 
   // Privacy
-  bool get readReceiptsEnabled =>
-      getBool(SettingsKeys.readReceiptsEnabled, defaultValue: SettingsDefaults.readReceiptsEnabled);
-  Future<void> setReadReceiptsEnabled(bool value) => setBool(SettingsKeys.readReceiptsEnabled, value);
+  bool get readReceiptsEnabled => getBool(
+    SettingsKeys.readReceiptsEnabled,
+    defaultValue: SettingsDefaults.readReceiptsEnabled,
+  );
+  Future<void> setReadReceiptsEnabled(bool value) =>
+      setBool(SettingsKeys.readReceiptsEnabled, value);
 
-  bool get typingIndicatorsEnabled =>
-      getBool(SettingsKeys.typingIndicatorsEnabled, defaultValue: SettingsDefaults.typingIndicatorsEnabled);
-  Future<void> setTypingIndicatorsEnabled(bool value) => setBool(SettingsKeys.typingIndicatorsEnabled, value);
+  bool get typingIndicatorsEnabled => getBool(
+    SettingsKeys.typingIndicatorsEnabled,
+    defaultValue: SettingsDefaults.typingIndicatorsEnabled,
+  );
+  Future<void> setTypingIndicatorsEnabled(bool value) =>
+      setBool(SettingsKeys.typingIndicatorsEnabled, value);
 
-  String get lastSeenVisible =>
-      getString(SettingsKeys.lastSeenVisible, defaultValue: SettingsDefaults.lastSeenVisible);
-  Future<void> setLastSeenVisible(String value) => setString(SettingsKeys.lastSeenVisible, value);
+  String get lastSeenVisible => getString(
+    SettingsKeys.lastSeenVisible,
+    defaultValue: SettingsDefaults.lastSeenVisible,
+  );
+  Future<void> setLastSeenVisible(String value) =>
+      setString(SettingsKeys.lastSeenVisible, value);
 
-  String get profilePhotoVisible =>
-      getString(SettingsKeys.profilePhotoVisible, defaultValue: SettingsDefaults.profilePhotoVisible);
-  Future<void> setProfilePhotoVisible(String value) => setString(SettingsKeys.profilePhotoVisible, value);
+  String get profilePhotoVisible => getString(
+    SettingsKeys.profilePhotoVisible,
+    defaultValue: SettingsDefaults.profilePhotoVisible,
+  );
+  Future<void> setProfilePhotoVisible(String value) =>
+      setString(SettingsKeys.profilePhotoVisible, value);
 
-  String get aboutVisible => getString(SettingsKeys.aboutVisible, defaultValue: SettingsDefaults.aboutVisible);
-  Future<void> setAboutVisible(String value) => setString(SettingsKeys.aboutVisible, value);
+  String get aboutVisible => getString(
+    SettingsKeys.aboutVisible,
+    defaultValue: SettingsDefaults.aboutVisible,
+  );
+  Future<void> setAboutVisible(String value) =>
+      setString(SettingsKeys.aboutVisible, value);
 
-  String get groupsAddPermission =>
-      getString(SettingsKeys.groupsAddPermission, defaultValue: SettingsDefaults.groupsAddPermission);
-  Future<void> setGroupsAddPermission(String value) => setString(SettingsKeys.groupsAddPermission, value);
+  String get groupsAddPermission => getString(
+    SettingsKeys.groupsAddPermission,
+    defaultValue: SettingsDefaults.groupsAddPermission,
+  );
+  Future<void> setGroupsAddPermission(String value) =>
+      setString(SettingsKeys.groupsAddPermission, value);
 
   // Security
-  bool get biometricEnabled =>
-      getBool(SettingsKeys.biometricEnabled, defaultValue: SettingsDefaults.biometricEnabled);
-  Future<void> setBiometricEnabled(bool value) => setBool(SettingsKeys.biometricEnabled, value);
+  bool get biometricEnabled => getBool(
+    SettingsKeys.biometricEnabled,
+  );
+  Future<void> setBiometricEnabled(bool value) =>
+      setBool(SettingsKeys.biometricEnabled, value);
 
-  int get lockTimeoutMinutes =>
-      getInt(SettingsKeys.lockTimeoutMinutes, defaultValue: SettingsDefaults.lockTimeoutMinutes);
-  Future<void> setLockTimeoutMinutes(int value) => setInt(SettingsKeys.lockTimeoutMinutes, value);
+  int get lockTimeoutMinutes => getInt(
+    SettingsKeys.lockTimeoutMinutes,
+  );
+  Future<void> setLockTimeoutMinutes(int value) =>
+      setInt(SettingsKeys.lockTimeoutMinutes, value);
 
   // Backup
-  bool get backupEnabled => getBool(SettingsKeys.backupEnabled, defaultValue: SettingsDefaults.backupEnabled);
-  Future<void> setBackupEnabled(bool value) => setBool(SettingsKeys.backupEnabled, value);
+  bool get backupEnabled => getBool(
+    SettingsKeys.backupEnabled,
+  );
+  Future<void> setBackupEnabled(bool value) =>
+      setBool(SettingsKeys.backupEnabled, value);
 
-  String get backupFrequency =>
-      getString(SettingsKeys.backupFrequency, defaultValue: SettingsDefaults.backupFrequency);
-  Future<void> setBackupFrequency(String value) => setString(SettingsKeys.backupFrequency, value);
+  String get backupFrequency => getString(
+    SettingsKeys.backupFrequency,
+    defaultValue: SettingsDefaults.backupFrequency,
+  );
+  Future<void> setBackupFrequency(String value) =>
+      setString(SettingsKeys.backupFrequency, value);
 }
