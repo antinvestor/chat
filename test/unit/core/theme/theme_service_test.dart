@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/core/theme/app_theme.dart';
 import 'package:chat/core/theme/theme_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('AppThemeMode', () {
@@ -184,10 +183,19 @@ void main() {
   group('Color utilities', () {
     test('all preset colors are valid', () {
       for (final color in AccentColors.presets) {
-        expect(color.alpha, equals(255));
-        expect(color.red, inInclusiveRange(0, 255));
-        expect(color.green, inInclusiveRange(0, 255));
-        expect(color.blue, inInclusiveRange(0, 255));
+        expect((color.a * 255.0).round().clamp(0, 255), equals(255));
+        expect(
+          (color.r * 255.0).round().clamp(0, 255),
+          inInclusiveRange(0, 255),
+        );
+        expect(
+          (color.g * 255.0).round().clamp(0, 255),
+          inInclusiveRange(0, 255),
+        );
+        expect(
+          (color.b * 255.0).round().clamp(0, 255),
+          inInclusiveRange(0, 255),
+        );
       }
     });
 

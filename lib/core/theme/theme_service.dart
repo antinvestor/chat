@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../settings/settings_service.dart';
@@ -9,19 +8,10 @@ import 'app_theme.dart';
 part 'theme_service.g.dart';
 
 /// Available theme modes
-enum AppThemeMode {
-  light,
-  dark,
-  system,
-}
+enum AppThemeMode { light, dark, system }
 
 /// Available font sizes
-enum AppFontSize {
-  small,
-  medium,
-  large,
-  extraLarge,
-}
+enum AppFontSize { small, medium, large, extraLarge }
 
 /// Preset accent colors available for customization
 class AccentColors {
@@ -230,9 +220,7 @@ ThemeData _buildTheme(
   return baseTheme.copyWith(
     colorScheme: colorScheme,
     textTheme: _scaleTextTheme(baseTheme.textTheme, textScale),
-    appBarTheme: baseTheme.appBarTheme.copyWith(
-      backgroundColor: accentColor,
-    ),
+    appBarTheme: baseTheme.appBarTheme.copyWith(backgroundColor: accentColor),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: accentColor,
@@ -260,7 +248,7 @@ double _getTextScale(AppFontSize fontSize) {
     case AppFontSize.small:
       return 0.85;
     case AppFontSize.medium:
-      return 1.0;
+      return 1;
     case AppFontSize.large:
       return 1.15;
     case AppFontSize.extraLarge:

@@ -77,7 +77,7 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -178,7 +178,7 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(0.4),
+                      color: color.withValues(alpha: 0.4),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -398,7 +398,6 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
 }
 
 class _ThemeModeCard extends StatelessWidget {
-
   const _ThemeModeCard({
     required this.mode,
     required this.isSelected,
@@ -455,7 +454,6 @@ class _ThemeModeCard extends StatelessWidget {
 }
 
 class _WallpaperPreview extends StatelessWidget {
-
   const _WallpaperPreview({required this.onTap, this.wallpaperPath});
   final String? wallpaperPath;
   final VoidCallback onTap;
@@ -469,9 +467,7 @@ class _WallpaperPreview extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline,
-          ),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
         ),
         clipBehavior: Clip.antiAlias,
         child: wallpaperPath != null
