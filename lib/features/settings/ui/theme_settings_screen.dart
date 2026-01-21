@@ -57,9 +57,7 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
           _buildSection(
             context,
             title: 'Chat Wallpaper',
-            children: [
-              _buildWallpaperSelector(context, wallpaper),
-            ],
+            children: [_buildWallpaperSelector(context, wallpaper)],
           ),
         ],
       ),
@@ -91,9 +89,9 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 16),
           ...children,
@@ -109,8 +107,8 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
         Text(
           'Theme Mode',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 12),
         Row(
@@ -144,8 +142,8 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
             Text(
               'Accent Color',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             if (current != AppTheme.primaryGreen)
               TextButton(
@@ -204,8 +202,8 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
         Text(
           'Font Size',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 12),
         SegmentedButton<AppFontSize>(
@@ -268,7 +266,7 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
       case AppFontSize.small:
         return 0.85;
       case AppFontSize.medium:
-        return 1.0;
+        return 1;
       case AppFontSize.large:
         return 1.15;
       case AppFontSize.extraLarge:
@@ -289,7 +287,7 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _pickWallpaperFromGallery(),
+                onPressed: _pickWallpaperFromGallery,
                 icon: const Icon(Icons.photo_library),
                 label: const Text('Gallery'),
               ),
@@ -378,8 +376,10 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
         await wallpaperDir.create(recursive: true);
       }
 
+      // Preserve original file extension to avoid format issues
+      final fileExtension = sourcePath.split('.').last;
       final fileName =
-          'wallpaper_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          'wallpaper_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
       final destPath = '${wallpaperDir.path}/$fileName';
 
       await File(sourcePath).copy(destPath);
@@ -389,24 +389,24 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to set wallpaper: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to set wallpaper: $e')));
       }
     }
   }
 }
 
 class _ThemeModeCard extends StatelessWidget {
-  final AppThemeMode mode;
-  final bool isSelected;
-  final VoidCallback onTap;
 
   const _ThemeModeCard({
     required this.mode,
     required this.isSelected,
     required this.onTap,
   });
+  final AppThemeMode mode;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -440,11 +440,11 @@ class _ThemeModeCard extends StatelessWidget {
             Text(
               mode.displayName,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -455,13 +455,10 @@ class _ThemeModeCard extends StatelessWidget {
 }
 
 class _WallpaperPreview extends StatelessWidget {
+
+  const _WallpaperPreview({required this.onTap, this.wallpaperPath});
   final String? wallpaperPath;
   final VoidCallback onTap;
-
-  const _WallpaperPreview({
-    this.wallpaperPath,
-    required this.onTap,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -474,7 +471,6 @@ class _WallpaperPreview extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: Theme.of(context).colorScheme.outline,
-            width: 1,
           ),
         ),
         clipBehavior: Clip.antiAlias,
@@ -506,8 +502,8 @@ class _WallpaperPreview extends StatelessWidget {
             Text(
               'Tap to change wallpaper',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
