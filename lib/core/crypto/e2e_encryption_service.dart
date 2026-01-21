@@ -23,6 +23,7 @@ import '../logging/app_logger.dart';
 class E2EEncryptionService {
   E2EEncryptionService(this._storage, this._database);
   final FlutterSecureStorage _storage;
+  // ignore: unused_field - reserved for future session persistence in database
   final AppDatabase _database;
   final Random _random = Random.secure();
 

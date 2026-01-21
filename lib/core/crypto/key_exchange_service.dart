@@ -168,6 +168,7 @@ class KeyExchangeService {
           'roomId': roomId,
           'sessionId': sessionId,
           'memberCount': memberProfileIds.length,
+          'hasSessionKey': sessionKey.isNotEmpty,
         },
       );
 
