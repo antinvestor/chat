@@ -16,21 +16,22 @@ class TypingIndicator extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    // Filter out current user if needed, but provider should handle logic
-    // For now assuming provider gives us IDs of others typing
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           _buildDots(context),
           const SizedBox(width: 8),
-          Text(
-            _getTypingText(typingUsers),
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontStyle: FontStyle.italic,
+          Expanded(
+            child: Text(
+              _getTypingText(typingUsers),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -38,13 +39,23 @@ class TypingIndicator extends ConsumerWidget {
     );
   }
 
-  String _getTypingText(Set<String> profileIds) {
-    if (profileIds.length == 1) {
-      return '${profileIds.first} is typing...';
-    } else if (profileIds.length == 2) {
-      return '${profileIds.first} and ${profileIds.last} are typing...';
+  /// Format the typing text based on the number of users
+  ///
+  /// - 1 user: "John is typing..."
+  /// - 2 users: "John and Jane are typing..."
+  /// - 3 users: "John, Jane, and Bob are typing..."
+  /// - 4+ users: "Several people are typing..."
+  String _getTypingText(Set<TypingUser> users) {
+    final names = users.map((u) => u.displayName).toList();
+
+    if (names.length == 1) {
+      return '${names[0]} is typing...';
+    } else if (names.length == 2) {
+      return '${names[0]} and ${names[1]} are typing...';
+    } else if (names.length == 3) {
+      return '${names[0]}, ${names[1]}, and ${names[2]} are typing...';
     } else {
-      return '${profileIds.length} people are typing...';
+      return 'Several people are typing...';
     }
   }
 

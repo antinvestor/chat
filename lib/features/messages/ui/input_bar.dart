@@ -83,14 +83,16 @@ class _InputBarState extends ConsumerState<InputBar>
       _sendButtonController.reverse();
     }
 
-    // Typing indicator logic
+    // Typing indicator logic with 3-second debounce for stop typing
     if (_typingDebounce?.isActive ?? false) _typingDebounce!.cancel();
 
     if (hasText) {
+      // Provider handles throttling for start typing events
       ref.read(typingProvider(widget.roomId).notifier).sendTyping(true);
     }
 
-    _typingDebounce = Timer(const Duration(seconds: 2), () {
+    // Send stop typing after 3 seconds of inactivity
+    _typingDebounce = Timer(const Duration(seconds: 3), () {
       ref.read(typingProvider(widget.roomId).notifier).sendTyping(false);
     });
 

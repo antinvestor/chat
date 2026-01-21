@@ -12,7 +12,7 @@ part of 'typing_provider.dart';
 @ProviderFor(Typing)
 final typingProvider = TypingFamily._();
 
-final class TypingProvider extends $NotifierProvider<Typing, Set<String>> {
+final class TypingProvider extends $NotifierProvider<Typing, Set<TypingUser>> {
   TypingProvider._({
     required TypingFamily super.from,
     required String super.argument,
@@ -39,10 +39,10 @@ final class TypingProvider extends $NotifierProvider<Typing, Set<String>> {
   Typing create() => Typing();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(Set<String> value) {
+  Override overrideWithValue(Set<TypingUser> value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<Set<String>>(value),
+      providerOverride: $SyncValueProvider<Set<TypingUser>>(value),
     );
   }
 
@@ -57,15 +57,15 @@ final class TypingProvider extends $NotifierProvider<Typing, Set<String>> {
   }
 }
 
-String _$typingHash() => r'a1922d69aa196b4dd1797166378c1690aca3a7ef';
+String _$typingHash() => r'cfc4d22a586e281552bf443b4627ba9364f8b497';
 
 final class TypingFamily extends $Family
     with
         $ClassFamilyOverride<
           Typing,
-          Set<String>,
-          Set<String>,
-          Set<String>,
+          Set<TypingUser>,
+          Set<TypingUser>,
+          Set<TypingUser>,
           String
         > {
   TypingFamily._()
@@ -84,20 +84,20 @@ final class TypingFamily extends $Family
   String toString() => r'typingProvider';
 }
 
-abstract class _$Typing extends $Notifier<Set<String>> {
+abstract class _$Typing extends $Notifier<Set<TypingUser>> {
   late final _$args = ref.$arg as String;
   String get roomId => _$args;
 
-  Set<String> build(String roomId);
+  Set<TypingUser> build(String roomId);
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<Set<String>, Set<String>>;
+    final ref = this.ref as $Ref<Set<TypingUser>, Set<TypingUser>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<Set<String>, Set<String>>,
-              Set<String>,
+              AnyNotifier<Set<TypingUser>, Set<TypingUser>>,
+              Set<TypingUser>,
               Object?,
               Object?
             >;

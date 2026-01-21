@@ -286,7 +286,7 @@ final class AppThemeProvider
   }
 }
 
-String _$appThemeHash() => r'2a5256415b111b105150ae7685fe8c34d7495e08';
+String _$appThemeHash() => r'7b36d453c8bf9a1c483e1a2a619e85f4db4f82b0';
 
 /// Provider for the brightness (for widgets that need to know current brightness)
 
@@ -332,4 +332,4 @@ final class AppBrightnessProvider
   }
 }
 
-String _$appBrightnessHash() => r'ed7631299d15ebe78c9a0ca2ca60b010b10aa575';
+String _$appBrightnessHash() => r'5281ff7e2ed522fedcea5f3596a82c88634b14cd';
