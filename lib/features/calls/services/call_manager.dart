@@ -302,6 +302,8 @@ class CallManager {
       onStatsUpdate: (stats) {
         _currentStats = stats;
         _statsController.add(stats);
+        // Apply adaptive bitrate based on quality
+        _applyAdaptiveBitrate();
       },
       onVideoStateChange: (enabled) {
         _isVideoDisabledByQuality = !enabled;

@@ -35,8 +35,11 @@ class CallQualityService {
   // Stats tracking for delta calculations
   int _lastBytesSent = 0;
   int _lastBytesReceived = 0;
+  // ignore: unused_field - reserved for future packet rate calculations
   int _lastPacketsSent = 0;
+  // ignore: unused_field - reserved for future packet rate calculations
   int _lastPacketsReceived = 0;
+  // ignore: unused_field - reserved for future packet loss rate tracking
   int _lastPacketsLost = 0;
   DateTime? _lastStatsTime;
 
