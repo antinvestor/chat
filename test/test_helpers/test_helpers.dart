@@ -1,6 +1,6 @@
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     show TokenRefreshResult;
-import 'package:chat/core/db/database.dart';
+import 'package:chat/core/db/database.dart' show Draft;
 import 'package:chat/features/auth/data/auth_repository.dart';
 import 'package:chat/features/auth/data/auth_service.dart';
 import 'package:chat/features/messages/data/draft_repository.dart';
@@ -103,19 +103,19 @@ class MockAuthRepository extends AuthRepository {
 }
 
 /// Mock DraftRepository for testing that doesn't use database
-class MockDraftRepository extends DraftRepository {
-  MockDraftRepository() : super(AppDatabase.instance);
-
-  final Map<String, Draft> _drafts = {};
+/// This is a fake implementation that doesn't extend DraftRepository
+/// to avoid initializing AppDatabase which creates timers.
+class MockDraftRepository implements DraftRepository {
+  final Map<String, String> _drafts = {};
 
   @override
   Future<Draft?> getDraft(String roomId) async {
-    return _drafts[roomId];
+    return null; // Return null for tests - no draft stored
   }
 
   @override
   Stream<Draft?> watchDraft(String roomId) {
-    return Stream.value(_drafts[roomId]);
+    return Stream.value(null);
   }
 
   @override
@@ -139,19 +139,17 @@ class MockDraftRepository extends DraftRepository {
 
   @override
   Stream<List<Draft>> watchAllDrafts() {
-    return Stream.value(_drafts.values.toList());
+    return Stream.value([]);
   }
 
   @override
   Future<Map<String, String>> getDraftsMap() async {
-    return {for (final e in _drafts.entries) e.key: e.value.content};
+    return {};
   }
 
   @override
   Stream<Map<String, String>> watchDraftsMap() {
-    return Stream.value({
-      for (final e in _drafts.entries) e.key: e.value.content,
-    });
+    return Stream.value({});
   }
 
   @override
