@@ -6,7 +6,8 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../../features/auth/data/auth_repository.dart';
-import '../../messages/domain/room_event.dart';
+import '../domain/call_stats.dart';
+import 'call_quality_service.dart';
 import 'signaling_service.dart';
 import 'turn_credentials_service.dart';
 
@@ -22,6 +23,7 @@ enum CallState {
   calling, // Outgoing call
   incoming, // Incoming call
   connected,
+  reconnecting, // Connection lost, attempting to reconnect
   ended,
 }
 
@@ -41,6 +43,19 @@ class CallManager {
   MediaStream? _localStream;
   MediaStream? _remoteStream;
   String? _currentRoomId;
+  CallQualityService? _qualityService;
+
+  // Reconnection handling
+  static const Duration _reconnectTimeout = Duration(seconds: 30);
+  static const int _maxReconnectAttempts = 5;
+  int _reconnectAttempts = 0;
+  Timer? _reconnectTimer;
+  bool _isReconnecting = false;
+
+  // Audio/video state
+  bool _isMicMuted = false;
+  bool _isCameraOff = false;
+  bool _isVideoDisabledByQuality = false;
 
   final _callStateController = StreamController<CallState>.broadcast();
   Stream<CallState> get callStateStream => _callStateController.stream;
@@ -53,11 +68,33 @@ class CallManager {
   final _remoteStreamController = StreamController<MediaStream?>.broadcast();
   Stream<MediaStream?> get remoteStreamStream => _remoteStreamController.stream;
 
+  final _statsController = StreamController<CallStats>.broadcast();
+  Stream<CallStats> get statsStream => _statsController.stream;
+  CallStats _currentStats = const CallStats();
+  CallStats get currentStats => _currentStats;
+
+  final _warningController = StreamController<String>.broadcast();
+  Stream<String> get warningStream => _warningController.stream;
+
+  // Getters for media state
+  bool get isMicMuted => _isMicMuted;
+  bool get isCameraOff => _isCameraOff || _isVideoDisabledByQuality;
+  bool get isVideoDisabledByQuality => _isVideoDisabledByQuality;
+
+  CallManager(
+    this._signalingService,
+    this._authRepository,
+    this._turnCredentialsService,
+  ) {
+    _signalingService.onSignal.listen(_handleSignal);
+  }
+
   void _setState(CallState newState) {
     _state = newState;
     _callStateController.add(newState);
   }
 
+  /// Start an outgoing call
   Future<void> startCall(String roomId) async {
     if (_state != CallState.idle) return;
 
@@ -84,6 +121,7 @@ class CallManager {
     }
   }
 
+  /// Answer an incoming call
   Future<void> answerCall() async {
     if (_state != CallState.incoming ||
         _peerConnection == null ||
@@ -112,23 +150,69 @@ class CallManager {
     }
   }
 
+  /// End the current call
   Future<void> endCall() async {
+    _reconnectTimer?.cancel();
+    _isReconnecting = false;
+
     if (_currentRoomId != null) {
       await _signalingService.sendHangup(_currentRoomId!);
     }
     _close();
   }
 
+  /// Toggle microphone mute
+  void toggleMic() {
+    _isMicMuted = !_isMicMuted;
+    _localStream?.getAudioTracks().forEach((track) {
+      track.enabled = !_isMicMuted;
+    });
+    AppLogger.debug('Microphone muted: $_isMicMuted');
+  }
+
+  /// Toggle camera on/off
+  void toggleCamera() {
+    if (_isVideoDisabledByQuality) {
+      _warningController.add('Video disabled due to poor connection');
+      return;
+    }
+
+    _isCameraOff = !_isCameraOff;
+    _localStream?.getVideoTracks().forEach((track) {
+      track.enabled = !_isCameraOff;
+    });
+    AppLogger.debug('Camera off: $_isCameraOff');
+  }
+
+  /// Manually enable/disable video
+  void setVideoEnabled(bool enabled) {
+    if (!enabled) {
+      _isCameraOff = true;
+    } else if (!_isVideoDisabledByQuality) {
+      _isCameraOff = false;
+    }
+
+    _localStream?.getVideoTracks().forEach((track) {
+      track.enabled = enabled && !_isVideoDisabledByQuality;
+    });
+  }
+
   void _close() {
+    _qualityService?.dispose();
+    _qualityService = null;
     _peerConnection?.close();
     _peerConnection = null;
     _localStream?.dispose();
     _localStream = null;
     _localStreamController.add(null);
-    _remoteStream =
-        null; // Remote stream is disposed by peer connection usually
+    _remoteStream = null;
     _remoteStreamController.add(null);
     _currentRoomId = null;
+    _isMicMuted = false;
+    _isCameraOff = false;
+    _isVideoDisabledByQuality = false;
+    _reconnectAttempts = 0;
+    _currentStats = const CallStats();
     _setState(CallState.idle);
   }
 
@@ -149,7 +233,11 @@ class CallManager {
     // Get local stream
     _localStream = await navigator.mediaDevices.getUserMedia({
       'audio': true,
-      'video': true,
+      'video': {
+        'facingMode': 'user',
+        'width': {'ideal': 1280},
+        'height': {'ideal': 720},
+      },
     });
     _localStreamController.add(_localStream);
 
@@ -176,16 +264,193 @@ class CallManager {
       }
     };
 
+    // Handle connection state changes
     _peerConnection!.onConnectionState = (state) {
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
-        _setState(CallState.connected);
-      } else if (state ==
-              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        endCall();
+      AppLogger.debug('Peer connection state: $state');
+
+      switch (state) {
+        case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+          _handleConnected();
+          break;
+        case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
+          _handleDisconnected();
+          break;
+        case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
+          _handleConnectionFailed();
+          break;
+        case RTCPeerConnectionState.RTCPeerConnectionStateClosed:
+          if (!_isReconnecting) {
+            _close();
+          }
+          break;
+        default:
+          break;
       }
     };
+
+    // Handle ICE connection state for more granular reconnection
+    _peerConnection!.onIceConnectionState = (state) {
+      AppLogger.debug('ICE connection state: $state');
+
+      if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
+        _attemptIceRestart();
+      }
+    };
+
+    // Initialize quality monitoring
+    _initQualityMonitoring();
+  }
+
+  void _initQualityMonitoring() {
+    if (_peerConnection == null) return;
+
+    _qualityService = CallQualityService(
+      peerConnection: _peerConnection!,
+      onStatsUpdate: (stats) {
+        _currentStats = stats;
+        _statsController.add(stats);
+      },
+      onVideoStateChange: (enabled) {
+        _isVideoDisabledByQuality = !enabled;
+        _localStream?.getVideoTracks().forEach((track) {
+          track.enabled = enabled && !_isCameraOff;
+        });
+      },
+      onReconnectNeeded: () {
+        if (!_isReconnecting) {
+          _attemptReconnect();
+        }
+      },
+      onWarning: (message) {
+        _warningController.add(message);
+      },
+    );
+
+    _qualityService!.start();
+  }
+
+  void _handleConnected() {
+    _isReconnecting = false;
+    _reconnectAttempts = 0;
+    _reconnectTimer?.cancel();
+    _qualityService?.notifyReconnectCompleted(true);
+    _setState(CallState.connected);
+    AppLogger.info('Call connected');
+  }
+
+  void _handleDisconnected() {
+    // Connection temporarily lost, attempt reconnection
+    if (_state == CallState.connected) {
+      AppLogger.warning('Connection lost, attempting to reconnect');
+      _attemptReconnect();
+    }
+  }
+
+  void _handleConnectionFailed() {
+    if (_reconnectAttempts < _maxReconnectAttempts) {
+      _attemptReconnect();
+    } else {
+      AppLogger.error('Connection failed after $_maxReconnectAttempts attempts');
+      _warningController.add('Call ended due to connection failure');
+      endCall();
+    }
+  }
+
+  void _attemptReconnect() {
+    if (_isReconnecting) return;
+
+    _reconnectAttempts++;
+    _isReconnecting = true;
+    _setState(CallState.reconnecting);
+    _qualityService?.notifyReconnectStarted();
+
+    AppLogger.info(
+      'Reconnection attempt',
+      data: {'attempt': _reconnectAttempts, 'maxAttempts': _maxReconnectAttempts},
+    );
+
+    _warningController.add('Reconnecting... (attempt $_reconnectAttempts)');
+
+    // Set timeout for reconnection
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(_reconnectTimeout, () {
+      if (_isReconnecting) {
+        AppLogger.warning('Reconnection timed out');
+        _qualityService?.notifyReconnectCompleted(false);
+        if (_reconnectAttempts >= _maxReconnectAttempts) {
+          _warningController.add('Call ended due to connection timeout');
+          endCall();
+        } else {
+          _attemptIceRestart();
+        }
+      }
+    });
+
+    _attemptIceRestart();
+  }
+
+  Future<void> _attemptIceRestart() async {
+    if (_peerConnection == null || _currentRoomId == null) return;
+
+    try {
+      AppLogger.debug('Attempting ICE restart');
+
+      // Create a new offer with ICE restart flag
+      final offer = await _peerConnection!.createOffer({
+        'iceRestart': true,
+      });
+
+      await _peerConnection!.setLocalDescription(offer);
+
+      await _signalingService.sendOffer(_currentRoomId!, {
+        'sdp': offer.sdp,
+        'type': offer.type,
+        'iceRestart': true,
+      });
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'ICE restart failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _qualityService?.notifyReconnectCompleted(false);
+    }
+  }
+
+  /// Apply adaptive bitrate based on quality
+  Future<void> _applyAdaptiveBitrate() async {
+    if (_peerConnection == null || _qualityService == null) return;
+
+    final recommendedBitrate = _qualityService!.getRecommendedVideoBitrate();
+    final recommendedFrameRate = _qualityService!.getRecommendedFrameRate();
+
+    try {
+      final senders = await _peerConnection!.getSenders();
+      for (final sender in senders) {
+        if (sender.track?.kind == 'video') {
+          final params = sender.parameters;
+          if (params.encodings != null && params.encodings!.isNotEmpty) {
+            params.encodings![0].maxBitrate = recommendedBitrate;
+            params.encodings![0].maxFramerate = recommendedFrameRate.toDouble();
+            await sender.setParameters(params);
+
+            AppLogger.debug(
+              'Applied adaptive bitrate',
+              data: {
+                'bitrate': recommendedBitrate,
+                'frameRate': recommendedFrameRate,
+              },
+            );
+          }
+        }
+      }
+    } catch (e, stackTrace) {
+      AppLogger.warning(
+        'Failed to apply adaptive bitrate',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   Future<void> _handleSignal(RoomEvent event) async {
@@ -212,9 +477,30 @@ class CallManager {
   }
 
   Future<void> _handleOffer(RoomEvent event) async {
+    final isIceRestart = event.content['iceRestart'] == true;
+
+    // Handle ICE restart during an active call
+    if (isIceRestart && _state == CallState.reconnecting) {
+      AppLogger.debug('Received ICE restart offer');
+      final sdp = event.content['sdp'];
+      final type = event.content['type'];
+      await _peerConnection!.setRemoteDescription(
+        RTCSessionDescription(sdp, type),
+      );
+
+      final answer = await _peerConnection!.createAnswer();
+      await _peerConnection!.setLocalDescription(answer);
+
+      await _signalingService.sendAnswer(_currentRoomId!, {
+        'sdp': answer.sdp,
+        'type': answer.type,
+        'iceRestart': true,
+      });
+      return;
+    }
+
     if (_state != CallState.idle) {
-      // Busy
-      // Implementation note: Send busy signal when receiving call offer while already in a call
+      // Busy - could send busy signal here
       return;
     }
 
@@ -231,13 +517,18 @@ class CallManager {
   }
 
   Future<void> _handleAnswer(RoomEvent event) async {
-    if (_state != CallState.calling) return;
+    if (_state != CallState.calling && _state != CallState.reconnecting) return;
 
     final sdp = event.content['sdp'];
     final type = event.content['type'];
     await _peerConnection!.setRemoteDescription(
       RTCSessionDescription(sdp, type),
     );
+
+    // If this was a reconnection answer
+    if (_isReconnecting) {
+      AppLogger.debug('Received ICE restart answer');
+    }
   }
 
   Future<void> _handleCandidate(RoomEvent event) async {
@@ -249,5 +540,17 @@ class CallManager {
       event.content['sdpMLineIndex'],
     );
     await _peerConnection!.addCandidate(candidate);
+  }
+
+  /// Dispose of resources
+  void dispose() {
+    _reconnectTimer?.cancel();
+    _callStateController.close();
+    _localStreamController.close();
+    _remoteStreamController.close();
+    _statsController.close();
+    _warningController.close();
+    _qualityService?.dispose();
+    _close();
   }
 }
