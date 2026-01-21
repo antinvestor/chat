@@ -329,6 +329,31 @@ class SyncMetadata extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// User settings persistence table
+///
+/// Stores all user preferences as key-value pairs with timestamps.
+/// Settings are loaded on app startup and cached in memory.
+///
+/// Example:
+/// ```dart
+/// final theme = await db.userSettings.select()
+///   .where((s) => s.key.equals('theme_mode'))
+///   .getSingleOrNull();
+/// ```
+class UserSettings extends Table {
+  /// Setting key (e.g., 'theme_mode', 'font_size')
+  TextColumn get key => text()();
+
+  /// Setting value (stored as string, can be JSON for complex values)
+  TextColumn get value => text()();
+
+  /// Last update timestamp (milliseconds since epoch)
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -352,6 +377,7 @@ class SyncMetadata extends Table {
     PendingJobs,
     Transactions,
     SyncMetadata,
+    UserSettings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -364,7 +390,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -395,6 +421,10 @@ class AppDatabase extends _$AppDatabase {
         await _createFtsTable();
         // Populate FTS index with existing text messages
         await _populateFtsFromExistingMessages();
+      }
+      if (from <= 5) {
+        // Migration from v5 to v6: Add user settings table
+        await m.createTable(userSettings);
       }
     },
     beforeOpen: (details) async {
