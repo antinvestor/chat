@@ -64,6 +64,9 @@ void main() {
       // Placeholder memory monitoring
       developer.log('Memory test: Chat input bar created');
 
+      // Wait for any pending timers before disposal
+      await tester.pumpAndSettle();
+
       // Test widget disposal
       await tester.pumpWidget(Container());
       developer.log('Memory test: Chat input bar disposed');

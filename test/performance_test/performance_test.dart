@@ -68,6 +68,9 @@ void main() {
 
       // Placeholder performance assertion - should render within reasonable time
       expect(stopwatch.elapsedMilliseconds, lessThan(3000));
+
+      // Wait for any pending timers (e.g., draft save debounce)
+      await tester.pumpAndSettle();
     });
 
     testWidgets('Performance test for text input responsiveness', (

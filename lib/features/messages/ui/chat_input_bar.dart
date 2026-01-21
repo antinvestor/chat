@@ -36,6 +36,9 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
   bool _draftLoaded = false;
   static const _draftSaveDebounce = Duration(milliseconds: 500);
 
+  // Store draft repository reference for use in dispose()
+  DraftRepository? _draftRepository;
+
   @override
   void initState() {
     super.initState();
@@ -51,10 +54,16 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
   @override
   void dispose() {
-    // Save draft before disposing if there's unsaved text
-    _saveDraftImmediately();
+    // Cancel all timers first to prevent any pending callbacks
     _draftSaveTimer?.cancel();
     _recordingTimer?.cancel();
+    // Remove listener before disposing controller to prevent callbacks
+    _controller.removeListener(_onTextChanged);
+    // Save any pending draft content synchronously
+    _draftRepository?.saveDraft(
+      roomId: widget.roomId,
+      content: _controller.text,
+    );
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -62,8 +71,8 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
   /// Load any existing draft for this room
   Future<void> _loadDraft() async {
-    final draftRepo = ref.read(draftRepositoryProvider);
-    final draft = await draftRepo.getDraft(widget.roomId);
+    _draftRepository = ref.read(draftRepositoryProvider);
+    final draft = await _draftRepository!.getDraft(widget.roomId);
     if (draft != null && mounted) {
       _controller.text = draft.content;
       _controller.selection = TextSelection.fromPosition(
@@ -87,26 +96,29 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
   /// Save draft immediately without debouncing
   void _saveDraftImmediately() {
     _draftSaveTimer?.cancel();
-    final draftRepo = ref.read(draftRepositoryProvider);
-    draftRepo.saveDraft(roomId: widget.roomId, content: _controller.text);
+    // Use stored reference to avoid calling ref.read() in dispose()
+    _draftRepository?.saveDraft(
+      roomId: widget.roomId,
+      content: _controller.text,
+    );
   }
 
   /// Clear draft when message is sent
   Future<void> _clearDraft() async {
     _draftSaveTimer?.cancel();
-    final draftRepo = ref.read(draftRepositoryProvider);
-    await draftRepo.deleteDraft(widget.roomId);
+    // Use stored reference for consistency
+    await _draftRepository?.deleteDraft(widget.roomId);
   }
 
   // Local state change only
   void _onTextChanged() {
     final hasText = _controller.text.trim().isNotEmpty;
-    if (hasText != _hasText) {
+    if (hasText != _hasText && mounted) {
       setState(() => _hasText = hasText);
     }
 
-    // Schedule draft save when text changes (only after initial load)
-    if (_draftLoaded) {
+    // Schedule draft save when text changes (only after initial load and if still mounted)
+    if (_draftLoaded && mounted) {
       _scheduleDraftSave();
     }
   }
