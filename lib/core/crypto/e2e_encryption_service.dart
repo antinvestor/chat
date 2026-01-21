@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:encrypt/encrypt.dart' as aes;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:vodozemac/vodozemac.dart' as vod;
@@ -33,7 +34,7 @@ class E2EEncryptionService {
 
   /// Megolm inbound sessions by roomId -> senderKey -> session
   final Map<String, Map<String, vod.InboundGroupSession>>
-      _inboundGroupSessions = {};
+  _inboundGroupSessions = {};
 
   /// Message count per room for session rotation (rotate after 100 messages)
   final Map<String, int> _sessionMessageCounts = {};
@@ -52,8 +53,6 @@ class E2EEncryptionService {
 
   /// Max messages before rotating group session
   static const int _sessionRotationThreshold = 100;
-
-  E2EEncryptionService(this._storage, this._database);
 
   /// Initialize the encryption service
   Future<void> initialize() async {
@@ -94,10 +93,17 @@ class E2EEncryptionService {
       // Log key fingerprints (first 8 chars) rather than full keys for security
       final curve25519 = _olmAccount!.curve25519Key.toBase64();
       final ed25519 = _olmAccount!.ed25519Key.toBase64();
-      AppLogger.debug('E2E encryption service initialized', data: {
-        'curve25519Fingerprint': curve25519.length > 8 ? curve25519.substring(0, 8) : curve25519,
-        'ed25519Fingerprint': ed25519.length > 8 ? ed25519.substring(0, 8) : ed25519,
-      });
+      AppLogger.debug(
+        'E2E encryption service initialized',
+        data: {
+          'curve25519Fingerprint': curve25519.length > 8
+              ? curve25519.substring(0, 8)
+              : curve25519,
+          'ed25519Fingerprint': ed25519.length > 8
+              ? ed25519.substring(0, 8)
+              : ed25519,
+        },
+      );
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to initialize E2E encryption',
@@ -280,11 +286,16 @@ class E2EEncryptionService {
       );
 
       await _saveGroupSession(roomId);
-      AppLogger.debug('Added inbound Megolm session',
-          data: {'roomId': roomId, 'sessionId': sessionId});
+      AppLogger.debug(
+        'Added inbound Megolm session',
+        data: {'roomId': roomId, 'sessionId': sessionId},
+      );
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to add inbound group session',
-          error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        'Failed to add inbound group session',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -385,46 +396,75 @@ class E2EEncryptionService {
     return _inboundGroupSessions[roomId]?.containsKey(senderKey) ?? false;
   }
 
-  /// Encrypt arbitrary data (for file encryption)
+  /// Encrypt arbitrary data (for file encryption) using AES-256-GCM
   ///
-  /// WARNING: This currently uses a placeholder XOR cipher which is NOT
-  /// cryptographically secure. Do NOT use for production file encryption.
+  /// Uses authenticated encryption (AEAD) which provides both confidentiality
+  /// and integrity protection. The IV is randomly generated for each encryption.
   ///
-  /// TODO: Replace with AES-GCM encryption using a proper cryptographic library
-  /// (e.g., pointycastle or cryptography package) before production use.
-  @Deprecated('XOR encryption is not secure - replace with AES-GCM')
+  /// Returns [EncryptedData] containing the ciphertext, key, and IV.
   Future<EncryptedData> encryptData(Uint8List data) async {
     _ensureInitialized();
-    AppLogger.warning(
-      'Using insecure XOR encryption for file data - replace with AES-GCM',
-    );
 
-    // Generate random key and IV
+    // Generate random 256-bit key and 96-bit IV for AES-GCM
     final keyBytes = Uint8List.fromList(
       List<int>.generate(32, (_) => _random.nextInt(256)),
     );
     final ivBytes = Uint8List.fromList(
-      List<int>.generate(16, (_) => _random.nextInt(256)),
+      List<int>.generate(12, (_) => _random.nextInt(256)), // 96-bit IV for GCM
     );
-    final key = base64Encode(keyBytes);
-    final iv = base64Encode(ivBytes);
 
-    // INSECURE: XOR cipher - placeholder only
-    // TODO: Replace with AES-GCM using pointycastle or similar
-    final encrypted = _xorEncrypt(data, keyBytes);
+    final key = aes.Key(keyBytes);
+    final iv = aes.IV(ivBytes);
+    final encrypter = aes.Encrypter(aes.AES(key, mode: aes.AESMode.gcm));
 
-    return EncryptedData(data: encrypted, key: key, iv: iv);
+    final encrypted = encrypter.encryptBytes(data, iv: iv);
+
+    AppLogger.debug(
+      'Encrypted data with AES-256-GCM',
+      data: {'dataSize': data.length, 'encryptedSize': encrypted.bytes.length},
+    );
+
+    return EncryptedData(
+      data: Uint8List.fromList(encrypted.bytes),
+      key: base64Encode(keyBytes),
+      iv: base64Encode(ivBytes),
+    );
   }
 
-  /// Decrypt arbitrary data
+  /// Decrypt arbitrary data using AES-256-GCM
   ///
-  /// WARNING: This currently uses a placeholder XOR cipher which is NOT
-  /// cryptographically secure.
-  @Deprecated('XOR encryption is not secure - replace with AES-GCM')
+  /// Uses authenticated decryption which verifies the integrity of the
+  /// ciphertext before returning the plaintext.
+  ///
+  /// Throws [ArgumentError] if decryption fails (e.g., tampered data).
   Future<Uint8List> decryptData(EncryptedData encryptedData) async {
     final keyBytes = base64Decode(encryptedData.key);
-    // INSECURE: XOR cipher - placeholder only
-    return _xorEncrypt(encryptedData.data, keyBytes);
+    final ivBytes = base64Decode(encryptedData.iv);
+
+    final key = aes.Key(Uint8List.fromList(keyBytes));
+    final iv = aes.IV(Uint8List.fromList(ivBytes));
+    final encrypter = aes.Encrypter(aes.AES(key, mode: aes.AESMode.gcm));
+
+    try {
+      final encrypted = aes.Encrypted(encryptedData.data);
+      final decrypted = encrypter.decryptBytes(encrypted, iv: iv);
+
+      AppLogger.debug(
+        'Decrypted data with AES-256-GCM',
+        data: {
+          'encryptedSize': encryptedData.data.length,
+          'decryptedSize': decrypted.length,
+        },
+      );
+
+      return Uint8List.fromList(decrypted);
+    } catch (e) {
+      AppLogger.error(
+        'AES-GCM decryption failed - data may be tampered',
+        error: e,
+      );
+      throw ArgumentError('Decryption failed: data integrity check failed');
+    }
   }
 
   // Private helper methods
@@ -433,15 +473,6 @@ class E2EEncryptionService {
     if (!_isInitialized || _olmAccount == null) {
       throw StateError('E2E encryption service not initialized');
     }
-  }
-
-  /// XOR encryption helper for file data
-  Uint8List _xorEncrypt(Uint8List data, List<int> key) {
-    final result = Uint8List(data.length);
-    for (var i = 0; i < data.length; i++) {
-      result[i] = data[i] ^ key[i % key.length];
-    }
-    return result;
   }
 
   Future<void> _saveGroupSession(String roomId) async {
@@ -498,8 +529,9 @@ class E2EEncryptionService {
       final allKeys = await _storage.readAll();
 
       // Load outbound sessions
-      for (final key
-          in allKeys.keys.where((k) => k.startsWith('megolm_outbound_'))) {
+      for (final key in allKeys.keys.where(
+        (k) => k.startsWith('megolm_outbound_'),
+      )) {
         final roomId = key.replaceFirst('megolm_outbound_', '');
         try {
           final data = jsonDecode(allKeys[key]!) as Map<String, dynamic>;
@@ -519,14 +551,17 @@ class E2EEncryptionService {
 
           AppLogger.debug('Loaded outbound session', data: {'roomId': roomId});
         } catch (e) {
-          AppLogger.warning('Failed to load outbound session',
-              data: {'roomId': roomId, 'error': '$e'});
+          AppLogger.warning(
+            'Failed to load outbound session',
+            data: {'roomId': roomId, 'error': '$e'},
+          );
         }
       }
 
       // Load inbound sessions
-      for (final key
-          in allKeys.keys.where((k) => k.startsWith('megolm_inbound_'))) {
+      for (final key in allKeys.keys.where(
+        (k) => k.startsWith('megolm_inbound_'),
+      )) {
         final roomId = key.replaceFirst('megolm_inbound_', '');
         try {
           final data = jsonDecode(allKeys[key]!) as Map<String, dynamic>;
@@ -541,18 +576,25 @@ class E2EEncryptionService {
             _inboundGroupSessions[roomId]![entry.key] = inbound;
           }
 
-          AppLogger.debug('Loaded inbound sessions',
-              data: {'roomId': roomId, 'count': data.length});
+          AppLogger.debug(
+            'Loaded inbound sessions',
+            data: {'roomId': roomId, 'count': data.length},
+          );
         } catch (e) {
-          AppLogger.warning('Failed to load inbound sessions',
-              data: {'roomId': roomId, 'error': '$e'});
+          AppLogger.warning(
+            'Failed to load inbound sessions',
+            data: {'roomId': roomId, 'error': '$e'},
+          );
         }
       }
 
-      AppLogger.debug('Loaded Megolm sessions', data: {
-        'outbound': _outboundGroupSessions.length,
-        'inboundRooms': _inboundGroupSessions.length,
-      });
+      AppLogger.debug(
+        'Loaded Megolm sessions',
+        data: {
+          'outbound': _outboundGroupSessions.length,
+          'inboundRooms': _inboundGroupSessions.length,
+        },
+      );
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to load group sessions',
@@ -606,22 +648,6 @@ class EncryptedMessage {
     required this.sessionId,
   });
 
-  factory EncryptedMessage.fromJson(Map<String, dynamic> json) =>
-      EncryptedMessage(
-        ciphertext: json['ciphertext'] as String,
-        messageType: json['messageType'] as int,
-        sessionId: json['sessionId'] as String,
-      );
-  final String ciphertext;
-  final int messageType;
-  final String sessionId;
-
-  Map<String, dynamic> toJson() => {
-        'ciphertext': ciphertext,
-        'messageType': messageType,
-        'sessionId': sessionId,
-      };
-
   factory EncryptedMessage.fromJson(Map<String, dynamic> json) {
     return EncryptedMessage(
       ciphertext: json['ciphertext'] as String,
@@ -629,38 +655,25 @@ class EncryptedMessage {
       sessionId: json['sessionId'] as String,
     );
   }
+  final String ciphertext;
+  final int messageType;
+  final String sessionId;
+
+  Map<String, dynamic> toJson() => {
+    'ciphertext': ciphertext,
+    'messageType': messageType,
+    'sessionId': sessionId,
+  };
 }
 
 /// Encrypted message for group communication (Megolm)
 class GroupEncryptedMessage {
-  final String ciphertext;
-  final String sessionId;
-  final int messageIndex;
-  final String? senderKey;
-
   GroupEncryptedMessage({
     required this.ciphertext,
     required this.sessionId,
     required this.messageIndex,
     this.senderKey,
   });
-
-  factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) =>
-      GroupEncryptedMessage(
-        ciphertext: json['ciphertext'] as String,
-        sessionId: json['sessionId'] as String,
-        messageIndex: json['messageIndex'] as int,
-      );
-  final String ciphertext;
-  final String sessionId;
-  final int messageIndex;
-
-  Map<String, dynamic> toJson() => {
-        'ciphertext': ciphertext,
-        'sessionId': sessionId,
-        'messageIndex': messageIndex,
-        if (senderKey != null) 'senderKey': senderKey,
-      };
 
   factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) {
     return GroupEncryptedMessage(
@@ -670,6 +683,17 @@ class GroupEncryptedMessage {
       senderKey: json['senderKey'] as String?,
     );
   }
+  final String ciphertext;
+  final String sessionId;
+  final int messageIndex;
+  final String? senderKey;
+
+  Map<String, dynamic> toJson() => {
+    'ciphertext': ciphertext,
+    'sessionId': sessionId,
+    'messageIndex': messageIndex,
+    if (senderKey != null) 'senderKey': senderKey,
+  };
 }
 
 /// Encrypted data with key
@@ -694,11 +718,10 @@ final e2eInitializedProvider = FutureProvider<bool>((ref) async {
 
 /// Exception thrown when a session is missing for decryption
 class MissingSessionException implements Exception {
+  MissingSessionException(this.message, {required this.roomId, this.senderKey});
   final String message;
   final String roomId;
   final String? senderKey;
-
-  MissingSessionException(this.message, {required this.roomId, this.senderKey});
 
   @override
   String toString() => 'MissingSessionException: $message';
@@ -706,10 +729,9 @@ class MissingSessionException implements Exception {
 
 /// Exception thrown when decryption fails
 class DecryptionException implements Exception {
+  DecryptionException(this.message, {required this.roomId});
   final String message;
   final String roomId;
-
-  DecryptionException(this.message, {required this.roomId});
 
   @override
   String toString() => 'DecryptionException: $message';
