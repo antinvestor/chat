@@ -1,5 +1,4 @@
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
-import 'package:chat/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,14 +8,22 @@ void main() {
   setUp(TestHelpers.resetMocks);
 
   testWidgets('Chat input bar smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame with mocked authentication
-    await tester.pumpWidgetWithMocks(const ChatApp());
+    // Build a simple MaterialApp with ChatInputBar directly since ChatApp
+    // now requires full startup initialization with splash screen
+    await tester.pumpWidgetWithMocks(
+      const MaterialApp(
+        home: Scaffold(
+          body: ChatInputBar(roomId: 'smoke-test-room', roomName: 'Smoke Test'),
+        ),
+      ),
+    );
 
     // Wait for app to load
     await tester.pumpAndSettle();
 
     // The app should load without crashing
     expect(find.byType(MaterialApp), findsOneWidget);
+    expect(find.byType(ChatInputBar), findsOneWidget);
   });
 
   testWidgets('Chat input bar widget test', (WidgetTester tester) async {

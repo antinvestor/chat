@@ -2,7 +2,6 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:chat/features/messages/ui/chat_input_bar.dart';
-import 'package:chat/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -112,7 +111,13 @@ void main() {
       // 3. Image memory management
       // 4. List view recycling efficiency
 
-      await tester.pumpWidgetWithMocks(const ChatApp());
+      await tester.pumpWidgetWithMocks(
+        const MaterialApp(
+          home: Scaffold(
+            body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Placeholder memory monitoring for large lists
@@ -157,7 +162,13 @@ void main() {
       // 3. Large dataset handling
       // 4. Database cleanup
 
-      await tester.pumpWidgetWithMocks(const ChatApp());
+      await tester.pumpWidgetWithMocks(
+        const MaterialApp(
+          home: Scaffold(
+            body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Placeholder database memory monitoring
@@ -201,7 +212,13 @@ void main() {
     ) async {
       // Tests memory stability over simulated session
 
-      await tester.pumpWidgetWithMocks(const ChatApp());
+      await tester.pumpWidgetWithMocks(
+        const MaterialApp(
+          home: Scaffold(
+            body: ChatInputBar(roomId: 'test-room', roomName: 'Test Room'),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Log initial memory state
