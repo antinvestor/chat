@@ -33,14 +33,12 @@ class LRUCache<K, V> {
   ///
   /// If the key already exists, the value is updated and moved to the end.
   /// If adding this item exceeds maxSize, the least recently used item is evicted.
+  ///
+  /// Note: When replacing an existing entry, onEvict is NOT called. The onEvict
+  /// callback is only invoked when items are evicted due to capacity limits.
   void put(K key, V value) {
-    // Remove existing entry to update position
-    final existing = _cache.remove(key);
-    if (existing != null && onEvict != null) {
-      // Only call onEvict if we're actually replacing with a different value
-      // This prevents unnecessary cleanup when just refreshing the same value
-    }
-
+    // Remove existing entry to update position (don't trigger onEvict for replacements)
+    _cache.remove(key);
     _cache[key] = value;
 
     // Evict oldest entries if over capacity
