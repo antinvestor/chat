@@ -335,10 +335,7 @@ void main() {
         const CallStats(quality: ConnectionQuality.veryPoor).qualityDescription,
         equals('Very Poor'),
       );
-      expect(
-        const CallStats().qualityDescription,
-        equals('Checking...'),
-      );
+      expect(const CallStats().qualityDescription, equals('Checking...'));
     });
 
     test('latencyDescription for various RTT values', () {
@@ -422,6 +419,326 @@ void main() {
 
       expect(updated.isReconnecting, isTrue);
       expect(updated.reconnectionAttempts, equals(2));
+    });
+  });
+
+  group('Auto-reconnection behavior', () {
+    test('default stats has zero reconnection attempts', () {
+      const stats = CallStats();
+      expect(stats.reconnectionAttempts, equals(0));
+      expect(stats.isReconnecting, isFalse);
+    });
+
+    test('reconnection attempts can be incremented', () {
+      const stats = CallStats();
+
+      final attempt1 = stats.copyWith(
+        isReconnecting: true,
+        reconnectionAttempts: 1,
+      );
+      expect(attempt1.reconnectionAttempts, equals(1));
+      expect(attempt1.isReconnecting, isTrue);
+
+      final attempt2 = attempt1.copyWith(reconnectionAttempts: 2);
+      expect(attempt2.reconnectionAttempts, equals(2));
+
+      final attempt3 = attempt2.copyWith(reconnectionAttempts: 3);
+      expect(attempt3.reconnectionAttempts, equals(3));
+    });
+
+    test('reconnection state can be cleared after successful reconnection', () {
+      const reconnecting = CallStats(
+        isReconnecting: true,
+        reconnectionAttempts: 3,
+        quality: ConnectionQuality.poor,
+      );
+
+      final reconnected = reconnecting.copyWith(
+        isReconnecting: false,
+        reconnectionAttempts: 0,
+        quality: ConnectionQuality.good,
+      );
+
+      expect(reconnected.isReconnecting, isFalse);
+      expect(reconnected.reconnectionAttempts, equals(0));
+      expect(reconnected.quality, equals(ConnectionQuality.good));
+    });
+
+    test(
+      'shouldShowWarning is true during reconnection regardless of quality',
+      () {
+        const reconnecting = CallStats(
+          quality: ConnectionQuality.excellent,
+          isReconnecting: true,
+        );
+
+        expect(reconnecting.shouldShowWarning, isTrue);
+      },
+    );
+
+    test('reconnection tracking survives quality changes', () {
+      const stats = CallStats(
+        isReconnecting: true,
+        reconnectionAttempts: 2,
+        quality: ConnectionQuality.poor,
+      );
+
+      final updatedQuality = stats.copyWith(quality: ConnectionQuality.fair);
+
+      expect(updatedQuality.isReconnecting, isTrue);
+      expect(updatedQuality.reconnectionAttempts, equals(2));
+    });
+
+    test('simulated reconnection flow', () {
+      // Start with good connection
+      var stats = const CallStats(
+        quality: ConnectionQuality.good,
+      );
+      expect(stats.shouldShowWarning, isFalse);
+
+      // Connection drops - start reconnecting
+      stats = stats.copyWith(
+        isReconnecting: true,
+        reconnectionAttempts: 1,
+        quality: ConnectionQuality.veryPoor,
+      );
+      expect(stats.shouldShowWarning, isTrue);
+      expect(stats.isReconnecting, isTrue);
+
+      // Attempt 2
+      stats = stats.copyWith(reconnectionAttempts: 2);
+      expect(stats.reconnectionAttempts, equals(2));
+
+      // Attempt 3
+      stats = stats.copyWith(reconnectionAttempts: 3);
+      expect(stats.reconnectionAttempts, equals(3));
+
+      // Successful reconnection
+      stats = stats.copyWith(
+        isReconnecting: false,
+        reconnectionAttempts: 0,
+        quality: ConnectionQuality.good,
+      );
+      expect(stats.shouldShowWarning, isFalse);
+      expect(stats.isReconnecting, isFalse);
+    });
+  });
+
+  group('Video disable behavior', () {
+    test('default stats has video not disabled', () {
+      const stats = CallStats();
+      expect(stats.isVideoDisabledDueToPoorConnection, isFalse);
+    });
+
+    test('video disabled flag can be set', () {
+      const stats = CallStats();
+
+      final disabled = stats.copyWith(isVideoDisabledDueToPoorConnection: true);
+
+      expect(disabled.isVideoDisabledDueToPoorConnection, isTrue);
+    });
+
+    test('video disabled flag can be cleared', () {
+      const disabled = CallStats(isVideoDisabledDueToPoorConnection: true);
+
+      final enabled = disabled.copyWith(
+        isVideoDisabledDueToPoorConnection: false,
+      );
+
+      expect(enabled.isVideoDisabledDueToPoorConnection, isFalse);
+    });
+
+    test('video disabled when quality is poor or veryPoor', () {
+      // Excellent quality - video should be acceptable
+      const excellent = CallStats(quality: ConnectionQuality.excellent);
+      expect(excellent.isVideoQualityAcceptable, isTrue);
+
+      // Good quality - video should be acceptable
+      const good = CallStats(quality: ConnectionQuality.good);
+      expect(good.isVideoQualityAcceptable, isTrue);
+
+      // Fair quality - video should be acceptable
+      const fair = CallStats(quality: ConnectionQuality.fair);
+      expect(fair.isVideoQualityAcceptable, isTrue);
+
+      // Poor quality - video not acceptable
+      const poor = CallStats(quality: ConnectionQuality.poor);
+      expect(poor.isVideoQualityAcceptable, isFalse);
+
+      // Very poor quality - video not acceptable
+      const veryPoor = CallStats(quality: ConnectionQuality.veryPoor);
+      expect(veryPoor.isVideoQualityAcceptable, isFalse);
+    });
+
+    test('video disable flow when quality degrades', () {
+      // Start with excellent quality and video enabled
+      var stats = const CallStats(
+        quality: ConnectionQuality.excellent,
+      );
+      expect(stats.isVideoQualityAcceptable, isTrue);
+
+      // Quality degrades to good - still acceptable
+      stats = stats.copyWith(quality: ConnectionQuality.good);
+      expect(stats.isVideoQualityAcceptable, isTrue);
+
+      // Quality degrades to fair - still acceptable
+      stats = stats.copyWith(quality: ConnectionQuality.fair);
+      expect(stats.isVideoQualityAcceptable, isTrue);
+
+      // Quality degrades to poor - should disable video
+      stats = stats.copyWith(
+        quality: ConnectionQuality.poor,
+        isVideoDisabledDueToPoorConnection: true,
+      );
+      expect(stats.isVideoQualityAcceptable, isFalse);
+      expect(stats.isVideoDisabledDueToPoorConnection, isTrue);
+    });
+
+    test('video re-enable flow when quality improves', () {
+      // Start with poor quality and video disabled
+      var stats = const CallStats(
+        quality: ConnectionQuality.poor,
+        isVideoDisabledDueToPoorConnection: true,
+      );
+      expect(stats.isVideoQualityAcceptable, isFalse);
+      expect(stats.isVideoDisabledDueToPoorConnection, isTrue);
+
+      // Quality improves to fair - video now acceptable
+      stats = stats.copyWith(quality: ConnectionQuality.fair);
+      expect(stats.isVideoQualityAcceptable, isTrue);
+      // Note: isVideoDisabledDueToPoorConnection may still be true until UI re-enables
+
+      // UI re-enables video
+      stats = stats.copyWith(isVideoDisabledDueToPoorConnection: false);
+      expect(stats.isVideoQualityAcceptable, isTrue);
+      expect(stats.isVideoDisabledDueToPoorConnection, isFalse);
+    });
+
+    test('video disable state persists through other stat updates', () {
+      const stats = CallStats(
+        quality: ConnectionQuality.poor,
+        isVideoDisabledDueToPoorConnection: true,
+        roundTripTimeMs: 300,
+      );
+
+      // Update RTT but preserve video disabled state
+      final updated = stats.copyWith(roundTripTimeMs: 350);
+
+      expect(updated.isVideoDisabledDueToPoorConnection, isTrue);
+      expect(updated.roundTripTimeMs, equals(350));
+    });
+  });
+
+  group('Combined reconnection and video disable scenarios', () {
+    test('both reconnecting and video disabled during severe conditions', () {
+      const stats = CallStats(
+        quality: ConnectionQuality.veryPoor,
+        isReconnecting: true,
+        reconnectionAttempts: 2,
+        isVideoDisabledDueToPoorConnection: true,
+      );
+
+      expect(stats.isReconnecting, isTrue);
+      expect(stats.isVideoDisabledDueToPoorConnection, isTrue);
+      expect(stats.shouldShowWarning, isTrue);
+      expect(stats.isVideoQualityAcceptable, isFalse);
+    });
+
+    test('recovery sequence: reconnection then video re-enable', () {
+      // Start with severe conditions
+      var stats = const CallStats(
+        quality: ConnectionQuality.veryPoor,
+        isReconnecting: true,
+        reconnectionAttempts: 3,
+        isVideoDisabledDueToPoorConnection: true,
+      );
+
+      // Phase 1: Reconnection succeeds but quality still poor
+      stats = stats.copyWith(
+        isReconnecting: false,
+        quality: ConnectionQuality.poor,
+      );
+      expect(stats.isReconnecting, isFalse);
+      expect(stats.isVideoDisabledDueToPoorConnection, isTrue);
+      expect(stats.shouldShowWarning, isTrue); // Poor quality shows warning
+
+      // Phase 2: Quality improves to fair
+      stats = stats.copyWith(quality: ConnectionQuality.fair);
+      expect(stats.isVideoQualityAcceptable, isTrue);
+      expect(stats.shouldShowWarning, isFalse);
+
+      // Phase 3: Video can be re-enabled and reconnection attempts reset
+      stats = stats.copyWith(
+        isVideoDisabledDueToPoorConnection: false,
+        reconnectionAttempts: 0,
+      );
+      expect(stats.isVideoDisabledDueToPoorConnection, isFalse);
+      expect(stats.reconnectionAttempts, equals(0));
+    });
+
+    test('quality fluctuation with video disable hysteresis', () {
+      // Excellent -> poor -> fair -> excellent
+      var stats = const CallStats(quality: ConnectionQuality.excellent);
+      expect(stats.isVideoQualityAcceptable, isTrue);
+
+      // Drop to poor - disable video
+      stats = stats.copyWith(
+        quality: ConnectionQuality.poor,
+        isVideoDisabledDueToPoorConnection: true,
+      );
+      expect(stats.isVideoQualityAcceptable, isFalse);
+
+      // Improve to fair - video acceptable but still marked disabled
+      stats = stats.copyWith(quality: ConnectionQuality.fair);
+      expect(stats.isVideoQualityAcceptable, isTrue);
+      expect(stats.isVideoDisabledDueToPoorConnection, isTrue);
+
+      // Improve to excellent - can now safely re-enable
+      stats = stats.copyWith(
+        quality: ConnectionQuality.excellent,
+        isVideoDisabledDueToPoorConnection: false,
+      );
+      expect(stats.isVideoQualityAcceptable, isTrue);
+      expect(stats.isVideoDisabledDueToPoorConnection, isFalse);
+    });
+  });
+
+  group('Edge cases', () {
+    test('default quality in stats is unknown', () {
+      const stats = CallStats();
+      // Default quality is unknown (not null), indicated by 'Checking...'
+      expect(stats.quality, equals(ConnectionQuality.unknown));
+      expect(stats.qualityDescription, equals('Checking...'));
+    });
+
+    test('all stat values can be set to zero', () {
+      const stats = CallStats(
+        
+      );
+
+      expect(stats.roundTripTimeMs, equals(0));
+      expect(stats.jitterMs, equals(0));
+      expect(stats.packetLossPercent, equals(0));
+      expect(stats.reconnectionAttempts, equals(0));
+    });
+
+    test('maximum reconnection attempts value', () {
+      const stats = CallStats(reconnectionAttempts: 100);
+      expect(stats.reconnectionAttempts, equals(100));
+    });
+
+    test('extreme RTT and packet loss values', () {
+      const stats = CallStats(
+        roundTripTimeMs: 10000,
+        packetLossPercent: 100,
+        jitterMs: 5000,
+      );
+
+      expect(stats.roundTripTimeMs, equals(10000));
+      expect(stats.packetLossPercent, equals(100));
+      expect(stats.jitterMs, equals(5000));
+      expect(stats.latencyDescription, contains('very high'));
+      expect(stats.packetLossDescription, contains('very high'));
     });
   });
 }
