@@ -20,10 +20,9 @@ void main() {
 
     /// Helper to insert a room
     Future<void> insertRoom(String roomId, {String? name}) async {
-      await db.into(db.rooms).insert(RoomsCompanion.insert(
-            id: roomId,
-            name: Value(name),
-          ));
+      await db
+          .into(db.rooms)
+          .insert(RoomsCompanion.insert(id: roomId, name: Value(name)));
     }
 
     /// Helper to insert a text message
@@ -33,14 +32,18 @@ void main() {
       required String text,
       String senderId = 'sender1',
     }) async {
-      await db.into(db.roomEvents).insert(RoomEventsCompanion.insert(
-            id: id,
-            roomId: roomId,
-            senderId: senderId,
-            type: 0, // text message type
-            content: Value(jsonEncode({'text': text})),
-            status: const Value(1),
-          ));
+      await db
+          .into(db.roomEvents)
+          .insert(
+            RoomEventsCompanion.insert(
+              id: id,
+              roomId: roomId,
+              senderId: senderId,
+              type: 0, // text message type
+              content: Value(jsonEncode({'text': text})),
+              status: const Value(1),
+            ),
+          );
     }
 
     group('searchMessages', () {
@@ -209,10 +212,13 @@ void main() {
         );
 
         // Update the message
-        await (db.update(db.roomEvents)..where((e) => e.id.equals('msg1')))
-            .write(RoomEventsCompanion(
-          content: Value(jsonEncode({'text': 'Updated content'})),
-        ));
+        await (db.update(
+          db.roomEvents,
+        )..where((e) => e.id.equals('msg1'))).write(
+          RoomEventsCompanion(
+            content: Value(jsonEncode({'text': 'Updated content'})),
+          ),
+        );
 
         // Old content should not be found
         final oldResults = await db.searchMessages('original');
@@ -236,8 +242,9 @@ void main() {
         expect(results, hasLength(1));
 
         // Delete the message
-        await (db.delete(db.roomEvents)..where((e) => e.id.equals('msg1')))
-            .go();
+        await (db.delete(
+          db.roomEvents,
+        )..where((e) => e.id.equals('msg1'))).go();
 
         // Should no longer be found
         results = await db.searchMessages('delete');
@@ -281,13 +288,17 @@ void main() {
       test('handles null content gracefully', () async {
         await insertRoom('room1');
         // Insert message with null content
-        await db.into(db.roomEvents).insert(RoomEventsCompanion.insert(
-              id: 'msg1',
-              roomId: 'room1',
-              senderId: 'sender1',
-              type: 0,
-              status: const Value(1),
-            ));
+        await db
+            .into(db.roomEvents)
+            .insert(
+              RoomEventsCompanion.insert(
+                id: 'msg1',
+                roomId: 'room1',
+                senderId: 'sender1',
+                type: 0,
+                status: const Value(1),
+              ),
+            );
 
         // Should not crash
         final results = await db.searchMessages('anything');
@@ -297,14 +308,20 @@ void main() {
       test('handles non-text message types', () async {
         await insertRoom('room1');
         // Insert an image message (type = 1)
-        await db.into(db.roomEvents).insert(RoomEventsCompanion.insert(
-              id: 'img1',
-              roomId: 'room1',
-              senderId: 'sender1',
-              type: 1, // image type
-              content: Value(jsonEncode({'url': 'image.jpg', 'text': 'photo'})),
-              status: const Value(1),
-            ));
+        await db
+            .into(db.roomEvents)
+            .insert(
+              RoomEventsCompanion.insert(
+                id: 'img1',
+                roomId: 'room1',
+                senderId: 'sender1',
+                type: 1, // image type
+                content: Value(
+                  jsonEncode({'url': 'image.jpg', 'text': 'photo'}),
+                ),
+                status: const Value(1),
+              ),
+            );
 
         // Non-text messages should not be in FTS index
         final results = await db.searchMessages('photo');

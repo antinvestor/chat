@@ -18,4 +18,5 @@ import 'package:drift/native.dart';
 ///   await testDb.close();
 /// });
 /// ```
-AppDatabase createTestDatabase() => AppDatabase.forTesting(NativeDatabase.memory());
+AppDatabase createTestDatabase() =>
+    AppDatabase.forTesting(NativeDatabase.memory());

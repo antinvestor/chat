@@ -11,7 +11,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 /// Mock AuthService for testing
 class MockAuthService extends AuthService {
-
   MockAuthService()
     : super(
         const FlutterSecureStorage(),
@@ -58,10 +57,10 @@ class MockAuthService extends AuthService {
   @override
   Future<({TokenRefreshResult result, TokenResponse? token, String? error})>
   refreshTokenWithResult() async => (
-      result: TokenRefreshResult.success,
-      token: _isAuthenticated ? null : null,
-      error: null,
-    );
+    result: TokenRefreshResult.success,
+    token: _isAuthenticated ? null : null,
+    error: null,
+  );
 
   @override
   Future<Duration?> getTimeUntilRefreshNeeded() async {
@@ -83,12 +82,12 @@ class MockAuthService extends AuthService {
     return (token: _isAuthenticated ? 'mock-token' : null, needsRelogin: false);
   }
 
-  Future<String?> getCurrentProfileId() async => _isAuthenticated ? 'mock-profile-id' : null;
+  Future<String?> getCurrentProfileId() async =>
+      _isAuthenticated ? 'mock-profile-id' : null;
 }
 
 /// Mock AuthRepository for testing
 class MockAuthRepository extends AuthRepository {
-
   MockAuthRepository(this._mockAuthService) : super(_mockAuthService);
   final MockAuthService _mockAuthService;
 

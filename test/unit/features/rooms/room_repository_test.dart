@@ -25,11 +25,7 @@ void main() {
   group('RoomRepository', () {
     group('insertRoom', () {
       test('inserts a room successfully', () async {
-        const room = Room(
-          id: 'room-1',
-          name: 'Test Room',
-          type: 'group',
-        );
+        const room = Room(id: 'room-1', name: 'Test Room', type: 'group');
 
         await repository.insertRoom(room);
 
@@ -78,11 +74,7 @@ void main() {
       });
 
       test('updates existing room on conflict', () async {
-        const room1 = Room(
-          id: 'room-1',
-          name: 'Original Name',
-          type: 'group',
-        );
+        const room1 = Room(id: 'room-1', name: 'Original Name', type: 'group');
 
         const room2 = Room(
           id: 'room-1',
@@ -209,11 +201,7 @@ void main() {
     group('updateUnreadCount', () {
       test('updates unread count for existing room', () async {
         await repository.insertRoom(
-          const Room(
-            id: 'room-1',
-            name: 'Test Room',
-            type: 'group',
-          ),
+          const Room(id: 'room-1', name: 'Test Room', type: 'group'),
         );
 
         await repository.updateUnreadCount('room-1', 10);
@@ -417,8 +405,7 @@ void main() {
         await repository.insertRoom(room);
 
         final result = await repository.getRoomById('room-1');
-        final nested =
-            result!.metadata!['nested'] as Map<String, dynamic>;
+        final nested = result!.metadata!['nested'] as Map<String, dynamic>;
         final level1 = nested['level1'] as Map<String, dynamic>;
         expect(level1['level2'], equals('deep value'));
         final array = result.metadata!['array'] as List<dynamic>;

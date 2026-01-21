@@ -25,11 +25,17 @@ void main() {
 
     group('hasPinsConfigured', () {
       test('returns true for configured host', () {
-        expect(certificatePinning.hasPinsConfigured('chat.antinvestor.com'), isTrue);
+        expect(
+          certificatePinning.hasPinsConfigured('chat.antinvestor.com'),
+          isTrue,
+        );
       });
 
       test('returns false for unconfigured host', () {
-        expect(certificatePinning.hasPinsConfigured('unknown.example.com'), isFalse);
+        expect(
+          certificatePinning.hasPinsConfigured('unknown.example.com'),
+          isFalse,
+        );
       });
     });
 
