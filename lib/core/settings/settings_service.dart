@@ -75,7 +75,6 @@ class SettingsDefaults {
 /// Provides typed getters/setters for all application settings
 /// with automatic caching and database persistence.
 class SettingsService {
-
   SettingsService(this._database);
   final AppDatabase _database;
 
@@ -274,9 +273,7 @@ class SettingsService {
   Future<void> setAutoDownloadWifi(bool value) =>
       setBool(SettingsKeys.autoDownloadWifi, value);
 
-  bool get autoDownloadMobile => getBool(
-    SettingsKeys.autoDownloadMobile,
-  );
+  bool get autoDownloadMobile => getBool(SettingsKeys.autoDownloadMobile);
   Future<void> setAutoDownloadMobile(bool value) =>
       setBool(SettingsKeys.autoDownloadMobile, value);
 
@@ -324,22 +321,16 @@ class SettingsService {
       setString(SettingsKeys.groupsAddPermission, value);
 
   // Security
-  bool get biometricEnabled => getBool(
-    SettingsKeys.biometricEnabled,
-  );
+  bool get biometricEnabled => getBool(SettingsKeys.biometricEnabled);
   Future<void> setBiometricEnabled(bool value) =>
       setBool(SettingsKeys.biometricEnabled, value);
 
-  int get lockTimeoutMinutes => getInt(
-    SettingsKeys.lockTimeoutMinutes,
-  );
+  int get lockTimeoutMinutes => getInt(SettingsKeys.lockTimeoutMinutes);
   Future<void> setLockTimeoutMinutes(int value) =>
       setInt(SettingsKeys.lockTimeoutMinutes, value);
 
   // Backup
-  bool get backupEnabled => getBool(
-    SettingsKeys.backupEnabled,
-  );
+  bool get backupEnabled => getBool(SettingsKeys.backupEnabled);
   Future<void> setBackupEnabled(bool value) =>
       setBool(SettingsKeys.backupEnabled, value);
 

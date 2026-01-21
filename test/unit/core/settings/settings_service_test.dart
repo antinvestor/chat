@@ -1,7 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/core/db/database.dart';
 import 'package:chat/core/settings/settings_service.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 import '../../../test_helpers/test_database.dart';
 
@@ -22,7 +21,9 @@ void main() {
     group('initialization', () {
       test('initialize loads settings from database', () async {
         // Pre-populate database with a setting
-        await testDb.into(testDb.userSettings).insert(
+        await testDb
+            .into(testDb.userSettings)
+            .insert(
               UserSettingsCompanion.insert(
                 key: 'test_key',
                 value: 'test_value',
@@ -84,10 +85,7 @@ void main() {
       });
 
       test('returns default value when key not found', () {
-        expect(
-          settingsService.getBool('missing', defaultValue: true),
-          isTrue,
-        );
+        expect(settingsService.getBool('missing', defaultValue: true), isTrue);
       });
 
       test('returns false when no default provided', () {
@@ -103,10 +101,7 @@ void main() {
 
       test('returns default value for invalid integer', () async {
         await settingsService.setString('int_key', 'not_a_number');
-        expect(
-          settingsService.getInt('int_key', defaultValue: 0),
-          equals(0),
-        );
+        expect(settingsService.getInt('int_key'), equals(0));
       });
 
       test('returns default value when key not found', () {
@@ -146,9 +141,9 @@ void main() {
         await settingsService.setString('key', 'value');
 
         // Verify in database
-        final stored = await (testDb.select(testDb.userSettings)
-              ..where((s) => s.key.equals('key')))
-            .getSingle();
+        final stored = await (testDb.select(
+          testDb.userSettings,
+        )..where((s) => s.key.equals('key'))).getSingle();
         expect(stored.value, equals('value'));
       });
 
@@ -159,9 +154,9 @@ void main() {
         expect(settingsService.getString('key'), equals('new_value'));
 
         // Verify only one entry in database
-        final entries = await (testDb.select(testDb.userSettings)
-              ..where((s) => s.key.equals('key')))
-            .get();
+        final entries = await (testDb.select(
+          testDb.userSettings,
+        )..where((s) => s.key.equals('key'))).get();
         expect(entries.length, equals(1));
         expect(entries.first.value, equals('new_value'));
       });
@@ -178,9 +173,9 @@ void main() {
         await settingsService.setString('key', 'value');
         await settingsService.remove('key');
 
-        final entries = await (testDb.select(testDb.userSettings)
-              ..where((s) => s.key.equals('key')))
-            .get();
+        final entries = await (testDb.select(
+          testDb.userSettings,
+        )..where((s) => s.key.equals('key'))).get();
         expect(entries, isEmpty);
       });
     });
@@ -240,9 +235,9 @@ void main() {
       test('persists imported settings to database', () async {
         await settingsService.importSettings({'key': 'value'});
 
-        final stored = await (testDb.select(testDb.userSettings)
-              ..where((s) => s.key.equals('key')))
-            .getSingle();
+        final stored = await (testDb.select(
+          testDb.userSettings,
+        )..where((s) => s.key.equals('key'))).getSingle();
         expect(stored.value, equals('value'));
       });
     });

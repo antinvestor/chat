@@ -419,36 +419,16 @@ class AppDatabase extends _$AppDatabase {
       if (from <= 4) {
         // Migration from v4 to v5: Add FTS5 for full-text message search
         await _createFtsTable();
-      },
-      onUpgrade: (Migrator m, int from, int to) async {
-        if (from <= 1) {
-          // Migration from v1 to v2: Add rosterId column and convert existing IDs to stable local UUIDs
-          // For now, we'll handle this in beforeOpen instead
-        }
-        if (from <= 2) {
-          // Migration from v2 to v3: Add message editing columns
-          await m.addColumn(roomEvents, roomEvents.editedAt);
-          await m.addColumn(roomEvents, roomEvents.originalContent);
-        }
-        if (from <= 3) {
-          // Migration from v3 to v4: Add message deletion columns
-          await m.addColumn(roomEvents, roomEvents.redacted);
-          await m.addColumn(roomEvents, roomEvents.redactedAt);
-          await m.addColumn(roomEvents, roomEvents.redactedBy);
-        }
-        if (from <= 4) {
-          // Migration from v4 to v5: Add FTS5 for full-text message search
-          await _createFtsTable();
-          // Populate FTS index with existing text messages
-          await _populateFtsFromExistingMessages();
-        }
-        if (from <= 5) {
-          // Migration from v5 to v6: Add user settings table
-          await m.createTable(userSettings);
-        }
-      },
-      beforeOpen: (details) async {
-        await customStatement('PRAGMA foreign_keys = ON');
+        // Populate FTS index with existing text messages
+        await _populateFtsFromExistingMessages();
+      }
+      if (from <= 5) {
+        // Migration from v5 to v6: Add user settings table
+        await m.createTable(userSettings);
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
 
       // Handle data migration after schema changes
       if (details.hadUpgrade) {
