@@ -27,7 +27,6 @@ enum ConnectionQuality {
 /// Represents WebRTC call statistics
 @freezed
 abstract class CallStats with _$CallStats {
-  const CallStats._();
 
   const factory CallStats({
     /// Round-trip time in milliseconds
@@ -96,6 +95,7 @@ abstract class CallStats with _$CallStats {
     /// Reconnection attempt count
     @Default(0) int reconnectionAttempts,
   }) = _CallStats;
+  const CallStats._();
 
   factory CallStats.fromJson(Map<String, dynamic> json) =>
       _$CallStatsFromJson(json);
@@ -141,22 +141,26 @@ abstract class CallStats with _$CallStats {
   /// Human-readable packet loss description
   String get packetLossDescription {
     if (packetLossPercent < 1) return '< 1%';
-    if (packetLossPercent < 3) return '${packetLossPercent.toStringAsFixed(1)}%';
-    if (packetLossPercent < 5) return '${packetLossPercent.toStringAsFixed(1)}% (high)';
+    if (packetLossPercent < 3) {
+      return '${packetLossPercent.toStringAsFixed(1)}%';
+    }
+    if (packetLossPercent < 5) {
+      return '${packetLossPercent.toStringAsFixed(1)}% (high)';
+    }
     return '${packetLossPercent.toStringAsFixed(1)}% (very high)';
   }
 }
 
 /// Extension for calculating quality from stats
 extension CallStatsQuality on CallStats {
-  /// Calculate connection quality based on latency and packet loss
+  /// Calculate connection quality based on latency, packet loss, and jitter
   static ConnectionQuality calculateQuality({
     required double roundTripTimeMs,
     required double packetLossPercent,
     required double jitterMs,
   }) {
-    // Very poor: disconnected-level metrics
-    if (packetLossPercent > 15 || roundTripTimeMs > 500) {
+    // Very poor: disconnected-level metrics (include jitter for stability check)
+    if (packetLossPercent > 15 || roundTripTimeMs > 500 || jitterMs > 200) {
       return ConnectionQuality.veryPoor;
     }
 
@@ -198,21 +202,22 @@ class BitrateConfig {
   static const double veryPoorQualityReductionFactor = 0.25;
 
   /// Get recommended video bitrate based on quality
+  ///
+  /// Returns a bitrate clamped between [minVideoBitrate] and [maxVideoBitrate]
+  /// to ensure video remains usable even in degraded conditions.
   static int getRecommendedVideoBitrate(ConnectionQuality quality) {
-    switch (quality) {
-      case ConnectionQuality.excellent:
-        return maxVideoBitrate;
-      case ConnectionQuality.good:
-        return (maxVideoBitrate * 0.8).round();
-      case ConnectionQuality.fair:
-        return (maxVideoBitrate * 0.5).round();
-      case ConnectionQuality.poor:
-        return (maxVideoBitrate * poorQualityReductionFactor).round();
-      case ConnectionQuality.veryPoor:
-        return (maxVideoBitrate * veryPoorQualityReductionFactor).round();
-      case ConnectionQuality.unknown:
-        return (maxVideoBitrate * 0.5).round();
-    }
+    final bitrate = switch (quality) {
+      ConnectionQuality.excellent => maxVideoBitrate,
+      ConnectionQuality.good => (maxVideoBitrate * 0.8).round(),
+      ConnectionQuality.fair => (maxVideoBitrate * 0.5).round(),
+      ConnectionQuality.poor =>
+        (maxVideoBitrate * poorQualityReductionFactor).round(),
+      ConnectionQuality.veryPoor =>
+        (maxVideoBitrate * veryPoorQualityReductionFactor).round(),
+      ConnectionQuality.unknown => (maxVideoBitrate * 0.5).round(),
+    };
+    // Clamp to ensure we never go below minimum bitrate
+    return bitrate.clamp(minVideoBitrate, maxVideoBitrate);
   }
 
   /// Get recommended frame rate based on quality
