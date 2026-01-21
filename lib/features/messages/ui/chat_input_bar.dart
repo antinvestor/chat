@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../messages/domain/room_event.dart' as domain;
 import '../data/chat_input_providers.dart';
+import '../data/draft_repository.dart';
 import '../data/message_providers.dart';
 
 /// WhatsApp-style chat input bar with proper Riverpod/state separation
@@ -30,6 +31,11 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
   Timer? _recordingTimer;
   int _recordingDuration = 0;
 
+  // Draft persistence
+  Timer? _draftSaveTimer;
+  bool _draftLoaded = false;
+  static const _draftSaveDebounce = Duration(milliseconds: 500);
+
   @override
   void initState() {
     super.initState();
@@ -38,14 +44,58 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
     // Local listener only - no Riverpod calls
     _controller.addListener(_onTextChanged);
+
+    // Load existing draft
+    _loadDraft();
   }
 
   @override
   void dispose() {
+    // Save draft before disposing if there's unsaved text
+    _saveDraftImmediately();
+    _draftSaveTimer?.cancel();
     _recordingTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  /// Load any existing draft for this room
+  Future<void> _loadDraft() async {
+    final draftRepo = ref.read(draftRepositoryProvider);
+    final draft = await draftRepo.getDraft(widget.roomId);
+    if (draft != null && mounted) {
+      _controller.text = draft.content;
+      _controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: draft.content.length),
+      );
+      setState(() {
+        _hasText = draft.content.trim().isNotEmpty;
+        _draftLoaded = true;
+      });
+    } else {
+      setState(() => _draftLoaded = true);
+    }
+  }
+
+  /// Save draft with debouncing to avoid excessive writes
+  void _scheduleDraftSave() {
+    _draftSaveTimer?.cancel();
+    _draftSaveTimer = Timer(_draftSaveDebounce, _saveDraftImmediately);
+  }
+
+  /// Save draft immediately without debouncing
+  void _saveDraftImmediately() {
+    _draftSaveTimer?.cancel();
+    final draftRepo = ref.read(draftRepositoryProvider);
+    draftRepo.saveDraft(roomId: widget.roomId, content: _controller.text);
+  }
+
+  /// Clear draft when message is sent
+  Future<void> _clearDraft() async {
+    _draftSaveTimer?.cancel();
+    final draftRepo = ref.read(draftRepositoryProvider);
+    await draftRepo.deleteDraft(widget.roomId);
   }
 
   // Local state change only
@@ -53,6 +103,11 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
     final hasText = _controller.text.trim().isNotEmpty;
     if (hasText != _hasText) {
       setState(() => _hasText = hasText);
+    }
+
+    // Schedule draft save when text changes (only after initial load)
+    if (_draftLoaded) {
+      _scheduleDraftSave();
     }
   }
 
@@ -77,6 +132,9 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
     // Clear UI instantly for perceived speed
     _controller.clear();
     setState(() => _hasText = false);
+
+    // Clear draft on send
+    await _clearDraft();
 
     // Network happens async via Riverpod
     await _sendMessage(ref, text, 'text', '');

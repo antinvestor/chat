@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../messages/data/draft_repository.dart';
 import '../domain/room.dart' as domain;
 import '../domain/room_with_last_message.dart';
 import 'room_service.dart';
@@ -95,14 +96,32 @@ class RoomListWithMessages extends _$RoomListWithMessages {
   @override
   Future<List<RoomWithLastMessage>> build() async {
     final repo = ref.watch(roomRepositoryProvider);
-    return repo.getRoomsWithLastMessage();
+    final draftRepo = ref.watch(draftRepositoryProvider);
+
+    // Get rooms and drafts
+    final rooms = await repo.getRoomsWithLastMessage();
+    final draftsMap = await draftRepo.getDraftsMap();
+
+    // Merge draft info into rooms
+    return rooms.map((room) {
+      final draft = draftsMap[room.id];
+      return room.copyWith(draftText: draft);
+    }).toList();
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(roomRepositoryProvider);
-      return repo.getRoomsWithLastMessage();
+      final draftRepo = ref.read(draftRepositoryProvider);
+
+      final rooms = await repo.getRoomsWithLastMessage();
+      final draftsMap = await draftRepo.getDraftsMap();
+
+      return rooms.map((room) {
+        final draft = draftsMap[room.id];
+        return room.copyWith(draftText: draft);
+      }).toList();
     });
   }
 }

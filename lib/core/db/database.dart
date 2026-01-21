@@ -360,6 +360,37 @@ class UserSettings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// Draft messages persistence table
+///
+/// Stores unsent message drafts for each room, allowing users to continue
+/// composing messages after navigating away or restarting the app.
+///
+/// Example:
+/// ```dart
+/// final draft = await db.drafts.select()
+///   .where((d) => d.roomId.equals(roomId))
+///   .getSingleOrNull();
+/// if (draft != null) {
+///   textController.text = draft.content;
+/// }
+/// ```
+class Drafts extends Table {
+  /// Room ID this draft belongs to (primary key)
+  TextColumn get roomId => text()();
+
+  /// Draft message content
+  TextColumn get content => text()();
+
+  /// Optional parent message ID for reply drafts
+  TextColumn get replyToId => text().nullable()();
+
+  /// Last update timestamp (milliseconds since epoch)
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {roomId};
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -384,6 +415,7 @@ class UserSettings extends Table {
     Transactions,
     SyncMetadata,
     UserSettings,
+    Drafts,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -436,6 +468,8 @@ class AppDatabase extends _$AppDatabase {
         // Migration from v6 to v7: Add retry tracking columns for messages
         await m.addColumn(roomEvents, roomEvents.retryCount);
         await m.addColumn(roomEvents, roomEvents.errorMessage);
+        // Migration from v6 to v7: Add drafts table for message draft persistence
+        await m.createTable(drafts);
       }
     },
     beforeOpen: (details) async {
