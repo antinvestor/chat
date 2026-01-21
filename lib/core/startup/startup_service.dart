@@ -52,6 +52,9 @@ enum StartupState {
   error,
 }
 
+// Sentinel value for copyWith to distinguish "not provided" from "explicitly null"
+const _sentinel = Object();
+
 /// Startup progress information
 class StartupProgress {
   const StartupProgress({
@@ -65,17 +68,27 @@ class StartupProgress {
   final double progress; // 0.0 to 1.0
   final String? errorMessage;
 
+  /// Creates a copy with the given fields replaced.
+  ///
+  /// To clear a nullable field, explicitly pass null:
+  /// ```dart
+  /// progress.copyWith(currentTask: null) // clears currentTask
+  /// ```
   StartupProgress copyWith({
     StartupState? state,
-    String? currentTask,
+    Object? currentTask = _sentinel,
     double? progress,
-    String? errorMessage,
+    Object? errorMessage = _sentinel,
   }) {
     return StartupProgress(
       state: state ?? this.state,
-      currentTask: currentTask ?? this.currentTask,
+      currentTask: identical(currentTask, _sentinel)
+          ? this.currentTask
+          : currentTask as String?,
       progress: progress ?? this.progress,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: identical(errorMessage, _sentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
     );
   }
 
