@@ -240,6 +240,115 @@ void main() {
         )..where((s) => s.key.equals('key'))).getSingle();
         expect(stored.value, equals('value'));
       });
+
+      test('imports empty settings map', () async {
+        await settingsService.setString('existing', 'value');
+        await settingsService.importSettings({});
+
+        // Existing settings should remain
+        expect(settingsService.getString('existing'), equals('value'));
+      });
+
+      test('overwrites existing settings on import', () async {
+        await settingsService.setString('key', 'old_value');
+        await settingsService.importSettings({'key': 'new_value'});
+
+        expect(settingsService.getString('key'), equals('new_value'));
+      });
+
+      test('imports boolean settings as strings', () async {
+        await settingsService.importSettings({
+          'bool_true': 'true',
+          'bool_false': 'false',
+        });
+
+        expect(settingsService.getBool('bool_true'), isTrue);
+        expect(settingsService.getBool('bool_false'), isFalse);
+      });
+
+      test('imports integer settings as strings', () async {
+        await settingsService.importSettings({
+          'int_positive': '42',
+          'int_zero': '0',
+          'int_negative': '-10',
+        });
+
+        expect(settingsService.getInt('int_positive'), equals(42));
+        expect(settingsService.getInt('int_zero'), equals(0));
+        expect(settingsService.getInt('int_negative'), equals(-10));
+      });
+
+      test('imports JSON settings as encoded strings', () async {
+        await settingsService.importSettings({
+          'json_data': '{"name":"test","count":5}',
+        });
+
+        final json = settingsService.getJson('json_data');
+        expect(json, isNotNull);
+        expect(json!['name'], equals('test'));
+        expect(json['count'], equals(5));
+      });
+
+      test('preserves existing settings not in import', () async {
+        await settingsService.setString('unchanged', 'stays');
+        await settingsService.importSettings({'new_key': 'new_value'});
+
+        expect(settingsService.getString('unchanged'), equals('stays'));
+        expect(settingsService.getString('new_key'), equals('new_value'));
+      });
+    });
+
+    group('export/import roundtrip', () {
+      test('exported settings can be reimported', () async {
+        await settingsService.setString('str', 'value');
+        await settingsService.setBool('bool', true);
+        await settingsService.setInt('int', 42);
+        await settingsService.setJson('json', {'key': 'value'});
+
+        final exported = settingsService.exportSettings();
+
+        // Clear and reimport
+        await settingsService.clearAll();
+        await settingsService.importSettings(exported);
+
+        expect(settingsService.getString('str'), equals('value'));
+        expect(settingsService.getBool('bool'), isTrue);
+        expect(settingsService.getInt('int'), equals(42));
+        expect(settingsService.getJson('json')!['key'], equals('value'));
+      });
+
+      test('roundtrip preserves all typed settings', () async {
+        // Set all typed settings
+        await settingsService.setThemeMode('dark');
+        await settingsService.setFontSize('large');
+        await settingsService.setNotificationSound(false);
+        await settingsService.setAutoDownloadWifi(false);
+        await settingsService.setLockTimeoutMinutes(15);
+        await settingsService.setBackupFrequency('daily');
+
+        final exported = settingsService.exportSettings();
+        await settingsService.clearAll();
+        await settingsService.importSettings(exported);
+
+        expect(settingsService.themeMode, equals('dark'));
+        expect(settingsService.fontSize, equals('large'));
+        expect(settingsService.notificationSound, isFalse);
+        expect(settingsService.autoDownloadWifi, isFalse);
+        expect(settingsService.lockTimeoutMinutes, equals(15));
+        expect(settingsService.backupFrequency, equals('daily'));
+      });
+
+      test('multiple export/import cycles preserve data', () async {
+        await settingsService.setString('key', 'original');
+
+        for (var i = 0; i < 3; i++) {
+          final exported = settingsService.exportSettings();
+          await settingsService.clearAll();
+          await settingsService.importSettings(exported);
+        }
+
+        expect(settingsService.getString('key'), equals('original'));
+      });
     });
 
     group('typed convenience getters/setters', () {
