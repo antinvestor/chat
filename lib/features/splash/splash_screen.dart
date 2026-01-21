@@ -6,12 +6,8 @@ import '../../core/theme/app_theme.dart';
 
 /// Splash screen shown during app initialization
 class SplashScreen extends ConsumerStatefulWidget {
+  const SplashScreen({required this.child, super.key});
   final Widget child;
-
-  const SplashScreen({
-    super.key,
-    required this.child,
-  });
 
   @override
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
@@ -63,10 +59,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       children: [
         // Main app (hidden until interactive)
         if (_showChild)
-          FadeTransition(
-            opacity: _fadeAnimation,
-            child: widget.child,
-          ),
+          FadeTransition(opacity: _fadeAnimation, child: widget.child),
 
         // Splash screen (visible until interactive)
         if (!_showChild || _fadeController.value < 1.0)
@@ -75,9 +68,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             child: AnimatedOpacity(
               opacity: _showChild ? 0.0 : 1.0,
               duration: const Duration(milliseconds: 300),
-              child: _SplashContent(
-                progress: progress,
-              ),
+              child: _SplashContent(progress: progress),
             ),
           ),
       ],
@@ -86,11 +77,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 }
 
 class _SplashContent extends StatelessWidget {
+  const _SplashContent({required this.progress});
   final StartupProgress progress;
-
-  const _SplashContent({
-    required this.progress,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +91,7 @@ class _SplashContent extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(32.0),
+            padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -170,10 +158,7 @@ class _SplashContent extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Failed to start app',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.red.shade300,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.red.shade300),
                   ),
                   const SizedBox(height: 8),
                   Text(

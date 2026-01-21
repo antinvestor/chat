@@ -1,6 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:chat/core/startup/startup_service.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('StartupPhase', () {
@@ -80,8 +79,9 @@ void main() {
         isFalse,
       );
       expect(
-        const StartupProgress(state: StartupState.initializingCritical)
-            .isComplete,
+        const StartupProgress(
+          state: StartupState.initializingCritical,
+        ).isComplete,
         isFalse,
       );
       expect(
@@ -104,13 +104,15 @@ void main() {
         isFalse,
       );
       expect(
-        const StartupProgress(state: StartupState.initializingCritical)
-            .isInteractive,
+        const StartupProgress(
+          state: StartupState.initializingCritical,
+        ).isInteractive,
         isFalse,
       );
       expect(
-        const StartupProgress(state: StartupState.initializingEssential)
-            .isInteractive,
+        const StartupProgress(
+          state: StartupState.initializingEssential,
+        ).isInteractive,
         isFalse,
       );
       expect(
@@ -136,10 +138,7 @@ void main() {
         const StartupProgress(state: StartupState.complete).hasError,
         isFalse,
       );
-      expect(
-        const StartupProgress(state: StartupState.error).hasError,
-        isTrue,
-      );
+      expect(const StartupProgress(state: StartupState.error).hasError, isTrue);
     });
 
     test('error state can contain error message', () {
@@ -153,17 +152,14 @@ void main() {
     });
 
     test('progress value can range from 0 to 1', () {
-      const progress0 = StartupProgress(
-        state: StartupState.initial,
-        progress: 0.0,
-      );
+      const progress0 = StartupProgress(state: StartupState.initial);
       const progress50 = StartupProgress(
         state: StartupState.initializingEssential,
         progress: 0.5,
       );
       const progress100 = StartupProgress(
         state: StartupState.complete,
-        progress: 1.0,
+        progress: 1,
       );
 
       expect(progress0.progress, equals(0.0));
@@ -207,11 +203,7 @@ void main() {
       expect(progress.isComplete, isFalse);
 
       // Complete
-      progress = progress.copyWith(
-        state: StartupState.complete,
-        currentTask: null,
-        progress: 1.0,
-      );
+      progress = progress.copyWith(state: StartupState.complete, progress: 1);
       expect(progress.isInteractive, isTrue);
       expect(progress.isComplete, isTrue);
     });

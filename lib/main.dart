@@ -70,7 +70,6 @@ class ChatApp extends ConsumerWidget {
         title: 'AntInvestor Chat',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
         routerConfig: router,
         debugShowCheckedModeBanner: false,
       ),

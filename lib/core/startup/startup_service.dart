@@ -5,17 +5,16 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../../features/auth/data/auth_repository.dart';
+import '../../features/notifications/notification_service.dart';
 import '../error/error_tracking_service.dart';
 import '../logging/app_logger.dart';
 import '../networking/connectivity_service.dart';
 import '../sync/background_sync_task.dart';
 import '../sync/sync_engine.dart';
-import '../../features/auth/data/auth_repository.dart';
-import '../../features/notifications/notification_service.dart';
 import 'startup_metrics.dart';
 
 part 'startup_service.g.dart';
@@ -55,17 +54,16 @@ enum StartupState {
 
 /// Startup progress information
 class StartupProgress {
-  final StartupState state;
-  final String? currentTask;
-  final double progress; // 0.0 to 1.0
-  final String? errorMessage;
-
   const StartupProgress({
     required this.state,
     this.currentTask,
     this.progress = 0.0,
     this.errorMessage,
   });
+  final StartupState state;
+  final String? currentTask;
+  final double progress; // 0.0 to 1.0
+  final String? errorMessage;
 
   StartupProgress copyWith({
     StartupState? state,
@@ -161,11 +159,7 @@ class StartupService extends _$StartupService {
       _initializeDeferred().then((_) {
         metrics.endPhase('deferred');
         metrics.markFullyLoaded();
-        state = state.copyWith(
-          state: StartupState.complete,
-          currentTask: null,
-          progress: 1.0,
-        );
+        state = state.copyWith(state: StartupState.complete, progress: 1);
       });
     } catch (e, stackTrace) {
       AppLogger.error(
@@ -202,10 +196,13 @@ class StartupService extends _$StartupService {
       );
     }
 
-    AppLogger.info('Critical initialization complete', data: {
-      'firebase_initialized': isMobile,
-      'error_tracking_enabled': ErrorTrackingService.isInitialized,
-    });
+    AppLogger.info(
+      'Critical initialization complete',
+      data: {
+        'firebase_initialized': isMobile,
+        'error_tracking_enabled': ErrorTrackingService.isInitialized,
+      },
+    );
   }
 
   /// Phase 2: Essential initialization
@@ -298,19 +295,23 @@ class StartupService extends _$StartupService {
       );
     }
 
-    AppLogger.info('Deferred initialization complete', data: {
-      'workmanager_registered': isMobile,
-      'notifications_initialized': isLoggedIn && NotificationService.isSupported,
-    });
+    AppLogger.info(
+      'Deferred initialization complete',
+      data: {
+        'workmanager_registered': isMobile,
+        'notifications_initialized':
+            isLoggedIn && NotificationService.isSupported,
+      },
+    );
   }
 
   /// Wait for network connectivity with a timeout
   /// Returns true if connected, false if timed out
   Future<bool> _waitForNetworkWithTimeout() async {
     final connectivity = Connectivity();
-    var results = await connectivity.checkConnectivity();
+    final results = await connectivity.checkConnectivity();
 
-    bool hasConnection = _hasValidConnection(results);
+    final hasConnection = _hasValidConnection(results);
 
     if (hasConnection) {
       // Small delay for DNS readiness
@@ -318,7 +319,9 @@ class StartupService extends _$StartupService {
       return true;
     }
 
-    AppLogger.info('Waiting for network connectivity (max ${_networkTimeout.inSeconds}s)...');
+    AppLogger.info(
+      'Waiting for network connectivity (max ${_networkTimeout.inSeconds}s)...',
+    );
 
     // Wait for connectivity with timeout
     try {
@@ -354,10 +357,6 @@ class StartupService extends _$StartupService {
 
 /// Type-safe wrapper for user info from OIDC token
 class _UserInfo {
-  final String id;
-  final String? email;
-  final String? username;
-
   _UserInfo({required this.id, this.email, this.username});
 
   factory _UserInfo.fromOidcClaims(Map<String, dynamic> claims) {
@@ -367,6 +366,9 @@ class _UserInfo {
       username: claims['preferred_username'] as String?,
     );
   }
+  final String id;
+  final String? email;
+  final String? username;
 }
 
 /// Marks when first frame is rendered

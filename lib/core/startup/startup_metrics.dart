@@ -2,10 +2,9 @@ import '../logging/app_logger.dart';
 
 /// Tracks startup timing metrics for performance monitoring
 class StartupMetrics {
+  StartupMetrics._();
   static final StartupMetrics _instance = StartupMetrics._();
   static StartupMetrics get instance => _instance;
-
-  StartupMetrics._();
 
   final DateTime _appStartTime = DateTime.now();
   final Map<String, DateTime> _phaseStartTimes = {};
@@ -71,8 +70,7 @@ class StartupMetrics {
   Duration get timeSinceStart => DateTime.now().difference(_appStartTime);
 
   /// Get time to first frame (null if not yet rendered)
-  Duration? get timeToFirstFrame =>
-      _firstFrameTime?.difference(_appStartTime);
+  Duration? get timeToFirstFrame => _firstFrameTime?.difference(_appStartTime);
 
   /// Get time to interactive (null if not yet interactive)
   Duration? get timeToInteractive =>
