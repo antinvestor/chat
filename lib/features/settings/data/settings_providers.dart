@@ -19,26 +19,27 @@ class SettingsNotifier extends _$SettingsNotifier {
 
   @override
   Future<Map<String, dynamic>> build() async => {
-      _keyMessageNotifications: await _getBool(_keyMessageNotifications, true),
-      _keyNotificationPreview: await _getBool(_keyNotificationPreview, true),
-      _keyGroupNotifications: await _getBool(_keyGroupNotifications, true),
-      _keyCallRingtone: await _getBool(_keyCallRingtone, true),
-      _keyArchiveChats: await _getBool(_keyArchiveChats, false),
-      _keyFontSize: await _getString(_keyFontSize, 'Medium'),
-      _keyWallpaper: await _getString(_keyWallpaper, 'Default'),
-      _keyMediaAutoDownload: await _getString(
-        _keyMediaAutoDownload,
-        'Wi-Fi only',
-      ),
-      _keyCallDataUsage: await _getString(_keyCallDataUsage, 'Low data usage'),
-    };
+    _keyMessageNotifications: await _getBool(_keyMessageNotifications, true),
+    _keyNotificationPreview: await _getBool(_keyNotificationPreview, true),
+    _keyGroupNotifications: await _getBool(_keyGroupNotifications, true),
+    _keyCallRingtone: await _getBool(_keyCallRingtone, true),
+    _keyArchiveChats: await _getBool(_keyArchiveChats, false),
+    _keyFontSize: await _getString(_keyFontSize, 'Medium'),
+    _keyWallpaper: await _getString(_keyWallpaper, 'Default'),
+    _keyMediaAutoDownload: await _getString(
+      _keyMediaAutoDownload,
+      'Wi-Fi only',
+    ),
+    _keyCallDataUsage: await _getString(_keyCallDataUsage, 'Low data usage'),
+  };
 
   Future<bool> _getBool(String key, bool defaultValue) async {
     final value = await _storage.read(key: key);
     return value != null ? value.toLowerCase() == 'true' : defaultValue;
   }
 
-  Future<String> _getString(String key, String defaultValue) async => await _storage.read(key: key) ?? defaultValue;
+  Future<String> _getString(String key, String defaultValue) async =>
+      await _storage.read(key: key) ?? defaultValue;
 
   Future<void> updateSetting(String key, value) async {
     if (value is bool) {

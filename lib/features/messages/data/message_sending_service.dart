@@ -22,7 +22,6 @@ import 'message_repository.dart';
 /// - Encrypted messages (E2E)
 /// - Offline queue with retry
 class MessageSendingService {
-
   MessageSendingService(
     this._messageRepo,
     this._jobRepo,
@@ -106,14 +105,14 @@ class MessageSendingService {
     bool encrypt = false,
     void Function(double progress)? onProgress,
   }) async => _sendMediaMessage(
-      roomId: roomId,
-      file: imageFile,
-      type: domain.RoomEventType.image,
-      caption: caption,
-      replyToId: replyToId,
-      encrypt: encrypt,
-      onProgress: onProgress,
-    );
+    roomId: roomId,
+    file: imageFile,
+    type: domain.RoomEventType.image,
+    caption: caption,
+    replyToId: replyToId,
+    encrypt: encrypt,
+    onProgress: onProgress,
+  );
 
   /// Send a video message
   Future<domain.RoomEvent> sendVideoMessage({
@@ -124,14 +123,14 @@ class MessageSendingService {
     bool encrypt = false,
     void Function(double progress)? onProgress,
   }) async => _sendMediaMessage(
-      roomId: roomId,
-      file: videoFile,
-      type: domain.RoomEventType.video,
-      caption: caption,
-      replyToId: replyToId,
-      encrypt: encrypt,
-      onProgress: onProgress,
-    );
+    roomId: roomId,
+    file: videoFile,
+    type: domain.RoomEventType.video,
+    caption: caption,
+    replyToId: replyToId,
+    encrypt: encrypt,
+    onProgress: onProgress,
+  );
 
   /// Send an audio message
   Future<domain.RoomEvent> sendAudioMessage({
@@ -142,14 +141,14 @@ class MessageSendingService {
     bool encrypt = false,
     void Function(double progress)? onProgress,
   }) async => _sendMediaMessage(
-      roomId: roomId,
-      file: audioFile,
-      type: domain.RoomEventType.audio,
-      extraContent: durationMs != null ? {'duration': durationMs} : null,
-      replyToId: replyToId,
-      encrypt: encrypt,
-      onProgress: onProgress,
-    );
+    roomId: roomId,
+    file: audioFile,
+    type: domain.RoomEventType.audio,
+    extraContent: durationMs != null ? {'duration': durationMs} : null,
+    replyToId: replyToId,
+    encrypt: encrypt,
+    onProgress: onProgress,
+  );
 
   /// Send a file message
   Future<domain.RoomEvent> sendFileMessage({
@@ -159,13 +158,13 @@ class MessageSendingService {
     bool encrypt = false,
     void Function(double progress)? onProgress,
   }) async => _sendMediaMessage(
-      roomId: roomId,
-      file: file,
-      type: domain.RoomEventType.file,
-      replyToId: replyToId,
-      encrypt: encrypt,
-      onProgress: onProgress,
-    );
+    roomId: roomId,
+    file: file,
+    type: domain.RoomEventType.file,
+    replyToId: replyToId,
+    encrypt: encrypt,
+    onProgress: onProgress,
+  );
 
   /// Internal method for sending media messages
   Future<domain.RoomEvent> _sendMediaMessage({
@@ -559,10 +558,11 @@ class MessageSendingService {
     return true;
   }
 
-  bool _isMediaType(domain.RoomEventType type) => type == domain.RoomEventType.image ||
-        type == domain.RoomEventType.video ||
-        type == domain.RoomEventType.audio ||
-        type == domain.RoomEventType.file;
+  bool _isMediaType(domain.RoomEventType type) =>
+      type == domain.RoomEventType.image ||
+      type == domain.RoomEventType.video ||
+      type == domain.RoomEventType.audio ||
+      type == domain.RoomEventType.file;
 }
 
 // Provider

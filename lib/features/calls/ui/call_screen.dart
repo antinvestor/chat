@@ -6,7 +6,6 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../services/call_manager.dart';
 
 class CallScreen extends ConsumerStatefulWidget {
-
   const CallScreen({required this.roomId, required this.roomName, super.key});
   final String roomId;
   final String roomName;

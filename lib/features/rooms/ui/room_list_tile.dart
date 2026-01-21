@@ -5,7 +5,6 @@ import '../../../core/theme/app_theme.dart';
 import '../domain/room_with_last_message.dart';
 
 class RoomListTile extends StatelessWidget {
-
   const RoomListTile({required this.room, required this.onTap, super.key});
   final RoomWithLastMessage room;
   final VoidCallback onTap;

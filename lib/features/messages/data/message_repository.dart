@@ -20,7 +20,6 @@ import '../domain/room_event.dart' as domain;
 /// await repo.insertMessage(newMessage);
 /// ```
 class MessageRepository {
-
   MessageRepository(this._database);
   final AppDatabase _database;
 
@@ -86,7 +85,9 @@ class MessageRepository {
       ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
       ..limit(limit);
 
-    return query.watch().map((results) => results.map(_toRoomEvent).toList().reversed.toList());
+    return query.watch().map(
+      (results) => results.map(_toRoomEvent).toList().reversed.toList(),
+    );
   }
 
   Future<void> insertMessage(domain.RoomEvent event) async {
@@ -265,19 +266,19 @@ class MessageRepository {
   }
 
   domain.RoomEvent _toRoomEvent(RoomEvent row) => domain.RoomEvent(
-      id: row.id,
-      roomId: row.roomId,
-      senderId: row.senderId,
-      type: domain.RoomEventType.values[row.type],
-      content: row.content != null ? jsonDecode(row.content!) : {},
-      parentId: row.parentId,
-      status: domain.EventStatus.values[row.status],
-      createdAt: row.createdAt ?? 0,
-      serverTs: row.serverTs,
-      localId: row.localId,
-      editedAt: row.editedAt,
-      redacted: row.redacted,
-      redactedAt: row.redactedAt,
-      redactedBy: row.redactedBy,
-    );
+    id: row.id,
+    roomId: row.roomId,
+    senderId: row.senderId,
+    type: domain.RoomEventType.values[row.type],
+    content: row.content != null ? jsonDecode(row.content!) : {},
+    parentId: row.parentId,
+    status: domain.EventStatus.values[row.status],
+    createdAt: row.createdAt ?? 0,
+    serverTs: row.serverTs,
+    localId: row.localId,
+    editedAt: row.editedAt,
+    redacted: row.redacted,
+    redactedAt: row.redactedAt,
+    redactedBy: row.redactedBy,
+  );
 }

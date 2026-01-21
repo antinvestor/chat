@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/typing_provider.dart';
 
 class TypingIndicator extends ConsumerWidget {
-
   const TypingIndicator({required this.roomId, super.key});
   final String roomId;
 
@@ -49,7 +48,8 @@ class TypingIndicator extends ConsumerWidget {
     }
   }
 
-  Widget _buildDots(BuildContext context) => SizedBox(width: 24, height: 12, child: _TypingDotsAnimation());
+  Widget _buildDots(BuildContext context) =>
+      SizedBox(width: 24, height: 12, child: _TypingDotsAnimation());
 }
 
 class _TypingDotsAnimation extends StatefulWidget {
@@ -78,25 +78,25 @@ class _TypingDotsAnimationState extends State<_TypingDotsAnimation>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) => Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(3, (index) {
-            final offset = index * 0.2;
-            final value = (_controller.value + offset) % 1.0;
-            final opacity = (value < 0.5) ? value * 2 : (1.0 - value) * 2;
+    animation: _controller,
+    builder: (context, child) => Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(3, (index) {
+        final offset = index * 0.2;
+        final value = (_controller.value + offset) % 1.0;
+        final opacity = (value < 0.5) ? value * 2 : (1.0 - value) * 2;
 
-            return Container(
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.6 + (opacity * 0.4)),
-                shape: BoxShape.circle,
-              ),
-            );
-          }),
-        ),
-    );
+        return Container(
+          width: 4,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.6 + (opacity * 0.4)),
+            shape: BoxShape.circle,
+          ),
+        );
+      }),
+    ),
+  );
 }

@@ -27,7 +27,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Provider for NotificationService
-final notificationServiceProvider = Provider<NotificationService>(NotificationService.new);
+final notificationServiceProvider = Provider<NotificationService>(
+  NotificationService.new,
+);
 
 /// Service for handling push notifications via Firebase Cloud Messaging
 ///
@@ -38,7 +40,6 @@ final notificationServiceProvider = Provider<NotificationService>(NotificationSe
 /// - Background notification handling
 /// - Deep linking from notification taps
 class NotificationService {
-
   NotificationService(this._ref);
   final Ref _ref;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -90,9 +91,7 @@ class NotificationService {
 
   /// Request notification permissions from the user
   Future<NotificationSettings> _requestPermissions() async {
-    final settings = await _messaging.requestPermission(
-      
-    );
+    final settings = await _messaging.requestPermission();
 
     AppLogger.info(
       'Notification permission status',

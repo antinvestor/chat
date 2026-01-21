@@ -21,7 +21,6 @@ import '../domain/room_with_last_message.dart';
 /// final room = await repo.getRoomById('room-123');
 /// ```
 class RoomRepository {
-
   RoomRepository(this._database);
   final AppDatabase _database;
 
@@ -106,12 +105,12 @@ class RoomRepository {
   }
 
   domain.Room _toRoom(Room row) => domain.Room(
-      id: row.id,
-      name: row.name ?? '',
-      type: row.type ?? '',
-      lastEventId: row.lastEventId,
-      lastEventIndex: row.lastEventIndex ?? 0,
-      unreadCount: row.unreadCount,
-      metadata: row.metadata != null ? jsonDecode(row.metadata!) : null,
-    );
+    id: row.id,
+    name: row.name ?? '',
+    type: row.type ?? '',
+    lastEventId: row.lastEventId,
+    lastEventIndex: row.lastEventIndex ?? 0,
+    unreadCount: row.unreadCount,
+    metadata: row.metadata != null ? jsonDecode(row.metadata!) : null,
+  );
 }

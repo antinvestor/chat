@@ -15,7 +15,6 @@ import '../logging/app_logger.dart';
 /// - windowDuration: Time window for rate limiting (default: 1 minute)
 /// - burstSize: Maximum burst size (default: same as maxRequests)
 class RateLimiter {
-
   RateLimiter({
     required this.maxRequests,
     this.windowDuration = const Duration(minutes: 1),
@@ -108,31 +107,21 @@ class RateLimiter {
 class RateLimiters {
   /// Rate limiter for chat service
   /// 100 requests per minute (aggressive use)
-  static final chat = RateLimiter(
-    maxRequests: 100,
-  );
+  static final chat = RateLimiter(maxRequests: 100);
 
   /// Rate limiter for gateway service (streaming)
   /// More lenient since it's used for real-time sync
-  static final gateway = RateLimiter(
-    maxRequests: 200,
-  );
+  static final gateway = RateLimiter(maxRequests: 200);
 
   /// Rate limiter for profile service
   /// 50 requests per minute (less frequent use)
-  static final profile = RateLimiter(
-    maxRequests: 50,
-  );
+  static final profile = RateLimiter(maxRequests: 50);
 
   /// Rate limiter for device service
   /// 30 requests per minute (infrequent use)
-  static final device = RateLimiter(
-    maxRequests: 30,
-  );
+  static final device = RateLimiter(maxRequests: 30);
 
   /// Rate limiter for file uploads
   /// 20 requests per minute (heavy operations)
-  static final files = RateLimiter(
-    maxRequests: 20,
-  );
+  static final files = RateLimiter(maxRequests: 20);
 }

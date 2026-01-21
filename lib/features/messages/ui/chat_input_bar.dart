@@ -12,7 +12,6 @@ import '../data/message_providers.dart';
 
 /// WhatsApp-style chat input bar with proper Riverpod/state separation
 class ChatInputBar extends ConsumerStatefulWidget {
-
   const ChatInputBar({required this.roomId, required this.roomName, super.key});
   final String roomId;
   final String roomName;
@@ -213,9 +212,7 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
   // Document functionality
   Future<void> _pickDocument() async {
-    final result = await FilePicker.platform.pickFiles(
-      
-    );
+    final result = await FilePicker.platform.pickFiles();
 
     if (result != null && result.files.single.path != null) {
       final file = result.files.single;
@@ -298,180 +295,180 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
     required String label,
     required VoidCallback onTap,
   }) => InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppTheme.getSubtleColor(context, AppTheme.primaryGreen),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: AppTheme.primaryGreen, size: 28),
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppTheme.getSubtleColor(context, AppTheme.primaryGreen),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: AppTheme.metadataText.copyWith(
-                color: AppTheme.getTextColor(context),
-              ),
+            child: Icon(icon, color: AppTheme.primaryGreen, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: AppTheme.metadataText.copyWith(
+              color: AppTheme.getTextColor(context),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => ProviderScope(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: AnimatedPadding(
-          duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
+    child: Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
-          child: SafeArea(
-            child: Row(
-              children: [
-                // Emoji button (Riverpod-driven)
-                IconButton(
-                  icon: Icon(
-                    ref.watch(emojiPanelVisibilityProvider)
-                        ? Icons.keyboard
-                        : Icons.emoji_emotions_outlined,
+        ],
+      ),
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              // Emoji button (Riverpod-driven)
+              IconButton(
+                icon: Icon(
+                  ref.watch(emojiPanelVisibilityProvider)
+                      ? Icons.keyboard
+                      : Icons.emoji_emotions_outlined,
+                ),
+                onPressed: _toggleEmoji,
+                tooltip: 'Emoji',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppTheme.primaryGreen,
+                ),
+              ),
+
+              const SizedBox(width: AppTheme.elementGap),
+
+              // Attachment button
+              IconButton(
+                icon: const Icon(Icons.attach_file),
+                onPressed: _showAttachmentOptions,
+                tooltip: 'Attachment',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppTheme.getTextColor(context),
+                ),
+              ),
+
+              const SizedBox(width: AppTheme.elementGap),
+
+              // Text field (local state only)
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.getChatBackground(context),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: _focusNode.hasFocus
+                          ? AppTheme.primaryGreen.withValues(alpha: 0.5)
+                          : Colors.transparent,
+                      width: _focusNode.hasFocus ? 2 : 1,
+                    ),
                   ),
-                  onPressed: _toggleEmoji,
-                  tooltip: 'Emoji',
-                  style: IconButton.styleFrom(
-                    foregroundColor: AppTheme.primaryGreen,
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    minLines: 1,
+                    maxLines: 5,
+                    keyboardType: TextInputType.multiline,
+                    style: AppTheme.bodyText.copyWith(
+                      color: AppTheme.getTextColor(context),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Message',
+                      hintStyle: AppTheme.bodyText.copyWith(
+                        color: AppTheme.getTextColor(
+                          context,
+                        ).withValues(alpha: 0.6),
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    // No onChanged that touches providers
                   ),
                 ),
+              ),
 
-                const SizedBox(width: AppTheme.elementGap),
+              const SizedBox(width: AppTheme.elementGap),
 
-                // Attachment button
+              // Camera button (only show when no text)
+              if (!_hasText)
                 IconButton(
-                  icon: const Icon(Icons.attach_file),
-                  onPressed: _showAttachmentOptions,
-                  tooltip: 'Attachment',
+                  icon: const Icon(Icons.camera_alt),
+                  onPressed: _captureFromCamera,
+                  tooltip: 'Camera',
                   style: IconButton.styleFrom(
                     foregroundColor: AppTheme.getTextColor(context),
                   ),
                 ),
 
-                const SizedBox(width: AppTheme.elementGap),
-
-                // Text field (local state only)
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppTheme.getChatBackground(context),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: _focusNode.hasFocus
-                            ? AppTheme.primaryGreen.withValues(alpha: 0.5)
-                            : Colors.transparent,
-                        width: _focusNode.hasFocus ? 2 : 1,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      minLines: 1,
-                      maxLines: 5,
-                      keyboardType: TextInputType.multiline,
-                      style: AppTheme.bodyText.copyWith(
-                        color: AppTheme.getTextColor(context),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Message',
-                        hintStyle: AppTheme.bodyText.copyWith(
-                          color: AppTheme.getTextColor(
-                            context,
-                          ).withValues(alpha: 0.6),
+              // Send/Mic button with proper animation
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _hasText
+                    ? IconButton(
+                        key: const ValueKey('send'),
+                        icon: const Icon(Icons.send),
+                        onPressed: _send,
+                        tooltip: 'Send',
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.white,
                         ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                      )
+                    : IconButton(
+                        key: const ValueKey('mic'),
+                        icon: Icon(
+                          _isRecording ? Icons.stop : Icons.mic,
+                          color: _isRecording
+                              ? Colors.red
+                              : AppTheme.primaryGreen,
+                        ),
+                        onPressed: _startVoice,
+                        tooltip: _isRecording
+                            ? 'Stop Recording'
+                            : 'Voice Message',
+                        style: IconButton.styleFrom(
+                          backgroundColor: _isRecording
+                              ? Colors.red.withValues(alpha: 0.1)
+                              : AppTheme.getSubtleColor(
+                                  context,
+                                  AppTheme.primaryGreen,
+                                ),
+                          foregroundColor: _isRecording
+                              ? Colors.red
+                              : AppTheme.primaryGreen,
                         ),
                       ),
-                      // No onChanged that touches providers
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: AppTheme.elementGap),
-
-                // Camera button (only show when no text)
-                if (!_hasText)
-                  IconButton(
-                    icon: const Icon(Icons.camera_alt),
-                    onPressed: _captureFromCamera,
-                    tooltip: 'Camera',
-                    style: IconButton.styleFrom(
-                      foregroundColor: AppTheme.getTextColor(context),
-                    ),
-                  ),
-
-                // Send/Mic button with proper animation
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: _hasText
-                      ? IconButton(
-                          key: const ValueKey('send'),
-                          icon: const Icon(Icons.send),
-                          onPressed: _send,
-                          tooltip: 'Send',
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppTheme.primaryGreen,
-                            foregroundColor: Colors.white,
-                          ),
-                        )
-                      : IconButton(
-                          key: const ValueKey('mic'),
-                          icon: Icon(
-                            _isRecording ? Icons.stop : Icons.mic,
-                            color: _isRecording
-                                ? Colors.red
-                                : AppTheme.primaryGreen,
-                          ),
-                          onPressed: _startVoice,
-                          tooltip: _isRecording
-                              ? 'Stop Recording'
-                              : 'Voice Message',
-                          style: IconButton.styleFrom(
-                            backgroundColor: _isRecording
-                                ? Colors.red.withValues(alpha: 0.1)
-                                : AppTheme.getSubtleColor(
-                                    context,
-                                    AppTheme.primaryGreen,
-                                  ),
-                            foregroundColor: _isRecording
-                                ? Colors.red
-                                : AppTheme.primaryGreen,
-                          ),
-                        ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
+    ),
+  );
 }

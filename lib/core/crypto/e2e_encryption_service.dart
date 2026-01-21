@@ -12,7 +12,6 @@ import '../logging/app_logger.dart';
 /// Uses AES-like encryption for messages and files
 /// Note: vodozemac integration will be implemented when stable API is available
 class E2EEncryptionService {
-
   E2EEncryptionService(this._storage, this._database);
   final FlutterSecureStorage _storage;
   final AppDatabase _database;
@@ -236,7 +235,8 @@ class E2EEncryptionService {
   }
 
   /// Decrypt arbitrary data
-  Future<Uint8List> decryptData(EncryptedData encryptedData) async => _xorEncrypt(encryptedData.data, utf8.encode(encryptedData.key));
+  Future<Uint8List> decryptData(EncryptedData encryptedData) async =>
+      _xorEncrypt(encryptedData.data, utf8.encode(encryptedData.key));
 
   // Private helper methods
 
@@ -369,7 +369,6 @@ class E2EEncryptionService {
 }
 
 class _SessionState {
-
   _SessionState({
     required this.sessionId,
     required this.sharedKey,
@@ -381,7 +380,6 @@ class _SessionState {
 }
 
 class GroupSessionState {
-
   GroupSessionState({
     required this.sessionId,
     required this.sessionKey,
@@ -394,18 +392,18 @@ class GroupSessionState {
 
 /// Encrypted message for 1:1 communication
 class EncryptedMessage {
-
   EncryptedMessage({
     required this.ciphertext,
     required this.messageType,
     required this.sessionId,
   });
 
-  factory EncryptedMessage.fromJson(Map<String, dynamic> json) => EncryptedMessage(
-      ciphertext: json['ciphertext'] as String,
-      messageType: json['messageType'] as int,
-      sessionId: json['sessionId'] as String,
-    );
+  factory EncryptedMessage.fromJson(Map<String, dynamic> json) =>
+      EncryptedMessage(
+        ciphertext: json['ciphertext'] as String,
+        messageType: json['messageType'] as int,
+        sessionId: json['sessionId'] as String,
+      );
   final String ciphertext;
   final int messageType;
   final String sessionId;
@@ -419,18 +417,18 @@ class EncryptedMessage {
 
 /// Encrypted message for group communication
 class GroupEncryptedMessage {
-
   GroupEncryptedMessage({
     required this.ciphertext,
     required this.sessionId,
     required this.messageIndex,
   });
 
-  factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) => GroupEncryptedMessage(
-      ciphertext: json['ciphertext'] as String,
-      sessionId: json['sessionId'] as String,
-      messageIndex: json['messageIndex'] as int,
-    );
+  factory GroupEncryptedMessage.fromJson(Map<String, dynamic> json) =>
+      GroupEncryptedMessage(
+        ciphertext: json['ciphertext'] as String,
+        sessionId: json['sessionId'] as String,
+        messageIndex: json['messageIndex'] as int,
+      );
   final String ciphertext;
   final String sessionId;
   final int messageIndex;
@@ -444,7 +442,6 @@ class GroupEncryptedMessage {
 
 /// Encrypted data with key
 class EncryptedData {
-
   EncryptedData({required this.data, required this.key, required this.iv});
   final Uint8List data;
   final String key;

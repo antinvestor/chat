@@ -14,7 +14,6 @@ final signalingServiceProvider = FutureProvider<SignalingService>((ref) async {
 });
 
 class SignalingService {
-
   SignalingService(this._syncEngine, this._authRepository);
   final SyncEngine _syncEngine;
   final AuthRepository _authRepository;

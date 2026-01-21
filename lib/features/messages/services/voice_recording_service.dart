@@ -55,9 +55,7 @@ class VoiceRecordingService {
       _currentRecordingPath = '${directory.path}/$fileName';
 
       // Configure and start recording
-      const config = RecordConfig(
-        numChannels: 1,
-      );
+      const config = RecordConfig(numChannels: 1);
 
       await _recorder.start(config, path: _currentRecordingPath!);
       _recordingStartTime = DateTime.now();
@@ -218,7 +216,6 @@ class VoiceRecordingService {
 
 /// Result of a voice recording
 class VoiceRecordingResult {
-
   const VoiceRecordingResult({
     required this.path,
     required this.duration,

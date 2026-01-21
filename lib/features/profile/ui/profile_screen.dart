@@ -9,7 +9,6 @@ import '../data/profile_providers.dart';
 
 /// Profile details screen showing user information
 class ProfileScreen extends ConsumerWidget {
-
   const ProfileScreen({required this.profileId, super.key});
   final String profileId;
 
@@ -32,37 +31,37 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildNotFoundScreen(BuildContext context) => Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            // Navigate back using navigation helper
-            context.navigateBack();
-          },
-        ),
+    appBar: AppBar(
+      title: const Text('Profile'),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () {
+          // Navigate back using navigation helper
+          context.navigateBack();
+        },
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_off, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Profile not found',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                context.navigateBack();
-              },
-              child: const Text('Go Back'),
-            ),
-          ],
-        ),
+    ),
+    body: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.person_off, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Profile not found',
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              context.navigateBack();
+            },
+            child: const Text('Go Back'),
+          ),
+        ],
       ),
-    );
+    ),
+  );
 
   Widget _buildProfileContent(
     BuildContext context,
@@ -288,17 +287,17 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
-          letterSpacing: 0.5,
-        ),
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.primary,
+        letterSpacing: 0.5,
       ),
-    );
+    ),
+  );
 
   Widget _buildActionButton(
     BuildContext context, {
@@ -410,7 +409,11 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _startChat(BuildContext context, WidgetRef ref, Profile profile) async {
+  Future<void> _startChat(
+    BuildContext context,
+    WidgetRef ref,
+    Profile profile,
+  ) async {
     try {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(

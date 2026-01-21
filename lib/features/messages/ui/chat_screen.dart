@@ -28,7 +28,6 @@ import 'input_bar.dart';
 import 'message_bubble.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-
   const ChatScreen({required this.roomId, required this.roomName, super.key});
   final String roomId;
   final String roomName;
@@ -471,71 +470,71 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) => AppBar(
-      title: GestureDetector(
-        onTap: _openContactInfo,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppTheme.primaryGreen,
-                  child: Text(
-                    widget.roomName.isNotEmpty
-                        ? widget.roomName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+    title: GestureDetector(
+      onTap: _openContactInfo,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppTheme.primaryGreen,
+                child: Text(
+                  widget.roomName.isNotEmpty
+                      ? widget.roomName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.roomName,
+                      style: AppTheme.bodyText.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).appBarTheme.foregroundColor,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.roomName,
-                        style: AppTheme.bodyText.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).appBarTheme.foregroundColor,
-                        ),
+                    Text(
+                      'Last seen recently',
+                      style: AppTheme.metadataText.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).appBarTheme.foregroundColor?.withValues(alpha: 0.7),
                       ),
-                      Text(
-                        'Last seen recently',
-                        style: AppTheme.metadataText.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).appBarTheme.foregroundColor?.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.go('/'),
-      ),
-      actions: [
-        IconButton(
-          icon: Icon(
-            _isEncryptionEnabled ? Icons.lock : Icons.lock_open,
-            color: _isEncryptionEnabled ? Colors.green : null,
+              ),
+            ],
           ),
-          onPressed: _toggleEncryption,
+        ],
+      ),
+    ),
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    elevation: 0,
+    leading: IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => context.go('/'),
+    ),
+    actions: [
+      IconButton(
+        icon: Icon(
+          _isEncryptionEnabled ? Icons.lock : Icons.lock_open,
+          color: _isEncryptionEnabled ? Colors.green : null,
         ),
-        IconButton(icon: const Icon(Icons.video_call), onPressed: _startCall),
-      ],
-    );
+        onPressed: _toggleEncryption,
+      ),
+      IconButton(icon: const Icon(Icons.video_call), onPressed: _startCall),
+    ],
+  );
 
   Widget _buildMessageList(List<RoomEvent> messages) {
     if (messages.isEmpty) {
@@ -614,145 +613,145 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildEmptyState() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.chat_bubble_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Start the conversation',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+          child: Icon(
+            Icons.chat_bubble_outline,
+            size: 64,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Start the conversation',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Send a message to begin chatting with ${widget.roomName}',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Text(
+            'Say Hello!',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Send a message to begin chatting with ${widget.roomName}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).colorScheme.primary,
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Text(
-              'Say Hello!',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
 
   Widget _buildLoadingState() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
-              strokeWidth: 3,
-            ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Loading messages...',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+            strokeWidth: 3,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Please wait while we fetch your conversation',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Loading messages...',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
           ),
-        ],
-      ),
-    );
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Please wait while we fetch your conversation',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
 
   Widget _buildErrorState(Object error, StackTrace stack) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.error_outline, size: 64, color: Colors.red),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.red.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Something went wrong',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
+          child: const Icon(Icons.error_outline, size: 64, color: Colors.red),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Something went wrong',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Unable to load messages. Please try again.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton.icon(
+          onPressed: () => ref.refresh(messageListProvider(widget.roomId)),
+          icon: const Icon(Icons.refresh),
+          label: const Text('Try Again'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Unable to load messages. Please try again.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => ref.refresh(messageListProvider(widget.roomId)),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Try Again'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
 
   void _toggleEncryption() {
     setState(() => _isEncryptionEnabled = !_isEncryptionEnabled);
@@ -935,56 +934,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildScrollToBottomButton() => GestureDetector(
-      onTap: _scrollToBottom,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(
-              Icons.keyboard_arrow_down,
-              color: Theme.of(context).colorScheme.onSurface,
-              size: 28,
-            ),
-            if (_newMessageCount > 0)
-              Positioned(
-                top: 2,
-                right: 2,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primaryGreen,
-                    shape: BoxShape.circle,
+    onTap: _scrollToBottom,
+    child: Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.keyboard_arrow_down,
+            color: Theme.of(context).colorScheme.onSurface,
+            size: 28,
+          ),
+          if (_newMessageCount > 0)
+            Positioned(
+              top: 2,
+              right: 2,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryGreen,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                child: Text(
+                  _newMessageCount > 99 ? '99+' : '$_newMessageCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: Text(
-                    _newMessageCount > 99 ? '99+' : '$_newMessageCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
-    );
+    ),
+  );
 }

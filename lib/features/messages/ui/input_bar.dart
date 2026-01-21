@@ -13,9 +13,13 @@ typedef OnVoiceRecordingComplete = void Function(VoiceRecordingResult result);
 
 /// Professional WhatsApp-style input bar with clean design
 class InputBar extends ConsumerStatefulWidget {
-
   const InputBar({
-    required this.roomId, required this.onSendMessage, required this.onAttachment, required this.onCamera, required this.onCancelReply, super.key,
+    required this.roomId,
+    required this.onSendMessage,
+    required this.onAttachment,
+    required this.onCamera,
+    required this.onCancelReply,
+    super.key,
     this.onVoiceRecordingComplete,
     this.isEncryptionEnabled = false,
     this.replyingToMessageId,
@@ -239,204 +243,205 @@ class _InputBarState extends ConsumerState<InputBar>
   }
 
   Widget _buildReplyPreview(ThemeData theme) => Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border(
-            left: BorderSide(color: theme.colorScheme.primary, width: 3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Reply',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.replyingToText ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.close,
-                size: 18,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              onPressed: widget.onCancelReply,
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            ),
-          ],
+    padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+    child: Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: theme.colorScheme.primary, width: 3),
         ),
       ),
-    );
-
-  Widget _buildVoiceRecordingUI(ThemeData theme) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          // Recording indicator
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withValues(alpha: 0.5),
-                  blurRadius: 6,
-                  spreadRadius: 1,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Reply',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.replyingToText ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            _formatDuration(_recordingDuration),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              fontFeatures: [FontFeature.tabularFigures()],
+          IconButton(
+            icon: Icon(
+              Icons.close,
+              size: 18,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
+            onPressed: widget.onCancelReply,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
-          const Spacer(),
-          // Cancel button
-          TextButton(
-            onPressed: _cancelVoiceRecording,
-            child: Text('Cancel', style: TextStyle(color: Colors.red.shade600)),
-          ),
-          const SizedBox(width: 8),
-          // Send button
-          _buildSendButton(theme, isRecording: true),
         ],
       ),
-    );
+    ),
+  );
 
-  Widget _buildInputRow(ThemeData theme, bool isDark, Color primaryColor) => Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Input field container
-          Expanded(
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 44),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF2A2A2A)
-                    : const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(22),
+  Widget _buildVoiceRecordingUI(ThemeData theme) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    child: Row(
+      children: [
+        // Recording indicator
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: Colors.red,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withValues(alpha: 0.5),
+                blurRadius: 6,
+                spreadRadius: 1,
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Attachment button
-                  _buildIconButton(
-                    icon: Icons.attach_file,
-                    onTap: widget.onAttachment,
-                    theme: theme,
-                  ),
-                  // Text field
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      maxLines: 5,
-                      minLines: 1,
-                      textCapitalization: TextCapitalization.sentences,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: widget.isEncryptionEnabled
-                            ? 'Encrypted message'
-                            : 'Message',
-                        hintStyle: TextStyle(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 12,
-                        ),
-                        isDense: true,
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  // Encryption indicator
-                  if (widget.isEncryptionEnabled)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4, bottom: 10),
-                      child: Icon(
-                        Icons.lock,
-                        size: 16,
-                        color: Colors.green.shade600,
-                      ),
-                    ),
-                  // Camera button (only when no text)
-                  if (!_hasText)
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          _formatDuration(_recordingDuration),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+        const Spacer(),
+        // Cancel button
+        TextButton(
+          onPressed: _cancelVoiceRecording,
+          child: Text('Cancel', style: TextStyle(color: Colors.red.shade600)),
+        ),
+        const SizedBox(width: 8),
+        // Send button
+        _buildSendButton(theme, isRecording: true),
+      ],
+    ),
+  );
+
+  Widget _buildInputRow(ThemeData theme, bool isDark, Color primaryColor) =>
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Input field container
+            Expanded(
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 44),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF2A2A2A)
+                      : const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Attachment button
                     _buildIconButton(
-                      icon: Icons.camera_alt,
-                      onTap: widget.onCamera,
+                      icon: Icons.attach_file,
+                      onTap: widget.onAttachment,
                       theme: theme,
                     ),
-                ],
+                    // Text field
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        maxLines: 5,
+                        minLines: 1,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: widget.isEncryptionEnabled
+                              ? 'Encrypted message'
+                              : 'Message',
+                          hintStyle: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 12,
+                          ),
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
+                    ),
+                    // Encryption indicator
+                    if (widget.isEncryptionEnabled)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4, bottom: 10),
+                        child: Icon(
+                          Icons.lock,
+                          size: 16,
+                          color: Colors.green.shade600,
+                        ),
+                      ),
+                    // Camera button (only when no text)
+                    if (!_hasText)
+                      _buildIconButton(
+                        icon: Icons.camera_alt,
+                        onTap: widget.onCamera,
+                        theme: theme,
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          // Send/Mic button
-          _buildSendButton(theme),
-        ],
-      ),
-    );
+            const SizedBox(width: 8),
+            // Send/Mic button
+            _buildSendButton(theme),
+          ],
+        ),
+      );
 
   Widget _buildIconButton({
     required IconData icon,
     required VoidCallback onTap,
     required ThemeData theme,
   }) => Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(
-            icon,
-            size: 22,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Icon(
+          icon,
+          size: 22,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
-    );
+    ),
+  );
 
   Widget _buildSendButton(ThemeData theme, {bool isRecording = false}) {
     final primaryColor = theme.colorScheme.primary;
@@ -458,7 +463,8 @@ class _InputBarState extends ConsumerState<InputBar>
         ),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
-          transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+          transitionBuilder: (child, animation) =>
+              ScaleTransition(scale: animation, child: child),
           child: showSend
               ? Icon(
                   isRecording ? Icons.send : Icons.send,

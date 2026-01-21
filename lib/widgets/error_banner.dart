@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../core/error/app_error.dart';
 
 class ErrorBanner extends StatelessWidget {
-
   const ErrorBanner({
-    required this.error, super.key,
+    required this.error,
+    super.key,
     this.onRetry,
     this.onDismiss,
   });

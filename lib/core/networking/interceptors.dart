@@ -6,7 +6,6 @@ import '../logging/app_logger.dart';
 /// Auth interceptor for Connect RPC
 /// Provides JWT authorization headers for all API calls
 class AuthInterceptor {
-
   AuthInterceptor(this._storage);
   final FlutterSecureStorage _storage;
   String? _cachedToken;

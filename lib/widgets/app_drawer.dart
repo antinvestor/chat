@@ -68,86 +68,86 @@ class AppDrawer extends ConsumerWidget {
     ThemeData theme,
     AsyncValue<UserInfo?> userInfoAsync,
   ) => Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 24,
-        bottom: 24,
-        left: 20,
-        right: 20,
-      ),
-      decoration: BoxDecoration(color: theme.colorScheme.primaryContainer),
-      child: userInfoAsync.when(
-        data: (userInfo) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile avatar
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: theme.colorScheme.primary,
-              backgroundImage: userInfo?.picture != null
-                  ? NetworkImage(userInfo!.picture!)
-                  : null,
-              child: userInfo?.picture == null
-                  ? Text(
-                      userInfo?.initials ?? 'U',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onPrimary,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 16),
+    width: double.infinity,
+    padding: EdgeInsets.only(
+      top: MediaQuery.of(context).padding.top + 24,
+      bottom: 24,
+      left: 20,
+      right: 20,
+    ),
+    decoration: BoxDecoration(color: theme.colorScheme.primaryContainer),
+    child: userInfoAsync.when(
+      data: (userInfo) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Profile avatar
+          CircleAvatar(
+            radius: 36,
+            backgroundColor: theme.colorScheme.primary,
+            backgroundImage: userInfo?.picture != null
+                ? NetworkImage(userInfo!.picture!)
+                : null,
+            child: userInfo?.picture == null
+                ? Text(
+                    userInfo?.initials ?? 'U',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onPrimary,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(height: 16),
 
-            // User name
+          // User name
+          Text(
+            userInfo?.displayName ?? 'User',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
+
+          // User email/phone
+          if (userInfo?.email != null || userInfo?.phone != null) ...[
+            const SizedBox(height: 4),
             Text(
-              userInfo?.displayName ?? 'User',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
-            ),
-
-            // User email/phone
-            if (userInfo?.email != null || userInfo?.phone != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                userInfo?.email ?? userInfo?.phone ?? '',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer.withValues(
-                    alpha: 0.7,
-                  ),
+              userInfo?.email ?? userInfo?.phone ?? '',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer.withValues(
+                  alpha: 0.7,
                 ),
               ),
-            ],
-          ],
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: theme.colorScheme.primary,
-              child: Icon(
-                Icons.person,
-                size: 36,
-                color: theme.colorScheme.onPrimary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'User',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
             ),
           ],
-        ),
+        ],
       ),
-    );
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 36,
+            backgroundColor: theme.colorScheme.primary,
+            child: Icon(
+              Icons.person,
+              size: 36,
+              color: theme.colorScheme.onPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'User',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildBottomSection(
     BuildContext context,
@@ -155,62 +155,62 @@ class AppDrawer extends ConsumerWidget {
     ThemeData theme,
     AsyncValue<UserInfo?> userInfoAsync,
   ) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Column(
-          children: [
-            // Logged in info
-            userInfoAsync.whenData((userInfo) {
-                  if (userInfo?.id != null) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.verified_user_outlined,
-                            size: 16,
-                            color: theme.colorScheme.outline,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Logged in as ${userInfo?.displayName ?? "User"}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.outline,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Column(
+        children: [
+          // Logged in info
+          userInfoAsync.whenData((userInfo) {
+                if (userInfo?.id != null) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.verified_user_outlined,
+                          size: 16,
+                          color: theme.colorScheme.outline,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Logged in as ${userInfo?.displayName ?? "User"}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.outline,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                }).value ??
-                const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }).value ??
+              const SizedBox.shrink(),
 
-            // Logout button
-            ListTile(
-              leading: Icon(Icons.logout, color: theme.colorScheme.error),
-              title: Text(
-                'Logout',
-                style: TextStyle(
-                  color: theme.colorScheme.error,
-                  fontWeight: FontWeight.w500,
-                ),
+          // Logout button
+          ListTile(
+            leading: Icon(Icons.logout, color: theme.colorScheme.error),
+            title: Text(
+              'Logout',
+              style: TextStyle(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w500,
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onTap: () => _handleLogout(context, ref),
             ),
-          ],
-        ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onTap: () => _handleLogout(context, ref),
+          ),
+        ],
       ),
-    );
+    ),
+  );
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(

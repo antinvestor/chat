@@ -20,7 +20,9 @@ import '../../features/auth/data/auth_repository.dart';
 import 'certificate_pinning.dart';
 
 /// Secure storage provider for token access
-final secureStorageProvider = Provider<FlutterSecureStorage>((ref) => const FlutterSecureStorage());
+final secureStorageProvider = Provider<FlutterSecureStorage>(
+  (ref) => const FlutterSecureStorage(),
+);
 
 /// Token manager provider using antinvestor_api_common TokenManager
 ///
@@ -99,10 +101,11 @@ final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
 ///
 /// This enables dependency injection of the CertificatePinning service
 /// while maintaining compatibility with the client factory function signature.
-typedef CreateTransportFn = connect.Transport Function(
-  Uri baseUrl,
-  List<connect.Interceptor> interceptors,
-);
+typedef CreateTransportFn =
+    connect.Transport Function(
+      Uri baseUrl,
+      List<connect.Interceptor> interceptors,
+    );
 
 /// Creates a transport factory bound to a CertificatePinning instance
 ///
@@ -110,15 +113,17 @@ typedef CreateTransportFn = connect.Transport Function(
 /// - [certificatePinning]: The CertificatePinning instance to use
 ///
 /// Returns a function that creates transports with certificate pinning enabled.
-CreateTransportFn createTransportFactory(CertificatePinning certificatePinning) => (Uri baseUrl, List<connect.Interceptor> interceptors) {
-    final httpClient = certificatePinning.createPinnedHttpClient();
-    return connect_protocol.Transport(
-      baseUrl: baseUrl.toString(),
-      codec: const connect_protobuf.ProtoCodec(),
-      httpClient: connect_io.createHttpClient(httpClient),
-      interceptors: interceptors,
-    );
-  };
+CreateTransportFn createTransportFactory(
+  CertificatePinning certificatePinning,
+) => (Uri baseUrl, List<connect.Interceptor> interceptors) {
+  final httpClient = certificatePinning.createPinnedHttpClient();
+  return connect_protocol.Transport(
+    baseUrl: baseUrl.toString(),
+    codec: const connect_protobuf.ProtoCodec(),
+    httpClient: connect_io.createHttpClient(httpClient),
+    interceptors: interceptors,
+  );
+};
 
 /// Creates a Connect transport for API communication with certificate pinning
 ///

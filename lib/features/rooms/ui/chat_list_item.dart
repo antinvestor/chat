@@ -5,9 +5,10 @@ import '../domain/room_with_last_message.dart';
 
 /// Chat list item following design specifications
 class ChatListItem extends StatelessWidget {
-
   const ChatListItem({
-    required this.room, required this.onTap, super.key,
+    required this.room,
+    required this.onTap,
+    super.key,
     this.isSelected = false,
     this.isMultiSelectMode = false,
     this.onLongPress,

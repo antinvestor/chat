@@ -22,7 +22,6 @@ part 'auth_repository.g.dart';
 /// final isLoggedIn = await authRepo.isLoggedIn();
 /// ```
 class AuthRepository {
-
   AuthRepository(this._authService);
   final AuthService _authService;
 
@@ -54,12 +53,15 @@ class AuthRepository {
 
   /// Get the time until a token refresh is needed
   /// Returns null if no expiry info available
-  Future<Duration?> getTimeUntilRefreshNeeded() async => _authService.getTimeUntilRefreshNeeded();
+  Future<Duration?> getTimeUntilRefreshNeeded() async =>
+      _authService.getTimeUntilRefreshNeeded();
 
   /// Get the token expiry time
-  Future<DateTime?> getTokenExpiryTime() async => _authService.getTokenExpiryTime();
+  Future<DateTime?> getTokenExpiryTime() async =>
+      _authService.getTokenExpiryTime();
 
-  Future<Map<String, dynamic>?> getUserInfo() async => _authService.getUserInfo();
+  Future<Map<String, dynamic>?> getUserInfo() async =>
+      _authService.getUserInfo();
 
   /// Get the current profile ID from the JWT token ('sub' claim)
   /// Returns the profile ID of the authenticated profile, or null if not authenticated
@@ -79,7 +81,8 @@ class AuthRepository {
 
   /// Ensure we have a valid access token, refreshing if necessary
   /// Returns the access token if successful, null if user needs to re-login
-  Future<String?> ensureValidAccessToken() async => _authService.ensureValidAccessToken();
+  Future<String?> ensureValidAccessToken() async =>
+      _authService.ensureValidAccessToken();
 
   /// Ensure valid access token with detailed status
   /// Returns token and whether re-login is needed
@@ -88,12 +91,13 @@ class AuthRepository {
     int maxRetries = 3,
     Duration retryDelay = const Duration(seconds: 2),
   }) async => _authService.ensureValidAccessTokenWithStatus(
-      maxRetries: maxRetries,
-      retryDelay: retryDelay,
-    );
+    maxRetries: maxRetries,
+    retryDelay: retryDelay,
+  );
 
   /// Check if we have a valid, usable access token right now
-  Future<bool> hasValidAccessToken() async => _authService.hasValidAccessToken();
+  Future<bool> hasValidAccessToken() async =>
+      _authService.hasValidAccessToken();
 }
 
 @riverpod

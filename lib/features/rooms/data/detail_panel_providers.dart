@@ -142,24 +142,23 @@ Stream<List<domain.RoomEvent>> roomTransactions(Ref ref, String roomId) {
 
 // Helper to convert database row to domain model
 domain.RoomEvent _toRoomEvent(RoomEvent row) => domain.RoomEvent(
-    id: row.id,
-    roomId: row.roomId,
-    senderId: row.senderId,
-    senderContactId: row.senderContactId,
-    type: domain.RoomEventType.values[row.type],
-    content: row.content != null
-        ? (jsonDecode(row.content!) as Map<String, dynamic>)
-        : {},
-    parentId: row.parentId,
-    status: domain.EventStatus.values[row.status],
-    createdAt: row.createdAt ?? 0,
-    serverTs: row.serverTs,
-    localId: row.localId,
-  );
+  id: row.id,
+  roomId: row.roomId,
+  senderId: row.senderId,
+  senderContactId: row.senderContactId,
+  type: domain.RoomEventType.values[row.type],
+  content: row.content != null
+      ? (jsonDecode(row.content!) as Map<String, dynamic>)
+      : {},
+  parentId: row.parentId,
+  status: domain.EventStatus.values[row.status],
+  createdAt: row.createdAt ?? 0,
+  serverTs: row.serverTs,
+  localId: row.localId,
+);
 
 /// Room member information for display
 class RoomMemberInfo {
-
   RoomMemberInfo({
     required this.subscriptionId,
     required this.profileId,

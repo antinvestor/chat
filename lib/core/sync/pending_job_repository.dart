@@ -6,7 +6,6 @@ import '../db/database.dart';
 import 'pending_job.dart' as domain;
 
 class PendingJobRepository {
-
   PendingJobRepository(this._database);
   final AppDatabase _database;
 
@@ -29,14 +28,18 @@ class PendingJobRepository {
 
     final results = await query.get();
 
-    return results.map((row) => domain.PendingJob(
-        id: row.id,
-        type: domain.JobType.values.firstWhere((e) => e.name == row.type),
-        payload: row.payload != null ? jsonDecode(row.payload!) : {},
-        createdAt: row.createdAt ?? 0,
-        retryCount: row.retryCount,
-        status: row.status,
-      )).toList();
+    return results
+        .map(
+          (row) => domain.PendingJob(
+            id: row.id,
+            type: domain.JobType.values.firstWhere((e) => e.name == row.type),
+            payload: row.payload != null ? jsonDecode(row.payload!) : {},
+            createdAt: row.createdAt ?? 0,
+            retryCount: row.retryCount,
+            status: row.status,
+          ),
+        )
+        .toList();
   }
 
   Future<void> deleteJob(int id) async {

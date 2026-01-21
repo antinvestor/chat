@@ -9,7 +9,9 @@ import '../logging/app_logger.dart';
 import 'api_config.dart';
 
 /// Provider for certificate pinning service
-final certificatePinningProvider = Provider<CertificatePinning>((ref) => CertificatePinning());
+final certificatePinningProvider = Provider<CertificatePinning>(
+  (ref) => CertificatePinning(),
+);
 
 /// Service for TLS certificate pinning to prevent MITM attacks
 ///
@@ -197,10 +199,11 @@ class CertificatePinning {
   /// Check if pinning should be bypassed for a host in debug mode
   ///
   /// Used for localhost and test environments
-  bool _shouldBypassPinning(String host) => host == 'localhost' ||
-        host == '127.0.0.1' ||
-        host.endsWith('.local') ||
-        host.endsWith('.test');
+  bool _shouldBypassPinning(String host) =>
+      host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host.endsWith('.local') ||
+      host.endsWith('.test');
 
   /// Validate that a host has pins configured
   ///

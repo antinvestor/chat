@@ -133,11 +133,11 @@ class ErrorTrackingService {
     required String operation,
     String? description,
   }) => Sentry.startTransaction(
-      name,
-      operation,
-      description: description,
-      bindToScope: true,
-    );
+    name,
+    operation,
+    description: description,
+    bindToScope: true,
+  );
 
   /// Set a tag for filtering in Sentry
   static Future<void> setTag(String key, String value) async {

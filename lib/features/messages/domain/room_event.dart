@@ -67,7 +67,6 @@ enum EventStatus { pending, sent, delivered, read, failed }
 /// ```
 @freezed
 abstract class RoomEvent with _$RoomEvent {
-
   const factory RoomEvent({
     // Required parameters first
     required String id,

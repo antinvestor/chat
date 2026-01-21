@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 class EmptyState extends StatelessWidget {
-
   const EmptyState({
-    required this.icon, required this.title, super.key,
+    required this.icon,
+    required this.title,
+    super.key,
     this.message,
     this.actionLabel,
     this.onAction,

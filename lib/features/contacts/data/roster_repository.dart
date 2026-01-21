@@ -332,17 +332,18 @@ enum RosterContactType {
 
   final int value;
 
-  static RosterContactType fromValue(int value) => RosterContactType.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => RosterContactType.email,
-    );
+  static RosterContactType fromValue(int value) =>
+      RosterContactType.values.firstWhere(
+        (e) => e.value == value,
+        orElse: () => RosterContactType.email,
+      );
 
-  static RosterContactType fromProto(pb.ContactType type) => type == pb.ContactType.MSISDN ? msisdn : email;
+  static RosterContactType fromProto(pb.ContactType type) =>
+      type == pb.ContactType.MSISDN ? msisdn : email;
 }
 
 /// Profile data model for local storage
 class ProfileData {
-
   ProfileData({
     required this.id,
     this.name,
@@ -375,12 +376,12 @@ class ProfileData {
   final Map<String, dynamic>? metadata;
 
   ProfilesCompanion toCompanion() => ProfilesCompanion(
-      id: Value(id),
-      name: Value(name),
-      avatarUrl: Value(avatarUrl),
-      updatedAt: Value(updatedAt?.millisecondsSinceEpoch),
-      metadata: Value(metadata != null ? json.encode(metadata) : null),
-    );
+    id: Value(id),
+    name: Value(name),
+    avatarUrl: Value(avatarUrl),
+    updatedAt: Value(updatedAt?.millisecondsSinceEpoch),
+    metadata: Value(metadata != null ? json.encode(metadata) : null),
+  );
 }
 
 /// Local roster entry model representing a contact link
@@ -390,10 +391,11 @@ class ProfileData {
 /// - contactId: Contact's unique ID from server (available after successful sync)
 /// - contactDetail: Email/phone number for display and local reference
 class RosterEntry {
-
   RosterEntry({
     required this.id,
-    required this.contactType, required this.contactDetail, this.rosterId,
+    required this.contactType,
+    required this.contactDetail,
+    this.rosterId,
     this.profileId,
     this.contactId,
     this.isVerified = false,
@@ -404,22 +406,22 @@ class RosterEntry {
   });
 
   factory RosterEntry.fromDbRow(RosterData row) => RosterEntry(
-      id: row.id,
-      rosterId: row.rosterId, // Server roster ID
-      profileId: row.profileId, // Now nullable
-      contactId: row.contactId,
-      contactType: RosterContactType.fromValue(row.contactType),
-      contactDetail: row.contactDetail,
-      isVerified: row.isVerified,
-      displayName: row.displayName,
-      isBlocked: row.isBlocked,
-      syncedAt: row.syncedAt != null
-          ? DateTime.fromMillisecondsSinceEpoch(row.syncedAt!)
-          : null,
-      createdAt: row.createdAt != null
-          ? DateTime.fromMillisecondsSinceEpoch(row.createdAt!)
-          : null,
-    );
+    id: row.id,
+    rosterId: row.rosterId, // Server roster ID
+    profileId: row.profileId, // Now nullable
+    contactId: row.contactId,
+    contactType: RosterContactType.fromValue(row.contactType),
+    contactDetail: row.contactDetail,
+    isVerified: row.isVerified,
+    displayName: row.displayName,
+    isBlocked: row.isBlocked,
+    syncedAt: row.syncedAt != null
+        ? DateTime.fromMillisecondsSinceEpoch(row.syncedAt!)
+        : null,
+    createdAt: row.createdAt != null
+        ? DateTime.fromMillisecondsSinceEpoch(row.createdAt!)
+        : null,
+  );
 
   factory RosterEntry.fromProto(
     pb.RosterObject roster, {
@@ -458,21 +460,21 @@ class RosterEntry {
   final DateTime? createdAt;
 
   RosterCompanion toCompanion() => RosterCompanion(
-      id: Value(id),
-      rosterId: Value(rosterId), // Server roster ID
-      profileId: Value(profileId), // Now nullable
-      contactId: Value(contactId),
-      contactType: Value(contactType.value),
-      contactDetail: Value(contactDetail),
-      isVerified: Value(isVerified),
-      displayName: Value(displayName),
-      isBlocked: Value(isBlocked),
-      syncedAt: Value(syncedAt?.millisecondsSinceEpoch),
-      createdAt: Value(
-        createdAt?.millisecondsSinceEpoch ??
-            DateTime.now().millisecondsSinceEpoch,
-      ),
-    );
+    id: Value(id),
+    rosterId: Value(rosterId), // Server roster ID
+    profileId: Value(profileId), // Now nullable
+    contactId: Value(contactId),
+    contactType: Value(contactType.value),
+    contactDetail: Value(contactDetail),
+    isVerified: Value(isVerified),
+    displayName: Value(displayName),
+    isBlocked: Value(isBlocked),
+    syncedAt: Value(syncedAt?.millisecondsSinceEpoch),
+    createdAt: Value(
+      createdAt?.millisecondsSinceEpoch ??
+          DateTime.now().millisecondsSinceEpoch,
+    ),
+  );
 
   /// Generate a stable local UUID for new roster entries
   static String _generateLocalUuid() => Xid().toString();
@@ -482,7 +484,6 @@ class RosterEntry {
 /// This is the primary display model - profile is the person,
 /// contacts are the ways to reach them
 class ProfileWithContacts {
-
   ProfileWithContacts({required this.profile, required this.contacts});
   final ProfileData profile;
   final List<RosterEntry> contacts;
@@ -529,7 +530,6 @@ typedef SyncProgressCallback = void Function(SyncProgress progress);
 
 /// Sync progress information
 class SyncProgress {
-
   const SyncProgress({
     required this.state,
     this.totalContacts = 0,
@@ -573,7 +573,6 @@ enum SyncState {
 /// - Reconciliation with server roster
 /// - Proper error handling and logging
 class RosterRepository {
-
   RosterRepository(this._profileClient, this._database);
   final ProfileServiceClient _profileClient;
   final AppDatabase _database;
@@ -1461,7 +1460,9 @@ class RosterRepository {
       );
 
       // Build contact requests for server
-      final contactRequests = unsyncedRows.map((row) => pb.RawContact(contact: row.contactDetail)).toList();
+      final contactRequests = unsyncedRows
+          .map((row) => pb.RawContact(contact: row.contactDetail))
+          .toList();
 
       reportProgress(
         SyncProgress(
@@ -2254,7 +2255,8 @@ class RosterRepository {
   }
 
   /// Watch profiles with contacts as a stream
-  Stream<List<ProfileWithContacts>> watchProfilesWithContacts() => watchRoster().asyncMap((_) => getProfilesWithContacts());
+  Stream<List<ProfileWithContacts>> watchProfilesWithContacts() =>
+      watchRoster().asyncMap((_) => getProfilesWithContacts());
 
   /// Get all roster entries for a specific profile
   Future<List<RosterEntry>> getRosterEntriesForProfile(String profileId) async {

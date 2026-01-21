@@ -20,7 +20,6 @@ abstract class TokenProvider {
 
 /// Default token provider using FlutterSecureStorage
 class SecureStorageTokenProvider implements TokenProvider {
-
   SecureStorageTokenProvider(
     this._storage, {
     Future<void> Function()? onExpired,
@@ -56,7 +55,6 @@ class SecureStorageTokenProvider implements TokenProvider {
 /// Creates an authenticated HTTP client with JWT headers
 /// Optimized for low-resource devices with connection pooling and timeouts
 class AuthenticatedHttpClient {
-
   AuthenticatedHttpClient(this._tokenProvider)
     : _httpClient = _createOptimizedHttpClient();
   final TokenProvider _tokenProvider;
@@ -99,7 +97,6 @@ class AuthenticatedHttpClient {
 
 /// Factory for creating authenticated transports for different services
 class TransportFactory {
-
   TransportFactory(this._tokenProvider);
   final TokenProvider _tokenProvider;
   final Map<String, connect.Transport> _transports = {};
@@ -111,14 +108,15 @@ class TransportFactory {
   }
 
   /// Create or get cached transport for a service
-  connect.Transport getTransport(String baseUrl) => _transports.putIfAbsent(baseUrl, () {
-      AppLogger.debug('Creating transport for $baseUrl');
-      return connect_protocol.Transport(
-        baseUrl: baseUrl,
-        codec: const connect_protobuf.ProtoCodec(),
-        httpClient: connect_io.createHttpClient(httpClient.httpClient),
-      );
-    });
+  connect.Transport getTransport(String baseUrl) =>
+      _transports.putIfAbsent(baseUrl, () {
+        AppLogger.debug('Creating transport for $baseUrl');
+        return connect_protocol.Transport(
+          baseUrl: baseUrl,
+          codec: const connect_protobuf.ProtoCodec(),
+          httpClient: connect_io.createHttpClient(httpClient.httpClient),
+        );
+      });
 
   /// Get transport for Chat service
   connect.Transport get chatTransport => getTransport(ApiConfig.chatBaseUrl);
@@ -151,7 +149,6 @@ class TransportFactory {
 /// Wrapper that automatically injects auth headers into API calls
 /// This provides a convenient way to make authenticated requests
 class AuthenticatedClient<T> {
-
   AuthenticatedClient(this._client, this._transportFactory);
   final T _client;
   final TransportFactory _transportFactory;

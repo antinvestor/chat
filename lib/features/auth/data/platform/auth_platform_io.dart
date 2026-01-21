@@ -14,7 +14,6 @@ const String _customHost = 'sso';
 
 /// Desktop authenticator using loopback interface
 class _DesktopAuthenticator {
-
   _DesktopAuthenticator({
     required this.flow,
     required this.urlLauncher,
@@ -164,7 +163,6 @@ class _DesktopAuthenticator {
 
 /// Mobile authenticator using custom URL scheme (RFC 8252)
 class _MobileAuthenticator {
-
   _MobileAuthenticator({required this.flow, required this.urlLauncher});
   final Flow flow;
   final Future<void> Function(String url) urlLauncher;

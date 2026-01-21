@@ -57,38 +57,38 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(
-        title: const Text('Contacts'),
-        actions: [
-          if (_isSyncing)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.sync),
-              onPressed: _syncContacts,
-              tooltip: 'Sync contacts with server',
+    appBar: AppBar(
+      title: const Text('Contacts'),
+      actions: [
+        if (_isSyncing)
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'On App', icon: Icon(Icons.people)),
-            Tab(text: 'Device', icon: Icon(Icons.contacts)),
-          ],
-        ),
-      ),
-      body: TabBarView(
+          )
+        else
+          IconButton(
+            icon: const Icon(Icons.sync),
+            onPressed: _syncContacts,
+            tooltip: 'Sync contacts with server',
+          ),
+      ],
+      bottom: TabBar(
         controller: _tabController,
-        children: [_buildSyncedContactsList(), _buildDeviceContactsList()],
+        tabs: const [
+          Tab(text: 'On App', icon: Icon(Icons.people)),
+          Tab(text: 'Device', icon: Icon(Icons.contacts)),
+        ],
       ),
-    );
+    ),
+    body: TabBarView(
+      controller: _tabController,
+      children: [_buildSyncedContactsList(), _buildDeviceContactsList()],
+    ),
+  );
 
   Widget _buildSyncedContactsList() {
     final profilesAsync = ref.watch(profilesWithContactsProvider);
@@ -200,9 +200,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                             decoration: BoxDecoration(
                               color: Colors.green.shade50,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.green.shade200,
-                              ),
+                              border: Border.all(color: Colors.green.shade200),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -289,48 +287,51 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     );
   }
 
-  List<Widget> _buildContactChips(List<RosterEntry> contacts, ThemeData theme) => [
-      const SizedBox(height: 8),
-      Wrap(
-        spacing: 4,
-        runSpacing: 4,
-        children: contacts.take(3).map((contact) {
-          final isPhone = contact.contactType == RosterContactType.msisdn;
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isPhone ? Icons.phone : Icons.email,
-                  size: 12,
+  List<Widget> _buildContactChips(
+    List<RosterEntry> contacts,
+    ThemeData theme,
+  ) => [
+    const SizedBox(height: 8),
+    Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: contacts.take(3).map((contact) {
+        final isPhone = contact.contactType == RosterContactType.msisdn;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isPhone ? Icons.phone : Icons.email,
+                size: 12,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _truncateContact(contact.contactDetail),
+                style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  _truncateContact(contact.contactDetail),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+              ),
+              if (contact.isVerified) ...[
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.verified,
+                  size: 10,
+                  color: theme.colorScheme.primary,
                 ),
-                if (contact.isVerified) ...[
-                  const SizedBox(width: 2),
-                  Icon(
-                    Icons.verified,
-                    size: 10,
-                    color: theme.colorScheme.primary,
-                  ),
-                ],
               ],
-            ),
-          );
-        }).toList(),
-      ),
-    ];
+            ],
+          ),
+        );
+      }).toList(),
+    ),
+  ];
 
   String _truncateContact(String detail) {
     if (detail.length <= 15) return detail;

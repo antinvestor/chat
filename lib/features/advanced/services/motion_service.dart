@@ -21,7 +21,6 @@ final motionServiceProvider = FutureProvider<MotionService>((ref) async {
 
 /// Service for handling motion transactions and payments
 class MotionService {
-
   /// Creates a motion service
   MotionService(
     this._syncEngine,

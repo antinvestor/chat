@@ -49,7 +49,6 @@ Future<void> showContactSyncSheet({
 }
 
 class _ContactSyncSheet extends StatefulWidget {
-
   const _ContactSyncSheet({
     required this.repository,
     required this.autoDismissDelay,

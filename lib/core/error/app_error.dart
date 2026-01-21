@@ -3,7 +3,6 @@ enum ErrorType { network, authentication, validation, server, unknown }
 
 /// Application error with user-friendly messaging
 class AppError {
-
   const AppError({
     required this.type,
     required this.message,

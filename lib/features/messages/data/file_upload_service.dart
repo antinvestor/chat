@@ -11,7 +11,6 @@ import '../../../core/networking/client.dart';
 
 /// Service for uploading files, images, and videos to the server
 class FileUploadService {
-
   FileUploadService(this._getAccessToken);
   final Future<String?> Function() _getAccessToken;
 
@@ -147,10 +146,10 @@ class FileUploadService {
     File videoFile, {
     void Function(double progress)? onProgress,
   }) async => uploadFile(
-      videoFile,
-      mimeType: _detectMimeType(videoFile.path),
-      onProgress: onProgress,
-    );
+    videoFile,
+    mimeType: _detectMimeType(videoFile.path),
+    onProgress: onProgress,
+  );
 
   /// Download a file
   Future<Uint8List?> downloadFile(String fileUrl) async {
@@ -230,7 +229,6 @@ class FileUploadService {
 }
 
 class UploadResult {
-
   UploadResult._({
     required this.isSuccess,
     this.fileId,
@@ -248,15 +246,16 @@ class UploadResult {
     String? mimeType,
     int? size,
   }) => UploadResult._(
-      isSuccess: true,
-      fileId: fileId,
-      fileUrl: fileUrl,
-      thumbnailUrl: thumbnailUrl,
-      mimeType: mimeType,
-      size: size,
-    );
+    isSuccess: true,
+    fileId: fileId,
+    fileUrl: fileUrl,
+    thumbnailUrl: thumbnailUrl,
+    mimeType: mimeType,
+    size: size,
+  );
 
-  factory UploadResult.failure(String message) => UploadResult._(isSuccess: false, errorMessage: message);
+  factory UploadResult.failure(String message) =>
+      UploadResult._(isSuccess: false, errorMessage: message);
   final bool isSuccess;
   final String? fileId;
   final String? fileUrl;

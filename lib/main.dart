@@ -19,21 +19,18 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/notifications/notification_service.dart';
 
 /// Sentry DSN - should be configured via environment variable in production
-const String _sentryDsn = String.fromEnvironment(
-  'SENTRY_DSN',
-);
+const String _sentryDsn = String.fromEnvironment('SENTRY_DSN');
 
 /// Type-safe wrapper for user info from OIDC token
 class _UserInfo {
-
   _UserInfo({required this.id, this.email, this.username});
 
   /// Parse user info from OIDC token claims
   factory _UserInfo.fromOidcClaims(Map<String, dynamic> claims) => _UserInfo(
-      id: claims['sub'] as String? ?? 'unknown',
-      email: claims['email'] as String?,
-      username: claims['preferred_username'] as String?,
-    );
+    id: claims['sub'] as String? ?? 'unknown',
+    email: claims['email'] as String?,
+    username: claims['preferred_username'] as String?,
+  );
   final String id;
   final String? email;
   final String? username;

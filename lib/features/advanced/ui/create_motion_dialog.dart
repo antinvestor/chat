@@ -8,7 +8,6 @@ import '../services/motion_service.dart';
 /// Dialog for creating a new motion
 /// Includes input validation and admin permission checking
 class CreateMotionDialog extends ConsumerStatefulWidget {
-
   const CreateMotionDialog({required this.roomId, super.key});
   final String roomId;
 
@@ -130,144 +129,145 @@ class _CreateMotionDialogState extends ConsumerState<CreateMotionDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-      title: const Text('Create Motion'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Motion Title *',
-                  hintText: 'e.g., Approve new member',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Title is required';
-                  }
-                  if (value.trim().length < 5) {
-                    return 'Title must be at least 5 characters';
-                  }
-                  if (value.trim().length > 100) {
-                    return 'Title must be less than 100 characters';
-                  }
-                  return null;
-                },
-                maxLength: 100,
-                enabled: !_isCreating,
+    title: const Text('Create Motion'),
+    content: SingleChildScrollView(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title
+            TextFormField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'Motion Title *',
+                hintText: 'e.g., Approve new member',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 16),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Title is required';
+                }
+                if (value.trim().length < 5) {
+                  return 'Title must be at least 5 characters';
+                }
+                if (value.trim().length > 100) {
+                  return 'Title must be less than 100 characters';
+                }
+                return null;
+              },
+              maxLength: 100,
+              enabled: !_isCreating,
+            ),
+            const SizedBox(height: 16),
 
-              // Description
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  hintText: 'Provide more details...',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                maxLength: 500,
-                enabled: !_isCreating,
+            // Description
+            TextFormField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                hintText: 'Provide more details...',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 16),
+              maxLines: 3,
+              maxLength: 500,
+              enabled: !_isCreating,
+            ),
+            const SizedBox(height: 16),
 
-              // Options
-              const Text(
-                'Options *',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ..._optionControllers.asMap().entries.map((entry) {
-                final index = entry.key;
-                final controller = entry.value;
+            // Options
+            const Text(
+              'Options *',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ..._optionControllers.asMap().entries.map((entry) {
+              final index = entry.key;
+              final controller = entry.value;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: controller,
-                          decoration: InputDecoration(
-                            labelText: 'Option ${index + 1}',
-                            border: const OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Option cannot be empty';
-                            }
-                            return null;
-                          },
-                          enabled: !_isCreating,
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller,
+                        decoration: InputDecoration(
+                          labelText: 'Option ${index + 1}',
+                          border: const OutlineInputBorder(),
+                          isDense: true,
                         ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Option cannot be empty';
+                          }
+                          return null;
+                        },
+                        enabled: !_isCreating,
                       ),
-                      if (_optionControllers.length > 2)
-                        IconButton(
-                          icon: const Icon(
-                            Icons.remove_circle,
-                            color: Colors.red,
-                          ),
-                          onPressed: _isCreating
-                              ? null
-                              : () => _removeOption(index),
+                    ),
+                    if (_optionControllers.length > 2)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.remove_circle,
+                          color: Colors.red,
                         ),
-                    ],
-                  ),
-                );
-              }),
-              if (_optionControllers.length < 10)
-                TextButton.icon(
-                  onPressed: _isCreating ? null : _addOption,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Option'),
+                        onPressed: _isCreating
+                            ? null
+                            : () => _removeOption(index),
+                      ),
+                  ],
                 ),
-              const SizedBox(height: 16),
+              );
+            }),
+            if (_optionControllers.length < 10)
+              TextButton.icon(
+                onPressed: _isCreating ? null : _addOption,
+                icon: const Icon(Icons.add),
+                label: const Text('Add Option'),
+              ),
+            const SizedBox(height: 16),
 
-              // Deadline
-              const Text(
-                'Deadline *',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            // Deadline
+            const Text(
+              'Deadline *',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today),
+              title: Text(_formatDeadline(_deadline)),
+              trailing: const Icon(Icons.edit),
+              onTap: _isCreating ? null : _selectDeadline,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: Colors.grey.shade300),
               ),
-              const SizedBox(height: 8),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today),
-                title: Text(_formatDeadline(_deadline)),
-                trailing: const Icon(Icons.edit),
-                onTap: _isCreating ? null : _selectDeadline,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isCreating ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _isCreating ? null : _createMotion,
-          child: _isCreating
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Create'),
-        ),
-      ],
-    );
+    ),
+    actions: [
+      TextButton(
+        onPressed: _isCreating ? null : () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      ElevatedButton(
+        onPressed: _isCreating ? null : _createMotion,
+        child: _isCreating
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Create'),
+      ),
+    ],
+  );
 
-  String _formatDeadline(DateTime date) => '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  String _formatDeadline(DateTime date) =>
+      '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
 }

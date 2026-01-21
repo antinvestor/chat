@@ -3,7 +3,6 @@
 /// Each service has its own dedicated endpoint for optimal routing
 /// and load balancing.
 class ApiConfig {
-
   const ApiConfig._();
   // Service endpoints
   static const String chatBaseUrl = 'https://chat.antinvestor.com';

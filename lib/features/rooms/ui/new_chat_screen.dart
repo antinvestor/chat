@@ -280,41 +280,41 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   }
 
   Widget _buildEmptyState(ThemeData theme) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.contacts_outlined,
-              size: 80,
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.contacts_outlined,
+            size: 80,
+            color: theme.colorScheme.outline,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No contacts yet',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sync your contacts to find friends on the app',
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.outline,
             ),
-            const SizedBox(height: 24),
-            Text(
-              'No contacts yet',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Sync your contacts to find friends on the app',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.outline,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _syncContacts,
-              icon: const Icon(Icons.sync),
-              label: const Text('Sync Contacts'),
-            ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: _syncContacts,
+            icon: const Icon(Icons.sync),
+            label: const Text('Sync Contacts'),
+          ),
+        ],
       ),
-    );
+    ),
+  );
 
   List<RosterEntry> _filterContacts(List<RosterEntry> contacts) {
     if (_searchQuery.isEmpty) {
@@ -365,9 +365,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
       final roomService = await ref.read(roomServiceProvider.future);
 
       // Get all contact identifiers using priority logic - server will handle routing
-      final contactIds = _selectedContacts
-          .map(_getContactIdentifier)
-          .toList();
+      final contactIds = _selectedContacts.map(_getContactIdentifier).toList();
 
       // Generate room name
       final roomName = _selectedContacts.length == 1

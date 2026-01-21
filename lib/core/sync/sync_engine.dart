@@ -18,7 +18,9 @@ import '../networking/client.dart';
 import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
 
-final pendingJobRepositoryProvider = Provider<PendingJobRepository>((ref) => PendingJobRepository(AppDatabase.instance));
+final pendingJobRepositoryProvider = Provider<PendingJobRepository>(
+  (ref) => PendingJobRepository(AppDatabase.instance),
+);
 
 /// Exception thrown when token refresh fails permanently and user must re-authenticate
 class TokenRefreshPermanentError implements Exception {
@@ -126,7 +128,6 @@ typedef TokenRefreshCallback = Future<String?> Function();
 /// await syncEngine.sendSignal(event);
 /// ```
 class SyncEngine {
-
   SyncEngine(
     this._gatewayClient,
     this._chatClient,
@@ -1240,10 +1241,10 @@ class SyncEngine {
     required String profileId,
     String? contactId,
   }) async => _subscriptionService.updateSubscriptionProfile(
-      subscriptionId: subscriptionId,
-      profileId: profileId,
-      contactId: contactId,
-    );
+    subscriptionId: subscriptionId,
+    profileId: profileId,
+    contactId: contactId,
+  );
 
   /// Get all subscriptions without a profile ID (anonymous subscriptions)
   /// Useful for finding subscriptions that need profile assignment

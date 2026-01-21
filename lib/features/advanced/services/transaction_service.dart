@@ -14,7 +14,6 @@ final transactionServiceProvider = FutureProvider<TransactionService>((
 });
 
 class TransactionService {
-
   TransactionService(this._syncEngine, this._authRepository);
   final SyncEngine _syncEngine;
   final AuthRepository _authRepository;

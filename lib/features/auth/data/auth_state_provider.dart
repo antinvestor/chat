@@ -20,9 +20,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     if (isLoggedIn) {
       // Ensure we have a valid access token (will refresh if expired)
       // Use the status-returning version to distinguish between transient and permanent errors
-      final result = await authRepo.ensureValidAccessTokenWithStatus(
-        
-      );
+      final result = await authRepo.ensureValidAccessTokenWithStatus();
 
       if (result.token != null) {
         AppLogger.info('Authentication state: authenticated');

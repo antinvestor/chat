@@ -8,7 +8,6 @@ import '../../messages/domain/room_event.dart';
 import '../services/motion_service.dart';
 
 class MotionBubble extends ConsumerStatefulWidget {
-
   const MotionBubble({required this.event, required this.isMe, super.key});
   final RoomEvent event;
   final bool isMe;
@@ -165,7 +164,11 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
                 if (winner != null) ...[
                   Row(
                     children: [
-                      const Icon(Icons.emoji_events, color: Colors.amber, size: 24),
+                      const Icon(
+                        Icons.emoji_events,
+                        color: Colors.amber,
+                        size: 24,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -316,5 +319,6 @@ class _MotionBubbleState extends ConsumerState<MotionBubble> {
     );
   }
 
-  String _formatDate(DateTime date) => '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  String _formatDate(DateTime date) =>
+      '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
 }

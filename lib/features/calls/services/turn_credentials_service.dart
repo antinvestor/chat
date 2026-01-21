@@ -14,10 +14,10 @@ final turnCredentialsServiceProvider = FutureProvider<TurnCredentialsService>((
 
 /// Cached TURN server credentials
 class TurnCredentials {
-
   TurnCredentials({
     required this.url,
-    required this.expiresAt, this.username,
+    required this.expiresAt,
+    this.username,
     this.credential,
   });
   final String url;
@@ -26,9 +26,8 @@ class TurnCredentials {
   final DateTime expiresAt;
 
   /// Check if credentials are expired or about to expire (within 5 minutes)
-  bool get isExpired => DateTime.now().isAfter(
-      expiresAt.subtract(const Duration(minutes: 5)),
-    );
+  bool get isExpired =>
+      DateTime.now().isAfter(expiresAt.subtract(const Duration(minutes: 5)));
 
   /// Convert to WebRTC ICE server configuration
   Map<String, dynamic> toIceServer() {
@@ -47,7 +46,6 @@ class TurnCredentials {
 /// - Credential refresh before expiry
 /// - Fallback to STUN if TURN unavailable
 class TurnCredentialsService {
-
   TurnCredentialsService(this._deviceClient);
 
   // ignore: unused_field - Will be used when Device API supports TURN credentials

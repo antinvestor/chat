@@ -5,7 +5,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Simplified KeyManager for E2EE
 /// Note: vodozemac integration will be implemented when API is stable
 class KeyManager {
-
   KeyManager(this._storage);
   final FlutterSecureStorage _storage;
 
@@ -27,7 +26,10 @@ class KeyManager {
   String get identityKey => _identityKey ?? '';
 
   // Helper to get public bundle to upload
-  Map<String, dynamic> getPublicBundle() => {'identity_key': _identityKey, 'curve25519_key': _identityKey};
+  Map<String, dynamic> getPublicBundle() => {
+    'identity_key': _identityKey,
+    'curve25519_key': _identityKey,
+  };
 
   // Placeholder encryption/decryption methods
   Future<String> encrypt(String plaintext, String recipientKey) async {

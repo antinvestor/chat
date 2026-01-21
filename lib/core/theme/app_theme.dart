@@ -50,9 +50,7 @@ class AppTheme {
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryGreen,
-    ),
+    colorScheme: ColorScheme.fromSeed(seedColor: primaryGreen),
     textTheme: const TextTheme(
       bodyLarge: bodyText,
       bodyMedium: bodyText,
@@ -220,7 +218,8 @@ class AppTheme {
   }
 
   // Get subtle color (10% opacity)
-  static Color getSubtleColor(BuildContext context, Color baseColor) => baseColor.withValues(alpha: 0.1);
+  static Color getSubtleColor(BuildContext context, Color baseColor) =>
+      baseColor.withValues(alpha: 0.1);
 
   // Get text color based on theme
   static Color getTextColor(BuildContext context) {

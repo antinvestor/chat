@@ -10,9 +10,10 @@ import '../data/room_providers.dart';
 /// Room detail panel showing room information, motions, transactions, and media
 /// Displayed in the right panel on desktop layouts
 class RoomDetailPanel extends ConsumerStatefulWidget {
-
   const RoomDetailPanel({
-    required this.roomId, required this.roomName, super.key,
+    required this.roomId,
+    required this.roomName,
+    super.key,
   });
   final String roomId;
   final String roomName;
@@ -491,96 +492,100 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
   }
 
   Widget _buildSectionHeader(String title) => Text(
-      title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 0.5,
-      ),
-    );
+    title,
+    style: const TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 0.5,
+    ),
+  );
 
   Widget _buildInfoTile({
     required IconData icon,
     required String title,
     required String subtitle,
   }) => ListTile(
-      leading: Icon(icon, size: 20),
-      title: Text(title, style: const TextStyle(fontSize: 14)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    );
+    leading: Icon(icon, size: 20),
+    title: Text(title, style: const TextStyle(fontSize: 14)),
+    subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  );
 
-  Widget _buildMembersList(AsyncValue<List<RoomMemberInfo>> membersAsync) => membersAsync.when(
-      data: (members) {
-        if (members.isEmpty) {
-          return const Text('No members found');
-        }
+  Widget _buildMembersList(AsyncValue<List<RoomMemberInfo>> membersAsync) =>
+      membersAsync.when(
+        data: (members) {
+          if (members.isEmpty) {
+            return const Text('No members found');
+          }
 
-        return Column(
-          children: members.map((member) {
-            final color = _getColorForName(member.name);
-            final isAdmin = member.role.toLowerCase() == 'admin';
+          return Column(
+            children: members.map((member) {
+              final color = _getColorForName(member.name);
+              final isAdmin = member.role.toLowerCase() == 'admin';
 
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: color.withValues(alpha: 0.2),
-                child: Text(
-                  member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
-                ),
-              ),
-              title: Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      member.name,
-                      style: const TextStyle(fontSize: 14),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.2),
+                  child: Text(
+                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
                   ),
-                  if (isAdmin) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                ),
+                title: Row(
+                  children: [
+                    Flexible(
                       child: Text(
-                        'Admin',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w500,
+                        member.name,
+                        style: const TextStyle(fontSize: 14),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isAdmin) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Admin',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
-              ),
-              subtitle: Text(member.role, style: const TextStyle(fontSize: 12)),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
-              onTap: () => _openMemberProfile(context, member),
-            );
-          }).toList(),
-        );
-      },
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: CircularProgressIndicator(),
+                ),
+                subtitle: Text(
+                  member.role,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                onTap: () => _openMemberProfile(context, member),
+              );
+            }).toList(),
+          );
+        },
+        loading: () => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(),
+          ),
         ),
-      ),
-      error: (e, _) => Text('Error loading members: $e'),
-    );
+        error: (e, _) => Text('Error loading members: $e'),
+      );
 
   void _openMemberProfile(BuildContext context, RoomMemberInfo member) {
     if (member.profileId != null) {
@@ -601,28 +606,28 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
     required String title,
     required String subtitle,
   }) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 48, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 48, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
-    );
+    ),
+  );
 
   Color _getColorForName(String name) {
     final colors = [
@@ -715,7 +720,6 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
 
 /// Full-screen media viewer with swipe navigation
 class _MediaViewerScreen extends StatefulWidget {
-
   const _MediaViewerScreen({
     required this.mediaList,
     required this.initialIndex,
@@ -746,78 +750,76 @@ class _MediaViewerScreenState extends State<_MediaViewerScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text('${_currentIndex + 1} of ${widget.mediaList.length}'),
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: widget.mediaList.length,
-        onPageChanged: (index) {
-          setState(() => _currentIndex = index);
-        },
-        itemBuilder: (context, index) {
-          final media = widget.mediaList[index];
-          final content = media.content;
-          final url = content['url'] as String?;
-          final isVideo = media.type == RoomEventType.video;
+      foregroundColor: Colors.white,
+      title: Text('${_currentIndex + 1} of ${widget.mediaList.length}'),
+    ),
+    body: PageView.builder(
+      controller: _pageController,
+      itemCount: widget.mediaList.length,
+      onPageChanged: (index) {
+        setState(() => _currentIndex = index);
+      },
+      itemBuilder: (context, index) {
+        final media = widget.mediaList[index];
+        final content = media.content;
+        final url = content['url'] as String?;
+        final isVideo = media.type == RoomEventType.video;
 
-          if (url == null) {
-            return const Center(
-              child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
-            );
-          }
+        if (url == null) {
+          return const Center(
+            child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
+          );
+        }
 
-          if (isVideo) {
-            // Show video placeholder with play button
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.play_circle_outline,
-                    color: Colors.white,
-                    size: 64,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Video playback',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return InteractiveViewer(
-            minScale: 0.5,
-            maxScale: 4,
-            child: Center(
-              child: Image.network(
-                url,
-                fit: BoxFit.contain,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                          : null,
-                      color: Colors.white,
-                    ),
-                  );
-                },
-                errorBuilder: (_, _, _) =>
-                    const Icon(Icons.broken_image, color: Colors.white54),
-              ),
+        if (isVideo) {
+          // Show video placeholder with play button
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.white,
+                  size: 64,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Video playback',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                ),
+              ],
             ),
           );
-        },
-      ),
-    );
+        }
+
+        return InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 4,
+          child: Center(
+            child: Image.network(
+              url,
+              fit: BoxFit.contain,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                        : null,
+                    color: Colors.white,
+                  ),
+                );
+              },
+              errorBuilder: (_, _, _) =>
+                  const Icon(Icons.broken_image, color: Colors.white54),
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }

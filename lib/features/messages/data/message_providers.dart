@@ -13,7 +13,8 @@ import 'message_repository.dart';
 part 'message_providers.g.dart';
 
 @riverpod
-MessageRepository messageRepository(Ref ref) => MessageRepository(AppDatabase.instance);
+MessageRepository messageRepository(Ref ref) =>
+    MessageRepository(AppDatabase.instance);
 
 /// Reactive stream provider for messages - provides instant UI updates
 /// when messages are added, updated, or deleted from the local database

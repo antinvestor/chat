@@ -67,264 +67,257 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          _buildSliverAppBar(),
-          _buildActionButtons(),
-          _buildContactsList(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Select Contact',
-        onPressed: () => context.go('/contacts/select'),
-        backgroundColor: AppTheme.primaryGreen,
-        child: const Icon(Icons.person_add, color: Colors.white),
-      ),
-    );
+    body: CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        _buildSliverAppBar(),
+        _buildActionButtons(),
+        _buildContactsList(),
+      ],
+    ),
+    floatingActionButton: FloatingActionButton(
+      tooltip: 'Select Contact',
+      onPressed: () => context.go('/contacts/select'),
+      backgroundColor: AppTheme.primaryGreen,
+      child: const Icon(Icons.person_add, color: Colors.white),
+    ),
+  );
 
   Widget _buildSliverAppBar() => SliverAppBar(
-      floating: true,
-      snap: true,
-      pinned: true,
-      backgroundColor: AppTheme.primaryGreen,
-      foregroundColor: Colors.white,
-      title: const Text('Select Contact', style: AppTheme.headerText),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(60),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppTheme.primaryGreen,
-            border: Border(
-              bottom: BorderSide(color: Colors.white12, width: 0.5),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Search contacts...',
-                hintStyle: const TextStyle(color: Colors.white70),
-                prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                suffixIcon: _isSearching
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.white70),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.1),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
+    floating: true,
+    snap: true,
+    pinned: true,
+    backgroundColor: AppTheme.primaryGreen,
+    foregroundColor: Colors.white,
+    title: const Text('Select Contact', style: AppTheme.headerText),
+    bottom: PreferredSize(
+      preferredSize: const Size.fromHeight(60),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.primaryGreen,
+          border: Border(bottom: BorderSide(color: Colors.white12, width: 0.5)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Search contacts...',
+              hintStyle: const TextStyle(color: Colors.white70),
+              prefixIcon: const Icon(Icons.search, color: Colors.white70),
+              suffixIcon: _isSearching
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.white70),
+                      onPressed: () {
+                        _searchController.clear();
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(28),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.1),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
               ),
             ),
           ),
         ),
       ),
-    );
+    ),
+  );
 
   Widget _buildActionButtons() => SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.group_add,
-                label: 'New Group',
-                onTap: _startNewChat,
-              ),
-            ),
-            Container(
-              width: 1,
-              height: 40,
-              color: Theme.of(
-                context,
-              ).colorScheme.outline.withValues(alpha: 0.2),
-            ),
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.person_add,
-                label: 'New Contact',
-                onTap: _addNewContact,
-              ),
-            ),
-          ],
-        ),
+    child: Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-    );
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.group_add,
+              label: 'New Group',
+              onTap: _startNewChat,
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 40,
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          ),
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.person_add,
+              label: 'New Contact',
+              onTap: _addNewContact,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildActionButton({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
   }) => InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 24, color: AppTheme.primaryGreen),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-  Widget _buildContactsList() => Consumer(
-      builder: (context, ref, child) {
-        final contactsAsync = ref.watch(profilesWithContactsProvider);
-
-        return contactsAsync.when(
-          data: (contacts) {
-            if (contacts.isEmpty) {
-              return SliverFillRemaining(child: _buildEmptyState());
-            }
-
-            final filteredContacts = _filterContacts(contacts);
-            final groupedContacts = _groupContactsAlphabetically(
-              filteredContacts,
-            );
-
-            return SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                if (index >= groupedContacts.length) return null;
-
-                final entry = groupedContacts.entries.elementAt(index);
-                final letter = entry.key;
-                final sectionContacts = entry.value;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Section header
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      color: Theme.of(context).colorScheme.surfaceContainer,
-                      child: Text(
-                        letter,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryGreen,
-                        ),
-                      ),
-                    ),
-                    // Contacts in this section
-                    ...sectionContacts.map(
-                      _buildContactTile,
-                    ),
-                  ],
-                );
-              }, childCount: groupedContacts.length),
-            );
-          },
-          loading: () => const SliverFillRemaining(
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (error, stack) => SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading contacts',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    error.toString(),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () =>
-                        ref.invalidate(profilesWithContactsProvider),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-  Widget _buildEmptyState() => Center(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.contacts_outlined,
-            size: 64,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 16),
+          Icon(icon, size: 24, color: AppTheme.primaryGreen),
+          const SizedBox(height: 4),
           Text(
-            'No contacts found',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sync your contacts to get started',
+            label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () {
-              // Navigate to contacts sync screen
-              context.go('/contacts');
-            },
-            icon: const Icon(Icons.sync),
-            label: const Text('Sync Contacts'),
           ),
         ],
       ),
-    );
+    ),
+  );
+
+  Widget _buildContactsList() => Consumer(
+    builder: (context, ref, child) {
+      final contactsAsync = ref.watch(profilesWithContactsProvider);
+
+      return contactsAsync.when(
+        data: (contacts) {
+          if (contacts.isEmpty) {
+            return SliverFillRemaining(child: _buildEmptyState());
+          }
+
+          final filteredContacts = _filterContacts(contacts);
+          final groupedContacts = _groupContactsAlphabetically(
+            filteredContacts,
+          );
+
+          return SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              if (index >= groupedContacts.length) return null;
+
+              final entry = groupedContacts.entries.elementAt(index);
+              final letter = entry.key;
+              final sectionContacts = entry.value;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Section header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    child: Text(
+                      letter,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
+                  ),
+                  // Contacts in this section
+                  ...sectionContacts.map(_buildContactTile),
+                ],
+              );
+            }, childCount: groupedContacts.length),
+          );
+        },
+        loading: () => const SliverFillRemaining(
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, stack) => SliverFillRemaining(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading contacts',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  error.toString(),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => ref.invalidate(profilesWithContactsProvider),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  Widget _buildEmptyState() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.contacts_outlined,
+          size: 64,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'No contacts found',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Sync your contacts to get started',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 24),
+        FilledButton.icon(
+          onPressed: () {
+            // Navigate to contacts sync screen
+            context.go('/contacts');
+          },
+          icon: const Icon(Icons.sync),
+          label: const Text('Sync Contacts'),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildContactTile(ProfileWithContacts profileWithContacts) {
     final displayName = profileWithContacts.displayName;
@@ -359,7 +352,11 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
             ),
             if (hasVerified) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.verified, size: 16, color: AppTheme.primaryGreen),
+              const Icon(
+                Icons.verified,
+                size: 16,
+                color: AppTheme.primaryGreen,
+              ),
             ],
           ],
         ),

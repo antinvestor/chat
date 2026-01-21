@@ -35,7 +35,6 @@ import 'platform/auth_platform_stub.dart'
 /// final token = await authService.getAccessToken();
 /// ```
 class AuthService {
-
   AuthService(
     this._storage, {
     required String issuerUrl,
@@ -162,7 +161,8 @@ class AuthService {
   Future<String?> getAccessToken() async => _storage.read(key: 'access_token');
 
   /// Get current refresh token
-  Future<String?> getRefreshToken() async => _storage.read(key: 'refresh_token');
+  Future<String?> getRefreshToken() async =>
+      _storage.read(key: 'refresh_token');
 
   /// Get ID token
   Future<String?> getIdToken() async => _storage.read(key: 'id_token');

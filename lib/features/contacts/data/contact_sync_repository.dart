@@ -31,7 +31,6 @@ typedef ContactSyncType = RosterContactType;
 
 /// @deprecated Use [RosterEntry] instead.
 class SyncedContact {
-
   SyncedContact({
     required this.id,
     required this.profileId,
@@ -41,12 +40,12 @@ class SyncedContact {
   });
 
   factory SyncedContact.fromRosterEntry(RosterEntry entry) => SyncedContact(
-      id: entry.id,
-      profileId: entry.profileId ?? '', // Handle nullable profileId
-      displayName: entry.displayName ?? entry.contactDetail,
-      contactType: entry.contactType,
-      isVerified: entry.isVerified,
-    );
+    id: entry.id,
+    profileId: entry.profileId ?? '', // Handle nullable profileId
+    displayName: entry.displayName ?? entry.contactDetail,
+    contactType: entry.contactType,
+    isVerified: entry.isVerified,
+  );
   final String id;
   final String profileId;
   final String displayName;
@@ -55,9 +54,9 @@ class SyncedContact {
 }
 
 /// @deprecated Use [rosterRepositoryProvider] instead.
-final contactSyncRepositoryProvider = FutureProvider<RosterRepository>((
-  ref,
-) async => await ref.watch(rosterRepositoryProvider.future));
+final contactSyncRepositoryProvider = FutureProvider<RosterRepository>(
+  (ref) async => await ref.watch(rosterRepositoryProvider.future),
+);
 
 /// @deprecated Use [rosterEntriesProvider] instead.
 final syncedContactsProvider = FutureProvider<List<SyncedContact>>((ref) async {
@@ -79,7 +78,9 @@ final contactReconcileProvider = FutureProvider<void>((ref) async {
 });
 
 /// @deprecated Use [rosterSyncNeededProvider] instead.
-final contactSyncNeededProvider = FutureProvider<bool>((ref) async => await ref.watch(rosterSyncNeededProvider.future));
+final contactSyncNeededProvider = FutureProvider<bool>(
+  (ref) async => await ref.watch(rosterSyncNeededProvider.future),
+);
 
 /// @deprecated Use [blockedRosterEntriesProvider] instead.
 final blockedContactsProvider = FutureProvider<List<SyncedContact>>((

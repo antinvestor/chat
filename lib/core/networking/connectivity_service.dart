@@ -8,7 +8,6 @@ import '../sync/sync_engine.dart';
 
 /// Monitors network connectivity and triggers sync when coming back online
 class ConnectivityService {
-
   ConnectivityService(this._connectivity, this._syncEngine);
   final Connectivity _connectivity;
   final SyncEngine _syncEngine;
@@ -68,11 +67,11 @@ class ConnectivityService {
   }
 
   bool _hasConnection(List<ConnectivityResult> results) => results.any(
-      (result) =>
-          result == ConnectivityResult.wifi ||
-          result == ConnectivityResult.mobile ||
-          result == ConnectivityResult.ethernet,
-    );
+    (result) =>
+        result == ConnectivityResult.wifi ||
+        result == ConnectivityResult.mobile ||
+        result == ConnectivityResult.ethernet,
+  );
 
   void _triggerSync() {
     // Restart the sync engine to process pending jobs
@@ -120,10 +119,12 @@ final isConnectedProvider = FutureProvider<bool>((ref) async {
 final connectivityStreamProvider = StreamProvider<bool>((ref) {
   final connectivity = Connectivity();
 
-  return connectivity.onConnectivityChanged.map((results) => results.any(
+  return connectivity.onConnectivityChanged.map(
+    (results) => results.any(
       (result) =>
           result == ConnectivityResult.wifi ||
           result == ConnectivityResult.mobile ||
           result == ConnectivityResult.ethernet,
-    ));
+    ),
+  );
 });

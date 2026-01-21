@@ -10,9 +10,10 @@ import '../../../features/contacts/data/contact_sync_repository.dart';
 import '../domain/room_event.dart';
 
 class MessageBubble extends ConsumerWidget {
-
   const MessageBubble({
-    required this.message, required this.isMe, super.key,
+    required this.message,
+    required this.isMe,
+    super.key,
     this.shouldGroupWithPrevious = false,
     this.removeTail = false,
     this.onReply,
@@ -176,48 +177,48 @@ class MessageBubble extends ConsumerWidget {
     String timestamp,
     bool isDarkMode,
   ) => Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isDarkMode
-              ? Colors.grey.shade800.withValues(alpha: 0.5)
-              : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.block,
-              size: 16,
-              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              isMe ? 'You deleted this message' : 'This message was deleted',
-              style: TextStyle(
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
-                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              timestamp,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
-              ),
-            ),
-          ],
+    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+    child: Container(
+      margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDarkMode
+            ? Colors.grey.shade800.withValues(alpha: 0.5)
+            : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
         ),
       ),
-    );
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.block,
+            size: 16,
+            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            isMe ? 'You deleted this message' : 'This message was deleted',
+            style: TextStyle(
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            timestamp,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Color _getBubbleColor(bool isMe, bool isDarkMode) {
     if (isMe) {
@@ -592,11 +593,11 @@ class MessageBubble extends ConsumerWidget {
   }
 
   Widget _buildMediaPlaceholder(IconData icon) => Container(
-      width: 150,
-      height: 100,
-      color: Colors.grey.shade300,
-      child: Icon(icon, size: 40, color: Colors.grey.shade600),
-    );
+    width: 150,
+    height: 100,
+    color: Colors.grey.shade300,
+    child: Icon(icon, size: 40, color: Colors.grey.shade600),
+  );
 
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
@@ -658,35 +659,35 @@ class MessageBubble extends ConsumerWidget {
 
   /// Retry button for failed messages
   Widget _buildRetryButton(BuildContext context) => GestureDetector(
-      onTap: onRetry,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(12),
-            bottomRight: Radius.circular(12),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 14, color: Colors.red.shade600),
-            const SizedBox(width: 6),
-            Text(
-              'Not sent. Tap to retry',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.red.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(Icons.refresh, size: 14, color: Colors.red.shade600),
-          ],
+    onTap: onRetry,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.1),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
         ),
       ),
-    );
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline, size: 14, color: Colors.red.shade600),
+          const SizedBox(width: 6),
+          Text(
+            'Not sent. Tap to retry',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.red.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.refresh, size: 14, color: Colors.red.shade600),
+        ],
+      ),
+    ),
+  );
 
   /// Show context menu for message actions (reply, edit, copy)
   void _showMessageMenu(BuildContext context, String text) {
@@ -737,7 +738,10 @@ class MessageBubble extends ConsumerWidget {
               // Delete for me option (available for all messages)
               if (onDelete != null)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.orange),
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.orange,
+                  ),
                   title: const Text('Delete for me'),
                   onTap: () {
                     Navigator.pop(context);

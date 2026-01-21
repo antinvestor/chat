@@ -20,7 +20,6 @@ part 'token_refresh_service.g.dart';
 /// - Graceful degradation: Only logs out on permanent errors
 /// - TokenManager sync: Updates TokenManager's in-memory cache after refresh
 class TokenRefreshService {
-
   TokenRefreshService(
     this._authRepository,
     this._onLogoutNeeded, {
@@ -101,7 +100,10 @@ class TokenRefreshService {
         },
       );
 
-      _scheduledRefreshTimer = Timer(timeUntilRefresh, _checkAndRefreshIfNeeded);
+      _scheduledRefreshTimer = Timer(
+        timeUntilRefresh,
+        _checkAndRefreshIfNeeded,
+      );
     } catch (e) {
       AppLogger.warning(
         'Failed to schedule token refresh',

@@ -6,7 +6,6 @@ import '../../../core/logging/app_logger.dart';
 /// Repository for managing room members and subscriptions
 /// Handles all database access for room membership operations
 class RoomMemberRepository {
-
   RoomMemberRepository(this._database);
   final AppDatabase _database;
 

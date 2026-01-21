@@ -368,56 +368,56 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-      onCreate: (Migrator m) async {
-        await m.createAll();
-        // Create FTS5 virtual table for message search on new databases
-        // Uses IF NOT EXISTS for idempotency
+    onCreate: (Migrator m) async {
+      await m.createAll();
+      // Create FTS5 virtual table for message search on new databases
+      // Uses IF NOT EXISTS for idempotency
+      await _createFtsTable();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from <= 1) {
+        // Migration from v1 to v2: Add rosterId column and convert existing IDs to stable local UUIDs
+        // For now, we'll handle this in beforeOpen instead
+      }
+      if (from <= 2) {
+        // Migration from v2 to v3: Add message editing columns
+        await m.addColumn(roomEvents, roomEvents.editedAt);
+        await m.addColumn(roomEvents, roomEvents.originalContent);
+      }
+      if (from <= 3) {
+        // Migration from v3 to v4: Add message deletion columns
+        await m.addColumn(roomEvents, roomEvents.redacted);
+        await m.addColumn(roomEvents, roomEvents.redactedAt);
+        await m.addColumn(roomEvents, roomEvents.redactedBy);
+      }
+      if (from <= 4) {
+        // Migration from v4 to v5: Add FTS5 for full-text message search
         await _createFtsTable();
-      },
-      onUpgrade: (Migrator m, int from, int to) async {
-        if (from <= 1) {
-          // Migration from v1 to v2: Add rosterId column and convert existing IDs to stable local UUIDs
-          // For now, we'll handle this in beforeOpen instead
-        }
-        if (from <= 2) {
-          // Migration from v2 to v3: Add message editing columns
-          await m.addColumn(roomEvents, roomEvents.editedAt);
-          await m.addColumn(roomEvents, roomEvents.originalContent);
-        }
-        if (from <= 3) {
-          // Migration from v3 to v4: Add message deletion columns
-          await m.addColumn(roomEvents, roomEvents.redacted);
-          await m.addColumn(roomEvents, roomEvents.redactedAt);
-          await m.addColumn(roomEvents, roomEvents.redactedBy);
-        }
-        if (from <= 4) {
-          // Migration from v4 to v5: Add FTS5 for full-text message search
-          await _createFtsTable();
-          // Populate FTS index with existing text messages
-          await _populateFtsFromExistingMessages();
-        }
-      },
-      beforeOpen: (details) async {
-        await customStatement('PRAGMA foreign_keys = ON');
+        // Populate FTS index with existing text messages
+        await _populateFtsFromExistingMessages();
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
 
-        // Handle data migration after schema changes
-        if (details.hadUpgrade) {
-          final currentVersion = await customSelect(
-            'SELECT user_version FROM pragma_user_version()',
-          ).getSingle();
-          if (currentVersion.data['user_version'] == 2) {
-            // Add rosterId column if it doesn't exist
-            await customStatement('''
+      // Handle data migration after schema changes
+      if (details.hadUpgrade) {
+        final currentVersion = await customSelect(
+          'SELECT user_version FROM pragma_user_version()',
+        ).getSingle();
+        if (currentVersion.data['user_version'] == 2) {
+          // Add rosterId column if it doesn't exist
+          await customStatement('''
               ALTER TABLE roster ADD COLUMN rosterId TEXT
             ''');
 
-            // Copy existing IDs to rosterId column (they were server IDs)
-            await customStatement('''
+          // Copy existing IDs to rosterId column (they were server IDs)
+          await customStatement('''
               UPDATE roster SET rosterId = id WHERE rosterId IS NULL
             ''');
 
-            // Generate new stable UUIDs for local id column using xid
-            await customStatement('''
+          // Generate new stable UUIDs for local id column using xid
+          await customStatement('''
               UPDATE roster SET id = substr(lower(hex(randomblob(8))), 1, 8) || '-' ||
                                  substr(lower(hex(randomblob(4))), 1, 4) || '-4' ||
                                  substr(lower(hex(randomblob(4))), 1, 4) || '-' ||
@@ -426,10 +426,10 @@ class AppDatabase extends _$AppDatabase {
                                  substr(lower(hex(randomblob(12))), 1, 12)
               WHERE id NOT LIKE '%-%-%-%-%'
             ''');
-          }
         }
-      },
-    );
+      }
+    },
+  );
 
   /// Create the FTS5 virtual table for full-text message search
   Future<void> _createFtsTable() async {
@@ -493,23 +493,23 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// Helper method to reduce duplication in search methods.
   RoomEvent _mapQueryRowToRoomEvent(QueryRow row) => RoomEvent(
-      id: row.read<String>('id'),
-      roomId: row.read<String>('room_id'),
-      senderId: row.read<String>('sender_id'),
-      senderContactId: row.readNullable<String>('sender_contact_id'),
-      type: row.read<int>('type'),
-      content: row.readNullable<String>('content'),
-      parentId: row.readNullable<String>('parent_id'),
-      status: row.read<int>('status'),
-      createdAt: row.readNullable<int>('created_at'),
-      serverTs: row.readNullable<int>('server_ts'),
-      localId: row.readNullable<String>('local_id'),
-      editedAt: row.readNullable<int>('edited_at'),
-      originalContent: row.readNullable<String>('original_content'),
-      redacted: row.read<bool>('redacted'),
-      redactedAt: row.readNullable<int>('redacted_at'),
-      redactedBy: row.readNullable<String>('redacted_by'),
-    );
+    id: row.read<String>('id'),
+    roomId: row.read<String>('room_id'),
+    senderId: row.read<String>('sender_id'),
+    senderContactId: row.readNullable<String>('sender_contact_id'),
+    type: row.read<int>('type'),
+    content: row.readNullable<String>('content'),
+    parentId: row.readNullable<String>('parent_id'),
+    status: row.read<int>('status'),
+    createdAt: row.readNullable<int>('created_at'),
+    serverTs: row.readNullable<int>('server_ts'),
+    localId: row.readNullable<String>('local_id'),
+    editedAt: row.readNullable<int>('edited_at'),
+    originalContent: row.readNullable<String>('original_content'),
+    redacted: row.read<bool>('redacted'),
+    redactedAt: row.readNullable<int>('redacted_at'),
+    redactedBy: row.readNullable<String>('redacted_by'),
+  );
 
   /// Search messages by text content across all rooms
   ///

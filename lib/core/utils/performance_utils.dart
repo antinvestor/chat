@@ -27,14 +27,16 @@ class PerformanceUtils {
   /// Clean up throttle timestamps to prevent memory leaks
   static void cleanupThrottles() {
     final now = DateTime.now();
-    _throttleTimestamps.removeWhere((key, timestamp) => now.difference(timestamp) > const Duration(minutes: 5));
+    _throttleTimestamps.removeWhere(
+      (key, timestamp) =>
+          now.difference(timestamp) > const Duration(minutes: 5),
+    );
   }
 }
 
 /// LRU Cache implementation for caching API responses
 /// Helps reduce memory usage on low-resource devices
 class LRUCache<K, V> {
-
   LRUCache({this.maxSize = 100});
   final int maxSize;
   final LinkedHashMap<K, V> _cache = LinkedHashMap();
@@ -75,9 +77,9 @@ class LRUCache<K, V> {
 /// Batch processor for reducing API calls
 /// Collects items and processes them in batches
 class BatchProcessor<T> {
-
   BatchProcessor({
-    required this.processor, this.batchSize = 10,
+    required this.processor,
+    this.batchSize = 10,
     this.maxWait = const Duration(milliseconds: 500),
   });
   final int batchSize;
@@ -126,7 +128,6 @@ class BatchProcessor<T> {
 
 /// Rate limiter to prevent overwhelming the API
 class RateLimiter {
-
   RateLimiter({
     this.maxRequests = 10,
     this.window = const Duration(seconds: 1),
@@ -163,7 +164,6 @@ class RateLimiter {
 
 /// Memory-efficient stream transformer that limits buffer size
 class BoundedStreamTransformer<T> extends StreamTransformerBase<T, T> {
-
   BoundedStreamTransformer({this.maxBufferSize = 100});
   final int maxBufferSize;
 

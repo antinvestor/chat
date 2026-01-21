@@ -26,7 +26,6 @@ enum CallState {
 }
 
 class CallManager {
-
   CallManager(
     this._signalingService,
     this._authRepository,
