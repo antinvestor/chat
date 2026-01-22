@@ -1087,9 +1087,17 @@ class SyncEngine {
 
   Future<void> _processChangeMemberRole(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final roomId = payload['roomId'] as String;
-    final subscriptionId = payload['subscriptionId'] as String;
-    final newRole = payload['role'] as String;
+    final roomId = payload['roomId'] as String?;
+    final subscriptionId = payload['subscriptionId'] as String?;
+    final newRole = payload['role'] as String?;
+
+    if (roomId == null || subscriptionId == null || newRole == null) {
+      AppLogger.error(
+        'Invalid payload for changeMemberRole job',
+        data: {'jobId': job.id},
+      );
+      return;
+    }
 
     // Update the role locally (already done in RoomService.changeMemberRole)
     // The server sync can be handled via UpdateRoomSubscription API when available

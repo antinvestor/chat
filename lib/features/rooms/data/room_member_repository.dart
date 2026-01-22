@@ -447,23 +447,11 @@ class RoomMemberRepository {
   /// @param profileId The profile ID to check
   /// @return true if the profile is an admin or owner
   Future<bool> isRoomAdmin(String roomId, String profileId) async {
-    try {
-      final query = _database.select(_database.roomMembers)
-        ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(profileId));
+    final member = await getMemberByProfileId(roomId, profileId);
+    if (member == null) return false;
 
-      final member = await query.getSingleOrNull();
-      if (member == null) return false;
-
-      final role = member.role?.toLowerCase() ?? '';
-      return role == 'admin' || role == 'owner';
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        'Failed to check if profile is room admin',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return false;
-    }
+    final role = member.role?.toLowerCase() ?? '';
+    return role == 'admin' || role == 'owner';
   }
 
   /// Check if a profile is the owner of a room
@@ -472,23 +460,11 @@ class RoomMemberRepository {
   /// @param profileId The profile ID to check
   /// @return true if the profile is the owner
   Future<bool> isRoomOwner(String roomId, String profileId) async {
-    try {
-      final query = _database.select(_database.roomMembers)
-        ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(profileId));
+    final member = await getMemberByProfileId(roomId, profileId);
+    if (member == null) return false;
 
-      final member = await query.getSingleOrNull();
-      if (member == null) return false;
-
-      final role = member.role?.toLowerCase() ?? '';
-      return role == 'owner';
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        'Failed to check if profile is room owner',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return false;
-    }
+    final role = member.role?.toLowerCase() ?? '';
+    return role == 'owner';
   }
 
   /// Get member by profile ID in a room

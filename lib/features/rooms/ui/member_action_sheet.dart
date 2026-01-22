@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/db/database.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../profile/data/profile_providers.dart';
 import '../data/detail_panel_providers.dart';
-import '../data/room_member_repository.dart';
 import '../data/room_service.dart';
 
 /// Member role constants
@@ -368,12 +366,24 @@ class MemberActionSheet extends ConsumerWidget {
   }
 
   Future<void> _removeMember(BuildContext context, WidgetRef ref) async {
+    if (member.profileId == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot remove member: missing profile ID'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       final roomService = await ref.read(roomServiceProvider.future);
       await roomService.removeMemberByAdmin(
         roomId: roomId,
         subscriptionId: member.subscriptionId,
-        profileId: member.profileId ?? '',
+        profileId: member.profileId!,
       );
 
       if (context.mounted) {
@@ -439,7 +449,7 @@ class MemberActionSheet extends ConsumerWidget {
 final isCurrentUserAdminProvider =
     FutureProvider.family<bool, (String, String)>((ref, args) async {
       final (roomId, profileId) = args;
-      final memberRepo = RoomMemberRepository(AppDatabase.instance);
+      final memberRepo = ref.watch(roomMemberRepositoryProvider);
       return memberRepo.isRoomAdmin(roomId, profileId);
     });
 
