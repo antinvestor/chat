@@ -8,28 +8,30 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../test_helpers/test_helpers.dart';
 
-// Mock SettingsService for testing
-class MockSettingsService extends SettingsService {
-  MockSettingsService() : super(MockAppDatabase());
+// Mock SettingsService for testing (uses noSuchMethod for unimplemented methods)
+class MockSettingsService implements SettingsService {
+  MockSettingsService();
 
-  final Map<String, String> _mockSettings = {};
-  bool _initialized = false;
+  final Map<String, dynamic> _mockSettings = {};
 
   @override
-  Future<void> initialize() async {
-    _initialized = true;
-  }
+  Future<void> initialize() async {}
 
   @override
   String getString(String key, {String? defaultValue}) =>
-      _mockSettings[key] ?? defaultValue ?? '';
+      _mockSettings[key] as String? ?? defaultValue ?? '';
 
   @override
-  bool getBool(String key, {bool defaultValue = false}) {
-    final value = _mockSettings[key];
-    if (value == null) return defaultValue;
-    return value == 'true' || value == '1';
-  }
+  bool getBool(String key, {bool defaultValue = false}) =>
+      _mockSettings[key] as bool? ?? defaultValue;
+
+  @override
+  int getInt(String key, {int defaultValue = 0}) =>
+      _mockSettings[key] as int? ?? defaultValue;
+
+  @override
+  Map<String, dynamic>? getJson(String key) =>
+      _mockSettings[key] as Map<String, dynamic>?;
 
   @override
   Future<void> setString(String key, String value) async {
@@ -38,53 +40,75 @@ class MockSettingsService extends SettingsService {
 
   @override
   Future<void> setBool(String key, bool value) async {
-    _mockSettings[key] = value.toString();
+    _mockSettings[key] = value;
+  }
+
+  @override
+  Future<void> setInt(String key, int value) async {
+    _mockSettings[key] = value;
+  }
+
+  @override
+  Future<void> setJson(String key, Map<String, dynamic> value) async {
+    _mockSettings[key] = value;
+  }
+
+  @override
+  Future<void> remove(String key) async {
+    _mockSettings.remove(key);
+  }
+
+  @override
+  Future<void> clearAll() async {
+    _mockSettings.clear();
+  }
+
+  @override
+  Map<String, String> exportSettings() =>
+      _mockSettings.map((k, v) => MapEntry(k, v.toString()));
+
+  @override
+  Future<void> importSettings(Map<String, String> settings) async {
+    _mockSettings.addAll(settings);
   }
 
   @override
   String get lastSeenVisible =>
-      _mockSettings[SettingsKeys.lastSeenVisible] ??
-      SettingsDefaults.lastSeenVisible;
+      getString(SettingsKeys.lastSeenVisible, defaultValue: SettingsDefaults.lastSeenVisible);
 
   @override
   String get profilePhotoVisible =>
-      _mockSettings[SettingsKeys.profilePhotoVisible] ??
-      SettingsDefaults.profilePhotoVisible;
+      getString(SettingsKeys.profilePhotoVisible, defaultValue: SettingsDefaults.profilePhotoVisible);
 
   @override
   String get aboutVisible =>
-      _mockSettings[SettingsKeys.aboutVisible] ?? SettingsDefaults.aboutVisible;
+      getString(SettingsKeys.aboutVisible, defaultValue: SettingsDefaults.aboutVisible);
 
   @override
   String get groupsAddPermission =>
-      _mockSettings[SettingsKeys.groupsAddPermission] ??
-      SettingsDefaults.groupsAddPermission;
+      getString(SettingsKeys.groupsAddPermission, defaultValue: SettingsDefaults.groupsAddPermission);
 
   @override
   bool get readReceiptsEnabled =>
-      getBool(
-        SettingsKeys.readReceiptsEnabled,
-        defaultValue: SettingsDefaults.readReceiptsEnabled,
-      );
+      getBool(SettingsKeys.readReceiptsEnabled, defaultValue: SettingsDefaults.readReceiptsEnabled);
 
   @override
   bool get liveLocationSharingEnabled =>
-      getBool(
-        SettingsKeys.liveLocationSharingEnabled,
-        defaultValue: SettingsDefaults.liveLocationSharingEnabled,
-      );
+      getBool(SettingsKeys.liveLocationSharingEnabled, defaultValue: SettingsDefaults.liveLocationSharingEnabled);
 
   @override
   bool get fingerprintLockEnabled =>
-      getBool(
-        SettingsKeys.fingerprintLockEnabled,
-        defaultValue: SettingsDefaults.fingerprintLockEnabled,
-      );
-}
+      getBool(SettingsKeys.fingerprintLockEnabled, defaultValue: SettingsDefaults.fingerprintLockEnabled);
 
-// Mock AppDatabase that doesn't actually connect to SQLite
-class MockAppDatabase {
-  // No-op implementation for testing
+  // Implement any remaining methods as no-ops
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    // Return defaults for getters
+    if (invocation.isGetter) return null;
+    if (invocation.isSetter) return null;
+    if (invocation.memberName == #initialize) return Future.value();
+    return null;
+  }
 }
 
 void main() {
