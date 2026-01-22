@@ -21,6 +21,7 @@ import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
 import '../services/voice_recording_service.dart';
 import 'edit_message_sheet.dart';
+import 'forward_sheet.dart';
 import 'input_bar.dart';
 import 'virtualized_message_list.dart';
 
@@ -557,6 +558,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       onEditMessage: _onEditMessage,
       onRetryMessage: _retryMessage,
       onDeleteMessage: _onDeleteMessage,
+      onForwardMessage: _onForwardMessage,
     );
   }
 
@@ -810,6 +812,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         );
       }
+    }
+  }
+
+Future<void> _onForwardMessage(RoomEvent message) async {
+    final result = await showForwardSheet(
+      context: context,
+      message: message,
+      currentRoomId: widget.roomId,
+    );
+
+    if (result != null && result.isNotEmpty && mounted) {
+      AppLogger.info(
+        'Message forwarded',
+        data: {
+          'messageId': message.id,
+          'forwardedTo': result.length,
+        },
+      );
     }
   }
 
