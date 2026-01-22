@@ -62,8 +62,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       // Load contacts
       _contacts = await profileRepo.getContacts();
     } catch (e) {
+      debugPrint('Failed to load profile: $e');
       if (mounted) {
-        _showError('Failed to load profile: $e');
+        _showError('Failed to load profile. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -163,35 +164,15 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       final profileRepo = ref.read(profileRepositoryProvider);
       final userInfo = await ref.read(userInfoProvider.future);
 
-      // Update display name if changed
-      if (_displayNameController.text.isNotEmpty &&
-          _displayNameController.text != userInfo?.displayName) {
-        final result = await profileRepo.updateDisplayName(
-          _displayNameController.text,
-        );
-        if (!result.success) {
-          _showError(result.errorMessage ?? 'Failed to update name');
-          return;
-        }
-      }
+      // Update each field independently
+      final nameUpdated = await _updateDisplayName(profileRepo, userInfo);
+      if (!nameUpdated) return;
 
-      // Update bio if changed
-      if (_bioController.text.isNotEmpty) {
-        final result = await profileRepo.updateBio(_bioController.text);
-        if (!result.success) {
-          _showError(result.errorMessage ?? 'Failed to update bio');
-          return;
-        }
-      }
+      final bioUpdated = await _updateBio(profileRepo);
+      if (!bioUpdated) return;
 
-      // Update profile photo if changed
-      if (_selectedImage != null) {
-        final result = await profileRepo.updateProfilePhoto(_selectedImage!);
-        if (!result.success) {
-          _showError(result.errorMessage ?? 'Failed to update photo');
-          return;
-        }
-      }
+      final photoUpdated = await _updateProfilePhoto(profileRepo);
+      if (!photoUpdated) return;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -203,12 +184,55 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         context.navigateBack();
       }
     } catch (e) {
-      _showError('Failed to save profile: $e');
+      debugPrint('Failed to save profile: $e');
+      _showError('Failed to save profile. Please try again.');
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  /// Updates display name if changed. Returns false if update failed.
+  Future<bool> _updateDisplayName(
+    ProfileRepository profileRepo,
+    userInfo,
+  ) async {
+    if (_displayNameController.text.isNotEmpty &&
+        _displayNameController.text != userInfo?.displayName) {
+      final result = await profileRepo.updateDisplayName(
+        _displayNameController.text,
+      );
+      if (!result.success) {
+        _showError('Failed to update name. Please try again.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Updates bio if not empty. Returns false if update failed.
+  Future<bool> _updateBio(ProfileRepository profileRepo) async {
+    if (_bioController.text.isNotEmpty) {
+      final result = await profileRepo.updateBio(_bioController.text);
+      if (!result.success) {
+        _showError('Failed to update bio. Please try again.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Updates profile photo if selected. Returns false if update failed.
+  Future<bool> _updateProfilePhoto(ProfileRepository profileRepo) async {
+    if (_selectedImage != null) {
+      final result = await profileRepo.updateProfilePhoto(_selectedImage!);
+      if (!result.success) {
+        _showError('Failed to update photo. Please try again.');
+        return false;
+      }
+    }
+    return true;
   }
 
   void _showError(String message) {
