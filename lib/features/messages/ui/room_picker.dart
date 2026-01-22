@@ -72,10 +72,9 @@ class _RoomPickerState extends ConsumerState<RoomPicker> {
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
-      filtered =
-          filtered
-              .where((room) => room.name.toLowerCase().contains(query))
-              .toList();
+      filtered = filtered
+          .where((room) => room.name.toLowerCase().contains(query))
+          .toList();
     }
 
     return filtered;
@@ -213,8 +212,7 @@ class _RoomPickerState extends ConsumerState<RoomPicker> {
                   ),
                   const SizedBox(height: 8),
                   TextButton(
-                    onPressed: () =>
-                        ref.refresh(roomListWithMessagesProvider),
+                    onPressed: () => ref.refresh(roomListWithMessagesProvider),
                     child: const Text('Try Again'),
                   ),
                 ],
@@ -274,11 +272,7 @@ class _RoomPickerTile extends StatelessWidget {
                     width: 2,
                   ),
                 ),
-                child: const Icon(
-                  Icons.check,
-                  size: 12,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.check, size: 12, color: Colors.white),
               ),
             ),
         ],
@@ -305,15 +299,9 @@ class _RoomPickerTile extends StatelessWidget {
             )
           : null,
       trailing: isSelected
-          ? Icon(
-              Icons.check_circle,
-              color: AppTheme.primaryGreen,
-            )
+          ? Icon(Icons.check_circle, color: AppTheme.primaryGreen)
           : canSelect
-          ? Icon(
-              Icons.circle_outlined,
-              color: theme.colorScheme.outline,
-            )
+          ? Icon(Icons.circle_outlined, color: theme.colorScheme.outline)
           : Icon(
               Icons.circle_outlined,
               color: theme.colorScheme.outline.withValues(alpha: 0.3),

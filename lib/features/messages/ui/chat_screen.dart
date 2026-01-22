@@ -825,10 +825,7 @@ Future<void> _onForwardMessage(RoomEvent message) async {
     if (result != null && result.isNotEmpty && mounted) {
       AppLogger.info(
         'Message forwarded',
-        data: {
-          'messageId': message.id,
-          'forwardedTo': result.length,
-        },
+        data: {'messageId': message.id, 'forwardedTo': result.length},
       );
     }
   }

@@ -21,19 +21,13 @@ Future<List<String>?> showForwardSheet({
   shape: const RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
   ),
-  builder: (context) => ForwardSheet(
-    message: message,
-    currentRoomId: currentRoomId,
-  ),
+  builder: (context) =>
+      ForwardSheet(message: message, currentRoomId: currentRoomId),
 );
 
 /// A bottom sheet for forwarding a message to selected rooms
 class ForwardSheet extends ConsumerStatefulWidget {
-  const ForwardSheet({
-    required this.message,
-    this.currentRoomId,
-    super.key,
-  });
+  const ForwardSheet({required this.message, this.currentRoomId, super.key});
 
   /// The message to forward
   final RoomEvent message;
@@ -79,7 +73,10 @@ class _ForwardSheetState extends ConsumerState<ForwardSheet> {
 
         // Return the list of room IDs that were successfully forwarded to
         Navigator.of(context).pop(
-          results.where((r) => r.success).map((r) => r.destinationRoomId).toList(),
+          results
+              .where((r) => r.success)
+              .map((r) => r.destinationRoomId)
+              .toList(),
         );
       }
     } catch (e) {
@@ -116,7 +113,9 @@ class _ForwardSheetState extends ConsumerState<ForwardSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.4,
+                ),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -137,10 +136,9 @@ class _ForwardSheetState extends ConsumerState<ForwardSheet> {
                 ),
                 // Forward button
                 FilledButton.icon(
-                  onPressed:
-                      _selectedRoomIds.isNotEmpty && !_isForwarding
-                          ? _forwardMessage
-                          : null,
+                  onPressed: _selectedRoomIds.isNotEmpty && !_isForwarding
+                      ? _forwardMessage
+                      : null,
                   icon: _isForwarding
                       ? const SizedBox(
                           width: 16,
@@ -158,7 +156,8 @@ class _ForwardSheetState extends ConsumerState<ForwardSheet> {
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.primaryGreen,
-                    disabledBackgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    disabledBackgroundColor:
+                        theme.colorScheme.surfaceContainerHighest,
                   ),
                 ),
               ],
@@ -240,10 +239,7 @@ class _MessagePreview extends StatelessWidget {
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border(
-          left: BorderSide(
-            color: AppTheme.primaryGreen,
-            width: 4,
-          ),
+          left: BorderSide(color: AppTheme.primaryGreen, width: 4),
         ),
       ),
       child: Row(

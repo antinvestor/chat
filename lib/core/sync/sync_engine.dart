@@ -1379,10 +1379,13 @@ class SyncEngine {
       await _messageRepo.insertMessage(updatedEvent);
     }
 
-    AppLogger.info('Forward message synced', data: {
-      'originalMessageId': originalMessageId,
-      'destinationRoomId': destinationRoomId,
-    });
+    AppLogger.info(
+      'Forward message synced',
+      data: {
+        'originalMessageId': originalMessageId,
+        'destinationRoomId': destinationRoomId,
+      },
+    );
   }
 
   // ignore: unused_element

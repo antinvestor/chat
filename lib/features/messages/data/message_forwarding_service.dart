@@ -72,7 +72,9 @@ class MessageForwardingService {
         },
       );
       // Take only first maxForwardDestinations
-      destinationRoomIds = destinationRoomIds.take(maxForwardDestinations).toList();
+      destinationRoomIds = destinationRoomIds
+          .take(maxForwardDestinations)
+          .toList();
     }
 
     // Check if message can be forwarded
@@ -250,12 +252,8 @@ final messageForwardingServiceProvider = Provider<MessageForwardingService>((
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
   final authRepo = ref.watch(authRepositoryProvider);
 
-  return MessageForwardingService(
-    messageRepo,
-    jobRepo,
-    () async {
-      final profileId = await authRepo.getCurrentProfileId();
-      return profileId ?? 'unknown_user';
-    },
-  );
+  return MessageForwardingService(messageRepo, jobRepo, () async {
+    final profileId = await authRepo.getCurrentProfileId();
+    return profileId ?? 'unknown_user';
+  });
 });

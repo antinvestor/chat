@@ -875,7 +875,10 @@ class MessageBubble extends ConsumerWidget {
               // Forward option
               if (canForward && onForward != null)
                 ListTile(
-                  leading: Icon(Icons.shortcut, color: theme.colorScheme.primary),
+                  leading: Icon(
+                    Icons.shortcut,
+                    color: theme.colorScheme.primary,
+                  ),
                   title: const Text('Forward'),
                   onTap: () {
                     Navigator.pop(context);
