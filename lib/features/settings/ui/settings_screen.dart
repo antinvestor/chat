@@ -50,6 +50,13 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 _buildSettingsItem(
                   context,
+                  icon: Icons.fingerprint,
+                  title: 'Security',
+                  subtitle: 'Biometric lock, app lock settings',
+                  onTap: () => context.navigateToSecuritySettings(),
+                ),
+                _buildSettingsItem(
+                  context,
                   icon: Icons.chat_outlined,
                   title: 'Chats',
                   subtitle: 'Chat history, wallpaper, font size',
