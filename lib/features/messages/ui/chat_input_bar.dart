@@ -14,6 +14,8 @@ import '../data/chat_input_providers.dart';
 import '../data/draft_repository.dart';
 import '../data/message_providers.dart';
 import '../data/message_sending_service.dart';
+import '../services/voice_recording_service.dart';
+import 'widgets/voice_record_button.dart';
 
 /// WhatsApp-style chat input bar with proper Riverpod/state separation
 class ChatInputBar extends ConsumerStatefulWidget {
@@ -31,9 +33,9 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
 
   // Local UI state only
   bool _hasText = false;
-  bool _isRecording = false;
-  Timer? _recordingTimer;
-  int _recordingDuration = 0;
+
+  // Voice recording state
+  VoiceRecordingState _voiceRecordingState = VoiceRecordingState.idle;
 
   // Draft persistence
   Timer? _draftSaveTimer;
@@ -60,7 +62,6 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
   void dispose() {
     // Cancel all timers first to prevent any pending callbacks
     _draftSaveTimer?.cancel();
-    _recordingTimer?.cancel();
     // Remove listener before disposing controller to prevent callbacks
     _controller.removeListener(_onTextChanged);
     // Save any pending draft content synchronously
@@ -156,44 +157,52 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
     await _sendMessage(ref, text, 'text', '');
   }
 
-  // Voice recording state managed locally with Riverpod typing indicator
-  void _startVoice() {
-    if (_isRecording) {
-      _stopRecording();
-    } else {
-      _startRecording();
+  // Voice recording callbacks
+  void _onVoiceRecordingStart() {
+    setState(() => _voiceRecordingState = VoiceRecordingState.recording);
+    ref.read(typingProvider.notifier).onTyping();
+  }
+
+  void _onVoiceRecordingCancel() {
+    setState(() => _voiceRecordingState = VoiceRecordingState.idle);
+  }
+
+  Future<void> _onVoiceRecordingComplete(VoiceRecordingResult result) async {
+    setState(() => _voiceRecordingState = VoiceRecordingState.idle);
+
+    // Send the voice message
+    try {
+      final sendingService = ref.read(messageSendingServiceProvider);
+      await sendingService.sendAudioMessage(
+        roomId: widget.roomId,
+        audioFile: File(result.path),
+        durationMs: result.duration.inMilliseconds,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Voice message sent (${result.formattedDuration})'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send voice message: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
-  Future<void> _startRecording() async {
-    setState(() => _isRecording = true);
-    ref.read(typingProvider.notifier).onTyping();
-
-    // Start recording timer
-    _recordingDuration = 0;
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() => _recordingDuration++);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Voice recording started'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _stopRecording() {
-    setState(() => _isRecording = false);
-    _recordingTimer?.cancel();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Voice recording stopped'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
+  /// Check if we are currently in voice recording mode
+  bool get _isVoiceRecordingActive =>
+      _voiceRecordingState != VoiceRecordingState.idle;
 
   // Helper method to send messages through provider
   Future<void> _sendMessage(
@@ -537,7 +546,17 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
   );
 
   @override
-  Widget build(BuildContext context) => ProviderScope(
+  Widget build(BuildContext context) {
+    // If voice recording is active, show the voice recording UI
+    if (_isVoiceRecordingActive) {
+      return _buildVoiceRecordingBar();
+    }
+
+    return _buildNormalInputBar();
+  }
+
+  /// Build the normal text input bar
+  Widget _buildNormalInputBar() => ProviderScope(
     child: Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -639,7 +658,7 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
                   ),
                 ),
 
-              // Send/Mic button with proper animation
+              // Send button when text is present, VoiceRecordButton otherwise
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: _hasText
@@ -653,32 +672,47 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
                           foregroundColor: Colors.white,
                         ),
                       )
-                    : IconButton(
-                        key: const ValueKey('mic'),
-                        icon: Icon(
-                          _isRecording ? Icons.stop : Icons.mic,
-                          color: _isRecording
-                              ? Colors.red
-                              : AppTheme.primaryGreen,
-                        ),
-                        onPressed: _startVoice,
-                        tooltip: _isRecording
-                            ? 'Stop Recording'
-                            : 'Voice Message',
-                        style: IconButton.styleFrom(
-                          backgroundColor: _isRecording
-                              ? Colors.red.withValues(alpha: 0.1)
-                              : AppTheme.getSubtleColor(
-                                  context,
-                                  AppTheme.primaryGreen,
-                                ),
-                          foregroundColor: _isRecording
-                              ? Colors.red
-                              : AppTheme.primaryGreen,
-                        ),
+                    : VoiceRecordButton(
+                        key: const ValueKey('voice'),
+                        onRecordingComplete: _onVoiceRecordingComplete,
+                        onRecordingStart: _onVoiceRecordingStart,
+                        onRecordingCancel: _onVoiceRecordingCancel,
                       ),
               ),
             ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  /// Build the voice recording bar (full width for recording UI)
+  Widget _buildVoiceRecordingBar() => Container(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.1),
+          blurRadius: 8,
+          offset: const Offset(0, -2),
+        ),
+      ],
+    ),
+    child: AnimatedPadding(
+      duration: const Duration(milliseconds: 200),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.standardMargin,
+            vertical: AppTheme.elementGap,
+          ),
+          child: VoiceRecordButton(
+            onRecordingComplete: _onVoiceRecordingComplete,
+            onRecordingStart: _onVoiceRecordingStart,
+            onRecordingCancel: _onVoiceRecordingCancel,
           ),
         ),
       ),

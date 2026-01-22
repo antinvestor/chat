@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../features/contacts/data/contact_sync_repository.dart';
 import '../domain/room_event.dart';
 import 'read_receipt_indicator.dart';
+import 'widgets/voice_message_player.dart';
 
 class MessageBubble extends ConsumerWidget {
   const MessageBubble({
@@ -488,35 +489,38 @@ class MessageBubble extends ConsumerWidget {
   }
 
   Widget _buildAudioContent(BuildContext context) {
-    final duration = message.content['duration'] as int?;
+    final url = message.content['url'] as String? ?? '';
+    final localPath = message.content['localPath'] as String?;
+    final duration = message.content['duration'] as int? ?? 0;
     final isUploading = message.content['uploading'] == true;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+    // Show uploading state
+    if (isUploading) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
           ),
-          child: isUploading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(
-                  Icons.play_arrow,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Voice message', style: TextStyle(fontSize: 14)),
-            if (duration != null)
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sending voice message...',
+                style: TextStyle(fontSize: 14),
+              ),
               Text(
                 _formatDuration(duration),
                 style: TextStyle(
@@ -524,9 +528,18 @@ class MessageBubble extends ConsumerWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      );
+    }
+
+    // Use polished VoiceMessagePlayer for playback
+    return VoiceMessagePlayer(
+      audioUrl: url,
+      localPath: localPath,
+      durationMs: duration,
+      isOwnMessage: isMe,
     );
   }
 
