@@ -20,7 +20,7 @@ class CompressionSettingsKeys {
 /// Default values for compression settings
 class CompressionDefaults {
   static const imageQuality = 80;
-  static const videoQuality = VideoQuality.Res1280x720Quality;
+  static const videoQuality = VideoQuality.Res960x540Quality;
   static const compressionEnabled = true;
   static const showSizeEstimate = true;
   static const maxImageWidth = 1920;
@@ -30,9 +30,9 @@ class CompressionDefaults {
 /// Compression quality preset for videos
 enum CompressionQualityPreset {
   low(VideoQuality.Res640x480Quality, 'Low (480p)'),
-  medium(VideoQuality.Res1280x720Quality, 'Medium (720p)'),
-  high(VideoQuality.Res960x540Quality, 'High (960p)'),
-  original(VideoQuality.Res1920x1080Quality, 'Original');
+  medium(VideoQuality.Res960x540Quality, 'Medium (540p)'),
+  high(VideoQuality.Res1280x720Quality, 'High (720p)'),
+  original(VideoQuality.Res1920x1080Quality, 'Original (1080p)');
 
   const CompressionQualityPreset(this.videoQuality, this.displayName);
   final VideoQuality videoQuality;
@@ -88,18 +88,7 @@ class CompressionResult {
   /// Human-readable size difference
   String get sizeReduction {
     final diff = originalSize - compressedSize;
-    return _formatBytes(diff);
-  }
-
-  static String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) {
-      return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    }
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+    return formatBytes(diff);
   }
 }
 
