@@ -76,6 +76,11 @@ class NavigationHelper {
     context.push('/settings/storage/compression');
   }
 
+  /// Navigate to profile edit screen
+  static void navigateToProfileEdit(BuildContext context) {
+    context.push('/profile/edit');
+  }
+
   /// Navigate back with proper fallback handling
   static void navigateBack(BuildContext context, {String? fallbackRoute}) {
     if (Navigator.canPop(context)) {
@@ -156,4 +161,6 @@ extension NavigationContext on BuildContext {
 
   void navigateToContactSelection() =>
       NavigationHelper.navigateToContactSelection(this);
+
+  void navigateToProfileEdit() => NavigationHelper.navigateToProfileEdit(this);
 }

@@ -1,0 +1,732 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../../core/navigation/navigation_helper.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../auth/data/user_info_provider.dart';
+import '../data/profile_repository.dart';
+
+/// Screen for editing user profile information
+class ProfileEditScreen extends ConsumerStatefulWidget {
+  const ProfileEditScreen({super.key});
+
+  @override
+  ConsumerState<ProfileEditScreen> createState() => _ProfileEditScreenState();
+}
+
+class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
+  final _displayNameController = TextEditingController();
+  final _bioController = TextEditingController();
+  final _imagePicker = ImagePicker();
+
+  bool _isLoading = false;
+  bool _isSaving = false;
+  File? _selectedImage;
+  String? _currentAvatarUrl;
+  List<ContactInfo> _contacts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _displayNameController.dispose();
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userInfo = await ref.read(userInfoProvider.future);
+      final profileRepo = ref.read(profileRepositoryProvider);
+
+      if (userInfo != null) {
+        _displayNameController.text = userInfo.displayName;
+        _currentAvatarUrl = userInfo.picture;
+      }
+
+      // Load bio from local profile metadata
+      final bio = await profileRepo.getCurrentBio();
+      if (bio != null) {
+        _bioController.text = bio;
+      }
+
+      // Load contacts
+      _contacts = await profileRepo.getContacts();
+    } catch (e) {
+      debugPrint('Failed to load profile: $e');
+      if (mounted) {
+        _showError('Failed to load profile. Please try again.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      _showError('Failed to pick image: $e');
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      _showError('Failed to take photo: $e');
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _takePhoto();
+              },
+            ),
+            if (_currentAvatarUrl != null || _selectedImage != null)
+              ListTile(
+                leading: Icon(Icons.delete, color: Colors.red.shade600),
+                title: Text(
+                  'Remove Photo',
+                  style: TextStyle(color: Colors.red.shade600),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedImage = null;
+                    _currentAvatarUrl = null;
+                  });
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveProfile() async {
+    if (_isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final profileRepo = ref.read(profileRepositoryProvider);
+      final userInfo = await ref.read(userInfoProvider.future);
+
+      // Update each field independently
+      final nameUpdated = await _updateDisplayName(profileRepo, userInfo);
+      if (!nameUpdated) return;
+
+      final bioUpdated = await _updateBio(profileRepo);
+      if (!bioUpdated) return;
+
+      final photoUpdated = await _updateProfilePhoto(profileRepo);
+      if (!photoUpdated) return;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully'),
+            backgroundColor: AppTheme.brightGreen,
+          ),
+        );
+        context.navigateBack();
+      }
+    } catch (e) {
+      debugPrint('Failed to save profile: $e');
+      _showError('Failed to save profile. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  /// Updates display name if changed. Returns false if update failed.
+  Future<bool> _updateDisplayName(
+    ProfileRepository profileRepo,
+    userInfo,
+  ) async {
+    if (_displayNameController.text.isNotEmpty &&
+        _displayNameController.text != userInfo?.displayName) {
+      final result = await profileRepo.updateDisplayName(
+        _displayNameController.text,
+      );
+      if (!result.success) {
+        _showError('Failed to update name. Please try again.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Updates bio if not empty. Returns false if update failed.
+  Future<bool> _updateBio(ProfileRepository profileRepo) async {
+    if (_bioController.text.isNotEmpty) {
+      final result = await profileRepo.updateBio(_bioController.text);
+      if (!result.success) {
+        _showError('Failed to update bio. Please try again.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Updates profile photo if selected. Returns false if update failed.
+  Future<bool> _updateProfilePhoto(ProfileRepository profileRepo) async {
+    if (_selectedImage != null) {
+      final result = await profileRepo.updateProfilePhoto(_selectedImage!);
+      if (!result.success) {
+        _showError('Failed to update photo. Please try again.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  void _showAddEmailDialog() {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Email'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: 'Email Address',
+            hintText: 'example@email.com',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final email = controller.text.trim();
+              if (email.isEmpty || !email.contains('@')) {
+                return;
+              }
+              Navigator.pop(context);
+              await _addEmail(email);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddPhoneDialog() {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Phone'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            labelText: 'Phone Number',
+            hintText: '+1234567890',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final phone = controller.text.trim();
+              if (phone.isEmpty) {
+                return;
+              }
+              Navigator.pop(context);
+              await _addPhone(phone);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addEmail(String email) async {
+    setState(() => _isSaving = true);
+    try {
+      final profileRepo = ref.read(profileRepositoryProvider);
+      final result = await profileRepo.addEmail(email);
+      if (result.success) {
+        await _loadProfile();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Email added successfully')),
+          );
+        }
+      } else {
+        _showError(result.errorMessage ?? 'Failed to add email');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _addPhone(String phone) async {
+    setState(() => _isSaving = true);
+    try {
+      final profileRepo = ref.read(profileRepositoryProvider);
+      final result = await profileRepo.addPhone(phone);
+      if (result.success) {
+        await _loadProfile();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Phone added successfully')),
+          );
+        }
+      } else {
+        _showError(result.errorMessage ?? 'Failed to add phone');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _removeContact(ContactInfo contact) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Contact'),
+        content: Text('Are you sure you want to remove ${contact.value}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed ?? false) {
+      setState(() => _isSaving = true);
+      try {
+        final profileRepo = ref.read(profileRepositoryProvider);
+        final result = await profileRepo.removeContact(contact.id);
+        if (result.success) {
+          await _loadProfile();
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Contact removed')));
+          }
+        } else {
+          _showError(result.errorMessage ?? 'Failed to remove contact');
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Edit Profile'),
+        backgroundColor: AppTheme.primaryGreen,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.navigateBack(),
+        ),
+        actions: [
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+            )
+          else
+            TextButton(
+              onPressed: _saveProfile,
+              child: const Text(
+                'Save',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Profile Photo Section
+                  _buildPhotoSection(theme),
+                  const SizedBox(height: 24),
+
+                  // Display Name Section
+                  _buildSection(
+                    theme,
+                    title: 'Display Name',
+                    child: TextField(
+                      controller: _displayNameController,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter your name',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Bio Section
+                  _buildSection(
+                    theme,
+                    title: 'About',
+                    child: TextField(
+                      controller: _bioController,
+                      decoration: const InputDecoration(
+                        hintText: 'Write something about yourself',
+                        prefixIcon: Icon(Icons.info_outline),
+                      ),
+                      maxLines: 3,
+                      maxLength: 200,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Email Section
+                  _buildContactSection(
+                    theme,
+                    title: 'Email Addresses',
+                    icon: Icons.email_outlined,
+                    contacts: _contacts.where(
+                      (c) => c.type == ContactType.email,
+                    ),
+                    onAdd: _showAddEmailDialog,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Phone Section
+                  _buildContactSection(
+                    theme,
+                    title: 'Phone Numbers',
+                    icon: Icons.phone_outlined,
+                    contacts: _contacts.where(
+                      (c) => c.type == ContactType.phone,
+                    ),
+                    onAdd: _showAddPhoneDialog,
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildPhotoSection(ThemeData theme) => Center(
+    child: Column(
+      children: [
+        GestureDetector(
+          onTap: _showImageSourceDialog,
+          child: Stack(
+            children: [
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
+                backgroundImage: _selectedImage != null
+                    ? FileImage(_selectedImage!)
+                    : (_currentAvatarUrl != null
+                          ? NetworkImage(_currentAvatarUrl!)
+                          : null),
+                child: (_selectedImage == null && _currentAvatarUrl == null)
+                    ? Text(
+                        _displayNameController.text.isNotEmpty
+                            ? _displayNameController.text[0].toUpperCase()
+                            : 'U',
+                        style: const TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryGreen,
+                        ),
+                      )
+                    : null,
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Tap to change photo',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildSection(
+    ThemeData theme, {
+    required String title,
+    required Widget child,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppTheme.primaryGreen,
+        ),
+      ),
+      const SizedBox(height: 8),
+      child,
+    ],
+  );
+
+  Widget _buildContactSection(
+    ThemeData theme, {
+    required String title,
+    required IconData icon,
+    required Iterable<ContactInfo> contacts,
+    required VoidCallback onAdd,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryGreen,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            color: AppTheme.primaryGreen,
+            onPressed: onAdd,
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      if (contacts.isEmpty)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: 12),
+              Text(
+                'No ${title.toLowerCase()} added',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        )
+      else
+        ...contacts.map((contact) => _buildContactTile(theme, contact)),
+    ],
+  );
+
+  Widget _buildContactTile(ThemeData theme, ContactInfo contact) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: ListTile(
+      leading: Icon(
+        contact.type == ContactType.email
+            ? Icons.email_outlined
+            : Icons.phone_outlined,
+        color: AppTheme.primaryGreen,
+      ),
+      title: Text(contact.value),
+      subtitle: Row(
+        children: [
+          if (contact.isVerified)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.verified,
+                  size: 14,
+                  color: AppTheme.brightGreen,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Verified',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.brightGreen,
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.warning_outlined,
+                  size: 14,
+                  color: Colors.orange,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Not verified',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+          if (contact.isPrimary) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'Primary',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppTheme.primaryGreen,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline),
+        color: Colors.red.shade400,
+        onPressed: () => _removeContact(contact),
+      ),
+    ),
+  );
+}
