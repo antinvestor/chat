@@ -4,6 +4,7 @@ import 'package:xid/xid.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
+import '../../../core/sync/sync_engine.dart';
 import '../../auth/data/auth_repository.dart';
 import '../domain/room_event.dart' as domain;
 import 'message_providers.dart';
