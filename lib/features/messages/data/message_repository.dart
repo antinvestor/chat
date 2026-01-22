@@ -120,11 +120,9 @@ class MessageRepository {
 
   /// Set expiration time for a message (for disappearing messages)
   Future<void> setMessageExpiry(String messageId, int expiresAt) async {
-    await (_database.update(
-      _database.roomEvents,
-    )..where((t) => t.id.equals(messageId))).write(
-      RoomEventsCompanion(expiresAt: Value(expiresAt)),
-    );
+    await (_database.update(_database.roomEvents)
+          ..where((t) => t.id.equals(messageId)))
+        .write(RoomEventsCompanion(expiresAt: Value(expiresAt)));
   }
 
   /// Get all expired messages that should be deleted
@@ -145,13 +143,13 @@ class MessageRepository {
   /// Delete all expired messages and their associated media
   Future<int> deleteExpiredMessages() async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final deleted = await (_database.delete(_database.roomEvents)
-          ..where(
-            (t) =>
-                t.expiresAt.isNotNull() &
-                t.expiresAt.isSmallerOrEqualValue(now),
-          ))
-        .go();
+    final deleted =
+        await (_database.delete(_database.roomEvents)..where(
+              (t) =>
+                  t.expiresAt.isNotNull() &
+                  t.expiresAt.isSmallerOrEqualValue(now),
+            ))
+            .go();
     return deleted;
   }
 
