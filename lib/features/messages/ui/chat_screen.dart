@@ -20,11 +20,8 @@ import '../data/message_sending_service.dart';
 import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
 import '../services/voice_recording_service.dart';
-import '../../advanced/ui/motion_bubble.dart';
-import '../../advanced/ui/transaction_bubble.dart';
 import 'edit_message_sheet.dart';
 import 'input_bar.dart';
-import 'message_bubble.dart';
 import 'virtualized_message_list.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -45,7 +42,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _replyingToText;
   bool _showScrollToBottom = false;
   int _newMessageCount = 0;
-  final bool _shouldAutoScroll = true;
 
   // Pagination state for virtualized list
   bool _isLoadingMore = false;
@@ -561,22 +557,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       onEditMessage: _onEditMessage,
       onRetryMessage: _retryMessage,
       onDeleteMessage: _onDeleteMessage,
-      config: const VirtualizedMessageListConfig(
-        // Cache 2 screens worth of items for smooth scrolling
-        cacheExtentMultiplier: 2.0,
-        // Estimated message height for scroll calculations
-        estimatedItemHeight: 80.0,
-        // Group messages within 2 minutes
-        groupingThresholdMs: 120000,
-        // Load more when 80% scrolled
-        loadMoreThreshold: 0.8,
-        // Initial batch size
-        initialBatchSize: 50,
-        // Load 30 more messages at a time
-        loadMoreBatchSize: 30,
-        // Enable keep-alive for visible items
-        enableKeepAlive: true,
-      ),
     );
   }
 
@@ -830,51 +810,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         );
       }
-    }
-  }
-
-  Widget _buildMessageWidget(
-    RoomEvent message,
-    bool isMe,
-    bool shouldGroupWithPrevious,
-    bool removeTail,
-  ) {
-    // Use shared validation logic from MessageSendingService
-    final canEdit = MessageSendingService.canEditMessage(
-      isOwnMessage: isMe,
-      messageType: message.type,
-      messageStatus: message.status,
-      messageCreatedAt: message.createdAt,
-    );
-
-    // Use shared validation logic for delete
-    final canDelete = MessageSendingService.canDeleteMessage(
-      isOwnMessage: isMe,
-      messageStatus: message.status,
-      messageCreatedAt: message.createdAt,
-      isDeleted: message.isDeleted,
-    );
-
-    switch (message.type) {
-      case RoomEventType.motion:
-        return MotionBubble(event: message, isMe: isMe);
-      case RoomEventType.transaction:
-        return TransactionBubble(event: message, isMe: isMe);
-      default:
-        return MessageBubble(
-          message: message,
-          isMe: isMe,
-          shouldGroupWithPrevious: shouldGroupWithPrevious,
-          removeTail: removeTail,
-          onReply: _onReplyToMessage,
-          onRetry: message.status == EventStatus.failed
-              ? () => _retryMessage(message)
-              : null,
-          onEdit: _onEditMessage,
-          canEdit: canEdit,
-          onDelete: _onDeleteMessage,
-          canDelete: canDelete,
-        );
     }
   }
 
