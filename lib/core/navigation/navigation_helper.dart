@@ -60,6 +60,17 @@ class NavigationHelper {
     context.push('/settings/storage');
   }
 
+  /// Navigate to group settings screen
+  static void navigateToGroupSettings(
+    BuildContext context, {
+    required String roomId,
+    required String roomName,
+  }) {
+    context.push(
+      '/room/$roomId/settings?name=${Uri.encodeComponent(roomName)}',
+    );
+  }
+
   /// Navigate back with proper fallback handling
   static void navigateBack(BuildContext context, {String? fallbackRoute}) {
     if (Navigator.canPop(context)) {
@@ -122,6 +133,15 @@ extension NavigationContext on BuildContext {
 
   void navigateToStorageSettings() =>
       NavigationHelper.navigateToStorageSettings(this);
+
+  void navigateToGroupSettings({
+    required String roomId,
+    required String roomName,
+  }) => NavigationHelper.navigateToGroupSettings(
+    this,
+    roomId: roomId,
+    roomName: roomName,
+  );
 
   void navigateBack([String? fallbackRoute]) =>
       NavigationHelper.navigateBack(this, fallbackRoute: fallbackRoute);

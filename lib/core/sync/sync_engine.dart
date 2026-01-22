@@ -921,6 +921,14 @@ class SyncEngine {
         case domain_job.JobType.deleteMessage:
           await _processDeleteMessage(job);
           break;
+        case domain_job.JobType.updateRoomAvatar:
+          // Avatar updates are included in updateRoom job
+          await _processUpdateRoom(job);
+          break;
+        case domain_job.JobType.updateRoomPermissions:
+          // Permission updates are included in updateRoom job
+          await _processUpdateRoom(job);
+          break;
       }
       await _jobRepo.deleteJob(job.id);
     } catch (e, stackTrace) {

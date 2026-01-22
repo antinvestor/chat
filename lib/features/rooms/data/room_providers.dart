@@ -7,6 +7,13 @@ import 'room_service.dart';
 
 part 'room_providers.g.dart';
 
+/// Provider for getting a room by ID
+@riverpod
+Future<domain.Room?> roomById(Ref ref, String roomId) async {
+  final service = await ref.watch(roomServiceProvider.future);
+  return service.getRoomById(roomId);
+}
+
 @riverpod
 class RoomList extends _$RoomList {
   @override

@@ -102,12 +102,10 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
               title: const Text('Edit Room Info'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to edit room screen
-                context.navigateToSettings();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Edit room functionality coming soon'),
-                  ),
+                // Navigate to group settings screen
+                context.navigateToGroupSettings(
+                  roomId: widget.roomId,
+                  roomName: widget.roomName,
                 );
               },
             ),
