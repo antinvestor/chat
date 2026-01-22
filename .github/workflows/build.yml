@@ -1,4 +1,5 @@
 # Reusable build workflow for all platforms
+# Called by staging.yml and production.yml
 name: Build
 
 on:
@@ -40,9 +41,9 @@ env:
 jobs:
   # Android Build
   build-android:
-    name: Build Android (${{ inputs.build_type }})
+    name: Android (${{ inputs.build_type }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     outputs:
       apk_path: ${{ steps.build.outputs.apk_path }}
@@ -52,24 +53,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.JAVA_VERSION }}
-
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: ./.github/actions/flutter-setup
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
+          java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Generate code
-        run: dart run build_runner build --delete-conflicting-outputs
+      # Cache Gradle
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
 
       - name: Setup Android signing
         if: inputs.build_type == 'release'
@@ -91,41 +89,27 @@ jobs:
       - name: Build Android
         id: build
         run: |
-          BUILD_ARGS=""
-          if [ "${{ inputs.build_type }}" == "release" ]; then
-            BUILD_ARGS="--release --shrink"
-          else
-            BUILD_ARGS="--debug"
-          fi
+          BUILD_ARGS="${{ inputs.build_type == 'release' && '--release --shrink' || '--debug' }}"
+          [ -n "${{ inputs.version }}" ] && BUILD_ARGS="$BUILD_ARGS --build-name=${{ inputs.version }}"
 
-          # Set version if provided
-          if [ -n "${{ inputs.version }}" ]; then
-            BUILD_ARGS="$BUILD_ARGS --build-name=${{ inputs.version }}"
-          fi
-
-          # Build APK
           flutter build apk $BUILD_ARGS
 
-          # Build AAB for release only
           if [ "${{ inputs.build_type }}" == "release" ]; then
             flutter build appbundle $BUILD_ARGS
             echo "aab_path=build/app/outputs/bundle/release/app-release.aab" >> $GITHUB_OUTPUT
-          fi
-
-          if [ "${{ inputs.build_type }}" == "release" ]; then
             echo "apk_path=build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_OUTPUT
           else
             echo "apk_path=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-${{ inputs.environment }}
           path: ${{ steps.build.outputs.apk_path }}
           retention-days: 14
 
-      - name: Upload AAB artifact
+      - name: Upload AAB
         if: inputs.build_type == 'release'
         uses: actions/upload-artifact@v4
         with:
@@ -135,9 +119,9 @@ jobs:
 
   # iOS Build
   build-ios:
-    name: Build iOS (${{ inputs.build_type }})
+    name: iOS (${{ inputs.build_type }})
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
 
     outputs:
       ipa_path: ${{ steps.build.outputs.ipa_path }}
@@ -147,41 +131,28 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: ./.github/actions/flutter-setup
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
 
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Generate code
-        run: dart run build_runner build --delete-conflicting-outputs
+      # Cache CocoaPods
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: pods-${{ runner.os }}-
 
       - name: Setup iOS project
         run: |
-          if [ ! -d "ios" ]; then
-            flutter create --platforms=ios .
-          fi
-
+          [ ! -d "ios" ] && flutter create --platforms=ios .
           cd ios
-          # Set deployment target
-          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" Runner.xcodeproj/project.pbxproj || true
-
-          # Update Podfile
-          if grep -q "^# platform :ios" Podfile 2>/dev/null; then
-            sed -i '' "s/^# platform :ios.*/platform :ios, '15.0'/" Podfile
-          elif grep -q "^platform :ios" Podfile 2>/dev/null; then
-            sed -i '' "s/^platform :ios.*/platform :ios, '15.0'/" Podfile
-          fi
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" Runner.xcodeproj/project.pbxproj 2>/dev/null || true
 
       - name: Install CocoaPods
-        run: |
-          cd ios
-          pod install --repo-update || pod install
+        run: cd ios && pod install --repo-update || pod install
 
-      - name: Setup iOS signing (Production)
+      - name: Setup iOS signing
         if: inputs.build_type == 'release' && inputs.environment == 'production'
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -210,57 +181,28 @@ jobs:
       - name: Build iOS
         id: build
         run: |
-          BUILD_ARGS=""
-          if [ "${{ inputs.build_type }}" == "release" ]; then
-            if [ "${{ inputs.environment }}" == "production" ]; then
-              BUILD_ARGS="--release"
-            else
-              BUILD_ARGS="--release --no-codesign"
-            fi
+          if [ "${{ inputs.build_type }}" == "release" ] && [ "${{ inputs.environment }}" == "production" ]; then
+            BUILD_ARGS="--release"
           else
-            BUILD_ARGS="--debug --no-codesign"
+            BUILD_ARGS="${{ inputs.build_type == 'release' && '--release' || '--debug' }} --no-codesign"
           fi
-
-          if [ -n "${{ inputs.version }}" ]; then
-            BUILD_ARGS="$BUILD_ARGS --build-name=${{ inputs.version }}"
-          fi
+          [ -n "${{ inputs.version }}" ] && BUILD_ARGS="$BUILD_ARGS --build-name=${{ inputs.version }}"
 
           flutter build ios $BUILD_ARGS
 
           # Create IPA
           mkdir -p build/ios/ipa
-          if [ "${{ inputs.build_type }}" == "release" ] && [ "${{ inputs.environment }}" == "production" ]; then
-            # Signed build - use xcodebuild archive
-            cd ios
-            xcodebuild -workspace Runner.xcworkspace \
-              -scheme Runner \
-              -sdk iphoneos \
-              -configuration Release \
-              -archivePath $RUNNER_TEMP/Runner.xcarchive \
-              archive || true
-
-            if [ -d "$RUNNER_TEMP/Runner.xcarchive" ]; then
-              xcodebuild -exportArchive \
-                -archivePath $RUNNER_TEMP/Runner.xcarchive \
-                -exportOptionsPlist ../ExportOptions.plist \
-                -exportPath ../build/ios/ipa || true
-            fi
-          fi
-
-          # Fallback: create unsigned IPA from .app
-          if [ ! -f "build/ios/ipa/*.ipa" ]; then
-            if [ -d "build/ios/iphoneos/Runner.app" ]; then
-              cd build/ios/ipa
-              mkdir -p Payload
-              cp -r ../iphoneos/Runner.app Payload/
-              zip -r Runner.ipa Payload
-              rm -rf Payload
-            fi
+          if [ -d "build/ios/iphoneos/Runner.app" ]; then
+            cd build/ios/ipa
+            mkdir -p Payload
+            cp -r ../iphoneos/Runner.app Payload/
+            zip -r Runner.ipa Payload
+            rm -rf Payload
           fi
 
           echo "ipa_path=build/ios/ipa/Runner.ipa" >> $GITHUB_OUTPUT
 
-      - name: Upload IPA artifact
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa-${{ inputs.environment }}
@@ -269,45 +211,24 @@ jobs:
 
   # Web Build
   build-web:
-    name: Build Web (${{ inputs.build_type }})
+    name: Web (${{ inputs.build_type }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    outputs:
-      web_path: ${{ steps.build.outputs.web_path }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: ./.github/actions/flutter-setup
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Generate code
-        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build Web
-        id: build
         run: |
-          BUILD_ARGS=""
-          if [ "${{ inputs.build_type }}" == "release" ]; then
-            BUILD_ARGS="--release"
-          else
-            BUILD_ARGS="--profile"  # Debug builds for web use profile mode
-          fi
+          flutter build web ${{ inputs.build_type == 'release' && '--release' || '--profile' }} --base-href /
 
-          flutter build web $BUILD_ARGS --base-href /
-
-          echo "web_path=build/web" >> $GITHUB_OUTPUT
-
-      - name: Upload Web artifact
+      - name: Upload Web
         uses: actions/upload-artifact@v4
         with:
           name: web-build-${{ inputs.environment }}

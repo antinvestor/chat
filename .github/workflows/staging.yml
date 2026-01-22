@@ -1,58 +1,21 @@
 # Staging Deployment - Triggered on pushes to main
-# Deploys debug builds for testing purposes
+# Tests already passed in CI (PR phase), so just build and deploy
 name: Deploy to Staging
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # Allow manual triggers
+  workflow_dispatch:
 
 concurrency:
   group: staging-deploy
   cancel-in-progress: true
 
-env:
-  FLUTTER_VERSION: '3.38.7'
-  JAVA_VERSION: '17'
-
 jobs:
-  # Run tests first
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Generate code
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Run tests
-        run: flutter test --coverage
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: coverage/lcov.info
-          flags: staging
-        continue-on-error: true
-
   # Build all platforms using reusable workflow
+  # Skip tests since they passed in CI before merge
   build:
     name: Build
-    needs: test
     uses: ./.github/workflows/build.yml
     with:
       environment: staging
@@ -63,11 +26,11 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 
   # Deploy Web to Cloudflare Pages (Staging)
-  deploy-web-staging:
-    name: Deploy Web to Cloudflare Pages
+  deploy-web:
+    name: Deploy Web
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     environment:
       name: staging
       url: ${{ steps.deploy.outputs.url }}
@@ -91,50 +54,23 @@ jobs:
           command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME_STAGING || 'stawi-staging' }} --branch=staging
         continue-on-error: true
 
-      - name: Comment deployment URL
-        if: github.event_name == 'push'
-        run: |
-          echo "## 🚀 Staging Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Web URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Deployed from commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-
-  # Deploy Android to Play Store Internal Testing
-  deploy-android-staging:
-    name: Deploy Android to Play Store (Internal)
+  # Deploy Android to Firebase App Distribution
+  deploy-android:
+    name: Deploy Android
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     environment:
       name: staging
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Download APK
         uses: actions/download-artifact@v4
         with:
           name: android-apk-staging
           path: artifacts/
 
-      - name: List artifacts
-        run: ls -la artifacts/
-
-      - name: Upload to Play Store Internal Testing
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
-          packageName: ${{ vars.ANDROID_PACKAGE_NAME || 'com.antinvestor.chat' }}
-          releaseFiles: artifacts/*.apk
-          track: internal
-          status: completed
-          releaseName: "Staging Build - ${{ github.sha }}"
-          whatsNewDirectory: fastlane/metadata/android
-        continue-on-error: true
-
-      - name: Upload to Firebase App Distribution (fallback)
+      - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID_ANDROID }}
@@ -148,12 +84,12 @@ jobs:
             Build: ${{ github.run_number }}
         continue-on-error: true
 
-  # Deploy iOS to TestFlight (Staging)
-  deploy-ios-staging:
-    name: Deploy iOS to TestFlight (Staging)
+  # Deploy iOS to Firebase App Distribution
+  deploy-ios:
+    name: Deploy iOS
     needs: build
-    runs-on: macos-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: staging
 
@@ -164,12 +100,7 @@ jobs:
           name: ios-ipa-staging
           path: artifacts/
 
-      - name: List artifacts
-        run: ls -la artifacts/
-
-      # Note: For staging, we typically use Firebase App Distribution
-      # TestFlight requires signed builds which need Apple Developer certificates
-      - name: Upload to Firebase App Distribution (iOS)
+      - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID_IOS }}
@@ -183,23 +114,22 @@ jobs:
             Build: ${{ github.run_number }}
         continue-on-error: true
 
-  # Notify on deployment
+  # Summary
   notify:
-    name: Notify Deployment
-    needs: [deploy-web-staging, deploy-android-staging, deploy-ios-staging]
+    name: Summary
+    needs: [deploy-web, deploy-android, deploy-ios]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
       - name: Create deployment summary
         run: |
-          echo "## 📦 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Web (Cloudflare) | ${{ needs.deploy-web-staging.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Android (Play Store Internal) | ${{ needs.deploy-android-staging.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| iOS (Firebase) | ${{ needs.deploy-ios-staging.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web | ${{ needs.deploy-web.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android | ${{ needs.deploy-android.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS | ${{ needs.deploy-ios.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
