@@ -30,9 +30,7 @@ class AccountSettingsScreen extends ConsumerWidget {
               context,
               title: 'Edit profile',
               subtitle: 'Change name, photo, about',
-              onTap: () {
-                _showComingSoonDialog(context, 'Profile Edit');
-              },
+              onTap: () => context.navigateToProfileEdit(),
             ),
           ],
         ),
