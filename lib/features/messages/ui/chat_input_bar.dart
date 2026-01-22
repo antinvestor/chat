@@ -323,7 +323,32 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
                   keepOriginal: keepOriginal,
                   videoQuality: videoQuality,
                   onCompressionProgress: (progress) {
-                    // Update progress indicator if needed
+                    if (mounted && !keepOriginal) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value: progress.progress,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(progress.stage)),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 30),
+                        ),
+                      );
+                    }
                   },
                 );
               } else {
@@ -333,7 +358,32 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
                   keepOriginal: keepOriginal,
                   imageQuality: imageQuality,
                   onCompressionProgress: (progress) {
-                    // Update progress indicator if needed
+                    if (mounted && !keepOriginal) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value: progress.progress,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(progress.stage)),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 30),
+                        ),
+                      );
+                    }
                   },
                 );
               }

@@ -79,20 +79,73 @@ void main() {
       // since we don't have actual files in unit tests
 
       test('estimateImageSize returns smaller size at lower quality', () async {
-        // Higher quality should give larger estimate
-        // Lower quality should give smaller estimate
-        // Since we don't have files, we just test the estimation formula behavior
-        expect(CompressionDefaults.imageQuality, equals(80));
-        expect(CompressionDefaults.maxImageWidth, equals(1920));
-        expect(CompressionDefaults.maxImageHeight, equals(1080));
+        // Create a temporary file with known size for testing
+        final tempDir = Directory.systemTemp;
+        final testFile = File('${tempDir.path}/test_image_estimate.tmp');
+        // Write 1MB of data
+        await testFile.writeAsBytes(List.filled(1000000, 0));
+
+        try {
+          // Lower quality should give smaller estimate
+          final lowQualityEstimate = await compressionService.estimateImageSize(
+            testFile,
+            quality: 50,
+          );
+          final highQualityEstimate = await compressionService
+              .estimateImageSize(testFile, quality: 90);
+
+          // Higher quality should result in larger estimated size
+          expect(highQualityEstimate, greaterThan(lowQualityEstimate));
+
+          // Estimates should be less than original for reasonable quality
+          expect(lowQualityEstimate, lessThan(1000000));
+        } finally {
+          // Clean up
+          if (await testFile.exists()) {
+            await testFile.delete();
+          }
+        }
       });
 
       test('estimateVideoSize varies by quality preset', () async {
-        // Different presets should have different compression ratios
-        expect(CompressionQualityPreset.low.videoQuality, isNotNull);
-        expect(CompressionQualityPreset.medium.videoQuality, isNotNull);
-        expect(CompressionQualityPreset.high.videoQuality, isNotNull);
-        expect(CompressionQualityPreset.original.videoQuality, isNotNull);
+        // Create a temporary file with known size for testing
+        final tempDir = Directory.systemTemp;
+        final testFile = File('${tempDir.path}/test_video_estimate.tmp');
+        // Write 10MB of data
+        await testFile.writeAsBytes(List.filled(10000000, 0));
+
+        try {
+          // Get estimates for different quality presets
+          final lowEstimate = await compressionService.estimateVideoSize(
+            testFile,
+            qualityPreset: CompressionQualityPreset.low,
+          );
+          final mediumEstimate = await compressionService.estimateVideoSize(
+            testFile,
+            qualityPreset: CompressionQualityPreset.medium,
+          );
+          final highEstimate = await compressionService.estimateVideoSize(
+            testFile,
+            qualityPreset: CompressionQualityPreset.high,
+          );
+          final originalEstimate = await compressionService.estimateVideoSize(
+            testFile,
+            qualityPreset: CompressionQualityPreset.original,
+          );
+
+          // Verify estimates follow expected ordering: low < medium < high < original
+          expect(lowEstimate, lessThan(mediumEstimate));
+          expect(mediumEstimate, lessThan(highEstimate));
+          expect(highEstimate, lessThan(originalEstimate));
+
+          // Original should equal actual file size
+          expect(originalEstimate, equals(10000000));
+        } finally {
+          // Clean up
+          if (await testFile.exists()) {
+            await testFile.delete();
+          }
+        }
       });
     });
   });
