@@ -113,8 +113,46 @@ class MessageRepository {
             forwardedFromEvent: Value(event.forwardedFromEvent),
             forwardCount: Value(event.forwardCount),
             forwardRestricted: Value(event.forwardRestricted),
+            expiresAt: Value(event.expiresAt),
           ),
         );
+  }
+
+  /// Set expiration time for a message (for disappearing messages)
+  Future<void> setMessageExpiry(String messageId, int expiresAt) async {
+    await (_database.update(
+      _database.roomEvents,
+    )..where((t) => t.id.equals(messageId))).write(
+      RoomEventsCompanion(expiresAt: Value(expiresAt)),
+    );
+  }
+
+  /// Get all expired messages that should be deleted
+  Future<List<domain.RoomEvent>> getExpiredMessages() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final query = _database.select(_database.roomEvents)
+      ..where(
+        (t) =>
+            t.expiresAt.isNotNull() &
+            t.expiresAt.isSmallerOrEqualValue(now) &
+            t.redacted.equals(false),
+      );
+
+    final results = await query.get();
+    return results.map(_toRoomEvent).toList();
+  }
+
+  /// Delete all expired messages and their associated media
+  Future<int> deleteExpiredMessages() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final deleted = await (_database.delete(_database.roomEvents)
+          ..where(
+            (t) =>
+                t.expiresAt.isNotNull() &
+                t.expiresAt.isSmallerOrEqualValue(now),
+          ))
+        .go();
+    return deleted;
   }
 
   Future<void> updateMessageStatus(
@@ -296,5 +334,6 @@ class MessageRepository {
     forwardedFromEvent: row.forwardedFromEvent,
     forwardCount: row.forwardCount,
     forwardRestricted: row.forwardRestricted,
+    expiresAt: row.expiresAt,
   );
 }

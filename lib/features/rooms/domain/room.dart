@@ -28,6 +28,9 @@ abstract class Room with _$Room {
     @Default(0) int lastEventIndex,
     @Default(0) int unreadCount,
     Map<String, dynamic>? metadata,
+    /// Disappearing messages timeout in seconds (null = disabled)
+    /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
+    int? disappearingTimeout,
   }) = _Room;
 
   factory Room.fromJson(Map<String, dynamic> json) => _$RoomFromJson(json);

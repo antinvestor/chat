@@ -95,8 +95,15 @@ class RoomRepository {
             metadata: Value(
               room.metadata != null ? jsonEncode(room.metadata) : null,
             ),
+            disappearingTimeout: Value(room.disappearingTimeout),
           ),
         );
+  }
+
+  /// Update disappearing messages timeout for a room
+  Future<void> updateDisappearingTimeout(String roomId, int? timeout) async {
+    await (_database.update(_database.rooms)..where((t) => t.id.equals(roomId)))
+        .write(RoomsCompanion(disappearingTimeout: Value(timeout)));
   }
 
   Future<void> updateUnreadCount(String roomId, int count) async {
@@ -112,5 +119,6 @@ class RoomRepository {
     lastEventIndex: row.lastEventIndex ?? 0,
     unreadCount: row.unreadCount,
     metadata: row.metadata != null ? jsonDecode(row.metadata!) : null,
+    disappearingTimeout: row.disappearingTimeout,
   );
 }
