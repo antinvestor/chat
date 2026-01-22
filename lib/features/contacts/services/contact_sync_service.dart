@@ -161,9 +161,8 @@ class ContactSyncService {
   }
 
   /// Whether to sync only on Wi-Fi
-  bool get syncOnlyOnWifi => _settingsService.getBool(
-    ContactSyncSettings.syncOnlyOnWifi,
-  );
+  bool get syncOnlyOnWifi =>
+      _settingsService.getBool(ContactSyncSettings.syncOnlyOnWifi);
 
   /// Set whether to sync only on Wi-Fi
   Future<void> setSyncOnlyOnWifi(bool wifiOnly) async {
