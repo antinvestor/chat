@@ -13,8 +13,11 @@ enum VisibilityOption {
   final String value;
   final String label;
 
-  static VisibilityOption fromValue(String value) => VisibilityOption.values
-      .firstWhere((e) => e.value == value, orElse: () => VisibilityOption.everyone);
+  static VisibilityOption fromValue(String value) =>
+      VisibilityOption.values.firstWhere(
+        (e) => e.value == value,
+        orElse: () => VisibilityOption.everyone,
+      );
 }
 
 /// A dialog picker for selecting visibility options
@@ -69,16 +72,15 @@ class VisibilityPicker extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         title: Text(
           title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w500),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
           currentOption.label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.primaryGreen,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.primaryGreen),
         ),
         trailing: Icon(
           Icons.chevron_right,
@@ -123,8 +125,8 @@ class _VisibilityPickerDialog extends StatelessWidget {
           Text(
             description,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 16),
           ...VisibilityOption.values.map(
@@ -170,11 +172,11 @@ class _VisibilityOptionTile extends StatelessWidget {
       title: Text(
         option.label,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected
-                  ? AppTheme.primaryGreen
-                  : Theme.of(context).colorScheme.onSurface,
-            ),
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+          color: isSelected
+              ? AppTheme.primaryGreen
+              : Theme.of(context).colorScheme.onSurface,
+        ),
       ),
       trailing: isSelected
           ? const Icon(Icons.check, color: AppTheme.primaryGreen)

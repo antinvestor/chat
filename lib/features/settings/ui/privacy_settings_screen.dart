@@ -26,7 +26,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   String _aboutVisible = SettingsDefaults.aboutVisible;
   String _groupsAddPermission = SettingsDefaults.groupsAddPermission;
   bool _readReceiptsEnabled = SettingsDefaults.readReceiptsEnabled;
-  bool _liveLocationSharingEnabled = SettingsDefaults.liveLocationSharingEnabled;
+  bool _liveLocationSharingEnabled =
+      SettingsDefaults.liveLocationSharingEnabled;
   bool _fingerprintLockEnabled = SettingsDefaults.fingerprintLockEnabled;
 
   @override
@@ -71,7 +72,9 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       body: !_isInitialized
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryGreen,
+                ),
               ),
             )
           : ListView(
@@ -84,7 +87,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                   items: [
                     VisibilityPicker(
                       title: 'Last seen',
-                      description: 'Choose who can see when you were last '
+                      description:
+                          'Choose who can see when you were last '
                           'active on Chat.',
                       currentValue: _lastSeenVisible,
                       onChanged: _updateLastSeenVisibility,
@@ -133,8 +137,9 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                         loading: () => 'Loading...',
                         error: (_, __) => 'Error loading',
                       ),
-                      onTap: () =>
-                          Navigator.of(context).push(_createBlockedContactsRoute()),
+                      onTap: () => Navigator.of(
+                        context,
+                      ).push(_createBlockedContactsRoute()),
                     ),
                   ],
                 ),
@@ -278,9 +283,9 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
           child: Text(
             title,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryGreen,
-                ),
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryGreen,
+            ),
           ),
         ),
         ...items,
@@ -311,16 +316,15 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         title: Text(
           title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w500),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
           subtitle,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         trailing: Icon(
           Icons.chevron_right,
@@ -356,18 +360,17 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         title: Text(
           title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w500),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             subtitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         trailing: Switch(
@@ -385,10 +388,9 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context)
-              .colorScheme
-              .primaryContainer
-              .withValues(alpha: 0.3),
+          color: Theme.of(
+            context,
+          ).colorScheme.primaryContainer.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -405,8 +407,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                 'Changes to your privacy settings may take a few minutes '
                 'to be reflected for other users.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -476,16 +478,16 @@ class _BlockedContactsListScreenImpl extends ConsumerWidget {
             Icon(
               Icons.block,
               size: 80,
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
-                  ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 24),
             Text(
               'No blocked contacts',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -493,8 +495,8 @@ class _BlockedContactsListScreenImpl extends ConsumerWidget {
               'Blocked contacts cannot send you messages or see your updates.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -549,16 +551,16 @@ class _BlockedContactsListScreenImpl extends ConsumerWidget {
         ),
         title: Text(
           contact.displayName ?? contact.contactDetail,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: contact.displayName != null
             ? Text(
                 contact.contactDetail,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               )
             : null,
         trailing: TextButton(
@@ -591,8 +593,8 @@ class _BlockedContactsListScreenImpl extends ConsumerWidget {
               error.toString(),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -780,9 +782,9 @@ class _ContactSelectionSheet extends ConsumerWidget {
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.4,
-                ),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -790,9 +792,9 @@ class _ContactSelectionSheet extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Text(
             'Select a contact to block',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         const Divider(),
@@ -800,8 +802,9 @@ class _ContactSelectionSheet extends ConsumerWidget {
           child: rosterAsync.when(
             data: (contacts) {
               // Filter out already blocked contacts
-              final unblockedContacts =
-                  contacts.where((c) => !c.isBlocked).toList();
+              final unblockedContacts = contacts
+                  .where((c) => !c.isBlocked)
+                  .toList();
 
               if (unblockedContacts.isEmpty) {
                 return Center(
@@ -810,9 +813,8 @@ class _ContactSelectionSheet extends ConsumerWidget {
                     child: Text(
                       'No contacts available to block',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 );
@@ -825,8 +827,9 @@ class _ContactSelectionSheet extends ConsumerWidget {
                   final contact = unblockedContacts[index];
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor:
-                          AppTheme.primaryGreen.withValues(alpha: 0.1),
+                      backgroundColor: AppTheme.primaryGreen.withValues(
+                        alpha: 0.1,
+                      ),
                       child: Text(
                         _getInitials(
                           contact.displayName ?? contact.contactDetail,
@@ -848,12 +851,13 @@ class _ContactSelectionSheet extends ConsumerWidget {
             },
             loading: () => const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryGreen,
+                ),
               ),
             ),
-            error: (error, _) => Center(
-              child: Text('Error loading contacts: $error'),
-            ),
+            error: (error, _) =>
+                Center(child: Text('Error loading contacts: $error')),
           ),
         ),
       ],

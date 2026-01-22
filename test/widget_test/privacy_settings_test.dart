@@ -73,32 +73,46 @@ class MockSettingsService implements SettingsService {
   }
 
   @override
-  String get lastSeenVisible =>
-      getString(SettingsKeys.lastSeenVisible, defaultValue: SettingsDefaults.lastSeenVisible);
+  String get lastSeenVisible => getString(
+    SettingsKeys.lastSeenVisible,
+    defaultValue: SettingsDefaults.lastSeenVisible,
+  );
 
   @override
-  String get profilePhotoVisible =>
-      getString(SettingsKeys.profilePhotoVisible, defaultValue: SettingsDefaults.profilePhotoVisible);
+  String get profilePhotoVisible => getString(
+    SettingsKeys.profilePhotoVisible,
+    defaultValue: SettingsDefaults.profilePhotoVisible,
+  );
 
   @override
-  String get aboutVisible =>
-      getString(SettingsKeys.aboutVisible, defaultValue: SettingsDefaults.aboutVisible);
+  String get aboutVisible => getString(
+    SettingsKeys.aboutVisible,
+    defaultValue: SettingsDefaults.aboutVisible,
+  );
 
   @override
-  String get groupsAddPermission =>
-      getString(SettingsKeys.groupsAddPermission, defaultValue: SettingsDefaults.groupsAddPermission);
+  String get groupsAddPermission => getString(
+    SettingsKeys.groupsAddPermission,
+    defaultValue: SettingsDefaults.groupsAddPermission,
+  );
 
   @override
-  bool get readReceiptsEnabled =>
-      getBool(SettingsKeys.readReceiptsEnabled, defaultValue: SettingsDefaults.readReceiptsEnabled);
+  bool get readReceiptsEnabled => getBool(
+    SettingsKeys.readReceiptsEnabled,
+    defaultValue: SettingsDefaults.readReceiptsEnabled,
+  );
 
   @override
-  bool get liveLocationSharingEnabled =>
-      getBool(SettingsKeys.liveLocationSharingEnabled, defaultValue: SettingsDefaults.liveLocationSharingEnabled);
+  bool get liveLocationSharingEnabled => getBool(
+    SettingsKeys.liveLocationSharingEnabled,
+    defaultValue: SettingsDefaults.liveLocationSharingEnabled,
+  );
 
   @override
-  bool get fingerprintLockEnabled =>
-      getBool(SettingsKeys.fingerprintLockEnabled, defaultValue: SettingsDefaults.fingerprintLockEnabled);
+  bool get fingerprintLockEnabled => getBool(
+    SettingsKeys.fingerprintLockEnabled,
+    defaultValue: SettingsDefaults.fingerprintLockEnabled,
+  );
 
   // Implement any remaining methods as no-ops
   @override
@@ -395,10 +409,7 @@ void main() {
 
       // Check for switch items
       // Note: "Read receipts" appears twice - once as section title and once as item title
-      expect(
-        find.text('Read receipts'),
-        findsNWidgets(2),
-      ); // section + item
+      expect(find.text('Read receipts'), findsNWidgets(2)); // section + item
       expect(find.text('Live location sharing'), findsOneWidget);
       expect(find.text('Fingerprint lock'), findsOneWidget);
 

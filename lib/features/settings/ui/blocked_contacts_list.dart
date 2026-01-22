@@ -57,16 +57,16 @@ class BlockedContactsListScreen extends ConsumerWidget {
             Icon(
               Icons.block,
               size: 80,
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
-                  ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 24),
             Text(
               'No blocked contacts',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -74,8 +74,8 @@ class BlockedContactsListScreen extends ConsumerWidget {
               'Blocked contacts cannot send you messages or see your updates.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -123,8 +123,8 @@ class BlockedContactsListScreen extends ConsumerWidget {
               error.toString(),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -284,10 +284,7 @@ class BlockedContactsListScreen extends ConsumerWidget {
 }
 
 class _BlockedContactTile extends StatelessWidget {
-  const _BlockedContactTile({
-    required this.contact,
-    required this.onUnblock,
-  });
+  const _BlockedContactTile({required this.contact, required this.onUnblock});
 
   final RosterEntry contact;
   final VoidCallback onUnblock;
@@ -321,16 +318,16 @@ class _BlockedContactTile extends StatelessWidget {
         ),
         title: Text(
           contact.displayName ?? contact.contactDetail,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: contact.displayName != null
             ? Text(
                 contact.contactDetail,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               )
             : null,
         trailing: TextButton(
@@ -371,9 +368,9 @@ class _ContactSelectionSheet extends ConsumerWidget {
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.4,
-                ),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -381,9 +378,9 @@ class _ContactSelectionSheet extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Text(
             'Select a contact to block',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         const Divider(),
@@ -391,8 +388,9 @@ class _ContactSelectionSheet extends ConsumerWidget {
           child: rosterAsync.when(
             data: (contacts) {
               // Filter out already blocked contacts
-              final unblockedContacts =
-                  contacts.where((c) => !c.isBlocked).toList();
+              final unblockedContacts = contacts
+                  .where((c) => !c.isBlocked)
+                  .toList();
 
               if (unblockedContacts.isEmpty) {
                 return Center(
@@ -401,9 +399,8 @@ class _ContactSelectionSheet extends ConsumerWidget {
                     child: Text(
                       'No contacts available to block',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 );
@@ -416,8 +413,9 @@ class _ContactSelectionSheet extends ConsumerWidget {
                   final contact = unblockedContacts[index];
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor:
-                          AppTheme.primaryGreen.withValues(alpha: 0.1),
+                      backgroundColor: AppTheme.primaryGreen.withValues(
+                        alpha: 0.1,
+                      ),
                       child: Text(
                         _getInitials(
                           contact.displayName ?? contact.contactDetail,
@@ -439,12 +437,13 @@ class _ContactSelectionSheet extends ConsumerWidget {
             },
             loading: () => const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryGreen,
+                ),
               ),
             ),
-            error: (error, _) => Center(
-              child: Text('Error loading contacts: $error'),
-            ),
+            error: (error, _) =>
+                Center(child: Text('Error loading contacts: $error')),
           ),
         ),
       ],
