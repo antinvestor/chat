@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/db/database.dart';
@@ -228,6 +229,9 @@ class BadgeService {
   }
 
   /// Check if badges are supported on the current platform
-  static bool get isSupported =>
-      Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+  static bool get isSupported {
+    // Web doesn't support app badges and dart:io Platform throws on web
+    if (kIsWeb) return false;
+    return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+  }
 }
