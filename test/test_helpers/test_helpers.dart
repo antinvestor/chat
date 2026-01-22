@@ -1,7 +1,9 @@
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     show TokenRefreshResult;
+import 'package:chat/core/db/database.dart' show Draft;
 import 'package:chat/features/auth/data/auth_repository.dart';
 import 'package:chat/features/auth/data/auth_service.dart';
+import 'package:chat/features/messages/data/draft_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -100,14 +102,71 @@ class MockAuthRepository extends AuthRepository {
   }
 }
 
+/// Mock DraftRepository for testing that doesn't use database
+/// This is a fake implementation that doesn't extend DraftRepository
+/// to avoid initializing AppDatabase which creates timers.
+class MockDraftRepository implements DraftRepository {
+  final Map<String, String> _drafts = {};
+
+  @override
+  Future<Draft?> getDraft(String roomId) async {
+    return null; // Return null for tests - no draft stored
+  }
+
+  @override
+  Stream<Draft?> watchDraft(String roomId) {
+    return Stream.value(null);
+  }
+
+  @override
+  Future<void> saveDraft({
+    required String roomId,
+    required String content,
+    String? replyToId,
+  }) async {
+    // No-op for tests - don't actually save
+  }
+
+  @override
+  Future<void> deleteDraft(String roomId) async {
+    _drafts.remove(roomId);
+  }
+
+  @override
+  Future<List<String>> getRoomsWithDrafts() async {
+    return _drafts.keys.toList();
+  }
+
+  @override
+  Stream<List<Draft>> watchAllDrafts() {
+    return Stream.value([]);
+  }
+
+  @override
+  Future<Map<String, String>> getDraftsMap() async {
+    return {};
+  }
+
+  @override
+  Stream<Map<String, String>> watchDraftsMap() {
+    return Stream.value({});
+  }
+
+  @override
+  Future<void> clearAllDrafts() async {
+    _drafts.clear();
+  }
+}
+
 /// Provider overrides for testing
 class TestHelpers {
   static final mockAuthService = MockAuthService();
   static final mockAuthRepository = MockAuthRepository(mockAuthService);
+  static final mockDraftRepository = MockDraftRepository();
 
   static List<Override> get overrides => [
     authRepositoryProvider.overrideWithValue(mockAuthRepository),
-    // Add other provider overrides as needed
+    draftRepositoryProvider.overrideWithValue(mockDraftRepository),
   ];
 
   static void resetMocks() {

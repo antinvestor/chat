@@ -13,5 +13,13 @@ abstract class RoomWithLastMessage with _$RoomWithLastMessage {
     int? lastMessageTimestamp,
     String? lastMessageSenderId,
     bool? isTyping,
+
+    /// Draft message text if the user has an unsent message
+    String? draftText,
   }) = _RoomWithLastMessage;
+
+  const RoomWithLastMessage._();
+
+  /// Whether this room has a draft message
+  bool get hasDraft => draftText != null && draftText!.isNotEmpty;
 }

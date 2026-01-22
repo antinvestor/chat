@@ -94,8 +94,37 @@ class RoomListTile extends StatelessWidget {
                         ],
                       ),
 
-                      // Last message
-                      if (room.lastMessageText != null)
+                      // Draft indicator or last message
+                      if (room.hasDraft)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: AppTheme.elementGap,
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                'Draft: ',
+                                style: AppTheme.bodyText.copyWith(
+                                  fontSize: 14,
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  room.draftText!,
+                                  style: AppTheme.bodyText.copyWith(
+                                    fontSize: 14,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (room.lastMessageText != null)
                         Padding(
                           padding: const EdgeInsets.only(
                             top: AppTheme.elementGap,

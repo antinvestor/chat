@@ -53,6 +53,9 @@ void main() {
         findsOneWidget,
         reason: 'Mic button should have tooltip for accessibility',
       );
+
+      // Wait for any pending timers before test cleanup
+      await tester.pumpAndSettle();
     });
 
     testWidgets('Chat input bar supports accessibility navigation', (
