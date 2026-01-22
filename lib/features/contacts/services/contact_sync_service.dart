@@ -42,6 +42,12 @@ class ContactSyncDefaults {
   static const autoSyncEnabled = true;
   static const syncIntervalHours = 24;
   static const syncOnlyOnWifi = false;
+
+  /// Minimum allowed sync interval in hours
+  static const minSyncIntervalHours = 1;
+
+  /// Maximum allowed sync interval in hours (1 week)
+  static const maxSyncIntervalHours = 168;
 }
 
 /// Result of a contact sync operation
@@ -154,10 +160,17 @@ class ContactSyncService {
 
   /// Set the sync interval in hours
   Future<void> setSyncIntervalHours(int hours) async {
-    if (hours < 1) hours = 1; // Minimum 1 hour
-    if (hours > 168) hours = 168; // Maximum 1 week
-    await _settingsService.setInt(ContactSyncSettings.syncIntervalHours, hours);
-    AppLogger.debug('[ContactSyncService] Sync interval set to $hours hours');
+    final clampedHours = hours.clamp(
+      ContactSyncDefaults.minSyncIntervalHours,
+      ContactSyncDefaults.maxSyncIntervalHours,
+    );
+    await _settingsService.setInt(
+      ContactSyncSettings.syncIntervalHours,
+      clampedHours,
+    );
+    AppLogger.debug(
+      '[ContactSyncService] Sync interval set to $clampedHours hours',
+    );
   }
 
   /// Whether to sync only on Wi-Fi
@@ -209,15 +222,15 @@ class ContactSyncService {
   Future<ContactSyncResult> performFullSync({
     SyncProgressCallback? progressCallback,
   }) async {
-    if (_isSyncing) {
+    // If a sync is already in progress, wait for it to complete
+    if (_isSyncing && _syncCompleter != null) {
       AppLogger.debug(
         '[ContactSyncService] Full sync already in progress, waiting...',
       );
-      if (_syncCompleter != null) {
-        return _syncCompleter!.future;
-      }
+      return _syncCompleter!.future;
     }
 
+    // Mark sync as in progress and create completer for coalescing
     _isSyncing = true;
     _syncCompleter = Completer<ContactSyncResult>();
     final stopwatch = Stopwatch()..start();
@@ -283,15 +296,15 @@ class ContactSyncService {
   Future<ContactSyncResult> performIncrementalSync({
     SyncProgressCallback? progressCallback,
   }) async {
-    if (_isSyncing) {
+    // If a sync is already in progress, wait for it to complete
+    if (_isSyncing && _syncCompleter != null) {
       AppLogger.debug(
         '[ContactSyncService] Incremental sync already in progress, waiting...',
       );
-      if (_syncCompleter != null) {
-        return _syncCompleter!.future;
-      }
+      return _syncCompleter!.future;
     }
 
+    // Mark sync as in progress and create completer for coalescing
     _isSyncing = true;
     _syncCompleter = Completer<ContactSyncResult>();
     final stopwatch = Stopwatch()..start();

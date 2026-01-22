@@ -32,49 +32,17 @@ class ContactBackgroundSyncTask {
   static Future<bool> run() async {
     try {
       AppLogger.info('[ContactBackgroundSync] Starting background sync task');
-      final stopwatch = Stopwatch()..start();
 
-      // Initialize database
-      final database = AppDatabase.instance;
-      final settingsService = SettingsService(database);
-      await settingsService.initialize();
-
-      // Check if auto sync is enabled
-      final autoSyncEnabled = settingsService.getBool(
-        ContactSyncSettings.autoSyncEnabled,
-        defaultValue: ContactSyncDefaults.autoSyncEnabled,
-      );
-
-      if (!autoSyncEnabled) {
-        AppLogger.debug('[ContactBackgroundSync] Auto sync disabled, skipping');
-        return true; // Not a failure, just disabled
+      // Initialize services for background context
+      final services = await _initializeServices();
+      if (services == null) {
+        // Not logged in, skip sync
+        return true;
       }
 
-      // Check if sync is due
-      final lastSyncTimestamp = settingsService.getInt(
-        ContactSyncSettings.lastSyncTime,
-      );
-      final syncIntervalHours = settingsService.getInt(
-        ContactSyncSettings.syncIntervalHours,
-        defaultValue: ContactSyncDefaults.syncIntervalHours,
-      );
+      final (syncService, settingsService) = services;
 
-      if (lastSyncTimestamp > 0) {
-        final lastSync = DateTime.fromMillisecondsSinceEpoch(lastSyncTimestamp);
-        final nextSyncTime = lastSync.add(Duration(hours: syncIntervalHours));
-        if (DateTime.now().isBefore(nextSyncTime)) {
-          AppLogger.debug(
-            '[ContactBackgroundSync] Sync not due yet',
-            data: {
-              'lastSync': lastSync.toIso8601String(),
-              'nextSyncTime': nextSyncTime.toIso8601String(),
-            },
-          );
-          return true; // Not a failure, just not due
-        }
-      }
-
-      // Check Wi-Fi only setting
+      // Check Wi-Fi only setting before delegating to service
       final syncOnlyOnWifi = settingsService.getBool(
         ContactSyncSettings.syncOnlyOnWifi,
       );
@@ -92,78 +60,20 @@ class ContactBackgroundSyncTask {
         }
       }
 
-      // Get auth token
-      const storage = FlutterSecureStorage();
-      final accessToken = await storage.read(key: 'access_token');
+      // Delegate to service for sync logic
+      final result = await syncService.performBackgroundSync();
 
-      if (accessToken == null) {
-        AppLogger.debug(
-          '[ContactBackgroundSync] No access token, skipping sync',
-        );
-        return true; // Not a failure, just not logged in
-      }
-
-      // Create profile client
-      final httpClient = io.HttpClient();
-      httpClient.connectionTimeout = ApiConfig.connectionTimeout;
-      httpClient.idleTimeout = ApiConfig.idleTimeout;
-      httpClient.maxConnectionsPerHost = 2; // Limit for background tasks
-
-      final transport = connect_protocol.Transport(
-        baseUrl: ApiConfig.profileBaseUrl,
-        codec: const connect_protobuf.ProtoCodec(),
-        httpClient: connect_io.createHttpClient(httpClient),
-      );
-      final profileClient = ProfileServiceClient(transport);
-
-      // Create roster repository
-      final rosterRepository = RosterRepository(profileClient, database);
-
-      // Check if contacts have changed (hash-based)
-      final needsSync = await rosterRepository.needsSync();
-
-      if (!needsSync) {
-        AppLogger.info('[ContactBackgroundSync] No contact changes detected');
-
-        // Update last sync time
-        await settingsService.setInt(
-          ContactSyncSettings.lastSyncTime,
-          DateTime.now().millisecondsSinceEpoch,
-        );
-
-        stopwatch.stop();
-        AppLogger.info(
-          '[ContactBackgroundSync] Completed (no changes)',
-          data: {'durationMs': stopwatch.elapsedMilliseconds},
-        );
-        return true;
-      }
-
-      // Perform incremental sync
-      AppLogger.info('[ContactBackgroundSync] Changes detected, syncing...');
-
-      final syncedEntries = await rosterRepository.syncContacts();
-      final foundOnPlatform = syncedEntries
-          .where((e) => e.profileId != null)
-          .length;
-
-      // Update last sync time
-      await settingsService.setInt(
-        ContactSyncSettings.lastSyncTime,
-        DateTime.now().millisecondsSinceEpoch,
-      );
-
-      stopwatch.stop();
       AppLogger.info(
-        '[ContactBackgroundSync] Completed successfully',
+        '[ContactBackgroundSync] Completed',
         data: {
-          'syncedCount': syncedEntries.length,
-          'foundOnPlatform': foundOnPlatform,
-          'durationMs': stopwatch.elapsedMilliseconds,
+          'success': result.success,
+          'syncedCount': result.syncedCount,
+          'foundOnPlatform': result.foundOnPlatform,
+          'durationMs': result.duration?.inMilliseconds,
         },
       );
 
-      return true;
+      return result.success;
     } catch (e, stackTrace) {
       AppLogger.error(
         '[ContactBackgroundSync] Failed',
@@ -172,5 +82,47 @@ class ContactBackgroundSyncTask {
       );
       return false; // Signal failure so workmanager can retry
     }
+  }
+
+  /// Initialize services needed for background sync
+  ///
+  /// Returns null if the user is not logged in (no access token).
+  static Future<(ContactSyncService, SettingsService)?>
+  _initializeServices() async {
+    // Initialize database and settings
+    final database = AppDatabase.instance;
+    final settingsService = SettingsService(database);
+    await settingsService.initialize();
+
+    // Get auth token
+    const storage = FlutterSecureStorage();
+    final accessToken = await storage.read(key: 'access_token');
+
+    if (accessToken == null) {
+      AppLogger.debug('[ContactBackgroundSync] No access token, skipping sync');
+      return null;
+    }
+
+    // Create profile client
+    final httpClient = io.HttpClient();
+    httpClient.connectionTimeout = ApiConfig.connectionTimeout;
+    httpClient.idleTimeout = ApiConfig.idleTimeout;
+    httpClient.maxConnectionsPerHost = 2; // Limit for background tasks
+
+    final transport = connect_protocol.Transport(
+      baseUrl: ApiConfig.profileBaseUrl,
+      codec: const connect_protobuf.ProtoCodec(),
+      httpClient: connect_io.createHttpClient(httpClient),
+    );
+    final profileClient = ProfileServiceClient(transport);
+
+    // Create roster repository and sync service
+    final rosterRepository = RosterRepository(profileClient, database);
+    final syncService = ContactSyncService(
+      syncRepository: rosterRepository,
+      settingsService: settingsService,
+    );
+
+    return (syncService, settingsService);
   }
 }
