@@ -55,6 +55,11 @@ class MockProfileRepository implements ProfileRepository {
   }
 
   @override
+  Future<String?> getCurrentBio() async {
+    return null;
+  }
+
+  @override
   Future<ProfileUpdateResult> removeContact(String contactId) async {
     if (shouldFail) {
       return ProfileUpdateResult.failure(failureMessage ?? 'Failed');
