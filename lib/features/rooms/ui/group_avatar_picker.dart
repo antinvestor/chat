@@ -40,6 +40,19 @@ class _GroupAvatarPickerState extends ConsumerState<GroupAvatarPicker> {
   String? _localImagePath;
   final ImagePicker _picker = ImagePicker();
 
+  /// Builds a styled icon container for bottom sheet options
+  Widget _buildIconContainer({required IconData icon, required Color color}) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, color: color),
+    );
+  }
+
   Future<void> _showPickerOptions() async {
     await showModalBottomSheet(
       context: context,
@@ -48,17 +61,9 @@ class _GroupAvatarPickerState extends ConsumerState<GroupAvatarPicker> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  color: AppTheme.primaryGreen,
-                ),
+              leading: _buildIconContainer(
+                icon: Icons.camera_alt,
+                color: AppTheme.primaryGreen,
               ),
               title: const Text('Take Photo'),
               onTap: () {
@@ -67,17 +72,9 @@ class _GroupAvatarPickerState extends ConsumerState<GroupAvatarPicker> {
               },
             ),
             ListTile(
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.photo_library,
-                  color: AppTheme.primaryGreen,
-                ),
+              leading: _buildIconContainer(
+                icon: Icons.photo_library,
+                color: AppTheme.primaryGreen,
               ),
               title: const Text('Choose from Gallery'),
               onTap: () {
@@ -87,14 +84,9 @@ class _GroupAvatarPickerState extends ConsumerState<GroupAvatarPicker> {
             ),
             if (widget.currentAvatarUrl != null || _localImagePath != null)
               ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.delete, color: Colors.red.shade600),
+                leading: _buildIconContainer(
+                  icon: Icons.delete,
+                  color: Colors.red.shade600,
                 ),
                 title: Text(
                   'Remove Photo',
