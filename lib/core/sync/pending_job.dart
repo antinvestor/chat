@@ -22,6 +22,11 @@ enum JobType {
   vote,
   syncContacts,
   custom, // For custom jobs like reports
+  createInviteLink,
+  revokeInviteLink,
+  useInviteLink,
+  approveJoinRequest,
+  rejectJoinRequest,
 }
 
 @freezed

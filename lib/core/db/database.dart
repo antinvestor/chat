@@ -468,6 +468,88 @@ class Reports extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Invite links for group room joining
+///
+/// Stores shareable invite links that allow users to join rooms
+/// via a unique code. Links can have expiration times, max uses,
+/// and can be revoked by admins.
+///
+/// Example:
+/// ```dart
+/// final link = await db.inviteLinks.select()
+///   .where((l) => l.code.equals('abc123'))
+///   .getSingleOrNull();
+/// if (link != null && !link.revoked) {
+///   // Process invite
+/// }
+/// ```
+class InviteLinks extends Table {
+  /// Unique invite link identifier
+  TextColumn get id => text()();
+
+  /// Room this invite links to (foreign key)
+  TextColumn get roomId => text().references(Rooms, #id)();
+
+  /// Unique invite code for URL (e.g., chat.app/join/{code})
+  TextColumn get code => text().unique()();
+
+  /// Profile ID of the user who created this link
+  TextColumn get createdBy => text()();
+
+  /// Creation timestamp (milliseconds since epoch)
+  IntColumn get createdAt => integer()();
+
+  /// Optional expiration timestamp (milliseconds since epoch, null = never expires)
+  IntColumn get expiresAt => integer().nullable()();
+
+  /// Optional maximum number of uses (null = unlimited)
+  IntColumn get maxUses => integer().nullable()();
+
+  /// Current number of times this link has been used
+  IntColumn get useCount => integer().withDefault(const Constant(0))();
+
+  /// Whether this link has been revoked by an admin
+  BoolColumn get revoked => boolean().withDefault(const Constant(false))();
+
+  /// Whether joining via this link requires admin approval
+  BoolColumn get requiresApproval =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Optional custom name/label for the link
+  TextColumn get name => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Tracks users who joined via invite links
+///
+/// Records each use of an invite link for analytics and
+/// "see who joined" functionality.
+///
+/// Example:
+/// ```dart
+/// final joins = await (db.inviteLinkJoins.select()
+///   ..where((j) => j.inviteLinkId.equals(linkId))
+/// ).get();
+/// ```
+class InviteLinkJoins extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// The invite link that was used
+  TextColumn get inviteLinkId => text().references(InviteLinks, #id)();
+
+  /// Profile ID of the user who joined
+  TextColumn get profileId => text()();
+
+  /// Timestamp when the user joined (milliseconds since epoch)
+  IntColumn get joinedAt => integer()();
+
+  /// Approval status: 'approved', 'pending', 'rejected'
+  TextColumn get status => text().withDefault(const Constant('approved'))();
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -495,6 +577,8 @@ class Reports extends Table {
     Drafts,
     ReadReceipts,
     Reports,
+    InviteLinks,
+    InviteLinkJoins,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -576,6 +660,24 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('''
           CREATE INDEX IF NOT EXISTS idx_reports_reported_user_id
           ON reports(reported_user_id)
+        ''');
+        // Migration from v8 to v9: Add invite links tables
+        await m.createTable(inviteLinks);
+        await m.createTable(inviteLinkJoins);
+        // Create index for efficient querying by room
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_invite_links_room_id
+          ON invite_links(room_id)
+        ''');
+        // Create index for efficient querying by code
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_invite_links_code
+          ON invite_links(code)
+        ''');
+        // Create index for efficient querying joins by link
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_invite_link_joins_link_id
+          ON invite_link_joins(invite_link_id)
         ''');
       }
     },
