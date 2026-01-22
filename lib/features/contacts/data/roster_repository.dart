@@ -16,6 +16,7 @@ import 'package:xid/xid.dart';
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
+import '../services/contact_sync_service.dart';
 
 // ============================================================================
 // Contact Validation Utilities
@@ -572,7 +573,9 @@ enum SyncState {
 /// - Mutex to prevent concurrent sync operations
 /// - Reconciliation with server roster
 /// - Proper error handling and logging
-class RosterRepository {
+///
+/// Implements [ContactSyncRepository] interface for use with [ContactSyncService].
+class RosterRepository implements ContactSyncRepository {
   RosterRepository(this._profileClient, this._database);
   final ProfileServiceClient _profileClient;
   final AppDatabase _database;
@@ -647,6 +650,7 @@ class RosterRepository {
   }
 
   /// Check if device contacts have changed since last sync
+  @override
   Future<bool> needsSync() async {
     try {
       final hasPermission = await flutter_contacts
@@ -711,6 +715,7 @@ class RosterRepository {
   /// Full sync of device contacts with server
   /// Returns list of roster entries that are registered on the platform
   /// Optionally accepts a [progressCallback] to report sync progress
+  @override
   Future<List<RosterEntry>> syncContacts({
     SyncProgressCallback? progressCallback,
   }) async {

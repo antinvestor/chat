@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/contacts/services/contact_background_sync_task.dart';
 import '../../features/notifications/badge_service.dart';
 import '../../features/notifications/notification_service.dart';
 import '../error/error_tracking_service.dart';
@@ -106,7 +107,16 @@ void callbackDispatcher() {
     AppLogger.info('Workmanager executing task', data: {'task': task});
 
     try {
-      final success = await BackgroundSyncTask.run();
+      bool success;
+
+      // Route to appropriate task handler
+      if (task == contactSyncTaskIdentifier) {
+        success = await ContactBackgroundSyncTask.run();
+      } else {
+        // Default: message sync task
+        success = await BackgroundSyncTask.run();
+      }
+
       AppLogger.info(
         'Workmanager task completed',
         data: {'task': task, 'success': success},
@@ -303,10 +313,24 @@ class StartupService extends _$StartupService {
     // Register background sync (only on mobile)
     if (isMobile) {
       await Workmanager().initialize(callbackDispatcher);
+
+      // Register message sync task (every 15 minutes)
       await Workmanager().registerPeriodicTask(
         'background-sync',
         'backgroundSync',
         frequency: const Duration(minutes: 15),
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+          requiresBatteryNotLow: true,
+        ),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      );
+
+      // Register contact sync task (every 24 hours)
+      await Workmanager().registerPeriodicTask(
+        contactSyncTaskName,
+        contactSyncTaskIdentifier,
+        frequency: const Duration(hours: 24),
         constraints: Constraints(
           networkType: NetworkType.connected,
           requiresBatteryNotLow: true,
@@ -319,6 +343,7 @@ class StartupService extends _$StartupService {
       'Deferred initialization complete',
       data: {
         'workmanager_registered': isMobile,
+        'contact_sync_task_registered': isMobile,
         'notifications_initialized':
             isLoggedIn && NotificationService.isSupported,
       },
