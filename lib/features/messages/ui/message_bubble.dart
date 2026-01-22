@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../features/contacts/data/contact_sync_repository.dart';
 import '../domain/room_event.dart';
+import 'read_receipt_indicator.dart';
 
 class MessageBubble extends ConsumerWidget {
   const MessageBubble({
@@ -16,6 +17,7 @@ class MessageBubble extends ConsumerWidget {
     super.key,
     this.shouldGroupWithPrevious = false,
     this.removeTail = false,
+    this.isGroupChat = false,
     this.onReply,
     this.onRetry,
     this.onEdit,
@@ -27,6 +29,7 @@ class MessageBubble extends ConsumerWidget {
   final bool isMe;
   final bool shouldGroupWithPrevious;
   final bool removeTail;
+  final bool isGroupChat;
   final Function(String messageId, String messageText)? onReply;
   final VoidCallback? onRetry;
   final Function(String messageId, String currentText)? onEdit;
@@ -913,48 +916,25 @@ class MessageBubble extends ConsumerWidget {
   }
 
   /// WhatsApp-style status indicator with ticks
+  ///
+  /// Uses ReadReceiptIndicator widget which supports:
+  /// - Pending: clock icon
+  /// - Sent: single grey check
+  /// - Delivered: double grey check
+  /// - Read: double blue check (tappable in group chats to show readers)
+  /// - Failed: error icon
   Widget _buildStatusIndicator(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    switch (message.status) {
-      case EventStatus.pending:
-        // Clock icon for pending
-        return Icon(
-          Icons.schedule,
-          size: 14,
-          color: isMe
-              ? Colors.black.withValues(alpha: 0.4)
-              : (isDarkMode ? Colors.white38 : Colors.black38),
-        );
-      case EventStatus.sent:
-        // Single check for sent
-        return Icon(
-          Icons.check,
-          size: 16,
-          color: isMe
-              ? Colors.black.withValues(alpha: 0.5)
-              : (isDarkMode ? Colors.white54 : Colors.black54),
-        );
-      case EventStatus.delivered:
-        // Double check for delivered (grey)
-        return Icon(
-          Icons.done_all,
-          size: 16,
-          color: isMe
-              ? Colors.black.withValues(alpha: 0.5)
-              : (isDarkMode ? Colors.white54 : Colors.black54),
-        );
-      case EventStatus.read:
-        // Double check for read (blue/green)
-        return const Icon(
-          Icons.done_all,
-          size: 16,
-          color: Color(0xFF53BDEB), // WhatsApp blue
-        );
-      case EventStatus.failed:
-        // Error icon for failed
-        return Icon(Icons.error_outline, size: 14, color: Colors.red.shade600);
-    }
+    // Use ReadReceiptIndicator for tappable read receipts in groups
+    return ReadReceiptIndicator(
+      event: message,
+      isGroupChat: isGroupChat,
+      sentColor: isMe
+          ? Colors.black.withValues(alpha: 0.5)
+          : (isDarkMode ? Colors.white54 : Colors.black54),
+      readColor: const Color(0xFF53BDEB), // WhatsApp blue
+    );
   }
 
   String _getSenderName(WidgetRef ref) {

@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/data/message_repository.dart';
+import '../../features/messages/data/read_receipt_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
@@ -53,6 +54,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     ref.watch(roomMemberRepositoryProvider),
     ref.watch(roomSubscriptionServiceProvider),
     encryptionService,
+    ref.watch(readReceiptRepositoryProvider),
     onTokenRefresh: () async {
       AppLogger.debug('SyncEngine: Starting token refresh via authRepo');
       try {
@@ -143,7 +145,8 @@ class SyncEngine {
     this._authRepository,
     this._roomMemberRepository,
     this._subscriptionService,
-    this._encryptionService, {
+    this._encryptionService,
+    this._readReceiptRepo, {
     TokenRefreshCallback? onTokenRefresh,
   }) : _onTokenRefresh = onTokenRefresh;
 
@@ -155,6 +158,7 @@ class SyncEngine {
   final RoomMemberRepository _roomMemberRepository;
   final RoomSubscriptionService _subscriptionService;
   final E2EEncryptionService _encryptionService;
+  final ReadReceiptRepository _readReceiptRepo;
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
@@ -726,14 +730,61 @@ class SyncEngine {
 
   Future<void> _processReceiptEvent(pb.ReceiptEvent event) async {
     // Update status for received read receipts
-    // New API doesn't include source information, so we can't filter out self-receipts
-    // Note: Filtering through subscription context will be implemented if needed
+    final eventIds = event.eventId.toList();
+    if (eventIds.isEmpty) return;
 
-    // Mark messages as delivered (other user received them)
-    await _messageRepo.updateMessagesStatus(
-      event.eventId.toList(),
-      domain.EventStatus.delivered,
-    );
+    // Get the subscription ID of the reader
+    final subscriptionId = event.hasSubscriptionId()
+        ? event.subscriptionId
+        : null;
+
+    // Get the room ID from one of the events (for storing receipts)
+    String? roomId;
+    String? readerProfileId;
+
+    if (subscriptionId != null) {
+      // Look up the profile ID from the subscription
+      final member = await _roomMemberRepository.getSubscription(
+        subscriptionId,
+      );
+      if (member != null) {
+        roomId = member.roomId;
+        readerProfileId = member.profileId;
+      }
+    }
+
+    // If we have reader info, store read receipts
+    if (roomId != null && readerProfileId != null) {
+      final readAt = DateTime.now().millisecondsSinceEpoch;
+      for (final eventId in eventIds) {
+        await _readReceiptRepo.saveReadReceipt(
+          eventId: eventId,
+          roomId: roomId,
+          profileId: readerProfileId,
+          readAt: readAt,
+        );
+      }
+
+      // Mark messages as read (since someone read them)
+      await _messageRepo.updateMessagesStatus(
+        eventIds,
+        domain.EventStatus.read,
+      );
+
+      AppLogger.debug(
+        'Processed read receipts',
+        data: {
+          'eventCount': eventIds.length,
+          'reader': readerProfileId.substring(0, 8),
+        },
+      );
+    } else {
+      // Fall back to delivered status if we can't identify the reader
+      await _messageRepo.updateMessagesStatus(
+        eventIds,
+        domain.EventStatus.delivered,
+      );
+    }
   }
 
   /// Process a roomKey event containing E2EE session key data

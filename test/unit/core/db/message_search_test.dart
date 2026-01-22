@@ -258,8 +258,8 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 7', () {
-        expect(db.schemaVersion, equals(7));
+      test('schema version is 8', () {
+        expect(db.schemaVersion, equals(8));
       });
     });
 
