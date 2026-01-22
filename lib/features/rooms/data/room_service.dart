@@ -159,7 +159,7 @@ class RoomService {
     await _roomRepo.insertRoom(updatedRoom);
 
     await _jobRepo.addJob(JobType.updateRoomAvatar, {
-      'roomId': roomId,
+      'id': roomId,
       'avatarUrl': avatarUrl,
     });
 
@@ -199,7 +199,7 @@ class RoomService {
     await _roomRepo.insertRoom(updatedRoom);
 
     await _jobRepo.addJob(JobType.updateRoomPermissions, {
-      'roomId': roomId,
+      'id': roomId,
       'editInfoPermission': editInfoPermission,
       'sendMessagesPermission': sendMessagesPermission,
       'addMembersPermission': addMembersPermission,
@@ -307,7 +307,7 @@ class RoomService {
     }
 
     // Queue for server sync
-    await _jobRepo.addJob(JobType.leaveRoom, {'roomId': roomId});
+    await _jobRepo.addJob(JobType.leaveRoom, {'id': roomId});
 
     AppLogger.info('Leave room queued for sync', data: {'roomId': roomId});
   }

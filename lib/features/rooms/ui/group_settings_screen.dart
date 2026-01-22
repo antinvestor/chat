@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/room_providers.dart';
 import 'group_avatar_picker.dart';
@@ -63,22 +62,27 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
   }
 
   Future<void> _loadRoomData() async {
-    final roomAsync = ref.read(roomByIdProvider(widget.roomId));
-    roomAsync.whenData((room) {
-      if (room != null) {
-        _nameController.text = room.name;
-        final metadata = room.metadata ?? {};
-        _descriptionController.text = metadata['description'] as String? ?? '';
-        _avatarUrl = metadata['avatarUrl'] as String?;
-        _editInfoPermission =
-            metadata['editInfoPermission'] as String? ?? 'admins';
-        _sendMessagesPermission =
-            metadata['sendMessagesPermission'] as String? ?? 'all_members';
-        _addMembersPermission =
-            metadata['addMembersPermission'] as String? ?? 'admins';
-        if (mounted) setState(() {});
+    try {
+      final room = await ref.read(roomByIdProvider(widget.roomId).future);
+      if (room != null && mounted) {
+        setState(() {
+          _nameController.text = room.name;
+          final metadata = room.metadata ?? {};
+          _descriptionController.text =
+              metadata['description'] as String? ?? '';
+          _avatarUrl = metadata['avatarUrl'] as String?;
+          _editInfoPermission =
+              metadata['editInfoPermission'] as String? ?? 'admins';
+          _sendMessagesPermission =
+              metadata['sendMessagesPermission'] as String? ?? 'all_members';
+          _addMembersPermission =
+              metadata['addMembersPermission'] as String? ?? 'admins';
+        });
       }
-    });
+    } catch (e) {
+      // Log error but don't crash - fields will have default values
+      debugPrint('Failed to load room data: $e');
+    }
   }
 
   void _onFieldChanged() {
@@ -184,7 +188,8 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
         if (didPop) return;
         final shouldPop = await _onWillPop();
         if (shouldPop && context.mounted) {
-          context.navigateBack();
+          // Use Navigator.pop directly to avoid retriggering onPopInvokedWithResult
+          Navigator.of(context).pop();
         }
       },
       child: Scaffold(
@@ -194,15 +199,9 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
           foregroundColor: Colors.white,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              if (_hasChanges) {
-                final shouldPop = await _onWillPop();
-                if (shouldPop && context.mounted) {
-                  context.navigateBack();
-                }
-              } else {
-                context.navigateBack();
-              }
+            onPressed: () {
+              // Let PopScope handle the confirmation dialog if there are changes
+              Navigator.of(context).maybePop();
             },
           ),
           actions: [

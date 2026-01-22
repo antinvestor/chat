@@ -989,21 +989,38 @@ class SyncEngine {
 
   Future<void> _processUpdateRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
+    final roomId = payload['id'] as String;
 
     final request = pb.UpdateRoomRequest(
-      roomId: payload['id'] as String,
+      roomId: roomId,
       name: payload['name'] as String? ?? '',
       topic: payload['description'] as String? ?? '',
     );
 
+    // Build metadata including avatar and permissions if present
+    final metadataMap = <String, dynamic>{};
     if (payload['metadata'] != null) {
-      request.metadata = _mapToStruct(
-        payload['metadata'] as Map<String, dynamic>,
-      );
+      metadataMap.addAll(payload['metadata'] as Map<String, dynamic>);
+    }
+    if (payload['avatarUrl'] != null) {
+      metadataMap['avatarUrl'] = payload['avatarUrl'];
+    }
+    if (payload['editInfoPermission'] != null) {
+      metadataMap['editInfoPermission'] = payload['editInfoPermission'];
+    }
+    if (payload['sendMessagesPermission'] != null) {
+      metadataMap['sendMessagesPermission'] = payload['sendMessagesPermission'];
+    }
+    if (payload['addMembersPermission'] != null) {
+      metadataMap['addMembersPermission'] = payload['addMembersPermission'];
+    }
+
+    if (metadataMap.isNotEmpty) {
+      request.metadata = _mapToStruct(metadataMap);
     }
 
     await _chatClient.updateRoom(request);
-    AppLogger.info('Room updated on server', data: {'roomId': payload['id']});
+    AppLogger.info('Room updated on server', data: {'roomId': roomId});
   }
 
   Future<void> _processDeleteRoom(domain_job.PendingJob job) async {
@@ -1067,7 +1084,7 @@ class SyncEngine {
 
   Future<void> _processLeaveRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final roomId = payload['roomId'] as String;
+    final roomId = payload['id'] as String;
 
     // Get current profile's profile ID to remove their subscription
     final currentProfileId = await _authRepository.getCurrentProfileId();
