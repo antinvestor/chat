@@ -13,6 +13,7 @@ import '../features/rooms/ui/group_settings_screen.dart';
 import '../features/rooms/ui/room_detail_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
 import '../features/settings/ui/account_settings_screen.dart';
+import '../features/settings/ui/cache_settings_screen.dart';
 import '../features/settings/ui/chat_settings_screen.dart';
 import '../features/settings/ui/media_compression_settings_screen.dart';
 import '../features/settings/ui/notification_settings_screen.dart';
@@ -96,9 +97,13 @@ GoRouter router(Ref ref) {
         builder: (context, state) => const MediaCompressionSettingsScreen(),
       ),
       GoRoute(
+        path: '/settings/storage/cache',
+        builder: (context, state) => const CacheSettingsScreen(),
+      ),
+      GoRoute(
         path: '/chat/:roomId',
         builder: (context, state) {
-          final roomId = state.pathParameters['roomId']!;
+          final roomId = state.pathParameters['roomId'];
           final roomName = state.uri.queryParameters['name'] ?? 'Chat';
           return ChatScreen(roomId: roomId, roomName: roomName);
         },
@@ -106,7 +111,7 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/room/:roomId/details',
         builder: (context, state) {
-          final roomId = state.pathParameters['roomId']!;
+          final roomId = state.pathParameters['roomId'];
           final roomName = state.uri.queryParameters['name'] ?? 'Room Details';
           return RoomDetailScreen(roomId: roomId, roomName: roomName);
         },
@@ -114,7 +119,7 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/room/:roomId/settings',
         builder: (context, state) {
-          final roomId = state.pathParameters['roomId']!;
+          final roomId = state.pathParameters['roomId'];
           final roomName =
               state.uri.queryParameters['name'] ?? 'Group Settings';
           return GroupSettingsScreen(roomId: roomId, roomName: roomName);
@@ -123,7 +128,7 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/profile/:profileId',
         builder: (context, state) {
-          final profileId = state.pathParameters['profileId']!;
+          final profileId = state.pathParameters['profileId'];
           return ProfileScreen(profileId: profileId);
         },
       ),
