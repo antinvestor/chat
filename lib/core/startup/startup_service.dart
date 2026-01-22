@@ -110,11 +110,12 @@ void callbackDispatcher() {
       bool success;
 
       // Route to appropriate task handler
-      if (task == contactSyncTaskIdentifier) {
-        success = await ContactBackgroundSyncTask.run();
-      } else {
-        // Default: message sync task
-        success = await BackgroundSyncTask.run();
+      switch (task) {
+        case contactSyncTaskIdentifier:
+          success = await ContactBackgroundSyncTask.run();
+        default:
+          // Default: message sync task
+          success = await BackgroundSyncTask.run();
       }
 
       AppLogger.info(
