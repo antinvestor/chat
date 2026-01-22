@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:antinvestor_api_common/antinvestor_api_common.dart' as common;
@@ -61,6 +62,21 @@ class ProfileRepository {
       ..where((t) => t.id.equals(userInfo!.id!));
 
     return query.getSingleOrNull();
+  }
+
+  /// Get the bio from the current profile's metadata
+  Future<String?> getCurrentBio() async {
+    final profile = await getCurrentProfile();
+    if (profile?.metadata == null || profile!.metadata!.isEmpty) {
+      return null;
+    }
+
+    try {
+      final metadataMap = jsonDecode(profile.metadata!) as Map<String, dynamic>;
+      return metadataMap['bio'] as String?;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Update the user's display name
@@ -328,11 +344,33 @@ class ProfileRepository {
 
     if (userInfo?.id == null) return;
 
+    // If bio is provided, we need to update the metadata field
+    String? metadata;
+    if (bio != null) {
+      // Get existing profile to preserve other metadata
+      final existingProfile = await getCurrentProfile();
+      final existingMetadata = existingProfile?.metadata;
+
+      var metadataMap = <String, dynamic>{};
+      if (existingMetadata != null && existingMetadata.isNotEmpty) {
+        try {
+          metadataMap = jsonDecode(existingMetadata) as Map<String, dynamic>;
+        } catch (_) {
+          // Ignore parsing errors, start fresh
+        }
+      }
+      metadataMap['bio'] = bio;
+      metadata = jsonEncode(metadataMap);
+    }
+
     final companion = ProfilesCompanion(
       id: drift.Value(userInfo!.id!),
       name: name != null ? drift.Value(name) : const drift.Value.absent(),
       avatarUrl: avatarUrl != null
           ? drift.Value(avatarUrl)
+          : const drift.Value.absent(),
+      metadata: metadata != null
+          ? drift.Value(metadata)
           : const drift.Value.absent(),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
     );
@@ -355,9 +393,10 @@ class ProfileRepository {
         final profile = response.data;
         final db = AppDatabase.instance;
 
-        // Extract name from properties if available
+        // Extract properties if available
         String? name;
         String? avatarUrl;
+        String? bio;
         if (profile.hasProperties()) {
           final props = profile.properties;
           if (props.fields.containsKey('name')) {
@@ -366,6 +405,15 @@ class ProfileRepository {
           if (props.fields.containsKey('avatar_url')) {
             avatarUrl = props.fields['avatar_url']?.stringValue;
           }
+          if (props.fields.containsKey('bio')) {
+            bio = props.fields['bio']?.stringValue;
+          }
+        }
+
+        // Build metadata JSON if bio is present
+        String? metadata;
+        if (bio != null) {
+          metadata = jsonEncode({'bio': bio});
         }
 
         await db
@@ -375,6 +423,9 @@ class ProfileRepository {
                 id: drift.Value(profile.id),
                 name: drift.Value(name),
                 avatarUrl: drift.Value(avatarUrl),
+                metadata: metadata != null
+                    ? drift.Value(metadata)
+                    : const drift.Value.absent(),
                 updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
               ),
             );

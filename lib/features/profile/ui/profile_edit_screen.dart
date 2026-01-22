@@ -53,6 +53,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         _currentAvatarUrl = userInfo.picture;
       }
 
+      // Load bio from local profile metadata
+      final bio = await profileRepo.getCurrentBio();
+      if (bio != null) {
+        _bioController.text = bio;
+      }
+
       // Load contacts
       _contacts = await profileRepo.getContacts();
     } catch (e) {
