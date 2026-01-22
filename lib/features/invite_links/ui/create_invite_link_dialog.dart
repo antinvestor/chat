@@ -72,7 +72,7 @@ class _CreateInviteLinkDialogState
 
     try {
       final link = await ref
-          .read(inviteLinkNotifierProvider.notifier)
+          .read(inviteLinkProvider.notifier)
           .createLink(
             roomId: widget.roomId,
             createdBy: widget.createdBy,

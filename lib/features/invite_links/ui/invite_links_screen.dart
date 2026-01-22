@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -136,11 +135,7 @@ class InviteLinksScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLinkTile(
-    BuildContext context,
-    WidgetRef ref,
-    InviteLink link,
-  ) {
+  Widget _buildLinkTile(BuildContext context, WidgetRef ref, InviteLink link) {
     final theme = Theme.of(context);
     final isActive = link.isValid;
 
@@ -260,10 +255,9 @@ class InviteLinksScreen extends ConsumerWidget {
                       isActive ? Icons.block : Icons.delete_outline,
                       color: Colors.red,
                     ),
-                    onPressed: () =>
-                        isActive
-                            ? _confirmRevoke(context, ref, link)
-                            : _confirmDelete(context, ref, link),
+                    onPressed: () => isActive
+                        ? _confirmRevoke(context, ref, link)
+                        : _confirmDelete(context, ref, link),
                     tooltip: isActive ? 'Revoke Link' : 'Delete Link',
                     iconSize: 20,
                   ),
@@ -278,7 +272,7 @@ class InviteLinksScreen extends ConsumerWidget {
 
   Widget _buildStatusChip(BuildContext context, InviteLink link) {
     final Color color;
-    final String text = link.statusText;
+    final text = link.statusText;
 
     switch (text) {
       case 'Active':
@@ -353,31 +347,22 @@ class InviteLinksScreen extends ConsumerWidget {
     }
   }
 
-  void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.read(currentUserProvider).valueOrNull;
-    if (currentUser == null) return;
+  Future<void> _showCreateDialog(BuildContext context, WidgetRef ref) async {
+    final profileId = await ref.read(currentProfileIdProvider.future);
+    if (profileId == null || !context.mounted) return;
 
     showDialog(
       context: context,
-      builder: (context) => CreateInviteLinkDialog(
-        roomId: roomId,
-        createdBy: currentUser.id,
-      ),
+      builder: (context) =>
+          CreateInviteLinkDialog(roomId: roomId, createdBy: profileId),
     );
   }
 
-  void _showLinkDetails(
-    BuildContext context,
-    WidgetRef ref,
-    InviteLink link,
-  ) {
+  void _showLinkDetails(BuildContext context, WidgetRef ref, InviteLink link) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => InviteLinkDetailSheet(
-        link: link,
-        roomId: roomId,
-      ),
+      builder: (context) => InviteLinkDetailSheet(link: link, roomId: roomId),
     );
   }
 
@@ -390,9 +375,9 @@ class InviteLinksScreen extends ConsumerWidget {
 
   void _copyLink(BuildContext context, InviteLink link) {
     Clipboard.setData(ClipboardData(text: link.inviteUrl));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Link copied to clipboard')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
   }
 
   void _shareLink(InviteLink link) {
@@ -402,11 +387,7 @@ class InviteLinksScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmRevoke(
-    BuildContext context,
-    WidgetRef ref,
-    InviteLink link,
-  ) {
+  void _confirmRevoke(BuildContext context, WidgetRef ref, InviteLink link) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -423,9 +404,7 @@ class InviteLinksScreen extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ref
-                  .read(inviteLinkNotifierProvider.notifier)
-                  .revokeLink(link.id, roomId);
+              ref.read(inviteLinkProvider.notifier).revokeLink(link.id, roomId);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Revoke'),
@@ -435,11 +414,7 @@ class InviteLinksScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(
-    BuildContext context,
-    WidgetRef ref,
-    InviteLink link,
-  ) {
+  void _confirmDelete(BuildContext context, WidgetRef ref, InviteLink link) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -455,9 +430,7 @@ class InviteLinksScreen extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ref
-                  .read(inviteLinkNotifierProvider.notifier)
-                  .deleteLink(link.id, roomId);
+              ref.read(inviteLinkProvider.notifier).deleteLink(link.id, roomId);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),

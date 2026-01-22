@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 
-import '../../../core/db/database.dart';
+import '../../../core/db/database.dart' hide InviteLink, InviteLinkJoin;
 import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
@@ -30,8 +30,10 @@ class InviteLinkService {
   static String generateCode({int length = 8}) {
     const chars = 'abcdefghijkmnpqrstuvwxyz23456789'; // Removed confusing chars
     final random = Random.secure();
-    return List.generate(length, (_) => chars[random.nextInt(chars.length)])
-        .join();
+    return List.generate(
+      length,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
   }
 
   /// Create a new invite link for a room
@@ -102,8 +104,7 @@ class InviteLinkService {
     bool requiresApproval = false,
     String? name,
   }) async {
-    final expiresAt =
-        DateTime.now().add(duration).millisecondsSinceEpoch;
+    final expiresAt = DateTime.now().add(duration).millisecondsSinceEpoch;
     return createInviteLink(
       roomId: roomId,
       createdBy: createdBy,
@@ -139,9 +140,7 @@ class InviteLinkService {
     await _repository.revokeLink(linkId);
 
     // Queue for server sync
-    await _jobRepository.addJob(JobType.revokeInviteLink, {
-      'linkId': linkId,
-    });
+    await _jobRepository.addJob(JobType.revokeInviteLink, {'linkId': linkId});
 
     AppLogger.info(
       'Invite link revoked locally and queued for sync',
@@ -224,8 +223,7 @@ class InviteLinkService {
   /// Get pending approval requests for a room's invite links
   Future<List<InviteLinkJoin>> getPendingApprovalsForRoom(
     String roomId,
-  ) async =>
-      _repository.getPendingApprovalsForRoom(roomId);
+  ) async => _repository.getPendingApprovalsForRoom(roomId);
 
   /// Approve a join request
   Future<void> approveJoinRequest({
