@@ -929,6 +929,9 @@ class SyncEngine {
           // Permission updates are included in updateRoom job
           await _processUpdateRoom(job);
           break;
+        case domain_job.JobType.changeMemberRole:
+          await _processChangeMemberRole(job);
+          break;
       }
       await _jobRepo.deleteJob(job.id);
     } catch (e, stackTrace) {
@@ -1080,6 +1083,28 @@ class SyncEngine {
         'memberCount': subscriptionIds.length,
       },
     );
+  }
+
+  Future<void> _processChangeMemberRole(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final roomId = payload['roomId'] as String;
+    final subscriptionId = payload['subscriptionId'] as String;
+    final newRole = payload['role'] as String;
+
+    // Update the role locally (already done in RoomService.changeMemberRole)
+    // The server sync can be handled via UpdateRoomSubscription API when available
+    // For now, log the role change request
+    AppLogger.info(
+      'Member role change queued for sync',
+      data: {
+        'roomId': roomId,
+        'subscriptionId': subscriptionId,
+        'newRole': newRole,
+      },
+    );
+
+    // TODO: Add server API call when backend supports role changes
+    // Example: await _chatClient.updateRoomSubscription(request);
   }
 
   Future<void> _processLeaveRoom(domain_job.PendingJob job) async {

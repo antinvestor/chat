@@ -16,6 +16,7 @@ enum JobType {
   deleteRoom,
   addRoomMembers,
   removeRoomMembers,
+  changeMemberRole,
   leaveRoom,
   vote,
   syncContacts,

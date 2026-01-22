@@ -6,6 +6,7 @@ import '../../../core/navigation/navigation_helper.dart';
 import '../../messages/domain/room_event.dart';
 import '../data/detail_panel_providers.dart';
 import '../data/room_providers.dart';
+import 'member_action_sheet.dart';
 
 /// Room detail panel showing room information, motions, transactions, and media
 /// Displayed in the right panel on desktop layouts
@@ -586,17 +587,12 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
       );
 
   void _openMemberProfile(BuildContext context, RoomMemberInfo member) {
-    if (member.profileId != null) {
-      // Use navigation helper for smoother navigation animation
-      context.navigateToProfile(profileId: member.profileId!);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Profile for ${member.name} not available'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    // Show member action sheet with admin controls
+    showMemberActionSheet(
+      context: context,
+      roomId: widget.roomId,
+      member: member,
+    );
   }
 
   Widget _buildEmptyState({

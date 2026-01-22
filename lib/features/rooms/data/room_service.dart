@@ -312,6 +312,94 @@ class RoomService {
     AppLogger.info('Leave room queued for sync', data: {'roomId': roomId});
   }
 
+  /// Change a member's role in a room
+  /// Updates locally first, then queues for server sync
+  ///
+  /// @param roomId The room ID
+  /// @param subscriptionId The subscription ID of the member to update
+  /// @param newRole The new role (e.g., 'admin', 'moderator', 'member')
+  Future<void> changeMemberRole({
+    required String roomId,
+    required String subscriptionId,
+    required String newRole,
+  }) async {
+    // Update locally first
+    await (_database.update(_database.roomMembers)
+          ..where((t) => t.subscriptionId.equals(subscriptionId)))
+        .write(RoomMembersCompanion(role: Value(newRole)));
+
+    // Queue for server sync
+    await _jobRepo.addJob(JobType.changeMemberRole, {
+      'roomId': roomId,
+      'subscriptionId': subscriptionId,
+      'role': newRole,
+    });
+
+    AppLogger.info(
+      'Member role change queued for sync',
+      data: {
+        'roomId': roomId,
+        'subscriptionId': subscriptionId,
+        'newRole': newRole,
+      },
+    );
+  }
+
+  /// Promote a member to admin
+  /// Convenience method that calls changeMemberRole with 'admin' role
+  Future<void> promoteToAdmin({
+    required String roomId,
+    required String subscriptionId,
+  }) async {
+    await changeMemberRole(
+      roomId: roomId,
+      subscriptionId: subscriptionId,
+      newRole: 'admin',
+    );
+  }
+
+  /// Demote a member from admin to regular member
+  /// Convenience method that calls changeMemberRole with 'member' role
+  Future<void> demoteFromAdmin({
+    required String roomId,
+    required String subscriptionId,
+  }) async {
+    await changeMemberRole(
+      roomId: roomId,
+      subscriptionId: subscriptionId,
+      newRole: 'member',
+    );
+  }
+
+  /// Remove a member from a room by admin action
+  /// Different from leaveRoom which is voluntary
+  Future<void> removeMemberByAdmin({
+    required String roomId,
+    required String subscriptionId,
+    required String profileId,
+  }) async {
+    // Remove from local database
+    await (_database.delete(
+      _database.roomMembers,
+    )..where((t) => t.subscriptionId.equals(subscriptionId))).go();
+
+    // Queue for server sync
+    await _jobRepo.addJob(JobType.removeRoomMembers, {
+      'roomId': roomId,
+      'profileIds': [profileId],
+      'isAdminAction': true,
+    });
+
+    AppLogger.info(
+      'Admin member removal queued for sync',
+      data: {
+        'roomId': roomId,
+        'subscriptionId': subscriptionId,
+        'profileId': profileId,
+      },
+    );
+  }
+
   /// Sync room members from server
   /// Fetches room member subscriptions and stores them locally using the searchRoomSubscriptions API
   Future<void> syncRoomMembers(String roomId) async {
