@@ -1,519 +1,133 @@
-name: CI/CD Pipeline
+# CI Pipeline - Runs on Pull Requests
+# Validates code quality before merging
+name: CI
 
 on:
-  push:
-    branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
   FLUTTER_VERSION: '3.38.7'
   JAVA_VERSION: '17'
 
 jobs:
-  # Code Quality and Analysis
+  # Code Analysis
   analyze:
-    name: Code Analysis
+    name: Analyze
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: ${{ env.JAVA_VERSION }}
-        
-    - name: Get Flutter dependencies
-      run: flutter pub get
-      
-    - name: Generate code
-      run: |
-        dart run build_runner build --delete-conflicting-outputs
-        
-    - name: Analyze code
-      run: flutter analyze --no-fatal-infos
-      
-    - name: Check code formatting
-      run: dart format --set-exit-if-changed .
-      
-    - name: Import sorting
-      run: flutter pub run import_sorter:main
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed .
 
   # Unit Tests
   test:
-    name: Unit Tests
+    name: Test
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Get Flutter dependencies
-      run: flutter pub get
-      
-    - name: Generate code
-      run: |
-        dart run build_runner build --delete-conflicting-outputs
-        
-    - name: Run unit tests
-      run: flutter test --coverage --test-randomize-ordering-seed=random
-      
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
-
-  # Widget Tests
-  widget_test:
-    name: Widget Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Get Flutter dependencies
-      run: flutter pub get
-      
-    - name: Generate code
-      run: |
-        dart run build_runner build --delete-conflicting-outputs
-        
-    - name: Run widget tests
-      run: flutter test --coverage test/widget_test/
-
-  # Integration Tests
-  integration_test:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Get Flutter dependencies
-      run: flutter pub get
-      
-    - name: Generate code
-      run: |
-        dart run build_runner build --delete-conflicting-outputs
-        
-    - name: Run integration tests
-      run: |
-        flutter test --coverage test/integration_test/
-        
-    - name: Upload integration coverage
-      uses: codecov/codecov-action@v4
-      with:
-        file: coverage/lcov.info
-        flags: integration
-        name: codecov-integration
-
-  # Android Build
-  build_android:
-    name: Build Android
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    needs: [analyze, test, widget_test]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: ${{ env.JAVA_VERSION }}
-        
-    - name: Get Flutter dependencies
-      run: flutter pub get
-      
-    - name: Generate code
-      run: |
-        dart run build_runner build --delete-conflicting-outputs
-        
-    - name: Setup Android signing
-      env:
-        SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
-        SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
-        KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      run: |
-        echo "$SIGNING_KEY" | base64 -d > android/app/keystore.jks
-        echo "storePassword=$KEYSTORE_PASSWORD" >> android/key.properties
-        echo "keyPassword=$SIGNING_KEY_PASSWORD" >> android/key.properties
-        echo "keyAlias=key" >> android/key.properties
-        echo "storeFile=keystore.jks" >> android/key.properties
-        
-    - name: Build APK
-      run: flutter build apk --release --shrink
-      
-    - name: Build App Bundle
-      run: flutter build appbundle --release
-      
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
-        
-    - name: Upload App Bundle
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-appbundle
-        path: build/app/outputs/bundle/release/app-release.aab
-
-  # iOS Build
-  build_ios:
-    name: Build iOS
-    runs-on: macos-latest
-    timeout-minutes: 60
-    needs: [analyze, test, widget_test]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
 
-    - name: Get Flutter dependencies
-      run: flutter pub get
+      - name: Get dependencies
+        run: flutter pub get
 
-    - name: Create iOS project if missing
-      run: |
-        if [ ! -d "ios" ]; then
-          echo "iOS project not found, creating..."
-          flutter create --platforms=ios .
-        fi
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
 
-    - name: Set iOS deployment target
-      run: |
-        cd ios
-        # Update Podfile to use iOS 15.0 (required by Firebase SDK 12.x)
-        if grep -q "^# platform :ios" Podfile; then
-          sed -i '' "s/^# platform :ios.*/platform :ios, '15.0'/" Podfile
-        elif grep -q "^platform :ios" Podfile; then
-          sed -i '' "s/^platform :ios.*/platform :ios, '15.0'/" Podfile
-        else
-          echo "platform :ios, '15.0'" | cat - Podfile > temp && mv temp Podfile
-        fi
+      - name: Run tests
+        run: flutter test --coverage
 
-        # Add PhoneNumberKit pod explicitly (required by libphonenumber_plugin)
-        if ! grep -q "PhoneNumberKit" Podfile; then
-          sed -i '' "/target 'Runner' do/a\\
-          pod 'PhoneNumberKit', '~> 3.7'
-        " Podfile
-        fi
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage/lcov.info
+          flags: unittests
+        continue-on-error: true
 
-        # Add post_install hook to set deployment target for all pods
-        if ! grep -q "post_install" Podfile; then
-          cat >> Podfile << 'HOOK'
-
-        post_install do |installer|
-          installer.pods_project.targets.each do |target|
-            target.build_configurations.each do |config|
-              config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
-            end
-          end
-        end
-        HOOK
-        fi
-
-        echo "Updated Podfile:"
-        cat Podfile
-
-    - name: Install CocoaPods dependencies
-      run: |
-        cd ios
-        pod repo update
-        pod install --repo-update || pod install
-
-    - name: Generate code
-      run: |
-        dart run build_runner build --delete-conflicting-outputs
-
-    - name: Setup iOS signing
-      continue-on-error: true  # Skip if secrets not configured
-      env:
-        BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-        P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-        BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
-        KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-      run: |
-        # create variables
-        CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-        PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-        # import certificate and provisioning profile from secrets
-        echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode --output $CERTIFICATE_PATH
-        echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode --output $PP_PATH
-
-        # create temporary keychain
-        security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-        security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-        # import certificate to keychain
-        security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-        security list-keychain -d user -s $KEYCHAIN_PATH
-
-        # install provisioning profile
-        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
-
-    - name: Build iOS (no codesigning)
-      run: flutter build ios --no-codesign
-      
-    - name: Create IPA
-      run: |
-        mkdir -p build/ios/ipa
-        cp -r build/ios/iphoneos/Runner.app build/ios/ipa/
-        cd build/ios/ipa
-        zip -r Runner.ipa Runner.app
-        
-    - name: Upload IPA
-      uses: actions/upload-artifact@v4
-      with:
-        name: ios-ipa
-        path: build/ios/ipa/Runner.ipa
-
-  # Web Build
-  build_web:
-    name: Build Web
+  # Build verification (ensure it compiles)
+  build-check:
+    name: Build Check
+    needs: [analyze, test]
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [analyze, test, widget_test]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Get Flutter dependencies
-      run: flutter pub get
-      
-    - name: Generate code
-      run: |
-        dart run build_runner build --delete-conflicting-outputs
-        
-    - name: Build Web
-      run: flutter build web --release
-      
-    - name: Upload Web build
-      uses: actions/upload-artifact@v4
-      with:
-        name: web-build
-        path: build/web/
 
-  # Performance Tests
-  performance_test:
-    name: Performance Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [build_android, build_ios, build_web]
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-        
-    - name: Get Flutter dependencies
-      run: flutter pub get
-      
-    - name: Generate code
-      run: |
-        dart run build_runner build --delete-conflicting-outputs
-        
-    - name: Run performance tests
-      run: flutter test test/performance_test/
-      
-    - name: Upload performance results
-      uses: actions/upload-artifact@v4
-      with:
-        name: performance-results
-        path: test_results/
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Security Scan
-  security_scan:
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Android (debug)
+        run: flutter build apk --debug
+
+      - name: Build Web
+        run: flutter build web
+
+  # Security scan
+  security:
     name: Security Scan
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        
-    - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v3
-      continue-on-error: true  # Continue if Advanced Security is not enabled
-      with:
-        sarif_file: 'trivy-results.sarif'
+    timeout-minutes: 15
 
-  # Deploy to Staging
-  deploy_staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [build_android, build_ios, build_web, performance_test]
-    if: github.ref == 'refs/heads/develop'
-    environment: staging
-    
     steps:
-    - name: Download Android artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: android-apk
-        path: artifacts/
-        
-    - name: Download iOS artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: ios-ipa
-        path: artifacts/
-        
-    - name: Download Web artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: web-build
-        path: artifacts/web/
-        
-    - name: Deploy to Firebase Hosting
-      uses: FirebaseExtended/action-hosting-deploy@v0
-      with:
-        repoToken: '${{ secrets.GITHUB_TOKEN }}'
-        firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-        channelId: live
-        projectId: chat-app-staging
-        
-    - name: Deploy to App Distribution
-      uses: wzieba/Firebase-Distribution-Github-Action@v1
-      with:
-        appId: ${{ secrets.FIREBASE_ANDROID_APPID }}
-        serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        groups: testers
-        file: artifacts/app-release.apk
-        releaseNotes: "Staging build from ${{ github.sha }}"
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Deploy to Production
-  deploy_production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [build_android, build_ios, build_web, performance_test]
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    
-    steps:
-    - name: Download Android artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: android-appbundle
-        path: artifacts/
-        
-    - name: Download iOS artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: ios-ipa
-        path: artifacts/
-        
-    - name: Download Web artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: web-build
-        path: artifacts/web/
-        
-    - name: Deploy to Firebase Hosting
-      uses: FirebaseExtended/action-hosting-deploy@v0
-      with:
-        repoToken: '${{ secrets.GITHUB_TOKEN }}'
-        firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-        channelId: live
-        projectId: chat-app-production
-        
-    - name: Deploy to Google Play Console
-      uses: r0adkll/upload-google-play@v1
-      with:
-        serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
-        packageName: com.antinvestor.chat
-        releaseFiles: artifacts/app-release.aab
-        track: production
-        status: completed
-        whatsNewDirectory: fastlane/metadata/android
-        
-    - name: Deploy to TestFlight
-      uses: apple-actions/upload-testflight-build@v1
-      with:
-        app-path: artifacts/Runner.ipa
-        apple-id: ${{ secrets.APPLE_ID }}
-        issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
-        key-id: ${{ secrets.APPLE_KEY_ID }}
-        key: ${{ secrets.APPLE_KEY }}
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true

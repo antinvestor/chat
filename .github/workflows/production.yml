@@ -1,0 +1,418 @@
+# Production Release - Triggered on version tags (v*)
+# Deploys release builds to app stores
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false  # Don't cancel production deployments
+
+env:
+  FLUTTER_VERSION: '3.38.7'
+  JAVA_VERSION: '17'
+
+jobs:
+  # Extract version from tag
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            TAG="v${VERSION}"
+          else
+            TAG=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG#v}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "📦 Building version: $VERSION (tag: $TAG)"
+
+  # Run full test suite before production release
+  test:
+    name: Run Tests
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Run all tests
+        run: |
+          flutter test --coverage
+          flutter analyze --no-fatal-infos
+
+      - name: Check code formatting
+        run: dart format --set-exit-if-changed .
+
+  # Build all platforms
+  build:
+    name: Build
+    needs: [prepare, test]
+    uses: ./.github/workflows/build.yml
+    with:
+      environment: production
+      build_type: release
+      version: ${{ needs.prepare.outputs.version }}
+    secrets:
+      ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
+      ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+  # Create GitHub Release
+  create-release:
+    name: Create GitHub Release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "Generating changelog from $PREV_TAG to ${{ needs.prepare.outputs.tag }}"
+            CHANGELOG=$(git log $PREV_TAG..${{ needs.prepare.outputs.tag }} --pretty=format:"- %s (%h)" --no-merges)
+          else
+            echo "No previous tag found, using last 20 commits"
+            CHANGELOG=$(git log -20 --pretty=format:"- %s (%h)" --no-merges)
+          fi
+
+          # Save to file for multiline output
+          echo "$CHANGELOG" > /tmp/changelog.txt
+          echo "changelog_file=/tmp/changelog.txt" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          VERSION=${{ needs.prepare.outputs.version }}
+
+          # Android APK
+          if [ -f "artifacts/android-apk-production/app-release.apk" ]; then
+            cp artifacts/android-apk-production/app-release.apk release-assets/chat-${VERSION}-android.apk
+          fi
+
+          # Android AAB
+          if [ -f "artifacts/android-aab-production/app-release.aab" ]; then
+            cp artifacts/android-aab-production/app-release.aab release-assets/chat-${VERSION}-android.aab
+          fi
+
+          # iOS IPA
+          if [ -f "artifacts/ios-ipa-production/Runner.ipa" ]; then
+            cp artifacts/ios-ipa-production/Runner.ipa release-assets/chat-${VERSION}-ios.ipa
+          fi
+
+          # Web (zip it)
+          if [ -d "artifacts/web-build-production" ]; then
+            cd artifacts/web-build-production
+            zip -r ../../release-assets/chat-${VERSION}-web.zip .
+            cd ../..
+          fi
+
+          ls -la release-assets/
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: Chat App ${{ needs.prepare.outputs.tag }}
+          body: |
+            ## 🚀 Chat App ${{ needs.prepare.outputs.tag }}
+
+            ### 📋 Changes
+            $(cat /tmp/changelog.txt)
+
+            ### 📱 Downloads
+
+            | Platform | Download |
+            |----------|----------|
+            | Android APK | [chat-${{ needs.prepare.outputs.version }}-android.apk](https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare.outputs.tag }}/chat-${{ needs.prepare.outputs.version }}-android.apk) |
+            | Android AAB | [chat-${{ needs.prepare.outputs.version }}-android.aab](https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare.outputs.tag }}/chat-${{ needs.prepare.outputs.version }}-android.aab) |
+            | iOS | Available on App Store |
+            | Web | [Live](https://chat.antinvestor.com) |
+
+            ### 🔧 Installation
+
+            **Android:**
+            1. Download the APK from above
+            2. Enable "Install from unknown sources" if needed
+            3. Install the APK
+
+            **iOS:**
+            1. Download from the App Store
+            2. Or join TestFlight for beta access
+
+            **Web:**
+            1. Visit [chat.antinvestor.com](https://chat.antinvestor.com)
+
+            ---
+            📖 [Documentation](https://docs.antinvestor.com/chat) | 🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
+          files: release-assets/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Deploy Web to Cloudflare Pages (Production)
+  deploy-web-production:
+    name: Deploy Web to Cloudflare Pages
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://chat.antinvestor.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build-production
+          path: build/web
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || 'chat-app' }} --branch=main
+
+      - name: Deployment summary
+        run: |
+          echo "## 🌐 Web Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+
+  # Deploy Android to Play Store (Production)
+  deploy-android-production:
+    name: Deploy Android to Play Store
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: android-aab-production
+          path: artifacts/
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Create whatsnew directory
+        run: |
+          mkdir -p fastlane/metadata/android/en-US/changelogs
+          echo "Version ${{ needs.prepare.outputs.version }}" > fastlane/metadata/android/en-US/changelogs/default.txt
+          echo "" >> fastlane/metadata/android/en-US/changelogs/default.txt
+          echo "Bug fixes and performance improvements" >> fastlane/metadata/android/en-US/changelogs/default.txt
+
+      - name: Upload to Play Store (Production)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: ${{ vars.ANDROID_PACKAGE_NAME || 'com.antinvestor.chat' }}
+          releaseFiles: artifacts/app-release.aab
+          track: production
+          status: completed
+          releaseName: ${{ needs.prepare.outputs.version }}
+          whatsNewDirectory: fastlane/metadata/android/en-US/changelogs
+
+      - name: Deployment summary
+        run: |
+          echo "## 🤖 Android Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Track:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Package:** ${{ vars.ANDROID_PACKAGE_NAME || 'com.antinvestor.chat' }}" >> $GITHUB_STEP_SUMMARY
+
+  # Deploy iOS to App Store Connect
+  deploy-ios-production:
+    name: Deploy iOS to App Store
+    needs: [prepare, build]
+    runs-on: macos-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+
+    steps:
+      - name: Download IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa-production
+          path: artifacts/
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Upload to App Store Connect
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: artifacts/Runner.ipa
+          issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPLE_KEY_ID }}
+          api-private-key: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+
+      - name: Deployment summary
+        run: |
+          echo "## 🍎 iOS Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** Uploaded to App Store Connect" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Note: App will be available after Apple review" >> $GITHUB_STEP_SUMMARY
+
+  # Notify on successful production release
+  notify:
+    name: Notify Release
+    needs: [prepare, create-release, deploy-web-production, deploy-android-production, deploy-ios-production]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Create release summary
+        run: |
+          echo "## 🎉 Production Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ needs.prepare.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| GitHub Release | ${{ needs.create-release.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web (Cloudflare) | ${{ needs.deploy-web-production.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android (Play Store) | ${{ needs.deploy-android-production.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS (App Store) | ${{ needs.deploy-ios-production.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send Slack notification
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🎉 Chat App ${{ needs.prepare.outputs.tag }} Released!"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Web:*\n${{ needs.deploy-web-production.result == 'success' && '✅ Deployed' || '❌ Failed' }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Android:*\n${{ needs.deploy-android-production.result == 'success' && '✅ Deployed' || '❌ Failed' }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*iOS:*\n${{ needs.deploy-ios-production.result == 'success' && '✅ Deployed' || '❌ Failed' }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Release"
+                      },
+                      "url": "https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.tag }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+      - name: Send Discord notification
+        if: ${{ secrets.DISCORD_WEBHOOK != '' }}
+        uses: Ilshidur/action-discord@master
+        with:
+          args: |
+            🎉 **Chat App ${{ needs.prepare.outputs.tag }} Released!**
+
+            📱 **Deployment Status:**
+            • Web: ${{ needs.deploy-web-production.result == 'success' && '✅' || '❌' }}
+            • Android: ${{ needs.deploy-android-production.result == 'success' && '✅' || '❌' }}
+            • iOS: ${{ needs.deploy-ios-production.result == 'success' && '✅' || '❌' }}
+
+            📋 [Release Notes](https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.tag }})
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        continue-on-error: true
