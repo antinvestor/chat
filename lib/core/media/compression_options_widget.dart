@@ -240,7 +240,11 @@ class _CompressionOptionsWidgetState
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.compress, size: 16, color: AppTheme.primaryGreen),
+                const Icon(
+                  Icons.compress,
+                  size: 16,
+                  color: AppTheme.primaryGreen,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Save ~${formatBytes(savings)} (${savingsPercent.toStringAsFixed(0)}%)',
@@ -462,7 +466,9 @@ class CompressionProgressIndicator extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppTheme.primaryGreen,
+              ),
               minHeight: 6,
             ),
           ),
