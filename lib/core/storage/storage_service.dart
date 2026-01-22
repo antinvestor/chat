@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -456,12 +457,12 @@ class StorageService {
 
     try {
       // Delete old media messages from database
+      // Media types are: 1=image, 2=video, 3=audio, 4=file
       final oldMediaMessages = await (_database.select(_database.roomEvents)
             ..where(
               (e) =>
-                  e.type.isBiggerOrEqualValue(1) &
-                  e.type.isSmallerOrEqualValue(4) &
-                  e.createdAt.isSmallerThanValue(cutoffTimestamp),
+                  e.type.isIn([1, 2, 3, 4]) &
+                  e.createdAt.isSmallerThan(Variable(cutoffTimestamp)),
             ))
           .get();
 
