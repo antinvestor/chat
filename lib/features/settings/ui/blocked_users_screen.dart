@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/db/database.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../contacts/data/roster_repository.dart';
 import '../../contacts/services/block_service.dart';
 
 /// Screen displaying the list of blocked users with options to unblock
@@ -58,57 +57,54 @@ class BlockedUsersScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check_circle_outline,
-                  size: 48,
-                  color: Colors.green.shade400,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'No blocked contacts',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'You have not blocked anyone yet. Blocked contacts will appear here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.check_circle_outline,
+              size: 48,
+              color: Colors.green.shade400,
+            ),
           ),
-        ),
-      );
+          const SizedBox(height: 24),
+          Text(
+            'No blocked contacts',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'You have not blocked anyone yet. Blocked contacts will appear here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildBlockedUsersList(
     BuildContext context,
     WidgetRef ref,
     List<RosterData> blockedUsers,
   ) => ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: blockedUsers.length,
-        itemBuilder: (context, index) {
-          final user = blockedUsers[index];
-          return _buildBlockedUserTile(context, ref, user);
-        },
-      );
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    itemCount: blockedUsers.length,
+    itemBuilder: (context, index) {
+      final user = blockedUsers[index];
+      return _buildBlockedUserTile(context, ref, user);
+    },
+  );
 
   Widget _buildBlockedUserTile(
     BuildContext context,
@@ -116,7 +112,9 @@ class BlockedUsersScreen extends ConsumerWidget {
     RosterData user,
   ) {
     final displayName = user.displayName ?? user.contactDetail;
-    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+    final initials = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : '?';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -145,10 +143,9 @@ class BlockedUsersScreen extends ConsumerWidget {
         ),
         title: Text(
           displayName,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w500),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,11 +169,7 @@ class BlockedUsersScreen extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.block,
-                    size: 12,
-                    color: Colors.red.shade600,
-                  ),
+                  Icon(Icons.block, size: 12, color: Colors.red.shade600),
                   const SizedBox(width: 4),
                   Text(
                     'Blocked',
@@ -193,9 +186,7 @@ class BlockedUsersScreen extends ConsumerWidget {
         ),
         trailing: TextButton(
           onPressed: () => _confirmUnblock(context, ref, user),
-          style: TextButton.styleFrom(
-            foregroundColor: AppTheme.primaryGreen,
-          ),
+          style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
           child: const Text('Unblock'),
         ),
         onTap: () {
@@ -207,11 +198,7 @@ class BlockedUsersScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmUnblock(
-    BuildContext context,
-    WidgetRef ref,
-    RosterData user,
-  ) {
+  void _confirmUnblock(BuildContext context, WidgetRef ref, RosterData user) {
     final displayName = user.displayName ?? user.contactDetail;
 
     showDialog(
@@ -231,9 +218,7 @@ class BlockedUsersScreen extends ConsumerWidget {
               Navigator.pop(dialogContext);
               await _unblockUser(context, ref, user);
             },
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.primaryGreen,
-            ),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.primaryGreen),
             child: const Text('Unblock'),
           ),
         ],

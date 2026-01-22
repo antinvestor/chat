@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:xid/xid.dart';
 
@@ -9,6 +8,7 @@ import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
+import '../../../core/sync/sync_engine.dart';
 
 part 'report_service.g.dart';
 
@@ -24,11 +24,10 @@ enum ReportReason {
   final String value;
   final String displayName;
 
-  static ReportReason fromValue(String value) =>
-      ReportReason.values.firstWhere(
-        (e) => e.value == value,
-        orElse: () => ReportReason.other,
-      );
+  static ReportReason fromValue(String value) => ReportReason.values.firstWhere(
+    (e) => e.value == value,
+    orElse: () => ReportReason.other,
+  );
 }
 
 /// Report status
@@ -43,9 +42,9 @@ enum ReportStatus {
   final String value;
 
   static ReportStatus fromValue(String value) => ReportStatus.values.firstWhere(
-        (e) => e.value == value,
-        orElse: () => ReportStatus.pending,
-      );
+    (e) => e.value == value,
+    orElse: () => ReportStatus.pending,
+  );
 }
 
 /// Domain model for a user report
@@ -54,24 +53,22 @@ class UserReport {
     required this.id,
     required this.reportedUserId,
     required this.reason,
-    this.details,
+    required this.reportedAt, this.details,
     this.evidenceEventIds,
-    required this.reportedAt,
     this.status = ReportStatus.pending,
   });
 
   factory UserReport.fromDbRow(Report row) => UserReport(
-        id: row.id,
-        reportedUserId: row.reportedUserId,
-        reason: ReportReason.fromValue(row.reason),
-        details: row.details,
-        evidenceEventIds: row.evidenceEventIds != null
-            ? (jsonDecode(row.evidenceEventIds!) as List<dynamic>)
-                .cast<String>()
-            : null,
-        reportedAt: DateTime.fromMillisecondsSinceEpoch(row.reportedAt),
-        status: ReportStatus.fromValue(row.status),
-      );
+    id: row.id,
+    reportedUserId: row.reportedUserId,
+    reason: ReportReason.fromValue(row.reason),
+    details: row.details,
+    evidenceEventIds: row.evidenceEventIds != null
+        ? (jsonDecode(row.evidenceEventIds!) as List<dynamic>).cast<String>()
+        : null,
+    reportedAt: DateTime.fromMillisecondsSinceEpoch(row.reportedAt),
+    status: ReportStatus.fromValue(row.status),
+  );
 
   final String id;
   final String reportedUserId;
@@ -82,16 +79,16 @@ class UserReport {
   final ReportStatus status;
 
   ReportsCompanion toCompanion() => ReportsCompanion.insert(
-        id: id,
-        reportedUserId: reportedUserId,
-        reason: reason.value,
-        details: Value(details),
-        evidenceEventIds: Value(
-          evidenceEventIds != null ? jsonEncode(evidenceEventIds) : null,
-        ),
-        reportedAt: reportedAt.millisecondsSinceEpoch,
-        status: Value(status.value),
-      );
+    id: id,
+    reportedUserId: reportedUserId,
+    reason: reason.value,
+    details: Value(details),
+    evidenceEventIds: Value(
+      evidenceEventIds != null ? jsonEncode(evidenceEventIds) : null,
+    ),
+    reportedAt: reportedAt.millisecondsSinceEpoch,
+    status: Value(status.value),
+  );
 }
 
 /// Service for reporting users
@@ -139,24 +136,20 @@ class ReportService {
         details: details,
         evidenceEventIds: evidenceEventIds,
         reportedAt: DateTime.now(),
-        status: ReportStatus.pending,
       );
 
       // Save to local database
       await _database.into(_database.reports).insert(report.toCompanion());
 
       // Queue job for server submission
-      await _pendingJobRepository.addJob(
-        JobType.custom,
-        {
-          'action': 'submit_report',
-          'reportId': report.id,
-          'reportedUserId': reportedUserId,
-          'reason': reason.value,
-          'details': details,
-          'evidenceEventIds': evidenceEventIds,
-        },
-      );
+      await _pendingJobRepository.addJob(JobType.custom, {
+        'action': 'submit_report',
+        'reportId': report.id,
+        'reportedUserId': reportedUserId,
+        'reason': reason.value,
+        'details': details,
+        'evidenceEventIds': evidenceEventIds,
+      });
 
       AppLogger.info(
         '[ReportService] Report submitted successfully',
@@ -261,10 +254,7 @@ class ReportService {
   // ============================================================================
 
   /// Update report status (called when server responds)
-  Future<void> updateReportStatus(
-    String reportId,
-    ReportStatus status,
-  ) async {
+  Future<void> updateReportStatus(String reportId, ReportStatus status) async {
     await (_database.update(_database.reports)
           ..where((t) => t.id.equals(reportId)))
         .write(ReportsCompanion(status: Value(status.value)));
@@ -277,9 +267,9 @@ class ReportService {
 
   /// Delete a local report (e.g., if submission failed permanently)
   Future<void> deleteReport(String reportId) async {
-    await (_database.delete(_database.reports)
-          ..where((t) => t.id.equals(reportId)))
-        .go();
+    await (_database.delete(
+      _database.reports,
+    )..where((t) => t.id.equals(reportId))).go();
 
     AppLogger.info(
       '[ReportService] Report deleted',

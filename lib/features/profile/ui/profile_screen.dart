@@ -29,7 +29,7 @@ class ProfileScreen extends ConsumerWidget {
             context,
             ref,
             profile,
-            isBlockedAsync.valueOrNull ?? false,
+            isBlockedAsync.value ?? false,
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -39,37 +39,37 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildNotFoundScreen(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+    appBar: AppBar(
+      title: const Text('Profile'),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () {
+          // Navigate back using navigation helper
+          context.navigateBack();
+        },
+      ),
+    ),
+    body: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.person_off, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Profile not found',
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
             onPressed: () {
-              // Navigate back using navigation helper
               context.navigateBack();
             },
+            child: const Text('Go Back'),
           ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.person_off, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'Profile not found',
-                style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  context.navigateBack();
-                },
-                child: const Text('Go Back'),
-              ),
-            ],
-          ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 
   Widget _buildProfileContent(
     BuildContext context,
@@ -153,11 +153,7 @@ class ProfileScreen extends ConsumerWidget {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.block,
-                              color: Colors.white,
-                              size: 16,
-                            ),
+                            Icon(Icons.block, color: Colors.white, size: 16),
                             SizedBox(width: 4),
                             Text(
                               'Blocked',
@@ -233,11 +229,7 @@ class ProfileScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.block,
-                        size: 48,
-                        color: Colors.red.shade400,
-                      ),
+                      Icon(Icons.block, size: 48, color: Colors.red.shade400),
                       const SizedBox(height: 8),
                       Text(
                         'You have blocked this user',
@@ -378,17 +370,17 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-            letterSpacing: 0.5,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.primary,
+        letterSpacing: 0.5,
+      ),
+    ),
+  );
 
   Widget _buildActionButton(
     BuildContext context, {
@@ -616,7 +608,8 @@ class ProfileScreen extends ConsumerWidget {
                     title: Text(reason.displayName),
                     value: reason,
                     groupValue: selectedReason,
-                    onChanged: (value) => setState(() => selectedReason = value),
+                    onChanged: (value) =>
+                        setState(() => selectedReason = value),
                     contentPadding: EdgeInsets.zero,
                     dense: true,
                   ),
@@ -634,10 +627,7 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Checkbox(
-                      value: false,
-                      onChanged: null,
-                    ),
+                    const Checkbox(value: false, onChanged: null),
                     Expanded(
                       child: Text(
                         'Also block this user',
@@ -697,7 +687,9 @@ class ProfileScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Report submitted. Thank you for helping keep our community safe.'),
+            content: Text(
+              'Report submitted. Thank you for helping keep our community safe.',
+            ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
           ),

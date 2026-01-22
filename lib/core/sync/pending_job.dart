@@ -21,6 +21,7 @@ enum JobType {
   leaveRoom,
   vote,
   syncContacts,
+  custom, // For custom jobs like reports
 }
 
 @freezed

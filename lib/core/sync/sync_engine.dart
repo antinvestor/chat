@@ -935,6 +935,9 @@ class SyncEngine {
         case domain_job.JobType.forwardMessage:
           await _processForwardMessage(job);
           break;
+        case domain_job.JobType.custom:
+          // Custom jobs are handled by their respective services
+          break;
       }
       await _jobRepo.deleteJob(job.id);
     } catch (e, stackTrace) {
