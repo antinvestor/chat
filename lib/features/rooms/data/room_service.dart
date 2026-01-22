@@ -10,17 +10,25 @@ import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../domain/room.dart' as domain;
+import 'room_member_repository.dart';
 import 'room_repository.dart';
 
 /// Service for managing rooms with offline-first support
 /// All operations are saved locally first, then queued for server sync
 /// Supports universal messaging: server handles routing to on/off-platform members
 class RoomService {
-  RoomService(this._roomRepo, this._jobRepo, this._chatClient, this._database);
+  RoomService(
+    this._roomRepo,
+    this._jobRepo,
+    this._chatClient,
+    this._database,
+    this._memberRepo,
+  );
   final RoomRepository _roomRepo;
   final PendingJobRepository _jobRepo;
   final pb_chat.ChatServiceClient _chatClient;
   final AppDatabase _database;
+  final RoomMemberRepository _memberRepo;
 
   /// Create a new room (group or direct chat)
   /// Saves locally first, then queues for server sync
@@ -312,6 +320,101 @@ class RoomService {
     AppLogger.info('Leave room queued for sync', data: {'roomId': roomId});
   }
 
+  /// Change a member's role in a room
+  /// Updates locally first, then queues for server sync
+  ///
+  /// @param roomId The room ID
+  /// @param subscriptionId The subscription ID of the member to update
+  /// @param newRole The new role (e.g., 'admin', 'moderator', 'member')
+  Future<void> changeMemberRole({
+    required String roomId,
+    required String subscriptionId,
+    required String newRole,
+  }) async {
+    // Update locally first using repository
+    final success = await _memberRepo.updateMemberRole(
+      subscriptionId: subscriptionId,
+      newRole: newRole,
+    );
+
+    if (!success) {
+      // The repository already logs a warning. Abort to avoid queueing
+      // a job for a failed local update.
+      return;
+    }
+
+    // Queue for server sync
+    await _jobRepo.addJob(JobType.changeMemberRole, {
+      'roomId': roomId,
+      'subscriptionId': subscriptionId,
+      'role': newRole,
+    });
+
+    AppLogger.info(
+      'Member role change queued for sync',
+      data: {
+        'roomId': roomId,
+        'subscriptionId': subscriptionId,
+        'newRole': newRole,
+      },
+    );
+  }
+
+  /// Promote a member to admin
+  /// Convenience method that calls changeMemberRole with 'admin' role
+  Future<void> promoteToAdmin({
+    required String roomId,
+    required String subscriptionId,
+  }) async {
+    await changeMemberRole(
+      roomId: roomId,
+      subscriptionId: subscriptionId,
+      newRole: 'admin',
+    );
+  }
+
+  /// Demote a member from admin to regular member
+  /// Convenience method that calls changeMemberRole with 'member' role
+  Future<void> demoteFromAdmin({
+    required String roomId,
+    required String subscriptionId,
+  }) async {
+    await changeMemberRole(
+      roomId: roomId,
+      subscriptionId: subscriptionId,
+      newRole: 'member',
+    );
+  }
+
+  /// Remove a member from a room by admin action
+  /// Different from leaveRoom which is voluntary
+  Future<void> removeMemberByAdmin({
+    required String roomId,
+    required String subscriptionId,
+    required String profileId,
+  }) async {
+    // Remove from local database
+    await (_database.delete(
+      _database.roomMembers,
+    )..where((t) => t.subscriptionId.equals(subscriptionId))).go();
+
+    // Queue for server sync
+    await _jobRepo.addJob(JobType.removeRoomMembers, {
+      'roomId': roomId,
+      'profileIds': [profileId],
+      'isAdminAction': true,
+    });
+
+    AppLogger.info(
+      'Admin member removal queued for sync',
+      data: {
+        'roomId': roomId,
+        'subscriptionId': subscriptionId,
+        'profileId': profileId,
+      },
+    );
+  }
+
   /// Sync room members from server
   /// Fetches room member subscriptions and stores them locally using the searchRoomSubscriptions API
   Future<void> syncRoomMembers(String roomId) async {
@@ -389,10 +492,16 @@ final roomServiceProvider = FutureProvider<RoomService>((ref) async {
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
   final chatClient = await ref.watch(chatServiceClientProvider.future);
   final database = AppDatabase.instance;
-  return RoomService(roomRepo, jobRepo, chatClient, database);
+  final memberRepo = ref.watch(roomMemberRepositoryProvider);
+  return RoomService(roomRepo, jobRepo, chatClient, database, memberRepo);
 });
 
 /// Provider for RoomRepository
 final roomRepositoryProvider = Provider<RoomRepository>(
   (ref) => RoomRepository(AppDatabase.instance),
+);
+
+/// Provider for RoomMemberRepository
+final roomMemberRepositoryProvider = Provider<RoomMemberRepository>(
+  (ref) => RoomMemberRepository(AppDatabase.instance),
 );

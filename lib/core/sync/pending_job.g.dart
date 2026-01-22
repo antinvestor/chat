@@ -38,6 +38,7 @@ const _$JobTypeEnumMap = {
   JobType.deleteRoom: 'deleteRoom',
   JobType.addRoomMembers: 'addRoomMembers',
   JobType.removeRoomMembers: 'removeRoomMembers',
+  JobType.changeMemberRole: 'changeMemberRole',
   JobType.leaveRoom: 'leaveRoom',
   JobType.vote: 'vote',
   JobType.syncContacts: 'syncContacts',

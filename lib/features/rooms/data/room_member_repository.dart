@@ -374,4 +374,120 @@ class RoomMemberRepository {
       return false;
     }
   }
+
+  /// Update a member's role in a room
+  ///
+  /// @param subscriptionId The subscription ID to update
+  /// @param newRole The new role to assign
+  /// @return true if update was successful
+  Future<bool> updateMemberRole({
+    required String subscriptionId,
+    required String newRole,
+  }) async {
+    try {
+      final query = _database.select(_database.roomMembers)
+        ..where((t) => t.subscriptionId.equals(subscriptionId));
+
+      final existingMember = await query.getSingleOrNull();
+      if (existingMember == null) {
+        AppLogger.warning(
+          'Subscription not found for role update',
+          data: {'subscriptionId': subscriptionId},
+        );
+        return false;
+      }
+
+      await (_database.update(_database.roomMembers)
+            ..where((t) => t.subscriptionId.equals(subscriptionId)))
+          .write(RoomMembersCompanion(role: Value(newRole)));
+
+      AppLogger.info(
+        'Member role updated successfully',
+        data: {'subscriptionId': subscriptionId, 'newRole': newRole},
+      );
+
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to update member role',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Get all members with a specific role in a room
+  ///
+  /// @param roomId The room ID
+  /// @param role The role to filter by
+  /// @return List of room members with the specified role
+  Future<List<RoomMember>> getMembersByRole(String roomId, String role) async {
+    try {
+      final query = _database.select(_database.roomMembers)
+        ..where(
+          (t) => t.roomId.equals(roomId) & t.role.equals(role.toLowerCase()),
+        )
+        ..orderBy([(t) => OrderingTerm.asc(t.joinedAt)]);
+
+      return await query.get();
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to get members by role',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return [];
+    }
+  }
+
+  /// Check if a profile is an admin of a room
+  ///
+  /// @param roomId The room ID
+  /// @param profileId The profile ID to check
+  /// @return true if the profile is an admin or owner
+  Future<bool> isRoomAdmin(String roomId, String profileId) async {
+    final member = await getMemberByProfileId(roomId, profileId);
+    if (member == null) return false;
+
+    final role = member.role?.toLowerCase() ?? '';
+    return role == 'admin' || role == 'owner';
+  }
+
+  /// Check if a profile is the owner of a room
+  ///
+  /// @param roomId The room ID
+  /// @param profileId The profile ID to check
+  /// @return true if the profile is the owner
+  Future<bool> isRoomOwner(String roomId, String profileId) async {
+    final member = await getMemberByProfileId(roomId, profileId);
+    if (member == null) return false;
+
+    final role = member.role?.toLowerCase() ?? '';
+    return role == 'owner';
+  }
+
+  /// Get member by profile ID in a room
+  ///
+  /// @param roomId The room ID
+  /// @param profileId The profile ID
+  /// @return Room member if found, null otherwise
+  Future<RoomMember?> getMemberByProfileId(
+    String roomId,
+    String profileId,
+  ) async {
+    try {
+      final query = _database.select(_database.roomMembers)
+        ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(profileId));
+
+      return await query.getSingleOrNull();
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to get member by profile ID',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
 }
