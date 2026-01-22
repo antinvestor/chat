@@ -101,12 +101,8 @@ class BadgeService {
 
   /// Start listening to unread count changes from the database
   void _startListening() {
-    // Create a query that sums all unread counts from rooms
-    final query = _database.selectOnly(_database.rooms)
-      ..addColumns([_database.rooms.unreadCount.sum()]);
-
     // Watch for changes and update badge
-    _unreadCountSubscription = query
+    _unreadCountSubscription = _createUnreadCountQuery()
         .watchSingle()
         .map((row) {
           final sum = row.read(_database.rooms.unreadCount.sum());
@@ -124,19 +120,21 @@ class BadgeService {
         );
   }
 
+  /// Create a query that sums all unread counts from rooms
+  JoinedSelectStatement<HasResultSet, dynamic> _createUnreadCountQuery() {
+    return _database.selectOnly(_database.rooms)
+      ..addColumns([_database.rooms.unreadCount.sum()]);
+  }
+
   /// Handle unread count changes
   Future<void> _onUnreadCountChanged(int totalUnread) async {
-    // Check if we should include muted chats
-    // For now, we include all unread counts (muted chat filtering can be added later)
-    final includeMutedChats = _settingsService.getBool(
-      kBadgeIncludeMutedChats,
-      defaultValue: kBadgeIncludeMutedChatsDefault,
-    );
-
-    // If muted chats should be excluded, we would need to filter them out
-    // This requires a muted_chats table or field in rooms table
+    // TODO: When muted chats feature is implemented, filter based on setting:
+    // final includeMutedChats = _settingsService.getBool(
+    //   kBadgeIncludeMutedChats,
+    //   defaultValue: kBadgeIncludeMutedChatsDefault,
+    // );
     // For now, we use the total unread count
-    final badgeCount = includeMutedChats ? totalUnread : totalUnread;
+    final badgeCount = totalUnread;
 
     await _updateBadge(badgeCount);
   }
@@ -169,16 +167,25 @@ class BadgeService {
   /// Manually refresh the badge count
   ///
   /// This can be called after background sync to ensure badge is up to date.
+  /// Works independently of initialization state, making it safe for background tasks.
   Future<void> refreshBadge() async {
-    if (!isSupported || !_initialized) {
+    if (!isSupported) {
       return;
     }
 
     try {
-      final query = _database.selectOnly(_database.rooms)
-        ..addColumns([_database.rooms.unreadCount.sum()]);
+      // Check device support if not already initialized
+      if (!_initialized) {
+        final supported = await FlutterAppBadger.isAppBadgeSupported();
+        if (!supported) {
+          AppLogger.warning(
+            'App badge not supported on this device, skipping refresh.',
+          );
+          return;
+        }
+      }
 
-      final row = await query.getSingle();
+      final row = await _createUnreadCountQuery().getSingle();
       final totalUnread = row.read(_database.rooms.unreadCount.sum()) ?? 0;
 
       await _onUnreadCountChanged(totalUnread);
