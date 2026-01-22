@@ -57,7 +57,7 @@ final class TypingProvider extends $NotifierProvider<Typing, Set<TypingUser>> {
   }
 }
 
-String _$typingHash() => r'cfc4d22a586e281552bf443b4627ba9364f8b497';
+String _$typingHash() => r'c199ca14eb893c20fd0ff67fe51cf8b8ca166525';
 
 final class TypingFamily extends $Family
     with

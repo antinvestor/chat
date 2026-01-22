@@ -176,3 +176,23 @@ class RoomMemberInfo {
   final String role;
   final int? joinedAt;
 }
+
+/// Provider to check if a room is a group chat (more than 2 members)
+///
+/// Returns true for group chats, false for direct messages.
+@riverpod
+Future<bool> isGroupChat(Ref ref, String roomId) async {
+  final db = AppDatabase.instance;
+
+  // Count members in the room
+  final result = await db
+      .customSelect(
+        'SELECT COUNT(*) as count FROM room_members WHERE room_id = ?',
+        variables: [Variable.withString(roomId)],
+      )
+      .getSingle();
+
+  final count = result.read<int>('count');
+  // A group chat has more than 2 members
+  return count > 2;
+}

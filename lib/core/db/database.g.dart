@@ -5399,6 +5399,363 @@ class DraftsCompanion extends UpdateCompanion<Draft> {
   }
 }
 
+class $ReadReceiptsTable extends ReadReceipts
+    with TableInfo<$ReadReceiptsTable, ReadReceipt> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReadReceiptsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _eventIdMeta = const VerificationMeta(
+    'eventId',
+  );
+  @override
+  late final GeneratedColumn<String> eventId = GeneratedColumn<String>(
+    'event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roomIdMeta = const VerificationMeta('roomId');
+  @override
+  late final GeneratedColumn<String> roomId = GeneratedColumn<String>(
+    'room_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<String> profileId = GeneratedColumn<String>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _readAtMeta = const VerificationMeta('readAt');
+  @override
+  late final GeneratedColumn<int> readAt = GeneratedColumn<int>(
+    'read_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    eventId,
+    roomId,
+    profileId,
+    readAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'read_receipts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReadReceipt> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('event_id')) {
+      context.handle(
+        _eventIdMeta,
+        eventId.isAcceptableOrUnknown(data['event_id']!, _eventIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventIdMeta);
+    }
+    if (data.containsKey('room_id')) {
+      context.handle(
+        _roomIdMeta,
+        roomId.isAcceptableOrUnknown(data['room_id']!, _roomIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roomIdMeta);
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('read_at')) {
+      context.handle(
+        _readAtMeta,
+        readAt.isAcceptableOrUnknown(data['read_at']!, _readAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_readAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReadReceipt map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReadReceipt(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      eventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_id'],
+      )!,
+      roomId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}room_id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      readAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}read_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReadReceiptsTable createAlias(String alias) {
+    return $ReadReceiptsTable(attachedDatabase, alias);
+  }
+}
+
+class ReadReceipt extends DataClass implements Insertable<ReadReceipt> {
+  /// Auto-incrementing primary key
+  final int id;
+
+  /// Event/message ID that was read
+  final String eventId;
+
+  /// Room ID for efficient querying
+  final String roomId;
+
+  /// Profile ID of the reader
+  final String profileId;
+
+  /// Timestamp when the message was read (milliseconds since epoch)
+  final int readAt;
+  const ReadReceipt({
+    required this.id,
+    required this.eventId,
+    required this.roomId,
+    required this.profileId,
+    required this.readAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['event_id'] = Variable<String>(eventId);
+    map['room_id'] = Variable<String>(roomId);
+    map['profile_id'] = Variable<String>(profileId);
+    map['read_at'] = Variable<int>(readAt);
+    return map;
+  }
+
+  ReadReceiptsCompanion toCompanion(bool nullToAbsent) {
+    return ReadReceiptsCompanion(
+      id: Value(id),
+      eventId: Value(eventId),
+      roomId: Value(roomId),
+      profileId: Value(profileId),
+      readAt: Value(readAt),
+    );
+  }
+
+  factory ReadReceipt.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReadReceipt(
+      id: serializer.fromJson<int>(json['id']),
+      eventId: serializer.fromJson<String>(json['eventId']),
+      roomId: serializer.fromJson<String>(json['roomId']),
+      profileId: serializer.fromJson<String>(json['profileId']),
+      readAt: serializer.fromJson<int>(json['readAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'eventId': serializer.toJson<String>(eventId),
+      'roomId': serializer.toJson<String>(roomId),
+      'profileId': serializer.toJson<String>(profileId),
+      'readAt': serializer.toJson<int>(readAt),
+    };
+  }
+
+  ReadReceipt copyWith({
+    int? id,
+    String? eventId,
+    String? roomId,
+    String? profileId,
+    int? readAt,
+  }) => ReadReceipt(
+    id: id ?? this.id,
+    eventId: eventId ?? this.eventId,
+    roomId: roomId ?? this.roomId,
+    profileId: profileId ?? this.profileId,
+    readAt: readAt ?? this.readAt,
+  );
+  ReadReceipt copyWithCompanion(ReadReceiptsCompanion data) {
+    return ReadReceipt(
+      id: data.id.present ? data.id.value : this.id,
+      eventId: data.eventId.present ? data.eventId.value : this.eventId,
+      roomId: data.roomId.present ? data.roomId.value : this.roomId,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      readAt: data.readAt.present ? data.readAt.value : this.readAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadReceipt(')
+          ..write('id: $id, ')
+          ..write('eventId: $eventId, ')
+          ..write('roomId: $roomId, ')
+          ..write('profileId: $profileId, ')
+          ..write('readAt: $readAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, eventId, roomId, profileId, readAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReadReceipt &&
+          other.id == this.id &&
+          other.eventId == this.eventId &&
+          other.roomId == this.roomId &&
+          other.profileId == this.profileId &&
+          other.readAt == this.readAt);
+}
+
+class ReadReceiptsCompanion extends UpdateCompanion<ReadReceipt> {
+  final Value<int> id;
+  final Value<String> eventId;
+  final Value<String> roomId;
+  final Value<String> profileId;
+  final Value<int> readAt;
+  const ReadReceiptsCompanion({
+    this.id = const Value.absent(),
+    this.eventId = const Value.absent(),
+    this.roomId = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.readAt = const Value.absent(),
+  });
+  ReadReceiptsCompanion.insert({
+    this.id = const Value.absent(),
+    required String eventId,
+    required String roomId,
+    required String profileId,
+    required int readAt,
+  }) : eventId = Value(eventId),
+       roomId = Value(roomId),
+       profileId = Value(profileId),
+       readAt = Value(readAt);
+  static Insertable<ReadReceipt> custom({
+    Expression<int>? id,
+    Expression<String>? eventId,
+    Expression<String>? roomId,
+    Expression<String>? profileId,
+    Expression<int>? readAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (eventId != null) 'event_id': eventId,
+      if (roomId != null) 'room_id': roomId,
+      if (profileId != null) 'profile_id': profileId,
+      if (readAt != null) 'read_at': readAt,
+    });
+  }
+
+  ReadReceiptsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? eventId,
+    Value<String>? roomId,
+    Value<String>? profileId,
+    Value<int>? readAt,
+  }) {
+    return ReadReceiptsCompanion(
+      id: id ?? this.id,
+      eventId: eventId ?? this.eventId,
+      roomId: roomId ?? this.roomId,
+      profileId: profileId ?? this.profileId,
+      readAt: readAt ?? this.readAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (eventId.present) {
+      map['event_id'] = Variable<String>(eventId.value);
+    }
+    if (roomId.present) {
+      map['room_id'] = Variable<String>(roomId.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<String>(profileId.value);
+    }
+    if (readAt.present) {
+      map['read_at'] = Variable<int>(readAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReadReceiptsCompanion(')
+          ..write('id: $id, ')
+          ..write('eventId: $eventId, ')
+          ..write('roomId: $roomId, ')
+          ..write('profileId: $profileId, ')
+          ..write('readAt: $readAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5414,6 +5771,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SyncMetadataTable syncMetadata = $SyncMetadataTable(this);
   late final $UserSettingsTable userSettings = $UserSettingsTable(this);
   late final $DraftsTable drafts = $DraftsTable(this);
+  late final $ReadReceiptsTable readReceipts = $ReadReceiptsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5431,6 +5789,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     syncMetadata,
     userSettings,
     drafts,
+    readReceipts,
   ];
 }
 
@@ -8815,6 +9174,200 @@ typedef $$DraftsTableProcessedTableManager =
       Draft,
       PrefetchHooks Function()
     >;
+typedef $$ReadReceiptsTableCreateCompanionBuilder =
+    ReadReceiptsCompanion Function({
+      Value<int> id,
+      required String eventId,
+      required String roomId,
+      required String profileId,
+      required int readAt,
+    });
+typedef $$ReadReceiptsTableUpdateCompanionBuilder =
+    ReadReceiptsCompanion Function({
+      Value<int> id,
+      Value<String> eventId,
+      Value<String> roomId,
+      Value<String> profileId,
+      Value<int> readAt,
+    });
+
+class $$ReadReceiptsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReadReceiptsTable> {
+  $$ReadReceiptsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get roomId => $composableBuilder(
+    column: $table.roomId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get readAt => $composableBuilder(
+    column: $table.readAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReadReceiptsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReadReceiptsTable> {
+  $$ReadReceiptsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get roomId => $composableBuilder(
+    column: $table.roomId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get readAt => $composableBuilder(
+    column: $table.readAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReadReceiptsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReadReceiptsTable> {
+  $$ReadReceiptsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get eventId =>
+      $composableBuilder(column: $table.eventId, builder: (column) => column);
+
+  GeneratedColumn<String> get roomId =>
+      $composableBuilder(column: $table.roomId, builder: (column) => column);
+
+  GeneratedColumn<String> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<int> get readAt =>
+      $composableBuilder(column: $table.readAt, builder: (column) => column);
+}
+
+class $$ReadReceiptsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReadReceiptsTable,
+          ReadReceipt,
+          $$ReadReceiptsTableFilterComposer,
+          $$ReadReceiptsTableOrderingComposer,
+          $$ReadReceiptsTableAnnotationComposer,
+          $$ReadReceiptsTableCreateCompanionBuilder,
+          $$ReadReceiptsTableUpdateCompanionBuilder,
+          (
+            ReadReceipt,
+            BaseReferences<_$AppDatabase, $ReadReceiptsTable, ReadReceipt>,
+          ),
+          ReadReceipt,
+          PrefetchHooks Function()
+        > {
+  $$ReadReceiptsTableTableManager(_$AppDatabase db, $ReadReceiptsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReadReceiptsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReadReceiptsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReadReceiptsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> eventId = const Value.absent(),
+                Value<String> roomId = const Value.absent(),
+                Value<String> profileId = const Value.absent(),
+                Value<int> readAt = const Value.absent(),
+              }) => ReadReceiptsCompanion(
+                id: id,
+                eventId: eventId,
+                roomId: roomId,
+                profileId: profileId,
+                readAt: readAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String eventId,
+                required String roomId,
+                required String profileId,
+                required int readAt,
+              }) => ReadReceiptsCompanion.insert(
+                id: id,
+                eventId: eventId,
+                roomId: roomId,
+                profileId: profileId,
+                readAt: readAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReadReceiptsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReadReceiptsTable,
+      ReadReceipt,
+      $$ReadReceiptsTableFilterComposer,
+      $$ReadReceiptsTableOrderingComposer,
+      $$ReadReceiptsTableAnnotationComposer,
+      $$ReadReceiptsTableCreateCompanionBuilder,
+      $$ReadReceiptsTableUpdateCompanionBuilder,
+      (
+        ReadReceipt,
+        BaseReferences<_$AppDatabase, $ReadReceiptsTable, ReadReceipt>,
+      ),
+      ReadReceipt,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8843,4 +9396,6 @@ class $AppDatabaseManager {
       $$UserSettingsTableTableManager(_db, _db.userSettings);
   $$DraftsTableTableManager get drafts =>
       $$DraftsTableTableManager(_db, _db.drafts);
+  $$ReadReceiptsTableTableManager get readReceipts =>
+      $$ReadReceiptsTableTableManager(_db, _db.readReceipts);
 }

@@ -361,3 +361,91 @@ final class RoomTransactionsFamily extends $Family
   @override
   String toString() => r'roomTransactionsProvider';
 }
+
+/// Provider to check if a room is a group chat (more than 2 members)
+///
+/// Returns true for group chats, false for direct messages.
+
+@ProviderFor(isGroupChat)
+final isGroupChatProvider = IsGroupChatFamily._();
+
+/// Provider to check if a room is a group chat (more than 2 members)
+///
+/// Returns true for group chats, false for direct messages.
+
+final class IsGroupChatProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  /// Provider to check if a room is a group chat (more than 2 members)
+  ///
+  /// Returns true for group chats, false for direct messages.
+  IsGroupChatProvider._({
+    required IsGroupChatFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'isGroupChatProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$isGroupChatHash();
+
+  @override
+  String toString() {
+    return r'isGroupChatProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    final argument = this.argument as String;
+    return isGroupChat(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is IsGroupChatProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$isGroupChatHash() => r'fb913e65ca5177d8bfa80da9d9c6a59cd74c069f';
+
+/// Provider to check if a room is a group chat (more than 2 members)
+///
+/// Returns true for group chats, false for direct messages.
+
+final class IsGroupChatFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<bool>, String> {
+  IsGroupChatFamily._()
+    : super(
+        retry: null,
+        name: r'isGroupChatProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider to check if a room is a group chat (more than 2 members)
+  ///
+  /// Returns true for group chats, false for direct messages.
+
+  IsGroupChatProvider call(String roomId) =>
+      IsGroupChatProvider._(argument: roomId, from: this);
+
+  @override
+  String toString() => r'isGroupChatProvider';
+}

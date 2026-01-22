@@ -391,6 +391,35 @@ class Drafts extends Table {
   Set<Column> get primaryKey => {roomId};
 }
 
+/// Read receipts for tracking who has read messages in group chats
+///
+/// Stores individual read events for messages, allowing the UI to
+/// display "seen by X, Y, and Z" in groups with timestamps.
+///
+/// Example:
+/// ```dart
+/// final readers = await (db.readReceipts.select()
+///   ..where((r) => r.eventId.equals(messageId))
+///   ..orderBy([(r) => OrderingTerm.desc(r.readAt)])
+/// ).get();
+/// ```
+class ReadReceipts extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Event/message ID that was read
+  TextColumn get eventId => text()();
+
+  /// Room ID for efficient querying
+  TextColumn get roomId => text()();
+
+  /// Profile ID of the reader
+  TextColumn get profileId => text()();
+
+  /// Timestamp when the message was read (milliseconds since epoch)
+  IntColumn get readAt => integer()();
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -416,6 +445,7 @@ class Drafts extends Table {
     SyncMetadata,
     UserSettings,
     Drafts,
+    ReadReceipts,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -428,7 +458,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -470,6 +500,20 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(roomEvents, roomEvents.errorMessage);
         // Migration from v6 to v7: Add drafts table for message draft persistence
         await m.createTable(drafts);
+      }
+      if (from <= 7) {
+        // Migration from v7 to v8: Add read receipts table
+        await m.createTable(readReceipts);
+        // Create index for efficient querying by eventId
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_read_receipts_event_id
+          ON read_receipts(event_id)
+        ''');
+        // Create unique constraint to prevent duplicate receipts
+        await customStatement('''
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_read_receipts_unique
+          ON read_receipts(event_id, profile_id)
+        ''');
       }
     },
     beforeOpen: (details) async {
