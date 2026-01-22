@@ -86,10 +86,10 @@ class AutoDeleteSettings {
   final bool deleteMediaOnly;
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'deleteAfterDays': deleteAfterDays,
-        'deleteMediaOnly': deleteMediaOnly,
-      };
+    'enabled': enabled,
+    'deleteAfterDays': deleteAfterDays,
+    'deleteMediaOnly': deleteMediaOnly,
+  };
 
   factory AutoDeleteSettings.fromJson(Map<String, dynamic> json) =>
       AutoDeleteSettings(
@@ -132,7 +132,9 @@ class AutoDeleteSettingsNotifier extends _$AutoDeleteSettingsNotifier {
   @override
   AutoDeleteSettings build() {
     final settingsService = ref.watch(settingsServiceProvider);
-    final json = settingsService.getJson(StorageSettingsKeys.autoDeleteSettings);
+    final json = settingsService.getJson(
+      StorageSettingsKeys.autoDeleteSettings,
+    );
     if (json != null) {
       return AutoDeleteSettings.fromJson(json);
     }
@@ -149,33 +151,43 @@ class AutoDeleteSettingsNotifier extends _$AutoDeleteSettingsNotifier {
   }
 
   Future<void> setEnabled(bool enabled) async {
-    await updateSettings(AutoDeleteSettings(
-      enabled: enabled,
-      deleteAfterDays: state.deleteAfterDays,
-      deleteMediaOnly: state.deleteMediaOnly,
-    ));
+    await updateSettings(
+      AutoDeleteSettings(
+        enabled: enabled,
+        deleteAfterDays: state.deleteAfterDays,
+        deleteMediaOnly: state.deleteMediaOnly,
+      ),
+    );
   }
 
   Future<void> setDeleteAfterDays(int days) async {
-    await updateSettings(AutoDeleteSettings(
-      enabled: state.enabled,
-      deleteAfterDays: days,
-      deleteMediaOnly: state.deleteMediaOnly,
-    ));
+    await updateSettings(
+      AutoDeleteSettings(
+        enabled: state.enabled,
+        deleteAfterDays: days,
+        deleteMediaOnly: state.deleteMediaOnly,
+      ),
+    );
   }
 
   Future<void> setDeleteMediaOnly(bool mediaOnly) async {
-    await updateSettings(AutoDeleteSettings(
-      enabled: state.enabled,
-      deleteAfterDays: state.deleteAfterDays,
-      deleteMediaOnly: mediaOnly,
-    ));
+    await updateSettings(
+      AutoDeleteSettings(
+        enabled: state.enabled,
+        deleteAfterDays: state.deleteAfterDays,
+        deleteMediaOnly: mediaOnly,
+      ),
+    );
   }
 }
 
 /// Service for managing storage calculations and cleanup
 class StorageService {
-  StorageService(this._database, this._imageCacheService, this._settingsService);
+  StorageService(
+    this._database,
+    this._imageCacheService,
+    this._settingsService,
+  );
 
   final AppDatabase _database;
   final ImageCacheService _imageCacheService;
@@ -234,39 +246,47 @@ class StorageService {
     // Database size
     final dbSize = await _getDatabaseSize();
     final messageCount = await _getMessageCount();
-    items.add(StorageBreakdownItem(
-      category: 'Database',
-      sizeBytes: dbSize,
-      itemCount: messageCount,
-      icon: 'database',
-    ));
+    items.add(
+      StorageBreakdownItem(
+        category: 'Database',
+        sizeBytes: dbSize,
+        itemCount: messageCount,
+        icon: 'database',
+      ),
+    );
 
     // Image cache
     final imageCacheSize = await _imageCacheService.getDiskCacheSize();
-    items.add(StorageBreakdownItem(
-      category: 'Image Cache',
-      sizeBytes: imageCacheSize,
-      itemCount: 0, // Count not easily available
-      icon: 'image',
-    ));
+    items.add(
+      StorageBreakdownItem(
+        category: 'Image Cache',
+        sizeBytes: imageCacheSize,
+        itemCount: 0, // Count not easily available
+        icon: 'image',
+      ),
+    );
 
     // Media files (downloaded)
     final mediaInfo = await _getMediaFilesInfo();
-    items.add(StorageBreakdownItem(
-      category: 'Media Files',
-      sizeBytes: mediaInfo['size'] as int? ?? 0,
-      itemCount: mediaInfo['count'] as int? ?? 0,
-      icon: 'video_file',
-    ));
+    items.add(
+      StorageBreakdownItem(
+        category: 'Media Files',
+        sizeBytes: mediaInfo['size'] as int? ?? 0,
+        itemCount: mediaInfo['count'] as int? ?? 0,
+        icon: 'video_file',
+      ),
+    );
 
     // Temporary files
     final tempInfo = await _getTempFilesInfo();
-    items.add(StorageBreakdownItem(
-      category: 'Temporary Files',
-      sizeBytes: tempInfo['size'] as int? ?? 0,
-      itemCount: tempInfo['count'] as int? ?? 0,
-      icon: 'folder_delete',
-    ));
+    items.add(
+      StorageBreakdownItem(
+        category: 'Temporary Files',
+        sizeBytes: tempInfo['size'] as int? ?? 0,
+        itemCount: tempInfo['count'] as int? ?? 0,
+        icon: 'folder_delete',
+      ),
+    );
 
     return items;
   }
@@ -279,9 +299,9 @@ class StorageService {
       final chatUsageList = <ChatStorageUsage>[];
 
       for (final room in rooms) {
-        final messages = await (_database.select(_database.roomEvents)
-              ..where((e) => e.roomId.equals(room.id)))
-            .get();
+        final messages = await (_database.select(
+          _database.roomEvents,
+        )..where((e) => e.roomId.equals(room.id))).get();
 
         // Calculate total content size
         var totalSize = 0;
@@ -298,7 +318,8 @@ class StorageService {
             // Add estimated file size from content metadata
             if (msg.content != null) {
               try {
-                final content = jsonDecode(msg.content!) as Map<String, dynamic>;
+                final content =
+                    jsonDecode(msg.content!) as Map<String, dynamic>;
                 totalSize += (content['fileSize'] as int?) ?? 0;
               } catch (_) {
                 // Ignore JSON parse errors
@@ -307,17 +328,21 @@ class StorageService {
           }
         }
 
-        chatUsageList.add(ChatStorageUsage(
-          roomId: room.id,
-          roomName: room.name ?? 'Unknown Chat',
-          totalSizeBytes: totalSize,
-          mediaCount: mediaCount,
-          messageCount: messages.length,
-        ));
+        chatUsageList.add(
+          ChatStorageUsage(
+            roomId: room.id,
+            roomName: room.name ?? 'Unknown Chat',
+            totalSizeBytes: totalSize,
+            mediaCount: mediaCount,
+            messageCount: messages.length,
+          ),
+        );
       }
 
       // Sort by size descending
-      chatUsageList.sort((a, b) => b.totalSizeBytes.compareTo(a.totalSizeBytes));
+      chatUsageList.sort(
+        (a, b) => b.totalSizeBytes.compareTo(a.totalSizeBytes),
+      );
 
       return chatUsageList;
     } catch (e, stackTrace) {
@@ -376,7 +401,10 @@ class StorageService {
 
       return {'size': totalSize, 'count': count};
     } catch (e) {
-      AppLogger.warning('Failed to get media files info', data: {'error': '$e'});
+      AppLogger.warning(
+        'Failed to get media files info',
+        data: {'error': '$e'},
+      );
       return {'size': 0, 'count': 0};
     }
   }
@@ -458,13 +486,13 @@ class StorageService {
     try {
       // Delete old media messages from database
       // Media types are: 1=image, 2=video, 3=audio, 4=file
-      final oldMediaMessages = await (_database.select(_database.roomEvents)
-            ..where(
-              (e) =>
-                  e.type.isIn([1, 2, 3, 4]) &
-                  e.createdAt.isSmallerThan(Variable(cutoffTimestamp)),
-            ))
-          .get();
+      final oldMediaMessages =
+          await (_database.select(_database.roomEvents)..where(
+                (e) =>
+                    e.type.isIn([1, 2, 3, 4]) &
+                    e.createdAt.isSmallerThan(Variable(cutoffTimestamp)),
+              ))
+              .get();
 
       for (final msg in oldMediaMessages) {
         // Try to delete the local file if it exists
@@ -485,11 +513,13 @@ class StorageService {
         }
 
         // Mark message as having no local file
-        await (_database.update(_database.roomEvents)
-              ..where((e) => e.id.equals(msg.id)))
-            .write(RoomEventsCompanion(
-          content: Value(_updateContentRemoveLocalPath(msg.content)),
-        ));
+        await (_database.update(
+          _database.roomEvents,
+        )..where((e) => e.id.equals(msg.id))).write(
+          RoomEventsCompanion(
+            content: Value(_updateContentRemoveLocalPath(msg.content)),
+          ),
+        );
       }
 
       // Also delete old files from media directory
@@ -538,7 +568,9 @@ class StorageService {
 
   /// Run auto-delete if enabled
   Future<void> runAutoDelete() async {
-    final json = _settingsService.getJson(StorageSettingsKeys.autoDeleteSettings);
+    final json = _settingsService.getJson(
+      StorageSettingsKeys.autoDeleteSettings,
+    );
     if (json == null) return;
 
     final settings = AutoDeleteSettings.fromJson(json);
@@ -576,52 +608,51 @@ class StorageService {
   Future<String> exportChatData(String roomId) async {
     try {
       // Get room info
-      final room = await (_database.select(_database.rooms)
-            ..where((r) => r.id.equals(roomId)))
-          .getSingleOrNull();
+      final room = await (_database.select(
+        _database.rooms,
+      )..where((r) => r.id.equals(roomId))).getSingleOrNull();
 
       if (room == null) {
         throw Exception('Room not found');
       }
 
       // Get all messages
-      final messages = await (_database.select(_database.roomEvents)
-            ..where((e) => e.roomId.equals(roomId))
-            ..orderBy([(e) => OrderingTerm.asc(e.createdAt)]))
-          .get();
+      final messages =
+          await (_database.select(_database.roomEvents)
+                ..where((e) => e.roomId.equals(roomId))
+                ..orderBy([(e) => OrderingTerm.asc(e.createdAt)]))
+              .get();
 
       // Get room members
-      final members = await (_database.select(_database.roomMembers)
-            ..where((m) => m.roomId.equals(roomId)))
-          .get();
+      final members = await (_database.select(
+        _database.roomMembers,
+      )..where((m) => m.roomId.equals(roomId))).get();
 
       // Build export data
       final exportData = {
         'exportedAt': DateTime.now().toIso8601String(),
-        'room': {
-          'id': room.id,
-          'name': room.name,
-          'type': room.type,
-        },
+        'room': {'id': room.id, 'name': room.name, 'type': room.type},
         'members': members
-            .map((m) => {
-                  'subscriptionId': m.subscriptionId,
-                  'profileId': m.profileId,
-                  'role': m.role,
-                  'joinedAt': m.joinedAt,
-                })
+            .map(
+              (m) => {
+                'subscriptionId': m.subscriptionId,
+                'profileId': m.profileId,
+                'role': m.role,
+                'joinedAt': m.joinedAt,
+              },
+            )
             .toList(),
         'messages': messages
-            .map((m) => {
-                  'id': m.id,
-                  'senderId': m.senderId,
-                  'type': m.type,
-                  'content': m.content != null
-                      ? jsonDecode(m.content!)
-                      : null,
-                  'createdAt': m.createdAt,
-                  'serverTs': m.serverTs,
-                })
+            .map(
+              (m) => {
+                'id': m.id,
+                'senderId': m.senderId,
+                'type': m.type,
+                'content': m.content != null ? jsonDecode(m.content!) : null,
+                'createdAt': m.createdAt,
+                'serverTs': m.serverTs,
+              },
+            )
             .toList(),
         'totalMessages': messages.length,
       };
@@ -644,27 +675,24 @@ class StorageService {
       final allChats = <Map<String, dynamic>>[];
 
       for (final room in rooms) {
-        final messages = await (_database.select(_database.roomEvents)
-              ..where((e) => e.roomId.equals(room.id))
-              ..orderBy([(e) => OrderingTerm.asc(e.createdAt)]))
-            .get();
+        final messages =
+            await (_database.select(_database.roomEvents)
+                  ..where((e) => e.roomId.equals(room.id))
+                  ..orderBy([(e) => OrderingTerm.asc(e.createdAt)]))
+                .get();
 
         allChats.add({
-          'room': {
-            'id': room.id,
-            'name': room.name,
-            'type': room.type,
-          },
+          'room': {'id': room.id, 'name': room.name, 'type': room.type},
           'messages': messages
-              .map((m) => {
-                    'id': m.id,
-                    'senderId': m.senderId,
-                    'type': m.type,
-                    'content': m.content != null
-                        ? jsonDecode(m.content!)
-                        : null,
-                    'createdAt': m.createdAt,
-                  })
+              .map(
+                (m) => {
+                  'id': m.id,
+                  'senderId': m.senderId,
+                  'type': m.type,
+                  'content': m.content != null ? jsonDecode(m.content!) : null,
+                  'createdAt': m.createdAt,
+                },
+              )
               .toList(),
           'totalMessages': messages.length,
         });
@@ -691,19 +719,19 @@ class StorageService {
   Future<void> deleteChatData(String roomId) async {
     try {
       // Delete messages
-      await (_database.delete(_database.roomEvents)
-            ..where((e) => e.roomId.equals(roomId)))
-          .go();
+      await (_database.delete(
+        _database.roomEvents,
+      )..where((e) => e.roomId.equals(roomId))).go();
 
       // Delete room members
-      await (_database.delete(_database.roomMembers)
-            ..where((m) => m.roomId.equals(roomId)))
-          .go();
+      await (_database.delete(
+        _database.roomMembers,
+      )..where((m) => m.roomId.equals(roomId))).go();
 
       // Delete room
-      await (_database.delete(_database.rooms)
-            ..where((r) => r.id.equals(roomId)))
-          .go();
+      await (_database.delete(
+        _database.rooms,
+      )..where((r) => r.id.equals(roomId))).go();
 
       AppLogger.info('Chat data deleted', data: {'roomId': roomId});
     } catch (e, stackTrace) {
