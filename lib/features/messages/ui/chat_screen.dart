@@ -12,8 +12,6 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../advanced/ui/motion_bubble.dart';
-import '../../advanced/ui/transaction_bubble.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
@@ -22,10 +20,9 @@ import '../data/message_sending_service.dart';
 import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
 import '../services/voice_recording_service.dart';
-import 'date_header.dart';
 import 'edit_message_sheet.dart';
 import 'input_bar.dart';
-import 'message_bubble.dart';
+import 'virtualized_message_list.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({required this.roomId, required this.roomName, super.key});
@@ -46,6 +43,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _showScrollToBottom = false;
   int _newMessageCount = 0;
   final bool _shouldAutoScroll = true;
+
+  // Pagination state for virtualized list
+  bool _isLoadingMore = false;
+  bool _hasMoreMessages = true;
 
   @override
   void initState() {
@@ -544,72 +545,61 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Send read receipts for messages being viewed
     _sendReadReceipts(messages);
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (scrollInfo) {
-        // Enhanced auto-scroll with better performance
-        if (scrollInfo is ScrollEndNotification &&
-            scrollInfo.metrics.extentAfter == 0) {
-          // User is at bottom, keep them there
-        } else if (scrollInfo is ScrollUpdateNotification) {
-          // Auto-scroll to bottom when new messages arrive
-          if (_shouldAutoScroll) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        }
-        return false;
-      },
-      child: ListView.builder(
-        controller: _scrollController,
-        reverse: true,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: messages.length,
-        // Performance optimizations for smooth scrolling
-        cacheExtent: MediaQuery.of(context).size.height * 2, // Cache 2 screens
-        addAutomaticKeepAlives: false, // Reduce memory for off-screen items
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
-        itemBuilder: (context, index) {
-          final reversedIndex = messages.length - 1 - index;
-          final message = messages[reversedIndex];
-          final currentProfileId = ref.watch(currentProfileIdProvider);
-          final isMe = message.senderId == currentProfileId.value;
-
-          // Enhanced message grouping with better performance
-          var showDateHeader = false;
-          var shouldGroupWithPrevious = false;
-          var removeTail = false;
-
-          if (reversedIndex < messages.length - 1) {
-            final nextMessage = messages[reversedIndex + 1];
-            final timeDiff = message.createdAt - nextMessage.createdAt;
-            shouldGroupWithPrevious =
-                nextMessage.senderId == message.senderId &&
-                timeDiff < 120000; // 2 minutes
-            removeTail = shouldGroupWithPrevious;
-          } else {
-            showDateHeader = true;
-          }
-
-          return Column(
-            children: [
-              if (showDateHeader) DateHeader(timestamp: message.createdAt),
-              _buildMessageWidget(
-                message,
-                isMe,
-                shouldGroupWithPrevious,
-                removeTail,
-              ),
-            ],
-          );
-        },
+    // Use the optimized VirtualizedMessageList for better performance
+    // with large message lists (10,000+ messages)
+    return VirtualizedMessageList(
+      roomId: widget.roomId,
+      messages: messages,
+      scrollController: _scrollController,
+      isLoadingMore: _isLoadingMore,
+      hasMoreMessages: _hasMoreMessages,
+      onLoadMore: _loadMoreMessages,
+      onReplyToMessage: _onReplyToMessage,
+      onEditMessage: _onEditMessage,
+      onRetryMessage: _retryMessage,
+      onDeleteMessage: _onDeleteMessage,
+      config: const VirtualizedMessageListConfig(
+        // Cache 2 screens worth of items for smooth scrolling
+        cacheExtentMultiplier: 2.0,
+        // Estimated message height for scroll calculations
+        estimatedItemHeight: 80.0,
+        // Group messages within 2 minutes
+        groupingThresholdMs: 120000,
+        // Load more when 80% scrolled
+        loadMoreThreshold: 0.8,
+        // Initial batch size
+        initialBatchSize: 50,
+        // Load 30 more messages at a time
+        loadMoreBatchSize: 30,
+        // Enable keep-alive for visible items
+        enableKeepAlive: true,
       ),
     );
+  }
+
+  /// Load older messages when user scrolls near the top
+  Future<void> _loadMoreMessages() async {
+    if (_isLoadingMore || !_hasMoreMessages) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final hasMore = await ref
+          .read(messageListProvider(widget.roomId).notifier)
+          .loadOlderMessages(widget.roomId);
+
+      if (mounted) {
+        setState(() {
+          _hasMoreMessages = hasMore;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Failed to load more messages', error: e);
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+      }
+    }
   }
 
   Widget _buildEmptyState() => Center(
