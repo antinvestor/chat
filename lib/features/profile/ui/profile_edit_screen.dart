@@ -641,7 +641,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.verified, size: 14, color: AppTheme.brightGreen),
+                const Icon(
+                  Icons.verified,
+                  size: 14,
+                  color: AppTheme.brightGreen,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Verified',
@@ -655,7 +659,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_outlined, size: 14, color: Colors.orange),
+                const Icon(
+                  Icons.warning_outlined,
+                  size: 14,
+                  color: Colors.orange,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Not verified',
