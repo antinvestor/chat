@@ -20,8 +20,11 @@ import '../data/message_sending_service.dart';
 import '../data/typing_provider.dart';
 import '../domain/room_event.dart';
 import '../services/voice_recording_service.dart';
+import '../../advanced/ui/motion_bubble.dart';
+import '../../advanced/ui/transaction_bubble.dart';
 import 'edit_message_sheet.dart';
 import 'input_bar.dart';
+import 'message_bubble.dart';
 import 'virtualized_message_list.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
