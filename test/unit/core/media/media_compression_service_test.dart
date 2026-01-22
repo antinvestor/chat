@@ -207,10 +207,13 @@ void main() {
       expect(CompressionQualityPreset.low.displayName, equals('Low (480p)'));
       expect(
         CompressionQualityPreset.medium.displayName,
-        equals('Medium (720p)'),
+        equals('Medium (540p)'),
       );
-      expect(CompressionQualityPreset.high.displayName, equals('High (960p)'));
-      expect(CompressionQualityPreset.original.displayName, equals('Original'));
+      expect(CompressionQualityPreset.high.displayName, equals('High (720p)'));
+      expect(
+        CompressionQualityPreset.original.displayName,
+        equals('Original (1080p)'),
+      );
     });
   });
 
