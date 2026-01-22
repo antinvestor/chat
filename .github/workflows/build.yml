@@ -145,8 +145,14 @@ jobs:
 
       - name: Setup iOS project
         run: |
-          [ ! -d "ios" ] && flutter create --platforms=ios .
+          # Check if iOS project is properly initialized (has Runner.xcodeproj)
+          if [ ! -d "ios/Runner.xcodeproj" ]; then
+            echo "iOS project not found or incomplete, regenerating..."
+            rm -rf ios
+            flutter create --platforms=ios .
+          fi
           cd ios
+          # Update deployment target
           sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" Runner.xcodeproj/project.pbxproj 2>/dev/null || true
 
       - name: Install CocoaPods

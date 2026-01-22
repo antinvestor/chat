@@ -30,20 +30,33 @@ jobs:
     name: Deploy Web
     needs: build
     runs-on: ubuntu-latest
+    if: always() && !cancelled()
     timeout-minutes: 10
     environment:
       name: staging
       url: ${{ steps.deploy.outputs.url }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Download web build
+        id: download
         uses: actions/download-artifact@v4
         with:
           name: web-build-staging
           path: build/web
+        continue-on-error: true
+
+      - name: Check artifact exists
+        if: steps.download.outcome == 'failure'
+        run: |
+          echo "::error::Web build artifact not found. Web build may have failed."
+          exit 1
+
+      - name: List downloaded files
+        run: |
+          echo "Contents of build/web:"
+          ls -la build/web/ || echo "Directory not found"
+          echo "Total files:"
+          find build/web -type f | wc -l || echo "0"
 
       - name: Deploy to Cloudflare Pages
         id: deploy
@@ -52,25 +65,34 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME_STAGING || 'stawi-staging' }} --branch=staging
-        continue-on-error: true
 
   # Deploy Android to Firebase App Distribution
   deploy-android:
     name: Deploy Android
     needs: build
     runs-on: ubuntu-latest
+    if: always() && !cancelled()
     timeout-minutes: 15
     environment:
       name: staging
 
     steps:
       - name: Download APK
+        id: download
         uses: actions/download-artifact@v4
         with:
           name: android-apk-staging
           path: artifacts/
+        continue-on-error: true
+
+      - name: Check artifact exists
+        if: steps.download.outcome == 'failure'
+        run: |
+          echo "::warning::Android APK artifact not found. Android build may have failed."
+          exit 0
 
       - name: Upload to Firebase App Distribution
+        if: steps.download.outcome == 'success'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID_ANDROID }}
@@ -89,18 +111,28 @@ jobs:
     name: Deploy iOS
     needs: build
     runs-on: ubuntu-latest
+    if: always() && !cancelled()
     timeout-minutes: 15
     environment:
       name: staging
 
     steps:
       - name: Download IPA
+        id: download
         uses: actions/download-artifact@v4
         with:
           name: ios-ipa-staging
           path: artifacts/
+        continue-on-error: true
+
+      - name: Check artifact exists
+        if: steps.download.outcome == 'failure'
+        run: |
+          echo "::warning::iOS IPA artifact not found. iOS build may have failed."
+          exit 0
 
       - name: Upload to Firebase App Distribution
+        if: steps.download.outcome == 'success'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID_IOS }}
