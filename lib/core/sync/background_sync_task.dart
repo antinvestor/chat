@@ -13,9 +13,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
+import '../../features/notifications/badge_service.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
 import '../networking/api_config.dart';
+import '../settings/settings_service.dart';
 import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
 
@@ -88,6 +90,24 @@ class BackgroundSyncTask {
         authHeaders,
         currentProfileId,
       );
+
+      // Refresh badge count after sync
+      if (BadgeService.isSupported) {
+        try {
+          final settingsService = SettingsService(database);
+          await settingsService.initialize();
+          final badgeService = BadgeService(database, settingsService);
+          await badgeService.refreshBadge();
+          AppLogger.debug('Badge refreshed after background sync');
+        } catch (e, stackTrace) {
+          AppLogger.error(
+            'Failed to refresh badge in background sync',
+            error: e,
+            stackTrace: stackTrace,
+          );
+          // Don't fail the sync task for badge errors
+        }
+      }
 
       AppLogger.info('Background sync completed', data: {'success': success});
       return success;
