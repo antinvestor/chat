@@ -230,6 +230,11 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
 
+      - name: Clean stale build artifacts
+        run: |
+          # Remove generated plugin registrant to avoid stale package references
+          rm -rf .dart_tool/flutter_build/
+
       - name: Build Web
         run: |
           flutter build web ${{ inputs.build_type == 'release' && '--release' || '--profile' }} --base-href /
