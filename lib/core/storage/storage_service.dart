@@ -81,6 +81,13 @@ class AutoDeleteSettings {
     this.deleteMediaOnly = true,
   });
 
+  factory AutoDeleteSettings.fromJson(Map<String, dynamic> json) =>
+      AutoDeleteSettings(
+        enabled: json['enabled'] as bool? ?? false,
+        deleteAfterDays: json['deleteAfterDays'] as int? ?? 30,
+        deleteMediaOnly: json['deleteMediaOnly'] as bool? ?? true,
+      );
+
   final bool enabled;
   final int deleteAfterDays;
   final bool deleteMediaOnly;
@@ -90,13 +97,6 @@ class AutoDeleteSettings {
     'deleteAfterDays': deleteAfterDays,
     'deleteMediaOnly': deleteMediaOnly,
   };
-
-  factory AutoDeleteSettings.fromJson(Map<String, dynamic> json) =>
-      AutoDeleteSettings(
-        enabled: json['enabled'] as bool? ?? false,
-        deleteAfterDays: json['deleteAfterDays'] as int? ?? 30,
-        deleteMediaOnly: json['deleteMediaOnly'] as bool? ?? true,
-      );
 }
 
 /// Settings keys for storage management
@@ -271,8 +271,8 @@ class StorageService {
     items.add(
       StorageBreakdownItem(
         category: 'Media Files',
-        sizeBytes: mediaInfo['size'] as int? ?? 0,
-        itemCount: mediaInfo['count'] as int? ?? 0,
+        sizeBytes: mediaInfo['size'] ?? 0,
+        itemCount: mediaInfo['count'] ?? 0,
         icon: 'video_file',
       ),
     );
@@ -282,8 +282,8 @@ class StorageService {
     items.add(
       StorageBreakdownItem(
         category: 'Temporary Files',
-        sizeBytes: tempInfo['size'] as int? ?? 0,
-        itemCount: tempInfo['count'] as int? ?? 0,
+        sizeBytes: tempInfo['size'] ?? 0,
+        itemCount: tempInfo['count'] ?? 0,
         icon: 'folder_delete',
       ),
     );
