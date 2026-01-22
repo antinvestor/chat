@@ -10,6 +10,7 @@ import '../../../core/crypto/key_exchange_service.dart';
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/media/media_compression_service.dart';
+import '../../../core/media/thumbnail_service.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
@@ -25,6 +26,7 @@ import 'message_repository.dart';
 /// - Encrypted messages (E2E)
 /// - Offline queue with retry
 /// - Media compression before upload
+/// - Client-side thumbnail generation
 class MessageSendingService {
   MessageSendingService(
     this._messageRepo,
@@ -32,6 +34,7 @@ class MessageSendingService {
     this._fileUploadService,
     this._encryptionService,
     this._compressionService,
+    this._thumbnailService,
     this._getCurrentProfileId,
   );
   final MessageRepository _messageRepo;
@@ -39,6 +42,7 @@ class MessageSendingService {
   final FileUploadService _fileUploadService;
   final E2EEncryptionService _encryptionService;
   final MediaCompressionService _compressionService;
+  final ThumbnailService _thumbnailService;
   final Future<String> Function() _getCurrentProfileId;
 
   /// Send a text message
@@ -284,13 +288,23 @@ class MessageSendingService {
     final fileName = file.path.split('/').last;
     final fileSize = await file.length();
 
-    // Create initial content with local file path
+    // Generate thumbnail for images and videos
+    ThumbnailResult? thumbnailResult;
+    if (type == domain.RoomEventType.image) {
+      thumbnailResult = await _thumbnailService.generateImageThumbnail(file);
+    } else if (type == domain.RoomEventType.video) {
+      thumbnailResult = await _thumbnailService.generateVideoThumbnail(file);
+    }
+
+    // Create initial content with local file path and thumbnail
     var content = <String, dynamic>{
       'localPath': file.path,
       'fileName': fileName,
       'fileSize': fileSize,
       'uploading': true,
       if (caption != null) 'caption': caption,
+      if (thumbnailResult != null)
+        'localThumbnailPath': thumbnailResult.file.path,
       ...?extraContent,
     };
 
@@ -305,10 +319,29 @@ class MessageSendingService {
       localId: localId,
     );
 
-    // Save locally first (shows as pending with local file)
+    // Save locally first (shows as pending with local file and thumbnail)
     await _messageRepo.insertMessage(event);
 
-    // Upload file
+    // Upload thumbnail first (if generated)
+    String? uploadedThumbnailUrl;
+    if (thumbnailResult != null) {
+      AppLogger.debug(
+        'Uploading thumbnail',
+        data: {'size': thumbnailResult.size},
+      );
+      final thumbUploadResult = await _fileUploadService.uploadFile(
+        thumbnailResult.file,
+      );
+      if (thumbUploadResult.isSuccess) {
+        uploadedThumbnailUrl = thumbUploadResult.fileUrl;
+        AppLogger.debug(
+          'Thumbnail uploaded',
+          data: {'url': uploadedThumbnailUrl},
+        );
+      }
+    }
+
+    // Upload main file
     AppLogger.info(
       'Uploading media file',
       data: {'fileName': fileName, 'size': fileSize},
@@ -320,6 +353,10 @@ class MessageSendingService {
     );
 
     if (uploadResult.isSuccess) {
+      // Prefer client-uploaded thumbnail, fall back to server-generated
+      final finalThumbnailUrl =
+          uploadedThumbnailUrl ?? uploadResult.thumbnailUrl;
+
       // Update content with server URL
       content = {
         'url': uploadResult.fileUrl,
@@ -327,8 +364,7 @@ class MessageSendingService {
         'fileName': fileName,
         'fileSize': fileSize,
         'mimeType': uploadResult.mimeType,
-        if (uploadResult.thumbnailUrl != null)
-          'thumbnailUrl': uploadResult.thumbnailUrl,
+        if (finalThumbnailUrl != null) 'thumbnailUrl': finalThumbnailUrl,
         if (caption != null) 'caption': caption,
         ...?extraContent,
       };
@@ -746,6 +782,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
   final fileUploadService = ref.watch(fileUploadServiceProvider);
   final encryptionService = ref.watch(e2eEncryptionServiceProvider);
   final compressionService = ref.watch(mediaCompressionServiceProvider);
+  final thumbnailService = ref.watch(thumbnailServiceProvider);
   final authRepo = ref.watch(authRepositoryProvider);
 
   return MessageSendingService(
@@ -754,6 +791,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
     fileUploadService,
     encryptionService,
     compressionService,
+    thumbnailService,
     () async {
       final profileId = await authRepo.getCurrentProfileId();
       return profileId ?? 'unknown_user';
