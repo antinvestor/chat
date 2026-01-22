@@ -52,6 +52,7 @@ dependencies:
   fixnum: ^1.1.1
   flutter:
     sdk: flutter
+  flutter_app_badger: ^1.5.0
   flutter_cache_manager: ^3.4.1
   flutter_contacts: ^1.1.9+2
   flutter_riverpod: ^3.1.0

@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/notifications/badge_service.dart';
 import '../../features/notifications/notification_service.dart';
 import '../error/error_tracking_service.dart';
 import '../logging/app_logger.dart';
@@ -291,6 +292,12 @@ class StartupService extends _$StartupService {
     if (isLoggedIn && NotificationService.isSupported) {
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.initialize();
+    }
+
+    // Initialize badge service for app icon badge count
+    if (isLoggedIn && BadgeService.isSupported) {
+      final badgeService = ref.read(badgeServiceProvider);
+      await badgeService.initialize();
     }
 
     // Register background sync (only on mobile)
