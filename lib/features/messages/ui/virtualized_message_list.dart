@@ -98,7 +98,7 @@ class VirtualizedMessageList extends ConsumerStatefulWidget {
 
   /// Callback when user wants to delete a message
   final Future<void> Function(String messageId, {required bool forEveryone})
-      onDeleteMessage;
+  onDeleteMessage;
 
   @override
   ConsumerState<VirtualizedMessageList> createState() =>
@@ -169,8 +169,7 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
         // Adjust scroll position for newly loaded messages
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients && mounted) {
-            final adjustment =
-                addedCount * widget.config.estimatedItemHeight;
+            final adjustment = addedCount * widget.config.estimatedItemHeight;
             _scrollController.jumpTo(_savedScrollOffset! + adjustment);
             _savedScrollOffset = null;
           }
@@ -286,7 +285,8 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
       controller: _scrollController,
       reverse: true,
       cacheExtent: cacheExtent,
-      physics: widget.config.scrollPhysics ??
+      physics:
+          widget.config.scrollPhysics ??
           const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         // Main message list
@@ -324,8 +324,8 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
                 child: Text(
                   'Beginning of conversation',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
@@ -370,14 +370,20 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
     if (index < widget.messages.length - 1) {
       final nextMessage = widget.messages[index + 1];
       final timeDiff = message.createdAt - nextMessage.createdAt;
-      shouldGroupWithPrevious = nextMessage.senderId == message.senderId &&
+      shouldGroupWithPrevious =
+          nextMessage.senderId == message.senderId &&
           timeDiff < widget.config.groupingThresholdMs;
       removeTail = shouldGroupWithPrevious;
 
       // Check if date changed
-      final messageDate = DateTime.fromMillisecondsSinceEpoch(message.createdAt);
-      final nextDate = DateTime.fromMillisecondsSinceEpoch(nextMessage.createdAt);
-      showDateHeader = messageDate.day != nextDate.day ||
+      final messageDate = DateTime.fromMillisecondsSinceEpoch(
+        message.createdAt,
+      );
+      final nextDate = DateTime.fromMillisecondsSinceEpoch(
+        nextMessage.createdAt,
+      );
+      showDateHeader =
+          messageDate.day != nextDate.day ||
           messageDate.month != nextDate.month ||
           messageDate.year != nextDate.year;
     } else {
@@ -393,43 +399,42 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
   }
 
   Widget _buildEmptyState(BuildContext context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.chat_bubble_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No messages yet',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start the conversation!',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.chat_bubble_outline,
+            size: 64,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
-      );
+        const SizedBox(height: 24),
+        Text(
+          'No messages yet',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Start the conversation!',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
 }
 
 /// Internal class for message grouping information
@@ -471,7 +476,7 @@ class _OptimizedMessageItem extends ConsumerStatefulWidget {
   final void Function(String messageId, String currentText) onEditMessage;
   final void Function(RoomEvent message) onRetryMessage;
   final Future<void> Function(String messageId, {required bool forEveryone})
-      onDeleteMessage;
+  onDeleteMessage;
 
   @override
   ConsumerState<_OptimizedMessageItem> createState() =>
@@ -494,8 +499,7 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
   }
 
   void _measureSize(Duration _) {
-    final renderBox =
-        _sizeKey.currentContext?.findRenderObject() as RenderBox?;
+    final renderBox = _sizeKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox != null && renderBox.hasSize) {
       final size = renderBox.size;
       if (_lastSize != size) {
