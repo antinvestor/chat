@@ -9,6 +9,7 @@ import '../../../core/crypto/e2e_encryption_service.dart';
 import '../../../core/crypto/key_exchange_service.dart';
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../../core/media/media_compression_service.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
@@ -23,18 +24,21 @@ import 'message_repository.dart';
 /// - Media messages (images, videos, audio, files)
 /// - Encrypted messages (E2E)
 /// - Offline queue with retry
+/// - Media compression before upload
 class MessageSendingService {
   MessageSendingService(
     this._messageRepo,
     this._jobRepo,
     this._fileUploadService,
     this._encryptionService,
+    this._compressionService,
     this._getCurrentProfileId,
   );
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
   final FileUploadService _fileUploadService;
   final E2EEncryptionService _encryptionService;
+  final MediaCompressionService _compressionService;
   final Future<String> Function() _getCurrentProfileId;
 
   /// Send a text message
@@ -110,41 +114,124 @@ class MessageSendingService {
     return event;
   }
 
-  /// Send an image message
+  /// Send an image message with optional compression
+  ///
+  /// Parameters:
+  /// - [roomId]: The room to send the message to
+  /// - [imageFile]: The image file to send
+  /// - [caption]: Optional caption for the image
+  /// - [replyToId]: Optional message ID to reply to
+  /// - [encrypt]: Whether to encrypt the message (default: false)
+  /// - [keepOriginal]: If true, skip compression and send original
+  /// - [imageQuality]: JPEG quality (0-100) for compression
+  /// - [onProgress]: Progress callback for compression and upload
   Future<domain.RoomEvent> sendImageMessage({
     required String roomId,
     required File imageFile,
     String? caption,
     String? replyToId,
     bool encrypt = false,
+    bool keepOriginal = false,
+    int? imageQuality,
     void Function(double progress)? onProgress,
-  }) async => _sendMediaMessage(
-    roomId: roomId,
-    file: imageFile,
-    type: domain.RoomEventType.image,
-    caption: caption,
-    replyToId: replyToId,
-    encrypt: encrypt,
-    onProgress: onProgress,
-  );
+    void Function(CompressionProgress progress)? onCompressionProgress,
+  }) async {
+    var fileToSend = imageFile;
 
-  /// Send a video message
+    // Compress image if not keeping original
+    if (!keepOriginal) {
+      final compressionResult = await _compressionService.compressImage(
+        imageFile,
+        quality: imageQuality,
+        onProgress: onCompressionProgress,
+      );
+      fileToSend = compressionResult.file;
+
+      if (compressionResult.wasCompressed) {
+        AppLogger.info(
+          'Image compressed before sending',
+          data: {
+            'originalSize': compressionResult.originalSize,
+            'compressedSize': compressionResult.compressedSize,
+            'savingsPercent': compressionResult.savingsPercent.toStringAsFixed(
+              1,
+            ),
+          },
+        );
+      }
+    }
+
+    return _sendMediaMessage(
+      roomId: roomId,
+      file: fileToSend,
+      type: domain.RoomEventType.image,
+      caption: caption,
+      replyToId: replyToId,
+      encrypt: encrypt,
+      onProgress: onProgress,
+    );
+  }
+
+  /// Send a video message with optional compression
+  ///
+  /// Parameters:
+  /// - [roomId]: The room to send the message to
+  /// - [videoFile]: The video file to send
+  /// - [caption]: Optional caption for the video
+  /// - [replyToId]: Optional message ID to reply to
+  /// - [encrypt]: Whether to encrypt the message (default: false)
+  /// - [keepOriginal]: If true, skip compression and send original
+  /// - [videoQuality]: Quality preset for video compression
+  /// - [onProgress]: Progress callback for upload
+  /// - [onCompressionProgress]: Progress callback for compression
   Future<domain.RoomEvent> sendVideoMessage({
     required String roomId,
     required File videoFile,
     String? caption,
     String? replyToId,
     bool encrypt = false,
+    bool keepOriginal = false,
+    CompressionQualityPreset? videoQuality,
     void Function(double progress)? onProgress,
-  }) async => _sendMediaMessage(
-    roomId: roomId,
-    file: videoFile,
-    type: domain.RoomEventType.video,
-    caption: caption,
-    replyToId: replyToId,
-    encrypt: encrypt,
-    onProgress: onProgress,
-  );
+    void Function(CompressionProgress progress)? onCompressionProgress,
+  }) async {
+    var fileToSend = videoFile;
+
+    // Compress video if not keeping original
+    if (!keepOriginal) {
+      final compressionResult = await _compressionService.compressVideo(
+        videoFile,
+        qualityPreset: videoQuality,
+        onProgress: onCompressionProgress,
+      );
+      fileToSend = compressionResult.file;
+
+      if (compressionResult.wasCompressed) {
+        AppLogger.info(
+          'Video compressed before sending',
+          data: {
+            'originalSize': compressionResult.originalSize,
+            'compressedSize': compressionResult.compressedSize,
+            'savingsPercent': compressionResult.savingsPercent.toStringAsFixed(
+              1,
+            ),
+            'width': compressionResult.width,
+            'height': compressionResult.height,
+          },
+        );
+      }
+    }
+
+    return _sendMediaMessage(
+      roomId: roomId,
+      file: fileToSend,
+      type: domain.RoomEventType.video,
+      caption: caption,
+      replyToId: replyToId,
+      encrypt: encrypt,
+      onProgress: onProgress,
+    );
+  }
 
   /// Send an audio message
   Future<domain.RoomEvent> sendAudioMessage({
@@ -658,6 +745,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
   final fileUploadService = ref.watch(fileUploadServiceProvider);
   final encryptionService = ref.watch(e2eEncryptionServiceProvider);
+  final compressionService = ref.watch(mediaCompressionServiceProvider);
   final authRepo = ref.watch(authRepositoryProvider);
 
   return MessageSendingService(
@@ -665,6 +753,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
     jobRepo,
     fileUploadService,
     encryptionService,
+    compressionService,
     () async {
       final profileId = await authRepo.getCurrentProfileId();
       return profileId ?? 'unknown_user';

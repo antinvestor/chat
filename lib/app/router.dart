@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -14,6 +13,7 @@ import '../features/rooms/ui/room_detail_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
 import '../features/settings/ui/account_settings_screen.dart';
 import '../features/settings/ui/chat_settings_screen.dart';
+import '../features/settings/ui/media_compression_settings_screen.dart';
 import '../features/settings/ui/notification_settings_screen.dart';
 import '../features/settings/ui/privacy_settings_screen.dart';
 import '../features/settings/ui/settings_screen.dart';
@@ -89,6 +89,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/settings/storage',
         builder: (context, state) => const StorageSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/storage/compression',
+        builder: (context, state) => const MediaCompressionSettingsScreen(),
       ),
       GoRoute(
         path: '/chat/:roomId',
