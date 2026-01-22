@@ -3,8 +3,8 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:drift/drift.dart';
-import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/db/database.dart';
@@ -78,7 +78,7 @@ class BadgeService {
 
     try {
       // Check if app badging is supported on this device
-      final supported = await FlutterAppBadger.isAppBadgeSupported();
+      final supported = await AppBadgePlus.isSupported();
       if (!supported) {
         AppLogger.warning('App badge not supported on this device');
         _initialized = true;
@@ -151,10 +151,10 @@ class BadgeService {
 
     try {
       if (count <= 0) {
-        await FlutterAppBadger.removeBadge();
+        await AppBadgePlus.updateBadge(0);
         AppLogger.debug('Badge cleared');
       } else {
-        await FlutterAppBadger.updateBadgeCount(count);
+        await AppBadgePlus.updateBadge(count);
         AppLogger.debug('Badge updated', data: {'count': count});
       }
     } catch (e, stackTrace) {
@@ -178,7 +178,7 @@ class BadgeService {
     try {
       // Check device support if not already initialized
       if (!_initialized) {
-        final supported = await FlutterAppBadger.isAppBadgeSupported();
+        final supported = await AppBadgePlus.isSupported();
         if (!supported) {
           AppLogger.warning(
             'App badge not supported on this device, skipping refresh.',
@@ -207,7 +207,7 @@ class BadgeService {
     }
 
     try {
-      await FlutterAppBadger.removeBadge();
+      await AppBadgePlus.updateBadge(0);
       _lastBadgeCount = 0;
       AppLogger.debug('Badge cleared manually');
     } catch (e, stackTrace) {
@@ -228,5 +228,6 @@ class BadgeService {
   }
 
   /// Check if badges are supported on the current platform
-  static bool get isSupported => Platform.isAndroid || Platform.isIOS;
+  static bool get isSupported =>
+      Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
 }

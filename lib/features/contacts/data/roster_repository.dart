@@ -9,8 +9,8 @@ import 'package:drift/drift.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:libphonenumber_plugin/libphonenumber_plugin.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 import 'package:xid/xid.dart';
 
 import '../../../core/db/database.dart';
@@ -71,7 +71,7 @@ bool isValidEmail(String email) {
   return _emailRegex.hasMatch(normalized);
 }
 
-/// Validate phone number using libphonenumber with thorough processing
+/// Validate phone number using phone_numbers_parser with thorough processing
 /// Returns the formatted E.164 number if valid, null otherwise
 Future<String?> validateAndFormatPhoneNumber(
   String phone, {
@@ -95,12 +95,15 @@ Future<String?> validateAndFormatPhoneNumber(
       return null;
     }
 
-    // Check if the number is valid
-    final isValid = await PhoneNumberUtil.isValidPhoneNumber(
+    // Parse the phone number with the region as caller country
+    final isoCode = _regionToIsoCode(region);
+    final parsedPhone = PhoneNumber.parse(
       normalizedPhone,
-      region,
+      callerCountry: isoCode,
     );
-    if (isValid != true) {
+
+    // Check if the number is valid
+    if (!parsedPhone.isValid()) {
       AppLogger.debug(
         'Invalid phone number',
         data: {'phone': phone, 'normalized': normalizedPhone, 'region': region},
@@ -108,11 +111,8 @@ Future<String?> validateAndFormatPhoneNumber(
       return null;
     }
 
-    // Format to E.164 for consistency
-    final formatted = await PhoneNumberUtil.normalizePhoneNumber(
-      normalizedPhone,
-      region,
-    );
+    // Get E.164 format (international format with +)
+    final formatted = parsedPhone.international;
 
     AppLogger.debug(
       'Phone validated successfully',
@@ -126,6 +126,18 @@ Future<String?> validateAndFormatPhoneNumber(
       data: {'phone': phone, 'error': e.toString()},
     );
     return null;
+  }
+}
+
+/// Convert region code string to IsoCode enum
+IsoCode _regionToIsoCode(String regionCode) {
+  try {
+    return IsoCode.values.firstWhere(
+      (code) => code.name.toUpperCase() == regionCode.toUpperCase(),
+      orElse: () => IsoCode.US, // Default to US if not found
+    );
+  } catch (e) {
+    return IsoCode.US;
   }
 }
 

@@ -52,7 +52,7 @@ dependencies:
   fixnum: ^1.1.1
   flutter:
     sdk: flutter
-  flutter_app_badger: ^1.5.0
+  app_badge_plus: ^1.2.6
   flutter_cache_manager: ^3.4.1
   flutter_contacts: ^1.1.9+2
   flutter_riverpod: ^3.1.0
@@ -65,7 +65,7 @@ dependencies:
   image_picker: ^1.1.2
   intl: ^0.20.2
   json_annotation: ^4.9.0
-  libphonenumber_plugin: ^0.3.3
+  phone_numbers_parser: ^9.0.18
   logger: ^2.5.0
   openid_client: ^0.4.9+1
   path: ^1.9.1

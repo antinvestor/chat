@@ -60,9 +60,8 @@ void main() {
         if (Platform.isMacOS) {
           expect(
             BadgeService.isSupported,
-            isFalse,
-            reason:
-                'macOS should not support app badges via flutter_app_badger',
+            isTrue,
+            reason: 'macOS should support app badges via app_badge_plus',
           );
         }
         if (Platform.isWindows) {
@@ -77,7 +76,7 @@ void main() {
       test('returns correct value based on current platform', () {
         final isSupported = BadgeService.isSupported;
 
-        if (Platform.isAndroid || Platform.isIOS) {
+        if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
           expect(isSupported, isTrue);
         } else {
           expect(isSupported, isFalse);
@@ -291,7 +290,7 @@ void main() {
       }
     });
 
-    test('desktop platforms are not supported', () {
+    test('some desktop platforms are not supported', () {
       if (Platform.isLinux) {
         expect(
           BadgeService.isSupported,
@@ -299,18 +298,21 @@ void main() {
           reason: 'Linux should not support app badges',
         );
       }
-      if (Platform.isMacOS) {
-        expect(
-          BadgeService.isSupported,
-          isFalse,
-          reason: 'macOS should not support app badges',
-        );
-      }
       if (Platform.isWindows) {
         expect(
           BadgeService.isSupported,
           isFalse,
           reason: 'Windows should not support app badges',
+        );
+      }
+    });
+
+    test('macOS is supported', () {
+      if (Platform.isMacOS) {
+        expect(
+          BadgeService.isSupported,
+          isTrue,
+          reason: 'macOS should support app badges via app_badge_plus',
         );
       }
     });
