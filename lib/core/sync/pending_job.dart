@@ -11,6 +11,8 @@ enum JobType {
   uploadFile,
   createRoom,
   updateRoom,
+  updateRoomAvatar,
+  updateRoomPermissions,
   deleteRoom,
   addRoomMembers,
   removeRoomMembers,

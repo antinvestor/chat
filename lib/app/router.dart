@@ -9,6 +9,7 @@ import '../features/auth/ui/login_screen.dart';
 import '../features/contacts/ui/contact_selection_screen.dart';
 import '../features/messages/ui/chat_screen.dart';
 import '../features/profile/ui/profile_screen.dart';
+import '../features/rooms/ui/group_settings_screen.dart';
 import '../features/rooms/ui/room_detail_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
 import '../features/settings/ui/account_settings_screen.dart';
@@ -103,6 +104,15 @@ GoRouter router(Ref ref) {
           final roomId = state.pathParameters['roomId']!;
           final roomName = state.uri.queryParameters['name'] ?? 'Room Details';
           return RoomDetailScreen(roomId: roomId, roomName: roomName);
+        },
+      ),
+      GoRoute(
+        path: '/room/:roomId/settings',
+        builder: (context, state) {
+          final roomId = state.pathParameters['roomId']!;
+          final roomName =
+              state.uri.queryParameters['name'] ?? 'Group Settings';
+          return GroupSettingsScreen(roomId: roomId, roomName: roomName);
         },
       ),
       GoRoute(

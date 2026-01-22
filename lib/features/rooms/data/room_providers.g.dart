@@ -8,6 +8,89 @@ part of 'room_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Provider for getting a room by ID
+
+@ProviderFor(roomById)
+final roomByIdProvider = RoomByIdFamily._();
+
+/// Provider for getting a room by ID
+
+final class RoomByIdProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<domain.Room?>,
+          domain.Room?,
+          FutureOr<domain.Room?>
+        >
+    with $FutureModifier<domain.Room?>, $FutureProvider<domain.Room?> {
+  /// Provider for getting a room by ID
+  RoomByIdProvider._({
+    required RoomByIdFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'roomByIdProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$roomByIdHash();
+
+  @override
+  String toString() {
+    return r'roomByIdProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<domain.Room?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<domain.Room?> create(Ref ref) {
+    final argument = this.argument as String;
+    return roomById(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RoomByIdProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$roomByIdHash() => r'6c931dc086f3bd7443ba1455f94628b4cae07046';
+
+/// Provider for getting a room by ID
+
+final class RoomByIdFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<domain.Room?>, String> {
+  RoomByIdFamily._()
+    : super(
+        retry: null,
+        name: r'roomByIdProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider for getting a room by ID
+
+  RoomByIdProvider call(String roomId) =>
+      RoomByIdProvider._(argument: roomId, from: this);
+
+  @override
+  String toString() => r'roomByIdProvider';
+}
 
 @ProviderFor(RoomList)
 final roomListProvider = RoomListProvider._();

@@ -33,6 +33,8 @@ const _$JobTypeEnumMap = {
   JobType.uploadFile: 'uploadFile',
   JobType.createRoom: 'createRoom',
   JobType.updateRoom: 'updateRoom',
+  JobType.updateRoomAvatar: 'updateRoomAvatar',
+  JobType.updateRoomPermissions: 'updateRoomPermissions',
   JobType.deleteRoom: 'deleteRoom',
   JobType.addRoomMembers: 'addRoomMembers',
   JobType.removeRoomMembers: 'removeRoomMembers',

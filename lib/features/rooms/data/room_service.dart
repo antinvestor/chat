@@ -79,16 +79,28 @@ class RoomService {
 
   /// Update an existing room
   /// Saves locally first, then queues for server sync
+  /// Logs changes as system messages when logChanges is true
   Future<domain.Room> updateRoom({
     required String roomId,
     String? name,
     String? description,
     Map<String, dynamic>? metadata,
+    bool logChanges = true,
   }) async {
     // Get existing room
     final existingRoom = await _roomRepo.getRoomById(roomId);
     if (existingRoom == null) {
       throw Exception('Room not found: $roomId');
+    }
+
+    // Track what changed for system messages
+    final changes = <String>[];
+    if (name != null && name != existingRoom.name) {
+      changes.add('name changed to "$name"');
+    }
+    final oldDescription = existingRoom.metadata?['description'] as String?;
+    if (description != null && description != oldDescription) {
+      changes.add('description updated');
     }
 
     // Merge metadata
@@ -113,10 +125,88 @@ class RoomService {
       'name': name ?? existingRoom.name,
       'description': description ?? updatedMetadata['description'] ?? '',
       'metadata': metadata,
+      'changes': changes,
+      'logSystemMessage': logChanges,
     });
 
     AppLogger.info(
       'Room updated locally and queued for sync',
+      data: {'roomId': roomId, 'changes': changes},
+    );
+
+    return updatedRoom;
+  }
+
+  /// Update room avatar
+  /// Saves locally first, then queues for server sync
+  Future<domain.Room> updateRoomAvatar({
+    required String roomId,
+    required String? avatarUrl,
+  }) async {
+    final existingRoom = await _roomRepo.getRoomById(roomId);
+    if (existingRoom == null) {
+      throw Exception('Room not found: $roomId');
+    }
+
+    final updatedMetadata = {
+      ...?existingRoom.metadata,
+      'avatarUrl': avatarUrl,
+      'pendingSync': true,
+    };
+
+    final updatedRoom = existingRoom.copyWith(metadata: updatedMetadata);
+
+    await _roomRepo.insertRoom(updatedRoom);
+
+    await _jobRepo.addJob(JobType.updateRoomAvatar, {
+      'id': roomId,
+      'avatarUrl': avatarUrl,
+    });
+
+    AppLogger.info(
+      'Room avatar updated locally and queued for sync',
+      data: {'roomId': roomId, 'hasAvatar': avatarUrl != null},
+    );
+
+    return updatedRoom;
+  }
+
+  /// Update room permissions
+  /// Saves locally first, then queues for server sync
+  Future<domain.Room> updateRoomPermissions({
+    required String roomId,
+    String? editInfoPermission,
+    String? sendMessagesPermission,
+    String? addMembersPermission,
+  }) async {
+    final existingRoom = await _roomRepo.getRoomById(roomId);
+    if (existingRoom == null) {
+      throw Exception('Room not found: $roomId');
+    }
+
+    final updatedMetadata = {
+      ...?existingRoom.metadata,
+      if (editInfoPermission != null) 'editInfoPermission': editInfoPermission,
+      if (sendMessagesPermission != null)
+        'sendMessagesPermission': sendMessagesPermission,
+      if (addMembersPermission != null)
+        'addMembersPermission': addMembersPermission,
+      'pendingSync': true,
+    };
+
+    final updatedRoom = existingRoom.copyWith(metadata: updatedMetadata);
+
+    await _roomRepo.insertRoom(updatedRoom);
+
+    await _jobRepo.addJob(JobType.updateRoomPermissions, {
+      'id': roomId,
+      'editInfoPermission': editInfoPermission,
+      'sendMessagesPermission': sendMessagesPermission,
+      'addMembersPermission': addMembersPermission,
+    });
+
+    AppLogger.info(
+      'Room permissions updated locally and queued for sync',
       data: {'roomId': roomId},
     );
 
@@ -217,7 +307,7 @@ class RoomService {
     }
 
     // Queue for server sync
-    await _jobRepo.addJob(JobType.leaveRoom, {'roomId': roomId});
+    await _jobRepo.addJob(JobType.leaveRoom, {'id': roomId});
 
     AppLogger.info('Leave room queued for sync', data: {'roomId': roomId});
   }
