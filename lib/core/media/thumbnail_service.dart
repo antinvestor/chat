@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -98,20 +99,17 @@ class ThumbnailService {
     try {
       // Get temp directory for thumbnail
       final tempDir = await getTemporaryDirectory();
-      final thumbnailName =
-          'thumb_${DateTime.now().millisecondsSinceEpoch}_${path.basename(imageFile.path)}';
-      final thumbnailPath = path.join(tempDir.path, thumbnailName);
 
-      // Determine output format
-      CompressFormat compressFormat;
-      switch (effectiveConfig.format) {
-        case ThumbnailFormat.png:
-          compressFormat = CompressFormat.png;
-        case ThumbnailFormat.webp:
-          compressFormat = CompressFormat.webp;
-        case ThumbnailFormat.jpeg:
-          compressFormat = CompressFormat.jpeg;
-      }
+      // Determine output format and extension
+      final (compressFormat, extension) = switch (effectiveConfig.format) {
+        ThumbnailFormat.png => (CompressFormat.png, 'png'),
+        ThumbnailFormat.webp => (CompressFormat.webp, 'webp'),
+        ThumbnailFormat.jpeg => (CompressFormat.jpeg, 'jpg'),
+      };
+
+      final thumbnailName =
+          'thumb_${DateTime.now().millisecondsSinceEpoch}.$extension';
+      final thumbnailPath = path.join(tempDir.path, thumbnailName);
 
       // Generate thumbnail using flutter_image_compress
       final result = await FlutterImageCompress.compressAndGetFile(
@@ -131,19 +129,26 @@ class ThumbnailService {
       final thumbnailFile = File(result.path);
       final thumbnailStat = await thumbnailFile.stat();
 
+      // Read actual dimensions from the generated thumbnail
+      final imageBytes = await thumbnailFile.readAsBytes();
+      final codec = await ui.instantiateImageCodec(imageBytes);
+      final frame = await codec.getNextFrame();
+
       AppLogger.debug(
         'Image thumbnail generated',
         data: {
           'originalPath': imageFile.path,
           'thumbnailPath': result.path,
           'size': thumbnailStat.size,
+          'width': frame.image.width,
+          'height': frame.image.height,
         },
       );
 
       return ThumbnailResult(
         file: thumbnailFile,
-        width: effectiveConfig.maxWidth,
-        height: effectiveConfig.maxHeight,
+        width: frame.image.width,
+        height: frame.image.height,
         size: thumbnailStat.size,
       );
     } catch (e, stackTrace) {
@@ -178,20 +183,12 @@ class ThumbnailService {
       // Get temp directory for thumbnail
       final tempDir = await getTemporaryDirectory();
 
-      // Determine output format
-      ImageFormat imageFormat;
-      String extension;
-      switch (effectiveConfig.format) {
-        case ThumbnailFormat.png:
-          imageFormat = ImageFormat.PNG;
-          extension = 'png';
-        case ThumbnailFormat.webp:
-          imageFormat = ImageFormat.WEBP;
-          extension = 'webp';
-        case ThumbnailFormat.jpeg:
-          imageFormat = ImageFormat.JPEG;
-          extension = 'jpg';
-      }
+      // Determine output format and extension
+      final (imageFormat, extension) = switch (effectiveConfig.format) {
+        ThumbnailFormat.png => (ImageFormat.PNG, 'png'),
+        ThumbnailFormat.webp => (ImageFormat.WEBP, 'webp'),
+        ThumbnailFormat.jpeg => (ImageFormat.JPEG, 'jpg'),
+      };
 
       final thumbnailName =
           'vthumb_${DateTime.now().millisecondsSinceEpoch}.$extension';
@@ -216,6 +213,11 @@ class ThumbnailService {
       final file = File(thumbnailFile);
       final thumbnailStat = await file.stat();
 
+      // Read actual dimensions from the generated thumbnail
+      final imageBytes = await file.readAsBytes();
+      final codec = await ui.instantiateImageCodec(imageBytes);
+      final frame = await codec.getNextFrame();
+
       AppLogger.debug(
         'Video thumbnail generated',
         data: {
@@ -223,13 +225,15 @@ class ThumbnailService {
           'thumbnailPath': thumbnailFile,
           'size': thumbnailStat.size,
           'timeMs': timeMs,
+          'width': frame.image.width,
+          'height': frame.image.height,
         },
       );
 
       return ThumbnailResult(
         file: file,
-        width: effectiveConfig.maxWidth,
-        height: effectiveConfig.maxHeight,
+        width: frame.image.width,
+        height: frame.image.height,
         size: thumbnailStat.size,
       );
     } catch (e, stackTrace) {
@@ -257,15 +261,11 @@ class ThumbnailService {
     }
 
     try {
-      ImageFormat imageFormat;
-      switch (effectiveConfig.format) {
-        case ThumbnailFormat.png:
-          imageFormat = ImageFormat.PNG;
-        case ThumbnailFormat.webp:
-          imageFormat = ImageFormat.WEBP;
-        case ThumbnailFormat.jpeg:
-          imageFormat = ImageFormat.JPEG;
-      }
+      final imageFormat = switch (effectiveConfig.format) {
+        ThumbnailFormat.png => ImageFormat.PNG,
+        ThumbnailFormat.webp => ImageFormat.WEBP,
+        ThumbnailFormat.jpeg => ImageFormat.JPEG,
+      };
 
       final thumbnailData = await VideoThumbnail.thumbnailData(
         video: videoPath,

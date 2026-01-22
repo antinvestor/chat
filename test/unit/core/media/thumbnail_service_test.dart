@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:chat/core/media/thumbnail_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as path;
 
 void main() {
   group('ThumbnailConfig', () {
@@ -55,7 +56,9 @@ void main() {
 
   group('ThumbnailResult', () {
     test('creates result with required fields', () {
-      final tempFile = File('/tmp/test_thumb.jpg');
+      final tempFile = File(
+        path.join(Directory.systemTemp.path, 'test_thumb.jpg'),
+      );
       final result = ThumbnailResult(
         file: tempFile,
         width: 200,
@@ -71,7 +74,9 @@ void main() {
     });
 
     test('creates result with optional blurHash', () {
-      final tempFile = File('/tmp/test_thumb.jpg');
+      final tempFile = File(
+        path.join(Directory.systemTemp.path, 'test_thumb.jpg'),
+      );
       final result = ThumbnailResult(
         file: tempFile,
         width: 200,
@@ -125,18 +130,17 @@ void main() {
   });
 
   group('Thumbnail naming conventions', () {
-    test('image thumbnails use thumb_ prefix', () {
+    test('image thumbnails use thumb_ prefix with extension', () {
       // Verify the naming pattern for image thumbnails
-      const prefix = 'thumb_';
-      const thumbnailName = '${prefix}1234567890_test_image.jpg';
+      const thumbnailName = 'thumb_1234567890.jpg';
 
       expect(thumbnailName.startsWith('thumb_'), isTrue);
+      expect(thumbnailName.endsWith('.jpg'), isTrue);
     });
 
     test('video thumbnails use vthumb_ prefix', () {
       // Verify the naming pattern for video thumbnails
-      const prefix = 'vthumb_';
-      const thumbnailName = '${prefix}1234567890.jpg';
+      const thumbnailName = 'vthumb_1234567890.jpg';
 
       expect(thumbnailName.startsWith('vthumb_'), isTrue);
     });
@@ -144,7 +148,7 @@ void main() {
     test('cleanup identifies thumbnail files by prefix', () {
       // Thumbnails should be identifiable by their prefix for cleanup
       final testNames = [
-        'thumb_12345_image.jpg',
+        'thumb_12345.jpg',
         'vthumb_12345.jpg',
         'regular_file.jpg',
         'thumbnail_not_ours.jpg',
@@ -155,7 +159,7 @@ void main() {
       );
 
       expect(thumbnailNames.length, equals(2));
-      expect(thumbnailNames, contains('thumb_12345_image.jpg'));
+      expect(thumbnailNames, contains('thumb_12345.jpg'));
       expect(thumbnailNames, contains('vthumb_12345.jpg'));
     });
   });
