@@ -71,6 +71,11 @@ class NavigationHelper {
     );
   }
 
+  /// Navigate to media compression settings screen
+  static void navigateToMediaCompressionSettings(BuildContext context) {
+    context.push('/settings/storage/compression');
+  }
+
   /// Navigate back with proper fallback handling
   static void navigateBack(BuildContext context, {String? fallbackRoute}) {
     if (Navigator.canPop(context)) {
@@ -142,6 +147,9 @@ extension NavigationContext on BuildContext {
     roomId: roomId,
     roomName: roomName,
   );
+
+  void navigateToMediaCompressionSettings() =>
+      NavigationHelper.navigateToMediaCompressionSettings(this);
 
   void navigateBack([String? fallbackRoute]) =>
       NavigationHelper.navigateBack(this, fallbackRoute: fallbackRoute);

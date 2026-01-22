@@ -49,6 +49,12 @@ class _StorageSettingsScreenState extends ConsumerState<StorageSettingsScreen> {
                   ),
                   _buildSettingsItem(
                     context,
+                    title: 'Media compression',
+                    subtitle: 'Compress images and videos before sending',
+                    onTap: () => context.navigateToMediaCompressionSettings(),
+                  ),
+                  _buildSettingsItem(
+                    context,
                     title: 'Call data usage',
                     subtitle: settings['call_data_usage'] ?? 'Low data usage',
                     onTap: () => _showCallDataUsageOptions(

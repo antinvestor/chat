@@ -1,15 +1,19 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/media/compression_options_widget.dart';
+import '../../../core/media/media_compression_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../messages/domain/room_event.dart' as domain;
 import '../data/chat_input_providers.dart';
 import '../data/draft_repository.dart';
 import '../data/message_providers.dart';
+import '../data/message_sending_service.dart';
 
 /// WhatsApp-style chat input bar with proper Riverpod/state separation
 class ChatInputBar extends ConsumerStatefulWidget {
@@ -233,51 +237,180 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
   // Camera functionality
   Future<void> _captureFromCamera() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: ImageSource.camera,
-      maxWidth: 1920,
-      maxHeight: 1080,
-      imageQuality: 85,
-    );
+    // Pick without compression - we'll handle compression ourselves
+    final image = await picker.pickImage(source: ImageSource.camera);
 
-    if (image != null) {
-      // Process and send selected image
-      await _sendMessage(ref, image.path, 'image', image.name);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Camera image sent: ${image.name}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+    if (image != null && mounted) {
+      final file = File(image.path);
+      await _showCompressionOptionsAndSend(file: file, isVideo: false);
     }
   }
 
   // Gallery functionality
   Future<void> _pickFromGallery() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1920,
-      maxHeight: 1080,
-      imageQuality: 85,
-    );
+    // Pick without compression - we'll handle compression ourselves
+    final image = await picker.pickImage(source: ImageSource.gallery);
 
-    if (image != null) {
-      // Process and send selected image
-      await _sendMessage(ref, image.path, 'image', image.name);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gallery image sent: ${image.name}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+    if (image != null && mounted) {
+      final file = File(image.path);
+      await _showCompressionOptionsAndSend(file: file, isVideo: false);
     }
+  }
+
+  // Video from gallery
+  Future<void> _pickVideoFromGallery() async {
+    final picker = ImagePicker();
+    final video = await picker.pickVideo(source: ImageSource.gallery);
+
+    if (video != null && mounted) {
+      final file = File(video.path);
+      await _showCompressionOptionsAndSend(file: file, isVideo: true);
+    }
+  }
+
+  // Show compression options and send media
+  Future<void> _showCompressionOptionsAndSend({
+    required File file,
+    required bool isVideo,
+  }) async {
+    await showCompressionOptionsSheet(
+      context: context,
+      file: file,
+      isVideo: isVideo,
+      onConfirm:
+          ({
+            required bool keepOriginal,
+            int? imageQuality,
+            CompressionQualityPreset? videoQuality,
+          }) async {
+            // Show a progress indicator
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        keepOriginal
+                            ? 'Sending ${isVideo ? "video" : "image"}...'
+                            : 'Compressing and sending...',
+                      ),
+                    ],
+                  ),
+                  duration: const Duration(seconds: 30),
+                ),
+              );
+            }
+
+            try {
+              final sendingService = ref.read(messageSendingServiceProvider);
+
+              if (isVideo) {
+                await sendingService.sendVideoMessage(
+                  roomId: widget.roomId,
+                  videoFile: file,
+                  keepOriginal: keepOriginal,
+                  videoQuality: videoQuality,
+                  onCompressionProgress: (progress) {
+                    if (mounted && !keepOriginal) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value: progress.progress,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(progress.stage)),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 30),
+                        ),
+                      );
+                    }
+                  },
+                );
+              } else {
+                await sendingService.sendImageMessage(
+                  roomId: widget.roomId,
+                  imageFile: file,
+                  keepOriginal: keepOriginal,
+                  imageQuality: imageQuality,
+                  onCompressionProgress: (progress) {
+                    if (mounted && !keepOriginal) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value: progress.progress,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(progress.stage)),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 30),
+                        ),
+                      );
+                    }
+                  },
+                );
+              }
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${isVideo ? "Video" : "Image"} sent!'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to send: $e'),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            }
+          },
+    );
   }
 
   // Document functionality
@@ -323,8 +456,10 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
             ),
             Padding(
               padding: const EdgeInsets.all(AppTheme.standardMargin),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              child: Wrap(
+                alignment: WrapAlignment.spaceEvenly,
+                spacing: 16,
+                runSpacing: 16,
                 children: [
                   _buildAttachmentOption(
                     icon: Icons.camera_alt,
@@ -340,6 +475,14 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
                     onTap: () async {
                       Navigator.pop(context);
                       await _pickFromGallery();
+                    },
+                  ),
+                  _buildAttachmentOption(
+                    icon: Icons.videocam,
+                    label: 'Video',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _pickVideoFromGallery();
                     },
                   ),
                   _buildAttachmentOption(
