@@ -234,7 +234,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || 'chat-app' }} --branch=main
+          command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || 'stawi' }} --branch=main
 
       - name: Deployment summary
         run: |

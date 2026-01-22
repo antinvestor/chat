@@ -88,7 +88,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME_STAGING || 'chat-staging' }} --branch=staging
+          command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME_STAGING || 'stawi-staging' }} --branch=staging
         continue-on-error: true
 
       - name: Comment deployment URL
@@ -203,18 +203,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Send Slack notification
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          channel: '#deployments'
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-          text: |
-            🚀 Staging deployment completed
-            Web: ${{ needs.deploy-web-staging.result }}
-            Android: ${{ needs.deploy-android-staging.result }}
-            iOS: ${{ needs.deploy-ios-staging.result }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        continue-on-error: true
