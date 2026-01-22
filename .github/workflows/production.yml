@@ -350,7 +350,6 @@ jobs:
           echo "| iOS (App Store) | ${{ needs.deploy-ios-production.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Send Slack notification
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
         uses: 8398a7/action-slack@v3
         with:
           status: custom
@@ -401,7 +400,6 @@ jobs:
         continue-on-error: true
 
       - name: Send Discord notification
-        if: ${{ secrets.DISCORD_WEBHOOK != '' }}
         uses: Ilshidur/action-discord@master
         with:
           args: |

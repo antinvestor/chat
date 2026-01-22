@@ -89,6 +89,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy build/web --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME_STAGING || 'chat-staging' }} --branch=staging
+        continue-on-error: true
 
       - name: Comment deployment URL
         if: github.event_name == 'push'
@@ -122,7 +123,6 @@ jobs:
         run: ls -la artifacts/
 
       - name: Upload to Play Store Internal Testing
-        if: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT != '' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
@@ -135,7 +135,6 @@ jobs:
         continue-on-error: true
 
       - name: Upload to Firebase App Distribution (fallback)
-        if: ${{ secrets.FIREBASE_APP_ID_ANDROID != '' }}
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID_ANDROID }}
@@ -171,7 +170,6 @@ jobs:
       # Note: For staging, we typically use Firebase App Distribution
       # TestFlight requires signed builds which need Apple Developer certificates
       - name: Upload to Firebase App Distribution (iOS)
-        if: ${{ secrets.FIREBASE_APP_ID_IOS != '' }}
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID_IOS }}
@@ -207,7 +205,6 @@ jobs:
           echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Send Slack notification
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
