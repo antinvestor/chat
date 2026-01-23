@@ -60,6 +60,11 @@ class NavigationHelper {
     context.push('/settings/storage');
   }
 
+  /// Navigate to security settings screen
+  static void navigateToSecuritySettings(BuildContext context) {
+    context.push('/settings/security');
+  }
+
   /// Navigate to group settings screen
   static void navigateToGroupSettings(
     BuildContext context, {
@@ -148,6 +153,9 @@ extension NavigationContext on BuildContext {
 
   void navigateToStorageSettings() =>
       NavigationHelper.navigateToStorageSettings(this);
+
+  void navigateToSecuritySettings() =>
+      NavigationHelper.navigateToSecuritySettings(this);
 
   void navigateToGroupSettings({
     required String roomId,

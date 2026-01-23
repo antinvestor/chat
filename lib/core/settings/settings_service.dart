@@ -45,6 +45,7 @@ class SettingsKeys {
   // Security
   static const biometricEnabled = 'biometric_enabled';
   static const lockTimeoutMinutes = 'lock_timeout_minutes';
+  static const showNotificationsLocked = 'show_notifications_locked';
   static const fingerprintLockEnabled = 'fingerprint_lock_enabled';
 
   // Location
@@ -75,7 +76,8 @@ class SettingsDefaults {
   static const aboutVisible = 'everyone';
   static const groupsAddPermission = 'everyone';
   static const biometricEnabled = false;
-  static const lockTimeoutMinutes = 0;
+  static const lockTimeoutMinutes = 1;
+  static const showNotificationsLocked = true;
   static const fingerprintLockEnabled = false;
   static const liveLocationSharingEnabled = false;
   static const backupEnabled = false;
@@ -347,9 +349,19 @@ class SettingsService {
   Future<void> setBiometricEnabled(bool value) =>
       setBool(SettingsKeys.biometricEnabled, value);
 
-  int get lockTimeoutMinutes => getInt(SettingsKeys.lockTimeoutMinutes);
+  int get lockTimeoutMinutes => getInt(
+    SettingsKeys.lockTimeoutMinutes,
+    defaultValue: SettingsDefaults.lockTimeoutMinutes,
+  );
   Future<void> setLockTimeoutMinutes(int value) =>
       setInt(SettingsKeys.lockTimeoutMinutes, value);
+
+  bool get showNotificationsLocked => getBool(
+    SettingsKeys.showNotificationsLocked,
+    defaultValue: SettingsDefaults.showNotificationsLocked,
+  );
+  Future<void> setShowNotificationsLocked(bool value) =>
+      setBool(SettingsKeys.showNotificationsLocked, value);
 
   // Backup
   bool get backupEnabled => getBool(SettingsKeys.backupEnabled);
@@ -364,18 +376,14 @@ class SettingsService {
       setString(SettingsKeys.backupFrequency, value);
 
   // Fingerprint Lock
-  bool get fingerprintLockEnabled => getBool(
-    SettingsKeys.fingerprintLockEnabled,
-    defaultValue: SettingsDefaults.fingerprintLockEnabled,
-  );
+  bool get fingerprintLockEnabled =>
+      getBool(SettingsKeys.fingerprintLockEnabled);
   Future<void> setFingerprintLockEnabled(bool value) =>
       setBool(SettingsKeys.fingerprintLockEnabled, value);
 
   // Live Location Sharing
-  bool get liveLocationSharingEnabled => getBool(
-    SettingsKeys.liveLocationSharingEnabled,
-    defaultValue: SettingsDefaults.liveLocationSharingEnabled,
-  );
+  bool get liveLocationSharingEnabled =>
+      getBool(SettingsKeys.liveLocationSharingEnabled);
   Future<void> setLiveLocationSharingEnabled(bool value) =>
       setBool(SettingsKeys.liveLocationSharingEnabled, value);
 

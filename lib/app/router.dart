@@ -18,6 +18,7 @@ import '../features/settings/ui/chat_settings_screen.dart';
 import '../features/settings/ui/media_compression_settings_screen.dart';
 import '../features/settings/ui/notification_settings_screen.dart';
 import '../features/settings/ui/privacy_settings_screen.dart';
+import '../features/settings/ui/security_settings_screen.dart';
 import '../features/settings/ui/settings_screen.dart';
 import '../features/settings/ui/storage_settings_screen.dart';
 
@@ -91,6 +92,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/settings/storage',
         builder: (context, state) => const StorageSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/security',
+        builder: (context, state) => const SecuritySettingsScreen(),
       ),
       GoRoute(
         path: '/settings/storage/compression',

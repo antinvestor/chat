@@ -8,9 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/router.dart';
 import 'core/error/error_tracking_service.dart';
 import 'core/logging/app_logger.dart';
+import 'core/security/lock_state_manager.dart';
 import 'core/startup/startup_metrics.dart';
 import 'core/startup/startup_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/security/ui/lock_screen.dart';
 import 'features/splash/splash_screen.dart';
 
 /// Sentry DSN - should be configured via environment variable in production
@@ -66,13 +68,42 @@ class ChatApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
 
     return SplashScreen(
-      child: MaterialApp.router(
-        title: 'AntInvestor Chat',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        routerConfig: router,
-        debugShowCheckedModeBanner: false,
+      child: _LockScreenWrapper(
+        child: MaterialApp.router(
+          title: 'AntInvestor Chat',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          routerConfig: router,
+          debugShowCheckedModeBanner: false,
+        ),
       ),
+    );
+  }
+}
+
+/// Wrapper that shows lock screen overlay when app is locked
+class _LockScreenWrapper extends ConsumerWidget {
+  const _LockScreenWrapper({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final shouldShowLock = ref.watch(shouldShowLockScreenProvider);
+
+    return Stack(
+      children: [
+        child,
+        if (shouldShowLock)
+          Positioned.fill(
+            child: LockScreen(
+              onUnlock: () {
+                final manager = ref.read(lockStateManagerProvider);
+                manager.unlock();
+              },
+            ),
+          ),
+      ],
     );
   }
 }
