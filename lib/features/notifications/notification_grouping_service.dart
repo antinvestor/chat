@@ -4,13 +4,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/db/database.dart';
 import '../../core/logging/app_logger.dart';
 
 /// Provider for NotificationGroupingService
 final notificationGroupingServiceProvider =
     Provider<NotificationGroupingService>(
-      (ref) => NotificationGroupingService(AppDatabase.instance),
+      (ref) => NotificationGroupingService(),
     );
 
 /// Provider for initializing the notification grouping service
@@ -82,11 +81,16 @@ class NotificationChannelConfig {
 /// );
 /// ```
 class NotificationGroupingService {
-  NotificationGroupingService(this._database);
+  NotificationGroupingService();
 
-  final AppDatabase _database;
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  /// Cache for room ID to notification ID mappings to ensure uniqueness
+  final Map<String, int> _roomNotificationIds = {};
+
+  /// Counter for generating unique notification IDs
+  int _nextNotificationId = 1;
 
   bool _initialized = false;
 
@@ -136,15 +140,12 @@ class NotificationGroupingService {
       );
 
       // iOS initialization settings
-      final iosSettings = DarwinInitializationSettings(
-        requestAlertPermission: true,
-        requestBadgePermission: true,
-        requestSoundPermission: true,
-        onDidReceiveLocalNotification: _onDidReceiveLocalNotification,
+      const iosSettings = DarwinInitializationSettings(
+        
       );
 
       // Combined initialization settings
-      final initSettings = InitializationSettings(
+      const initSettings = InitializationSettings(
         android: androidSettings,
         iOS: iosSettings,
         macOS: iosSettings,
@@ -183,8 +184,6 @@ class NotificationGroupingService {
       _defaultChannelName,
       description: _defaultChannelDescription,
       importance: Importance.high,
-      playSound: true,
-      enableVibration: true,
     );
 
     await _notificationsPlugin
@@ -213,8 +212,6 @@ class NotificationGroupingService {
       roomName,
       description: 'Notifications for $roomName',
       importance: Importance.high,
-      playSound: true,
-      enableVibration: true,
     );
 
     await _notificationsPlugin
@@ -283,9 +280,8 @@ class NotificationGroupingService {
       // Get channel ID for this room (Android)
       final channelId = _roomChannelMap[roomId] ?? _defaultChannelId;
 
-      // Generate notification ID from room ID hash
-      final notificationId =
-          roomId.hashCode.abs() % _summaryNotificationIdOffset;
+      // Generate unique notification ID for this room
+      final notificationId = _getOrCreateNotificationId(roomId);
 
       // Build notification details
       final androidDetails = await _buildAndroidNotificationDetails(
@@ -390,10 +386,8 @@ class NotificationGroupingService {
       importance: Importance.high,
       priority: Priority.high,
       groupKey: groupKey,
-      setAsGroupSummary: false,
       styleInformation: inboxStyle,
       category: AndroidNotificationCategory.message,
-      autoCancel: true,
     );
   }
 
@@ -419,7 +413,7 @@ class NotificationGroupingService {
     required int messageCount,
   }) async {
     final groupKey = '$_groupKeyPrefix$roomId';
-    final summaryId = roomId.hashCode.abs() + _summaryNotificationIdOffset;
+    final summaryId = _getSummaryNotificationId(roomId);
 
     final messages = _pendingMessages[roomId] ?? [];
     final lines = messages
@@ -443,7 +437,6 @@ class NotificationGroupingService {
       setAsGroupSummary: true,
       styleInformation: inboxStyle,
       category: AndroidNotificationCategory.message,
-      autoCancel: true,
     );
 
     await _notificationsPlugin.show(
@@ -453,6 +446,33 @@ class NotificationGroupingService {
       NotificationDetails(android: androidDetails),
       payload: roomId,
     );
+  }
+
+  /// Get or create a unique notification ID for a room
+  ///
+  /// This ensures each room gets a consistent, unique notification ID
+  /// without relying on hashCode which can cause collisions.
+  int _getOrCreateNotificationId(String roomId) {
+    if (_roomNotificationIds.containsKey(roomId)) {
+      return _roomNotificationIds[roomId]!;
+    }
+
+    // Generate a new unique ID for this room
+    final id = _nextNotificationId;
+    _nextNotificationId++;
+
+    // Ensure we don't exceed the summary offset range
+    if (_nextNotificationId >= _summaryNotificationIdOffset) {
+      _nextNotificationId = 1;
+    }
+
+    _roomNotificationIds[roomId] = id;
+    return id;
+  }
+
+  /// Get the summary notification ID for a room
+  int _getSummaryNotificationId(String roomId) {
+    return _getOrCreateNotificationId(roomId) + _summaryNotificationIdOffset;
   }
 
   /// Clear all notifications for a specific room
@@ -466,15 +486,16 @@ class NotificationGroupingService {
       // Clear pending messages for this room
       _pendingMessages.remove(roomId);
 
-      // Cancel the main notification
-      final notificationId =
-          roomId.hashCode.abs() % _summaryNotificationIdOffset;
-      await _notificationsPlugin.cancel(notificationId);
+      // Cancel the main notification using our tracked ID
+      final notificationId = _roomNotificationIds[roomId];
+      if (notificationId != null) {
+        await _notificationsPlugin.cancel(notificationId);
 
-      // Cancel the summary notification (Android)
-      if (Platform.isAndroid) {
-        final summaryId = roomId.hashCode.abs() + _summaryNotificationIdOffset;
-        await _notificationsPlugin.cancel(summaryId);
+        // Cancel the summary notification (Android)
+        if (Platform.isAndroid) {
+          final summaryId = notificationId + _summaryNotificationIdOffset;
+          await _notificationsPlugin.cancel(summaryId);
+        }
       }
 
       AppLogger.debug(
@@ -542,20 +563,6 @@ class NotificationGroupingService {
     // The roomId is in the payload for navigation
   }
 
-  /// iOS-specific callback for local notifications (iOS < 10)
-  void _onDidReceiveLocalNotification(
-    int id,
-    String? title,
-    String? body,
-    String? payload,
-  ) {
-    // Handle older iOS versions
-    AppLogger.debug(
-      'Legacy iOS notification received',
-      data: {'id': id, 'title': title},
-    );
-  }
-
   /// Check if notification grouping is supported on the current platform
   static bool get isSupported {
     if (kIsWeb) return false;
@@ -566,6 +573,8 @@ class NotificationGroupingService {
   void dispose() {
     _pendingMessages.clear();
     _roomChannelMap.clear();
+    _roomNotificationIds.clear();
+    _nextNotificationId = 1;
     _initialized = false;
     AppLogger.debug('NotificationGroupingService disposed');
   }
