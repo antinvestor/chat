@@ -52,9 +52,9 @@ class NotificationActionHandler {
           await _handleReplyAction(roomId, payload);
         case NotificationActions.markAsRead:
           await _handleMarkAsReadAction(roomId);
-        case 'answer_call':
+        case NotificationActions.answerCall:
           await _handleAnswerCallAction(roomId);
-        case 'decline_call':
+        case NotificationActions.declineCall:
           await _handleDeclineCallAction(roomId);
         default:
           AppLogger.warning(

@@ -15,6 +15,8 @@ import 'notification_content_formatter.dart';
 class NotificationActions {
   static const String reply = 'reply_action';
   static const String markAsRead = 'mark_as_read_action';
+  static const String answerCall = 'answer_call';
+  static const String declineCall = 'decline_call';
 }
 
 /// Notification channel configuration
@@ -210,7 +212,14 @@ class RichNotificationService {
 
     if (response.actionId != null) {
       // Handle action button tap
-      _onAction?.call(response.actionId!, roomId, response.input ?? payload);
+      // For reply actions, pass the input text; for other actions, pass the payload
+      _onAction?.call(
+        response.actionId!,
+        roomId,
+        response.actionId == NotificationActions.reply
+            ? response.input
+            : payload,
+      );
     } else {
       // Handle notification tap
       _onTap?.call(roomId, roomName);
@@ -242,7 +251,8 @@ class RichNotificationService {
   Future<void> showMessageNotification({
     required RoomEvent event,
     required String senderName,
-    required String roomId, String? senderAvatarUrl,
+    required String roomId,
+    String? senderAvatarUrl,
     String? roomName,
   }) async {
     if (!_initialized) {
@@ -399,7 +409,8 @@ class RichNotificationService {
   /// Show a call notification
   Future<void> showCallNotification({
     required String callerName,
-    required String roomId, String? callerAvatarUrl,
+    required String roomId,
+    String? callerAvatarUrl,
     bool isVideoCall = false,
   }) async {
     if (!_initialized) {
@@ -427,12 +438,12 @@ class RichNotificationService {
       autoCancel: false,
       actions: [
         const AndroidNotificationAction(
-          'answer_call',
+          NotificationActions.answerCall,
           'Answer',
           showsUserInterface: true,
         ),
         const AndroidNotificationAction(
-          'decline_call',
+          NotificationActions.declineCall,
           'Decline',
         ),
       ],
