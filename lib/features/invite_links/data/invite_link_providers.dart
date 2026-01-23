@@ -189,10 +189,7 @@ class InviteLinkNotifier extends _$InviteLinkNotifier {
 
     try {
       final service = ref.read(inviteLinkServiceProvider);
-      await service.rejectJoinRequest(
-        joinId: joinId,
-        profileId: profileId,
-      );
+      await service.rejectJoinRequest(joinId: joinId, profileId: profileId);
 
       state = const AsyncData(null);
 

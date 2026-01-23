@@ -24,21 +24,23 @@ class InviteLinkRepository {
 
   /// Insert or update an invite link
   Future<void> insertLink(domain.InviteLink link) async {
-    await _database.into(_database.inviteLinks).insertOnConflictUpdate(
-      InviteLinksCompanion.insert(
-        id: link.id,
-        roomId: link.roomId,
-        code: link.code,
-        createdBy: link.createdBy,
-        createdAt: link.createdAt,
-        expiresAt: Value(link.expiresAt),
-        maxUses: Value(link.maxUses),
-        useCount: Value(link.useCount),
-        revoked: Value(link.revoked),
-        requiresApproval: Value(link.requiresApproval),
-        name: Value(link.name),
-      ),
-    );
+    await _database
+        .into(_database.inviteLinks)
+        .insertOnConflictUpdate(
+          InviteLinksCompanion.insert(
+            id: link.id,
+            roomId: link.roomId,
+            code: link.code,
+            createdBy: link.createdBy,
+            createdAt: link.createdAt,
+            expiresAt: Value(link.expiresAt),
+            maxUses: Value(link.maxUses),
+            useCount: Value(link.useCount),
+            revoked: Value(link.revoked),
+            requiresApproval: Value(link.requiresApproval),
+            name: Value(link.name),
+          ),
+        );
   }
 
   /// Get an invite link by its code
@@ -94,27 +96,30 @@ class InviteLinkRepository {
   /// Revoke an invite link
   Future<void> revokeLink(String id) async {
     await (_database.update(_database.inviteLinks)
-      ..where((t) => t.id.equals(id)))
+          ..where((t) => t.id.equals(id)))
         .write(const InviteLinksCompanion(revoked: Value(true)));
   }
 
   /// Increment the use count of a link
   Future<void> incrementUseCount(String id) async {
-    await _database.customStatement('''
+    await _database.customStatement(
+      '''
       UPDATE invite_links SET use_count = use_count + 1 WHERE id = ?
-    ''', [id]);
+    ''',
+      [id],
+    );
   }
 
   /// Delete an invite link
   Future<void> deleteLink(String id) async {
     // First delete related joins
-    await (_database.delete(_database.inviteLinkJoins)
-      ..where((t) => t.inviteLinkId.equals(id)))
-        .go();
+    await (_database.delete(
+      _database.inviteLinkJoins,
+    )..where((t) => t.inviteLinkId.equals(id))).go();
     // Then delete the link
-    await (_database.delete(_database.inviteLinks)
-      ..where((t) => t.id.equals(id)))
-        .go();
+    await (_database.delete(
+      _database.inviteLinks,
+    )..where((t) => t.id.equals(id))).go();
   }
 
   /// Record a user joining via an invite link
@@ -123,14 +128,16 @@ class InviteLinkRepository {
     required String profileId,
     String status = 'approved',
   }) async {
-    await _database.into(_database.inviteLinkJoins).insert(
-      InviteLinkJoinsCompanion.insert(
-        inviteLinkId: inviteLinkId,
-        profileId: profileId,
-        joinedAt: DateTime.now().millisecondsSinceEpoch,
-        status: Value(status),
-      ),
-    );
+    await _database
+        .into(_database.inviteLinkJoins)
+        .insert(
+          InviteLinkJoinsCompanion.insert(
+            inviteLinkId: inviteLinkId,
+            profileId: profileId,
+            joinedAt: DateTime.now().millisecondsSinceEpoch,
+            status: Value(status),
+          ),
+        );
   }
 
   /// Get all users who joined via a specific invite link
@@ -147,16 +154,18 @@ class InviteLinkRepository {
   Future<List<domain.InviteLinkJoin>> getPendingApprovalsForRoom(
     String roomId,
   ) async {
-    final results = await _database.customSelect(
-      '''
+    final results = await _database
+        .customSelect(
+          '''
       SELECT j.* FROM invite_link_joins j
       INNER JOIN invite_links l ON j.invite_link_id = l.id
       WHERE l.room_id = ? AND j.status = 'pending'
       ORDER BY j.joined_at DESC
       ''',
-      variables: [Variable.withString(roomId)],
-      readsFrom: {_database.inviteLinkJoins, _database.inviteLinks},
-    ).get();
+          variables: [Variable.withString(roomId)],
+          readsFrom: {_database.inviteLinkJoins, _database.inviteLinks},
+        )
+        .get();
 
     return results.map((row) {
       return domain.InviteLinkJoin(
@@ -175,7 +184,7 @@ class InviteLinkRepository {
     required String status,
   }) async {
     await (_database.update(_database.inviteLinkJoins)
-      ..where((t) => t.id.equals(joinId)))
+          ..where((t) => t.id.equals(joinId)))
         .write(InviteLinkJoinsCompanion(status: Value(status)));
   }
 

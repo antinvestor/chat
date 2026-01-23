@@ -20,8 +20,6 @@ part 'invite_link.g.dart';
 /// ```
 @freezed
 abstract class InviteLink with _$InviteLink {
-  const InviteLink._();
-
   const factory InviteLink({
     required String id,
     required String roomId,
@@ -35,6 +33,8 @@ abstract class InviteLink with _$InviteLink {
     @Default(false) bool requiresApproval,
     String? name,
   }) = _InviteLink;
+
+  const InviteLink._();
 
   factory InviteLink.fromJson(Map<String, dynamic> json) =>
       _$InviteLinkFromJson(json);
