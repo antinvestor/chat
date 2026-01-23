@@ -141,9 +141,7 @@ class BlockService {
   /// Check if a user is blocked by their profile ID
   Future<bool> isUserBlocked(String profileId) async {
     final query = _database.select(_database.roster)
-      ..where(
-        (t) => t.profileId.equals(profileId) & t.isBlocked.equals(true),
-      );
+      ..where((t) => t.profileId.equals(profileId) & t.isBlocked.equals(true));
 
     final result = await query.getSingleOrNull();
     return result != null;
@@ -198,11 +196,11 @@ class BlockService {
       ..where((t) => t.isBlocked.equals(true));
 
     return query.watch().map(
-          (results) => results
-              .where((r) => r.profileId != null)
-              .map((r) => r.profileId!)
-              .toSet(),
-        );
+      (results) => results
+          .where((r) => r.profileId != null)
+          .map((r) => r.profileId!)
+          .toSet(),
+    );
   }
 }
 
@@ -246,11 +244,11 @@ final blockedProfileIdsStreamProvider = StreamProvider<Set<String>>((ref) {
   final query = db.select(db.roster)..where((t) => t.isBlocked.equals(true));
 
   return query.watch().map(
-        (results) => results
-            .where((r) => r.profileId != null)
-            .map((r) => r.profileId!)
-            .toSet(),
-      );
+    (results) => results
+        .where((r) => r.profileId != null)
+        .map((r) => r.profileId!)
+        .toSet(),
+  );
 });
 
 /// Provider to check if a specific user is blocked

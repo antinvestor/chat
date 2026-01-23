@@ -53,7 +53,8 @@ class UserReport {
     required this.id,
     required this.reportedUserId,
     required this.reason,
-    required this.reportedAt, this.details,
+    required this.reportedAt,
+    this.details,
     this.evidenceEventIds,
     this.status = ReportStatus.pending,
   });
