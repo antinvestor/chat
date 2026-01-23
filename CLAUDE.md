@@ -807,6 +807,119 @@ flutter build windows --release
 
 4. **WebRTC calls failing**: Verify STUN/TURN server configuration
 
+## Agent Workflow Guidelines
+
+### Reference Files
+
+Before acting on any task, agents should always reference:
+
+1. **CLAUDE.md (This File - Required)**: Contains project-specific instructions, architecture, technology stack, feature documentation, code patterns, and development setup
+2. **Agents.md (Required)**: Comprehensive multi-agent development practices including:
+   - Branch strategy (trunk-based development with worktrees)
+   - Issue workflow (states, commands)
+   - Pull request process (templates, size guidelines, review feedback policy)
+   - Quality gates (pre-merge requirements)
+   - Code review guidelines (for authors and reviewers)
+   - Testing requirements (unit 80%, widget 70% coverage targets)
+   - CI/CD pipeline (lint, test, build stages)
+   - Sprint execution (structure, priority order)
+   - Communication protocols (commit message format)
+3. **agents.md**: Simplified workflow guidelines for concurrent task management
+
+### Concurrent Task Management
+
+When working on multiple tasks (features, bug fixes, PRs), agents should:
+
+#### Task Limits
+- **Work on 3-5 tasks concurrently** - This ensures focused attention while maximizing throughput
+- Never exceed 5 concurrent tasks to maintain quality and avoid context switching overhead
+- Prioritize completing existing tasks before starting new ones
+
+#### Git Worktrees
+- **Always use git worktrees** for concurrent development
+- Each task/feature branch should have its own worktree
+- Worktrees provide isolated working directories that share the same git repository
+
+#### Worktree Structure
+```
+/home/j/code/antinvestor/chat                    # Main worktree (main branch)
+/home/j/code/antinvestor/sprint1-worktrees/      # Sprint 1 feature worktrees
+/home/j/code/antinvestor/sprint2-worktrees/      # Sprint 2 feature worktrees
+```
+
+#### Worktree Commands
+```bash
+# List all worktrees
+git worktree list
+
+# Add a new worktree for a feature branch
+git worktree add ../sprint-worktrees/feature-name feature/FEATURE-001
+
+# Remove a worktree when done
+git worktree remove ../sprint-worktrees/feature-name
+```
+
+#### Benefits of Worktrees
+1. **Isolation** - Each feature has its own directory, avoiding conflicts
+2. **Parallel work** - Run tests, builds, or development in multiple features simultaneously
+3. **Clean context switching** - No need to stash changes when switching tasks
+4. **Shared history** - All worktrees share the same git objects and references
+
+### PR Workflow with Worktrees
+
+1. Create/checkout worktree for the feature branch
+2. Make changes in the worktree directory
+3. Run tests and formatting in the worktree
+4. Commit and push from the worktree
+5. Create/update PR
+6. After merge, remove the worktree
+
+### Auto-merge Strategy
+
+- Enable auto-merge for PRs that pass all CI checks
+- Only enable auto-merge after confirming:
+  - All tests pass
+  - All formatting checks pass
+  - All review feedback is addressed
+
+### Review Feedback Policy (CRITICAL)
+
+All PR review feedback must be addressed before proceeding to work on other issues:
+- Prevents accumulation of unresolved issues
+- Ensures code quality before moving forward
+- Maintains clean PR history
+- Avoids context-switching overhead later
+
+**When to proceed to next issue:**
+- All review comments marked as resolved
+- No pending "Changes Requested" status
+- CI checks passing
+- PR merged OR explicitly paused with documented reason
+
+### Quality Gates
+
+All PRs must pass these gates before merging:
+- `dart format .` produces no changes
+- `flutter analyze` has no errors or warnings
+- `flutter test` passes all tests
+- Test coverage >= 70%
+- No TODO comments without issue references
+- No commented-out code
+- No debug print statements
+- API keys/secrets not hardcoded
+
+### Definition of Done
+
+A feature is "done" when:
+- Code implemented and self-reviewed
+- Unit tests written (>80% coverage for new code)
+- Widget tests for new UI components
+- All CI checks pass
+- PR approved by reviewer
+- No unresolved comments
+- Documentation updated (if applicable)
+- Issue closed via PR merge
+
 ## Future Enhancements
 
 - [ ] End-to-end encryption (E2EE) enabled by default
