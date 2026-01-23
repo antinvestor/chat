@@ -815,7 +815,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-Future<void> _onForwardMessage(RoomEvent message) async {
+  Future<void> _onForwardMessage(RoomEvent message) async {
     final result = await showForwardSheet(
       context: context,
       message: message,
