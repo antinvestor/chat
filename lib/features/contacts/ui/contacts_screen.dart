@@ -88,7 +88,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   void _showSortOptions() {
-    final currentSort = ref.read(contactSortOptionProvider);
+    final currentSort = ref.read(contactSortOptionStateProvider);
 
     showModalBottomSheet(
       context: context,
@@ -111,8 +111,9 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                   groupValue: currentSort,
                   onChanged: (value) {
                     if (value != null) {
-                      ref.read(contactSortOptionProvider.notifier).state =
-                          value;
+                      ref
+                          .read(contactSortOptionStateProvider.notifier)
+                          .setOption(value);
                       try {
                         ref
                             .read(contactSearchProvider.notifier)
@@ -126,7 +127,9 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                 ),
                 title: Text(option.displayName),
                 onTap: () {
-                  ref.read(contactSortOptionProvider.notifier).state = option;
+                  ref
+                      .read(contactSortOptionStateProvider.notifier)
+                      .setOption(option);
                   try {
                     ref
                         .read(contactSearchProvider.notifier)
@@ -269,7 +272,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
 
   Widget _buildSearchResultsList(List<RosterEntry> results) {
     final theme = Theme.of(context);
-    final sortOption = ref.watch(contactSortOptionProvider);
+    final sortOption = ref.watch(contactSortOptionStateProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,4 +1,3 @@
-
 import 'package:chat/features/contacts/data/contact_search_provider.dart';
 import 'package:chat/features/contacts/data/roster_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,18 +42,13 @@ void main() {
     });
 
     test('hasNoResults returns true when searched but no results', () {
-      const state = ContactSearchState(
-        query: 'test',
-        hasSearched: true,
-      );
+      const state = ContactSearchState(query: 'test', hasSearched: true);
 
       expect(state.hasNoResults, isTrue);
     });
 
     test('hasNoResults returns false when query is empty', () {
-      const state = ContactSearchState(
-        hasSearched: true,
-      );
+      const state = ContactSearchState(hasSearched: true);
 
       expect(state.hasNoResults, isFalse);
     });
