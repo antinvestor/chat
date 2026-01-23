@@ -69,7 +69,6 @@ extension MuteDurationExtension on MuteDuration {
 /// ```
 @freezed
 abstract class Room with _$Room {
-
   const factory Room({
     required String id,
     required String name,

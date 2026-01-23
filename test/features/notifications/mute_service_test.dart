@@ -240,11 +240,7 @@ void main() {
 
   group('Room.isMuted getter', () {
     test('should return false when mutedUntil is null', () {
-      const room = domain.Room(
-        id: 'room-1',
-        name: 'Test',
-        type: 'group',
-      );
+      const room = domain.Room(id: 'room-1', name: 'Test', type: 'group');
 
       expect(room.isMuted, isFalse);
     });
@@ -291,11 +287,7 @@ void main() {
 
   group('Room.muteTimeRemaining getter', () {
     test('should return null when not muted', () {
-      const room = domain.Room(
-        id: 'room-1',
-        name: 'Test',
-        type: 'group',
-      );
+      const room = domain.Room(id: 'room-1', name: 'Test', type: 'group');
 
       expect(room.muteTimeRemaining, equals(null));
     });
