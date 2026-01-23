@@ -342,7 +342,10 @@ class SettingsService {
   Future<void> setBiometricEnabled(bool value) =>
       setBool(SettingsKeys.biometricEnabled, value);
 
-  int get lockTimeoutMinutes => getInt(SettingsKeys.lockTimeoutMinutes);
+  int get lockTimeoutMinutes => getInt(
+    SettingsKeys.lockTimeoutMinutes,
+    defaultValue: SettingsDefaults.lockTimeoutMinutes,
+  );
   Future<void> setLockTimeoutMinutes(int value) =>
       setInt(SettingsKeys.lockTimeoutMinutes, value);
 
