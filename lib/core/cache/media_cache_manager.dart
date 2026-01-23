@@ -478,7 +478,6 @@ class MediaCacheManager {
     var availableStorage = 0;
     try {
       if (_cacheDir != null) {
-        final stat = await _cacheDir!.stat();
         // Get free space - this is platform specific
         // For now, we'll use a simple approach
         availableStorage = await _getAvailableStorage();
@@ -538,7 +537,7 @@ class MediaCacheManager {
       if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
         // Use directory stat to estimate
         final tempDir = await getTemporaryDirectory();
-        final stat = await tempDir.stat();
+        await tempDir.stat();
         // This is a rough estimate - actual implementation would use
         // platform-specific APIs
         return 1024 * 1024 * 1024; // Default to 1GB as fallback

@@ -387,9 +387,7 @@ class SettingsService {
   Future<void> setMediaCacheSizeBytes(int value) =>
       setInt(SettingsKeys.mediaCacheSizeBytes, value);
 
-  bool get perRoomCacheEnabled => getBool(
-    SettingsKeys.perRoomCacheEnabled,
-  );
+  bool get perRoomCacheEnabled => getBool(SettingsKeys.perRoomCacheEnabled);
   Future<void> setPerRoomCacheEnabled(bool value) =>
       setBool(SettingsKeys.perRoomCacheEnabled, value);
 }
