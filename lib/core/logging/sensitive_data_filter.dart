@@ -43,7 +43,9 @@ class SensitiveDataFilter {
     // Email addresses
     RegExp(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'),
     // Phone numbers (various formats)
-    RegExp(r'\b\+?[0-9]{1,3}[-.\s]?\(?[0-9]{2,3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b'),
+    RegExp(
+      r'\b\+?[0-9]{1,3}[-.\s]?\(?[0-9]{2,3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b',
+    ),
     // Credit card numbers (16 digits, with or without separators)
     RegExp(r'\b(?:\d{4}[-\s]?){3}\d{4}\b'),
     // JWT tokens (three base64 segments separated by dots)
@@ -52,7 +54,10 @@ class SensitiveDataFilter {
     RegExp(r'\bBearer\s+[A-Za-z0-9_-]+\b', caseSensitive: false),
     // UUIDs (often used for tokens/keys)
     // Only mask UUIDs that appear to be tokens (prefixed with specific keywords)
-    RegExp(r'\b(?:token|key|secret|auth)[=:\s]+[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\b', caseSensitive: false),
+    RegExp(
+      r'\b(?:token|key|secret|auth)[=:\s]+[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\b',
+      caseSensitive: false,
+    ),
   ];
 
   /// The mask to use for sensitive data
@@ -109,9 +114,7 @@ class SensitiveDataFilter {
   /// Check if a key name indicates sensitive data
   static bool _isSensitiveKey(String key) {
     final lowerKey = key.toLowerCase();
-    return _sensitiveFieldPatterns.any(
-      (pattern) => lowerKey.contains(pattern),
-    );
+    return _sensitiveFieldPatterns.any(lowerKey.contains);
   }
 
   /// Filter a string value, masking any detected sensitive patterns
@@ -119,10 +122,7 @@ class SensitiveDataFilter {
     var filtered = value;
 
     for (final pattern in _sensitiveValuePatterns) {
-      filtered = filtered.replaceAllMapped(
-        pattern,
-        (match) => _shortMask,
-      );
+      filtered = filtered.replaceAllMapped(pattern, (match) => _shortMask);
     }
 
     return filtered;

@@ -111,11 +111,14 @@ class AppLogger {
     }
 
     _initialized = true;
-    info('AppLogger initialized', data: {
-      'remoteLogging': remoteConfig?.enabled ?? false,
-      'maxLocalLogSize': maxLocalLogSize,
-      'maxLogFiles': maxLogFiles,
-    });
+    info(
+      'AppLogger initialized',
+      data: {
+        'remoteLogging': remoteConfig?.enabled ?? false,
+        'maxLocalLogSize': maxLocalLogSize,
+        'maxLogFiles': maxLogFiles,
+      },
+    );
   }
 
   /// Generate a new correlation ID for tracing
@@ -332,8 +335,9 @@ class AppLogger {
     parts.add(message);
 
     if (data != null && data.isNotEmpty) {
-      final dataStr =
-          data.entries.map((e) => '${e.key}: ${e.value}').join(', ');
+      final dataStr = data.entries
+          .map((e) => '${e.key}: ${e.value}')
+          .join(', ');
       parts.add('| Data: {$dataStr}');
     }
 

@@ -54,10 +54,8 @@ class RemoteLoggerConfig {
 /// - Filters sensitive data before sending
 /// - Automatic retry with exponential backoff
 class RemoteLogger {
-  RemoteLogger({
-    required this.config,
-    http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+  RemoteLogger({required this.config, http.Client? httpClient})
+    : _httpClient = httpClient ?? http.Client();
 
   final RemoteLoggerConfig config;
   final http.Client _httpClient;
@@ -118,7 +116,7 @@ class RemoteLogger {
           ? SensitiveDataFilter.filterString(entry.stackTrace!)
           : null,
       data: entry.data != null
-          ? SensitiveDataFilter.filterData(entry.data!)
+          ? SensitiveDataFilter.filterData(entry.data)
           : null,
     );
   }
@@ -163,9 +161,7 @@ class RemoteLogger {
     }
 
     try {
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (config.apiKey != null) {
         headers['Authorization'] = 'Bearer ${config.apiKey}';
@@ -181,11 +177,7 @@ class RemoteLogger {
       });
 
       final response = await _httpClient
-          .post(
-            Uri.parse(config.endpoint),
-            headers: headers,
-            body: body,
-          )
+          .post(Uri.parse(config.endpoint), headers: headers, body: body)
           .timeout(config.timeout);
 
       return response.statusCode >= 200 && response.statusCode < 300;
@@ -198,8 +190,8 @@ class RemoteLogger {
   /// Calculate exponential backoff delay
   int _calculateBackoff(int failures) {
     // Exponential backoff: 1s, 2s, 4s, 8s, max 60s
-    final baseMs = 1000;
-    final maxMs = 60000;
+    const baseMs = 1000;
+    const maxMs = 60000;
     final delay = baseMs * (1 << (failures - 1).clamp(0, 6));
     return delay.clamp(baseMs, maxMs);
   }

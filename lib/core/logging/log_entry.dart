@@ -4,16 +4,11 @@ part 'log_entry.freezed.dart';
 part 'log_entry.g.dart';
 
 /// Log severity levels
-enum LogLevel {
-  debug,
-  info,
-  warning,
-  error,
-}
+enum LogLevel { debug, info, warning, error }
 
 /// Represents a single log entry with all metadata
 @freezed
-class LogEntry with _$LogEntry {
+abstract class LogEntry with _$LogEntry {
   const factory LogEntry({
     required String id,
     required DateTime timestamp,
