@@ -136,9 +136,9 @@ class _SecuritySettingsScreenState
               padding: const EdgeInsets.all(16),
               child: Text(
                 'Lock after inactivity',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
             const Divider(height: 1),
@@ -146,7 +146,7 @@ class _SecuritySettingsScreenState
               (timeout) => ListTile(
                 title: Text(timeout.$2),
                 trailing: _lockTimeoutMinutes == timeout.$1
-                    ? Icon(Icons.check, color: AppTheme.primaryGreen)
+                    ? const Icon(Icons.check, color: AppTheme.primaryGreen)
                     : null,
                 onTap: () {
                   _setLockTimeout(timeout.$1);
@@ -248,7 +248,7 @@ class _SecuritySettingsScreenState
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.info_outline,
                             color: AppTheme.primaryGreen,
                             size: 24,
@@ -260,9 +260,7 @@ class _SecuritySettingsScreenState
                               children: [
                                 Text(
                                   'About Biometric Lock',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
+                                  style: Theme.of(context).textTheme.titleSmall
                                       ?.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: AppTheme.primaryGreen,
@@ -273,13 +271,11 @@ class _SecuritySettingsScreenState
                                   'When enabled, you will need to authenticate using '
                                   'fingerprint, face recognition, or device PIN/password '
                                   'to access the app after the configured timeout.',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
+                                  style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
                                       ),
                                 ),
                               ],
@@ -307,7 +303,7 @@ class _SecuritySettingsScreenState
               ? 'Use $description to unlock'
               : 'Not available on this device',
           loading: () => 'Checking...',
-          error: (_, __) => 'Error checking availability',
+          error: (_, _) => 'Error checking availability',
         );
 
         return _buildSwitchItem(
@@ -327,7 +323,7 @@ class _SecuritySettingsScreenState
         enabled: false,
         onChanged: null,
       ),
-      error: (_, __) => _buildSwitchItem(
+      error: (_, _) => _buildSwitchItem(
         context,
         title: 'Enable biometric lock',
         subtitle: 'Error checking availability',
@@ -440,7 +436,8 @@ class _SecuritySettingsScreenState
       trailing: Switch(
         value: value,
         onChanged: enabled ? onChanged : null,
-        activeColor: AppTheme.primaryGreen,
+        activeTrackColor: AppTheme.primaryGreen.withValues(alpha: 0.5),
+        activeThumbColor: AppTheme.primaryGreen,
       ),
     ),
   );

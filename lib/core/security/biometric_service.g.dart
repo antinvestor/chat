@@ -161,13 +161,13 @@ final availableBiometricsProvider = AvailableBiometricsProvider._();
 final class AvailableBiometricsProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<BiometricType>>,
-          List<BiometricType>,
-          FutureOr<List<BiometricType>>
+          AsyncValue<List<AppBiometricType>>,
+          List<AppBiometricType>,
+          FutureOr<List<AppBiometricType>>
         >
     with
-        $FutureModifier<List<BiometricType>>,
-        $FutureProvider<List<BiometricType>> {
+        $FutureModifier<List<AppBiometricType>>,
+        $FutureProvider<List<AppBiometricType>> {
   /// Provider that gets available biometric types
   AvailableBiometricsProvider._()
     : super(
@@ -185,18 +185,18 @@ final class AvailableBiometricsProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<BiometricType>> $createElement(
+  $FutureProviderElement<List<AppBiometricType>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<BiometricType>> create(Ref ref) {
+  FutureOr<List<AppBiometricType>> create(Ref ref) {
     return availableBiometrics(ref);
   }
 }
 
 String _$availableBiometricsHash() =>
-    r'304742de3aea15b132e9dbf93ebdff9e4f096d8f';
+    r'91f8f6ebea0c394f217c2def636908fd9c1c8b19';
 
 /// Provider that gets the biometric description
 

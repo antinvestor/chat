@@ -57,7 +57,7 @@ final class LockStateManagerProvider
   }
 }
 
-String _$lockStateManagerHash() => r'b5f3cab4956611697e4dde416bc6fa1203a0bd88';
+String _$lockStateManagerHash() => r'44146eb9939b2887447802f6e75157d8872a9a7c';
 
 /// Provider that exposes whether the app is currently locked
 

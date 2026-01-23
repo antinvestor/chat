@@ -11,10 +11,7 @@ import '../../../core/theme/app_theme.dart';
 /// biometric authentication. It serves as a secure overlay that prevents
 /// access to app content until the user authenticates.
 class LockScreen extends ConsumerStatefulWidget {
-  const LockScreen({
-    required this.onUnlock,
-    super.key,
-  });
+  const LockScreen({required this.onUnlock, super.key});
 
   /// Callback triggered when the user successfully authenticates
   final VoidCallback onUnlock;
@@ -38,7 +35,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+    _pulseAnimation = Tween<double>(begin: 1, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
@@ -65,7 +62,6 @@ class _LockScreenState extends ConsumerState<LockScreen>
     final biometricService = ref.read(biometricServiceProvider);
     final result = await biometricService.authenticate(
       localizedReason: 'Authenticate to unlock the app',
-      allowDeviceCredentials: true,
     );
 
     if (!mounted) return;
@@ -150,7 +146,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
                 const SizedBox(height: 48),
 
                 // App name
-                Text(
+                const Text(
                   'AntInvestor Chat',
                   style: TextStyle(
                     fontSize: 28,
@@ -187,7 +183,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.error_outline,
                           color: Colors.white,
                           size: 20,
@@ -215,13 +211,14 @@ class _LockScreenState extends ConsumerState<LockScreen>
                   child: ElevatedButton.icon(
                     onPressed: _isAuthenticating ? null : _authenticate,
                     icon: _isAuthenticating
-                        ? SizedBox(
+                        ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Icon(Icons.fingerprint, size: 24),
@@ -256,7 +253,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
                     ),
                   ),
                   loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
                 ),
 
                 const Spacer(),

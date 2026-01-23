@@ -1,6 +1,5 @@
 import 'package:flutter/services.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -10,12 +9,7 @@ import '../settings/settings_service.dart';
 part 'biometric_service.g.dart';
 
 /// Types of biometric authentication available
-enum BiometricType {
-  fingerprint,
-  face,
-  iris,
-  none,
-}
+enum AppBiometricType { fingerprint, face, iris, none }
 
 /// Result of a biometric authentication attempt
 enum BiometricAuthResult {
@@ -37,7 +31,7 @@ class BiometricService {
 
   /// Cache for biometric availability check
   bool? _isBiometricAvailable;
-  List<BiometricType>? _availableBiometrics;
+  List<AppBiometricType>? _availableBiometrics;
 
   /// Check if the device supports any biometric authentication
   Future<bool> isBiometricAvailable() async {
@@ -75,7 +69,7 @@ class BiometricService {
   }
 
   /// Get the list of available biometric types on this device
-  Future<List<BiometricType>> getAvailableBiometrics() async {
+  Future<List<AppBiometricType>> getAvailableBiometrics() async {
     if (_availableBiometrics != null) {
       return _availableBiometrics!;
     }
@@ -86,13 +80,13 @@ class BiometricService {
       _availableBiometrics = availableBiometrics.map((bio) {
         switch (bio) {
           case BiometricType.fingerprint:
-            return BiometricType.fingerprint;
+            return AppBiometricType.fingerprint;
           case BiometricType.face:
-            return BiometricType.face;
+            return AppBiometricType.face;
           case BiometricType.iris:
-            return BiometricType.iris;
+            return AppBiometricType.iris;
           default:
-            return BiometricType.none;
+            return AppBiometricType.none;
         }
       }).toList();
 
@@ -169,7 +163,6 @@ class BiometricService {
         options: AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: !allowDeviceCredentials,
-          useErrorDialogs: true,
         ),
       );
 
@@ -232,13 +225,13 @@ class BiometricService {
     }
 
     final types = <String>[];
-    if (biometrics.contains(BiometricType.fingerprint)) {
+    if (biometrics.contains(AppBiometricType.fingerprint)) {
       types.add('Fingerprint');
     }
-    if (biometrics.contains(BiometricType.face)) {
+    if (biometrics.contains(AppBiometricType.face)) {
       types.add('Face ID');
     }
-    if (biometrics.contains(BiometricType.iris)) {
+    if (biometrics.contains(AppBiometricType.iris)) {
       types.add('Iris');
     }
 
@@ -271,7 +264,7 @@ Future<bool> isBiometricAvailable(Ref ref) async {
 
 /// Provider that gets available biometric types
 @riverpod
-Future<List<BiometricType>> availableBiometrics(Ref ref) async {
+Future<List<AppBiometricType>> availableBiometrics(Ref ref) async {
   final biometricService = ref.watch(biometricServiceProvider);
   return biometricService.getAvailableBiometrics();
 }

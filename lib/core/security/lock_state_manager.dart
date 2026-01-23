@@ -2,11 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../logging/app_logger.dart';
-import '../settings/settings_service.dart';
 import 'biometric_service.dart';
 
 part 'lock_state_manager.g.dart';
@@ -26,11 +24,10 @@ enum LockState {
 /// Manages the lock state of the application based on user activity
 /// and app lifecycle events.
 class LockStateManager extends ChangeNotifier with WidgetsBindingObserver {
-  LockStateManager(this._settingsService, this._biometricService) {
+  LockStateManager(this._biometricService) {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  final SettingsService _settingsService;
   final BiometricService _biometricService;
 
   /// Current lock state
@@ -138,9 +135,7 @@ class LockStateManager extends ChangeNotifier with WidgetsBindingObserver {
 
     // Start a timer to lock the app after the timeout
     _lockTimer?.cancel();
-    _lockTimer = Timer(Duration(minutes: timeoutMinutes), () {
-      _lock();
-    });
+    _lockTimer = Timer(Duration(minutes: timeoutMinutes), _lock);
 
     // Set state to "locking" to indicate grace period
     if (_lockState == LockState.unlocked) {
@@ -212,13 +207,12 @@ class LockStateManager extends ChangeNotifier with WidgetsBindingObserver {
 /// Provider for LockStateManager
 @riverpod
 LockStateManager lockStateManager(Ref ref) {
-  final settingsService = ref.watch(settingsServiceProvider);
   final biometricService = ref.watch(biometricServiceProvider);
 
-  final manager = LockStateManager(settingsService, biometricService);
+  final manager = LockStateManager(biometricService);
   manager.initialize();
 
-  ref.onDispose(() => manager.dispose());
+  ref.onDispose(manager.dispose);
 
   return manager;
 }
