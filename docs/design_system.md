@@ -171,7 +171,7 @@ class AppTheme {
   static ThemeData get darkTheme => ThemeData(...);
   
   // Helper methods
-  static Color getSubtleColor(BuildContext context, Color baseColor) => 
+  static Color getSubtleColor(BuildContext context, Color baseColor) =>
     baseColor.withValues(alpha: 0.1);
   // ... other helpers
 }

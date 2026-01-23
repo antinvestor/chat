@@ -103,14 +103,12 @@ class MockSettingsService implements SettingsService {
   );
 
   @override
-  bool get liveLocationSharingEnabled => getBool(
-    SettingsKeys.liveLocationSharingEnabled,
-  );
+  bool get liveLocationSharingEnabled =>
+      getBool(SettingsKeys.liveLocationSharingEnabled);
 
   @override
-  bool get fingerprintLockEnabled => getBool(
-    SettingsKeys.fingerprintLockEnabled,
-  );
+  bool get fingerprintLockEnabled =>
+      getBool(SettingsKeys.fingerprintLockEnabled);
 
   // Implement any remaining methods as no-ops
   @override
