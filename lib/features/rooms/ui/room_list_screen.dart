@@ -19,12 +19,15 @@ import '../../contacts/ui/contact_sync_sheet.dart';
 import '../../messages/ui/chat_screen.dart';
 import '../../onboarding/data/onboarding_repository.dart';
 import '../data/room_providers.dart';
+import '../data/room_search_providers.dart';
 import '../data/room_service.dart';
 import '../domain/room_with_last_message.dart';
 import 'chat_list_item.dart';
 import 'new_chat_screen.dart';
 import 'room_detail_panel.dart';
 import 'room_list_tile.dart';
+import 'room_search_bar.dart';
+import 'search_empty_state.dart';
 
 class RoomListScreen extends ConsumerStatefulWidget {
   const RoomListScreen({super.key});
@@ -37,9 +40,7 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   String? _selectedRoomId;
   String? _selectedRoomName;
   bool _hasCheckedContactSync = false;
-  bool _isSearching = false;
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
+  bool _isSearchExpanded = false;
   bool _isMultiSelectMode = false;
   final Set<String> _selectedRoomIds = <String>{};
 
@@ -394,27 +395,18 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     }
   }
 
-  void _toggleSearch() {
+  void _toggleSearchExpanded() {
     setState(() {
-      _isSearching = !_isSearching;
-      if (!_isSearching) {
-        _searchQuery = '';
-        _searchController.clear();
+      _isSearchExpanded = !_isSearchExpanded;
+      if (!_isSearchExpanded) {
+        // Clear search when collapsing
+        ref.read(roomSearchProvider.notifier).clearAll();
       }
     });
   }
 
-  List<RoomWithLastMessage> _filterRooms(List<RoomWithLastMessage> rooms) {
-    if (_searchQuery.isEmpty) return rooms;
-
-    return rooms
-        .where(
-          (room) =>
-              room.name.toLowerCase().contains(_searchQuery) ||
-              (room.lastMessageText?.toLowerCase().contains(_searchQuery) ??
-                  false),
-        )
-        .toList();
+  void _clearSearch() {
+    ref.read(roomSearchProvider.notifier).clearAll();
   }
 
   void _navigateToNewChat() {
@@ -426,19 +418,36 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   @override
   Widget build(BuildContext context) {
     final roomsAsync = ref.watch(roomListWithMessagesProvider);
+    final filteredRoomsAsync = ref.watch(filteredRoomsProvider);
+    final searchState = ref.watch(roomSearchProvider);
     final width = MediaQuery.of(context).size.width;
     final showDetailPanel = AppBreakpoints.showDetailPanel(width);
 
     return ResponsiveLayout(
-      mobileLayout: _buildMobileLayout(roomsAsync),
-      tabletLayout: _buildTabletLayout(roomsAsync),
-      desktopLayout: _buildDesktopLayout(roomsAsync, showDetailPanel),
+      mobileLayout: _buildMobileLayout(
+        roomsAsync,
+        filteredRoomsAsync,
+        searchState,
+      ),
+      tabletLayout: _buildTabletLayout(
+        roomsAsync,
+        filteredRoomsAsync,
+        searchState,
+      ),
+      desktopLayout: _buildDesktopLayout(
+        roomsAsync,
+        filteredRoomsAsync,
+        searchState,
+        showDetailPanel,
+      ),
     );
   }
 
   /// Mobile layout: Single-pane with stack navigation
   Widget _buildMobileLayout(
     AsyncValue<List<RoomWithLastMessage>> roomsAsync,
+    AsyncValue<List<RoomWithLastMessage>> filteredRoomsAsync,
+    RoomSearchState searchState,
   ) => Scaffold(
     body: CustomScrollView(
       slivers: [
@@ -454,80 +463,94 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
             ),
           ),
           actions: [
-            // Search button or back button
+            // Search toggle button
             IconButton(
               icon: Icon(
-                _isSearching ? Icons.arrow_back : Icons.search,
+                _isSearchExpanded ? Icons.close : Icons.search,
                 color: Theme.of(context).appBarTheme.foregroundColor,
               ),
-              onPressed: _toggleSearch,
-              tooltip: _isSearching ? 'Back' : 'Search',
+              onPressed: _toggleSearchExpanded,
+              tooltip: _isSearchExpanded ? 'Close search' : 'Search',
             ),
-            // Search field or more options
-            if (_isSearching)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: TextField(
-                    controller: _searchController,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      hintText: 'Search conversations...',
-                      hintStyle: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).appBarTheme.foregroundColor?.withValues(alpha: 0.6),
-                      ),
-                      border: InputBorder.none,
-                    ),
-                    style: TextStyle(
-                      color: Theme.of(context).appBarTheme.foregroundColor,
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value.toLowerCase();
-                      });
-                    },
-                  ),
-                ),
-              )
-            else
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: Theme.of(context).appBarTheme.foregroundColor,
-                ),
-                onSelected: _handleMenuAction,
-                itemBuilder: (context) => [
-                  const PopupMenuItem<String>(
-                    value: 'settings',
-                    child: Text('Settings'),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'select_multiple',
-                    child: Text('Select Multiple'),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'mark_all_read',
-                    child: Text('Mark All Read'),
-                  ),
-                ],
+            // More options menu
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert,
+                color: Theme.of(context).appBarTheme.foregroundColor,
               ),
+              onSelected: _handleMenuAction,
+              itemBuilder: (context) => [
+                const PopupMenuItem<String>(
+                  value: 'settings',
+                  child: Text('Settings'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'select_multiple',
+                  child: Text('Select Multiple'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'mark_all_read',
+                  child: Text('Mark All Read'),
+                ),
+              ],
+            ),
           ],
         ),
+
+        // Search bar (expanded)
+        if (_isSearchExpanded) const SliverToBoxAdapter(child: RoomSearchBar()),
 
         // Call banner
         const SliverToBoxAdapter(child: IncomingCallBanner()),
 
-        // Chat list
-        SliverList(
-          delegate: SliverChildBuilderDelegate((context, index) {
-            final rooms = roomsAsync.value;
-            if (rooms == null) {
-              return null;
-            }
+        // Chat list or empty state
+        _buildMobileChatList(roomsAsync, filteredRoomsAsync, searchState),
+      ],
+    ),
+    floatingActionButton: FloatingActionButton(
+      onPressed: _navigateToNewChat,
+      backgroundColor: AppTheme.primaryGreen,
+      child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+    ),
+  );
 
-            final filteredRooms = _filterRooms(rooms);
+  /// Build the chat list for mobile layout
+  Widget _buildMobileChatList(
+    AsyncValue<List<RoomWithLastMessage>> roomsAsync,
+    AsyncValue<List<RoomWithLastMessage>> filteredRoomsAsync,
+    RoomSearchState searchState,
+  ) {
+    return roomsAsync.when(
+      data: (allRooms) {
+        // Get filtered rooms
+        final filteredRooms = filteredRoomsAsync.value ?? allRooms;
+
+        // Show empty state when no rooms exist
+        if (allRooms.isEmpty) {
+          return SliverFillRemaining(
+            child: EmptyState(
+              icon: Icons.chat_bubble_outline,
+              title: 'No conversations yet',
+              message: 'Start a new conversation to begin chatting',
+              actionLabel: 'New Chat',
+              onAction: _navigateToNewChat,
+            ),
+          );
+        }
+
+        // Show search empty state when filtering returns no results
+        if (filteredRooms.isEmpty && searchState.isFiltering) {
+          return SliverFillRemaining(
+            child: SearchEmptyState(
+              searchState: searchState,
+              onClearSearch: _clearSearch,
+            ),
+          );
+        }
+
+        // Show the list of rooms
+        return SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
             if (index >= filteredRooms.length) {
               return null;
             }
@@ -595,40 +618,71 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                 ),
               ),
             );
-          }, childCount: _filterRooms(roomsAsync.value ?? []).length),
+          }, childCount: filteredRooms.length),
+        );
+      },
+      loading: () => SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => const RoomListSkeleton(),
+          childCount: 10,
         ),
-      ],
-    ),
-    floatingActionButton: FloatingActionButton(
-      onPressed: _navigateToNewChat,
-      backgroundColor: AppTheme.primaryGreen,
-      child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-    ),
-  );
-
-  /// Tablet layout: 2-panel (Rooms | Chat)
-  Widget _buildTabletLayout(AsyncValue<List<RoomWithLastMessage>> roomsAsync) =>
-      Scaffold(
-        body: Stack(
-          children: [
-            Column(
+      ),
+      error: (error, stack) {
+        final appError = AppError.fromException(error, stack);
+        return SliverFillRemaining(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const IncomingCallBanner(),
-                Expanded(
-                  child: ThreePanelLayout(
-                    leftPanel: _buildRoomListPanel(roomsAsync),
-                    centerPanel: _buildChatPanel(),
-                  ),
+                ErrorBanner(
+                  error: appError,
+                  onRetry: () => ref.refresh(roomListWithMessagesProvider),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load rooms',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Tablet layout: 2-panel (Rooms | Chat)
+  Widget _buildTabletLayout(
+    AsyncValue<List<RoomWithLastMessage>> roomsAsync,
+    AsyncValue<List<RoomWithLastMessage>> filteredRoomsAsync,
+    RoomSearchState searchState,
+  ) => Scaffold(
+    body: Stack(
+      children: [
+        Column(
+          children: [
+            const IncomingCallBanner(),
+            Expanded(
+              child: ThreePanelLayout(
+                leftPanel: _buildRoomListPanel(
+                  roomsAsync,
+                  filteredRoomsAsync,
+                  searchState,
+                ),
+                centerPanel: _buildChatPanel(),
+              ),
+            ),
           ],
         ),
-      );
+      ],
+    ),
+  );
 
   /// Desktop layout: 3-panel (Rooms | Chat | Details)
   Widget _buildDesktopLayout(
     AsyncValue<List<RoomWithLastMessage>> roomsAsync,
+    AsyncValue<List<RoomWithLastMessage>> filteredRoomsAsync,
+    RoomSearchState searchState,
     bool showDetailPanel,
   ) => Scaffold(
     body: Stack(
@@ -638,7 +692,11 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
             const IncomingCallBanner(),
             Expanded(
               child: ThreePanelLayout(
-                leftPanel: _buildRoomListPanel(roomsAsync),
+                leftPanel: _buildRoomListPanel(
+                  roomsAsync,
+                  filteredRoomsAsync,
+                  searchState,
+                ),
                 centerPanel: _buildChatPanel(),
                 rightPanel: showDetailPanel ? _buildDetailPanel() : null,
               ),
@@ -652,15 +710,40 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   /// Room list panel for tablet/desktop layouts
   Widget _buildRoomListPanel(
     AsyncValue<List<RoomWithLastMessage>> roomsAsync,
+    AsyncValue<List<RoomWithLastMessage>> filteredRoomsAsync,
+    RoomSearchState searchState,
   ) => Scaffold(
-    appBar: AppBar(title: const Text('Chats')),
+    appBar: AppBar(
+      title: const Text('Chats'),
+      actions: [
+        IconButton(
+          icon: Icon(_isSearchExpanded ? Icons.close : Icons.search),
+          onPressed: _toggleSearchExpanded,
+          tooltip: _isSearchExpanded ? 'Close search' : 'Search',
+        ),
+      ],
+    ),
     drawer: const AppDrawer(),
     floatingActionButton: FloatingActionButton(
       onPressed: _navigateToNewChat,
       tooltip: 'New Chat',
       child: const Icon(Icons.chat_bubble_outline),
     ),
-    body: _buildRoomList(roomsAsync, isMobile: false),
+    body: Column(
+      children: [
+        // Search bar (expanded)
+        if (_isSearchExpanded) const RoomSearchBar(),
+        // Room list
+        Expanded(
+          child: _buildRoomList(
+            roomsAsync,
+            filteredRoomsAsync,
+            searchState,
+            isMobile: false,
+          ),
+        ),
+      ],
+    ),
   );
 
   /// Chat panel for tablet/desktop layouts
@@ -698,14 +781,20 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   }
 
   Widget _buildRoomList(
-    AsyncValue<List<RoomWithLastMessage>> roomsAsync, {
+    AsyncValue<List<RoomWithLastMessage>> roomsAsync,
+    AsyncValue<List<RoomWithLastMessage>> filteredRoomsAsync,
+    RoomSearchState searchState, {
     required bool isMobile,
   }) => Column(
     children: [
       Expanded(
         child: roomsAsync.when(
-          data: (rooms) {
-            if (rooms.isEmpty) {
+          data: (allRooms) {
+            // Get filtered rooms
+            final filteredRooms = filteredRoomsAsync.value ?? allRooms;
+
+            // Show empty state when no rooms exist
+            if (allRooms.isEmpty) {
               return EmptyState(
                 icon: Icons.chat_bubble_outline,
                 title: 'No conversations yet',
@@ -714,10 +803,19 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
                 onAction: _navigateToNewChat,
               );
             }
+
+            // Show search empty state when filtering returns no results
+            if (filteredRooms.isEmpty && searchState.isFiltering) {
+              return SearchEmptyState(
+                searchState: searchState,
+                onClearSearch: _clearSearch,
+              );
+            }
+
             return ListView.builder(
-              itemCount: rooms.length,
+              itemCount: filteredRooms.length,
               itemBuilder: (context, index) {
-                final room = rooms[index];
+                final room = filteredRooms[index];
                 final isSelected = !isMobile && room.id == _selectedRoomId;
 
                 return Container(
