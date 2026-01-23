@@ -366,16 +366,14 @@ class SettingsService {
       setString(SettingsKeys.backupFrequency, value);
 
   // Fingerprint Lock
-  bool get fingerprintLockEnabled => getBool(
-    SettingsKeys.fingerprintLockEnabled,
-  );
+  bool get fingerprintLockEnabled =>
+      getBool(SettingsKeys.fingerprintLockEnabled);
   Future<void> setFingerprintLockEnabled(bool value) =>
       setBool(SettingsKeys.fingerprintLockEnabled, value);
 
   // Live Location Sharing
-  bool get liveLocationSharingEnabled => getBool(
-    SettingsKeys.liveLocationSharingEnabled,
-  );
+  bool get liveLocationSharingEnabled =>
+      getBool(SettingsKeys.liveLocationSharingEnabled);
   Future<void> setLiveLocationSharingEnabled(bool value) =>
       setBool(SettingsKeys.liveLocationSharingEnabled, value);
 }
