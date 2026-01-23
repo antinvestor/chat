@@ -569,6 +569,38 @@ class InviteLinkJoins extends Table {
   TextColumn get status => text().withDefault(const Constant('approved'))();
 }
 
+/// Tracks chunk progress for resumable uploads
+///
+/// Stores upload state to allow resuming interrupted uploads.
+/// Each chunk is recorded separately for precise resume points.
+///
+/// Example:
+/// ```dart
+/// final chunks = await (db.uploadChunks.select()
+///   ..where((c) => c.localId.equals(messageLocalId))
+///   ..orderBy([(c) => OrderingTerm.asc(c.chunkIndex)])
+/// ).get();
+/// ```
+class UploadChunks extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Local message ID this upload is associated with
+  TextColumn get localId => text()();
+
+  /// Server-assigned upload ID for resumable uploads
+  TextColumn get uploadId => text().nullable()();
+
+  /// Index of this chunk (0-based, -1 for metadata row)
+  IntColumn get chunkIndex => integer().withDefault(const Constant(-1))();
+
+  /// Size of this chunk in bytes
+  IntColumn get chunkSize => integer().withDefault(const Constant(0))();
+
+  /// Timestamp when this chunk was uploaded (milliseconds since epoch)
+  IntColumn get createdAt => integer()();
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -598,6 +630,7 @@ class InviteLinkJoins extends Table {
     Reports,
     InviteLinks,
     InviteLinkJoins,
+    UploadChunks,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -610,7 +643,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -711,6 +744,15 @@ class AppDatabase extends _$AppDatabase {
       if (from <= 9) {
         // Migration from v9 to v10: Add mute notifications support
         await m.addColumn(rooms, rooms.mutedUntil);
+      }
+      if (from <= 10) {
+        // Migration from v10 to v11: Add upload chunks table for resumable uploads
+        await m.createTable(uploadChunks);
+        // Create index for efficient querying by localId
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_upload_chunks_local_id
+          ON upload_chunks(local_id)
+        ''');
       }
     },
     beforeOpen: (details) async {

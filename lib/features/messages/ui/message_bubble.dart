@@ -8,8 +8,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../features/contacts/data/contact_sync_repository.dart';
 import '../../../features/rooms/data/room_subscription_service.dart';
+import '../data/upload_progress_provider.dart';
 import '../domain/room_event.dart';
+import '../domain/upload_progress.dart';
 import 'read_receipt_indicator.dart';
+import 'widgets/upload_progress_indicator.dart';
 import 'widgets/voice_message_player.dart';
 
 class MessageBubble extends ConsumerWidget {
@@ -28,6 +31,8 @@ class MessageBubble extends ConsumerWidget {
     this.canDelete = false,
     this.onForward,
     this.canForward = false,
+    this.onCancelUpload,
+    this.onRetryUpload,
   });
   final RoomEvent message;
   final bool isMe;
@@ -42,6 +47,8 @@ class MessageBubble extends ConsumerWidget {
   final bool canDelete;
   final Function(RoomEvent message)? onForward;
   final bool canForward;
+  final Function(String localId)? onCancelUpload;
+  final Function(String localId)? onRetryUpload;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -177,7 +184,7 @@ class MessageBubble extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildMessageContent(context),
+                                    _buildMessageContent(context, ref),
                                     // Spacer for timestamp+status
                                     const SizedBox(height: 16),
                                   ],
@@ -319,7 +326,7 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
-  Widget _buildMessageContent(BuildContext context) {
+  Widget _buildMessageContent(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isEncrypted = message.content['encrypted'] == true;
 
@@ -359,13 +366,13 @@ class MessageBubble extends ConsumerWidget {
     // Handle different message types
     switch (message.type) {
       case RoomEventType.image:
-        return _buildImageContent(context);
+        return _buildImageContent(context, ref);
       case RoomEventType.video:
-        return _buildVideoContent(context);
+        return _buildVideoContent(context, ref);
       case RoomEventType.audio:
-        return _buildAudioContent(context);
+        return _buildAudioContent(context, ref);
       case RoomEventType.file:
-        return _buildFileContent(context);
+        return _buildFileContent(context, ref);
       case RoomEventType.reaction:
         return _buildReactionContent(context);
       default:
@@ -397,11 +404,21 @@ class MessageBubble extends ConsumerWidget {
     }
   }
 
-  Widget _buildImageContent(BuildContext context) {
+  Widget _buildImageContent(BuildContext context, WidgetRef ref) {
     final url = message.content['url'] as String?;
     final localPath = message.content['localPath'] as String?;
     final caption = message.content['caption'] as String?;
     final isUploading = message.content['uploading'] == true;
+    final localId = message.localId;
+
+    // Get upload progress if available
+    final uploadProgress = localId != null
+        ? ref.watch(singleUploadProgressProvider(localId))
+        : null;
+    final hasActiveUpload =
+        uploadProgress != null &&
+        (uploadProgress.isInProgress ||
+            uploadProgress.state == UploadState.pending);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,7 +427,7 @@ class MessageBubble extends ConsumerWidget {
           borderRadius: BorderRadius.circular(8),
           child: Container(
             constraints: const BoxConstraints(maxHeight: 200, maxWidth: 250),
-            child: isUploading && localPath != null
+            child: (isUploading || hasActiveUpload) && localPath != null
                 ? Stack(
                     alignment: Alignment.center,
                     children: [
@@ -420,12 +437,25 @@ class MessageBubble extends ConsumerWidget {
                         errorBuilder: (_, _, _) =>
                             _buildMediaPlaceholder(Icons.image),
                       ),
-                      Container(
-                        color: Colors.black45,
-                        child: const CircularProgressIndicator(
-                          color: Colors.white,
+                      // Use progressive upload indicator
+                      if (localId != null && uploadProgress != null)
+                        UploadProgressIndicator(
+                          localId: localId,
+                          size: 56,
+                          onCancel: onCancelUpload != null
+                              ? () => onCancelUpload!(localId)
+                              : null,
+                          onRetry: onRetryUpload != null
+                              ? () => onRetryUpload!(localId)
+                              : null,
+                        )
+                      else
+                        Container(
+                          color: Colors.black45,
+                          child: const CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
                     ],
                   )
                 : url != null
@@ -449,6 +479,20 @@ class MessageBubble extends ConsumerWidget {
                 : _buildMediaPlaceholder(Icons.image),
           ),
         ),
+        // Show progress bar below image during upload
+        if (localId != null && hasActiveUpload) ...[
+          const SizedBox(height: 4),
+          UploadProgressBar(
+            localId: localId,
+            height: 3,
+            onCancel: onCancelUpload != null
+                ? () => onCancelUpload!(localId)
+                : null,
+            onRetry: onRetryUpload != null
+                ? () => onRetryUpload!(localId)
+                : null,
+          ),
+        ],
         if (caption != null && caption.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(
@@ -463,17 +507,30 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
-  Widget _buildVideoContent(BuildContext context) {
+  Widget _buildVideoContent(BuildContext context, WidgetRef ref) {
     final url = message.content['url'] as String?;
     final thumbnailUrl = message.content['thumbnailUrl'] as String?;
+    final localThumbnailPath = message.content['localThumbnailPath'] as String?;
     final caption = message.content['caption'] as String?;
     final isUploading = message.content['uploading'] == true;
+    final localId = message.localId;
+
+    // Get upload progress if available
+    final uploadProgress = localId != null
+        ? ref.watch(singleUploadProgressProvider(localId))
+        : null;
+    final hasActiveUpload =
+        uploadProgress != null &&
+        (uploadProgress.isInProgress ||
+            uploadProgress.state == UploadState.pending);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: url != null ? () => _openUrl(url) : null,
+          onTap: url != null && !isUploading && !hasActiveUpload
+              ? () => _openUrl(url)
+              : null,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Container(
@@ -481,7 +538,16 @@ class MessageBubble extends ConsumerWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  if (thumbnailUrl != null)
+                  // Show thumbnail (local or remote)
+                  if (localThumbnailPath != null &&
+                      (isUploading || hasActiveUpload))
+                    Image.file(
+                      File(localThumbnailPath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          _buildMediaPlaceholder(Icons.videocam),
+                    )
+                  else if (thumbnailUrl != null)
                     Image.network(
                       thumbnailUrl,
                       fit: BoxFit.cover,
@@ -490,13 +556,26 @@ class MessageBubble extends ConsumerWidget {
                     )
                   else
                     _buildMediaPlaceholder(Icons.videocam),
-                  if (isUploading)
-                    Container(
-                      color: Colors.black45,
-                      child: const CircularProgressIndicator(
-                        color: Colors.white,
-                      ),
-                    )
+                  // Upload progress or play button
+                  if (isUploading || hasActiveUpload)
+                    if (localId != null && uploadProgress != null)
+                      UploadProgressIndicator(
+                        localId: localId,
+                        size: 56,
+                        onCancel: onCancelUpload != null
+                            ? () => onCancelUpload!(localId)
+                            : null,
+                        onRetry: onRetryUpload != null
+                            ? () => onRetryUpload!(localId)
+                            : null,
+                      )
+                    else
+                      Container(
+                        color: Colors.black45,
+                        child: const CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
+                      )
                   else
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -515,6 +594,20 @@ class MessageBubble extends ConsumerWidget {
             ),
           ),
         ),
+        // Show progress bar below video during upload
+        if (localId != null && hasActiveUpload) ...[
+          const SizedBox(height: 4),
+          UploadProgressBar(
+            localId: localId,
+            height: 3,
+            onCancel: onCancelUpload != null
+                ? () => onCancelUpload!(localId)
+                : null,
+            onRetry: onRetryUpload != null
+                ? () => onRetryUpload!(localId)
+                : null,
+          ),
+        ],
         if (caption != null && caption.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(
@@ -529,48 +622,90 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
-  Widget _buildAudioContent(BuildContext context) {
+  Widget _buildAudioContent(BuildContext context, WidgetRef ref) {
     final url = message.content['url'] as String? ?? '';
     final localPath = message.content['localPath'] as String?;
     final duration = message.content['duration'] as int? ?? 0;
     final isUploading = message.content['uploading'] == true;
+    final localId = message.localId;
 
-    // Show uploading state
-    if (isUploading) {
-      return Row(
+    // Get upload progress if available
+    final uploadProgress = localId != null
+        ? ref.watch(singleUploadProgressProvider(localId))
+        : null;
+    final hasActiveUpload =
+        uploadProgress != null &&
+        (uploadProgress.isInProgress ||
+            uploadProgress.state == UploadState.pending);
+
+    // Show uploading state with progress
+    if (isUploading || hasActiveUpload) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Sending voice message...',
-                style: TextStyle(fontSize: 14),
-              ),
-              Text(
-                _formatDuration(duration),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+              // Progress indicator
+              if (localId != null && uploadProgress != null)
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: UploadProgressIndicator(
+                    localId: localId,
+                    size: 40,
+                    showPercentage: false,
+                    onCancel: onCancelUpload != null
+                        ? () => onCancelUpload!(localId)
+                        : null,
+                    onRetry: onRetryUpload != null
+                        ? () => onRetryUpload!(localId)
+                        : null,
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      uploadProgress?.progressText ??
+                          'Sending voice message...',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    Text(
+                      _formatDuration(duration),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+          // Progress bar
+          if (localId != null && hasActiveUpload) ...[
+            const SizedBox(height: 8),
+            UploadProgressBar(localId: localId, height: 3, showText: false),
+          ],
         ],
       );
     }
@@ -584,61 +719,122 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
-  Widget _buildFileContent(BuildContext context) {
+  Widget _buildFileContent(BuildContext context, WidgetRef ref) {
     final fileName = message.content['fileName'] as String? ?? 'File';
     final fileSize = message.content['fileSize'] as int?;
     final url = message.content['url'] as String?;
     final isUploading = message.content['uploading'] == true;
+    final localId = message.localId;
+
+    // Get upload progress if available
+    final uploadProgress = localId != null
+        ? ref.watch(singleUploadProgressProvider(localId))
+        : null;
+    final hasActiveUpload =
+        uploadProgress != null &&
+        (uploadProgress.isInProgress ||
+            uploadProgress.state == UploadState.pending);
 
     return GestureDetector(
-      onTap: url != null ? () => _openUrl(url) : null,
-      child: Row(
+      onTap: url != null && !isUploading && !hasActiveUpload
+          ? () => _openUrl(url)
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: isUploading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(
-                    Icons.insert_drive_file,
-                    color: Theme.of(context).colorScheme.primary,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // File icon or upload progress
+              if ((isUploading || hasActiveUpload) &&
+                  localId != null &&
+                  uploadProgress != null)
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: UploadProgressIndicator(
+                    localId: localId,
+                    size: 44,
+                    onCancel: onCancelUpload != null
+                        ? () => onCancelUpload!(localId)
+                        : null,
+                    onRetry: onRetryUpload != null
+                        ? () => onRetryUpload!(localId)
+                        : null,
                   ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fileName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  child: isUploading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          Icons.insert_drive_file,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                 ),
-                if (fileSize != null)
-                  Text(
-                    _formatFileSize(fileSize),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+              const SizedBox(width: 12),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fileName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-              ],
-            ),
+                    if (fileSize != null)
+                      Builder(
+                        builder: (context) {
+                          final uploadedBytes =
+                              uploadProgress?.uploadedBytes ?? 0;
+                          return Text(
+                            hasActiveUpload
+                                ? '${_formatFileSize(uploadedBytes)} / ${_formatFileSize(fileSize)}'
+                                : _formatFileSize(fileSize),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
+          // Progress bar for file uploads
+          if (localId != null && hasActiveUpload) ...[
+            const SizedBox(height: 8),
+            UploadProgressBar(
+              localId: localId,
+              height: 3,
+              onCancel: onCancelUpload != null
+                  ? () => onCancelUpload!(localId)
+                  : null,
+              onRetry: onRetryUpload != null
+                  ? () => onRetryUpload!(localId)
+                  : null,
+            ),
+          ],
         ],
       ),
     );
