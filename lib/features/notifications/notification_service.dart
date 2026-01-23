@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/networking/client.dart';
 import '../../core/storage/key_manager.dart';
+import 'notification_grouping_service.dart';
 
 /// Background message handler - must be top-level function
 @pragma('vm:entry-point')
@@ -46,6 +47,9 @@ class NotificationService {
   String? _fcmToken;
   bool _initialized = false;
 
+  /// Reference to the notification grouping service for local notifications
+  NotificationGroupingService? _groupingService;
+
   /// Whether the notification service has been initialized
   bool get isInitialized => _initialized;
 
@@ -77,6 +81,10 @@ class NotificationService {
 
       // Setup message handlers
       _setupMessageHandlers();
+
+      // Initialize the grouping service for local notifications
+      _groupingService = _ref.read(notificationGroupingServiceProvider);
+      await _groupingService!.initialize();
 
       _initialized = true;
       AppLogger.info('NotificationService initialized successfully');
@@ -198,9 +206,43 @@ class NotificationService {
       },
     );
 
-    // For now, foreground messages are logged
-    // TODO(antinvestor): Show as local notification using flutter_local_notifications
-    // or update UI directly via state management
+    // Show grouped local notification for foreground messages
+    await _showGroupedNotification(message);
+  }
+
+  /// Show a grouped local notification for the received message
+  Future<void> _showGroupedNotification(RemoteMessage message) async {
+    if (_groupingService == null || !_groupingService!.isInitialized) {
+      AppLogger.warning(
+        'Grouping service not initialized, skipping notification',
+      );
+      return;
+    }
+
+    // Extract message data
+    final roomId = message.data['roomId'] as String?;
+    final roomName =
+        message.data['roomName'] as String? ??
+        message.notification?.title ??
+        'Chat';
+    final senderName = message.data['senderName'] as String? ?? 'Unknown';
+    final messageText =
+        message.data['message'] as String? ?? message.notification?.body ?? '';
+    final messageId = message.messageId;
+
+    if (roomId == null) {
+      AppLogger.warning('No roomId in message data, cannot group notification');
+      return;
+    }
+
+    // Show the grouped notification
+    await _groupingService!.showMessageNotification(
+      roomId: roomId,
+      roomName: roomName,
+      senderName: senderName,
+      message: messageText,
+      messageId: messageId,
+    );
   }
 
   /// Handle notification tap - navigate to relevant screen
@@ -215,8 +257,45 @@ class NotificationService {
     final roomName = message.data['roomName'] as String?;
 
     if (roomId != null) {
+      // Clear all grouped notifications for this room
+      _groupingService?.clearRoomNotifications(roomId);
       _navigateToChat(roomId, roomName);
     }
+  }
+
+  /// Clear notifications for a specific room
+  ///
+  /// Should be called when the user opens a chat room to clear
+  /// all related notifications (both from FCM and local grouped notifications).
+  Future<void> clearRoomNotifications(String roomId) async {
+    await _groupingService?.clearRoomNotifications(roomId);
+  }
+
+  /// Clear all notifications
+  ///
+  /// Should be called on logout or when the user wants to dismiss all notifications.
+  Future<void> clearAllNotifications() async {
+    await _groupingService?.clearAllNotifications();
+  }
+
+  /// Create a notification channel for a room (Android only)
+  ///
+  /// This allows users to customize notifications per chat.
+  Future<void> createRoomChannel({
+    required String roomId,
+    required String roomName,
+  }) async {
+    await _groupingService?.createRoomChannel(
+      roomId: roomId,
+      roomName: roomName,
+    );
+  }
+
+  /// Delete a notification channel for a room (Android only)
+  ///
+  /// Should be called when a user leaves a room.
+  Future<void> deleteRoomChannel(String roomId) async {
+    await _groupingService?.deleteRoomChannel(roomId);
   }
 
   /// Navigate to chat screen for a specific room
