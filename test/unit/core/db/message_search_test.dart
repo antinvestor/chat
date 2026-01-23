@@ -258,8 +258,9 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 9', () {
-        expect(db.schemaVersion, equals(9));
+      test('schema version is 10', () {
+        // Version 10 includes mute functionality (mutedUntil column)
+        expect(db.schemaVersion, equals(10));
       });
     });
 
