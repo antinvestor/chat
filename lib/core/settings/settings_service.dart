@@ -72,7 +72,7 @@ class SettingsDefaults {
   static const aboutVisible = 'everyone';
   static const groupsAddPermission = 'everyone';
   static const biometricEnabled = false;
-  static const lockTimeoutMinutes = 0;
+  static const lockTimeoutMinutes = 1;
   static const showNotificationsLocked = true;
   static const fingerprintLockEnabled = false;
   static const liveLocationSharingEnabled = false;
