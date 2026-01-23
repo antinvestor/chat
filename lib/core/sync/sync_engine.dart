@@ -932,6 +932,9 @@ class SyncEngine {
         case domain_job.JobType.changeMemberRole:
           await _processChangeMemberRole(job);
           break;
+        case domain_job.JobType.forwardMessage:
+          await _processForwardMessage(job);
+          break;
       }
       await _jobRepo.deleteJob(job.id);
     } catch (e, stackTrace) {
@@ -1313,6 +1316,76 @@ class SyncEngine {
     await _chatClient.sendEvent(request);
 
     AppLogger.info('Delete message synced', data: {'messageId': messageId});
+  }
+
+  Future<void> _processForwardMessage(domain_job.PendingJob job) async {
+    final payload = job.payload;
+    final originalMessageId = payload['originalMessageId'] as String;
+    final destinationRoomId = payload['destinationRoomId'] as String;
+    final localId = payload['localId'] as String?;
+    final currentProfileId = await _authRepository.getCurrentProfileId();
+
+    // Get original message content
+    final content = payload['content'] as Map<String, dynamic>;
+    final localType = domain.RoomEventType.values.firstWhere(
+      (t) => t.toString() == payload['type'],
+      orElse: () => domain.RoomEventType.text,
+    );
+    final protoType = _mapLocalEventTypeToProto(localType);
+
+    // Build event with forwarded content
+    final timestamp = common_types.Timestamp.fromDateTime(DateTime.now());
+    final pbPayload = pb.Payload();
+
+    if (localType == domain.RoomEventType.text) {
+      pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+    } else if (localType == domain.RoomEventType.image ||
+        localType == domain.RoomEventType.video ||
+        localType == domain.RoomEventType.audio ||
+        localType == domain.RoomEventType.file) {
+      pbPayload.attachment = pb.AttachmentContent(
+        attachmentId: content['attachmentId'] as String? ?? '',
+        filename: content['fileName'] as String? ?? '',
+        mimeType: content['mimeType'] as String? ?? '',
+        sizeBytes: Int64(content['size'] as int? ?? 0),
+      );
+    }
+
+    final event = pb.RoomEvent(
+      id: localId ?? '',
+      roomId: destinationRoomId,
+      type: protoType,
+      sentAt: timestamp,
+      payload: pbPayload,
+    );
+
+    final request = pb.SendEventRequest(event: [event]);
+    final response = await _chatClient.sendEvent(request);
+
+    // Update local message with server ID
+    if (localId != null && response.ack.isNotEmpty) {
+      final ackEventId = response.ack.first.eventId;
+      final updatedEvent = domain.RoomEvent(
+        id: ackEventId.first,
+        roomId: destinationRoomId,
+        senderId: currentProfileId ?? 'unknown',
+        type: localType,
+        content: content,
+        status: domain.EventStatus.sent,
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+        localId: localId,
+        forwardedFromEvent: originalMessageId,
+      );
+      await _messageRepo.insertMessage(updatedEvent);
+    }
+
+    AppLogger.info(
+      'Forward message synced',
+      data: {
+        'originalMessageId': originalMessageId,
+        'destinationRoomId': destinationRoomId,
+      },
+    );
   }
 
   // ignore: unused_element

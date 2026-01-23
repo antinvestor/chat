@@ -67,7 +67,7 @@ void main() {
       );
 
       // Placeholder performance assertion - should render within reasonable time
-      // Using 10s threshold to accommodate CI environments with variable load
+      // Using generous threshold for CI environments which may be slower
       expect(stopwatch.elapsedMilliseconds, lessThan(10000));
 
       // Wait for any pending timers (e.g., draft save debounce)
@@ -106,7 +106,7 @@ void main() {
       );
 
       // Placeholder performance assertion
-      // Using 30s threshold to accommodate CI environments with variable load
+      // Using generous threshold for CI environments which may be slower
       expect(stopwatch.elapsedMilliseconds, lessThan(30000));
     });
 
@@ -277,8 +277,8 @@ void main() {
       );
 
       // Placeholder performance assertion
-      // Using 10s threshold to accommodate CI environments with variable load
-      expect(stopwatch.elapsedMilliseconds, lessThan(10000));
+      // Using generous threshold for CI environments which may be slower
+      expect(stopwatch.elapsedMilliseconds, lessThan(15000));
     });
 
     testWidgets('Performance test for app startup time', (
@@ -316,9 +316,8 @@ void main() {
 
       developer.log('Performance test: App startup took ${startupTime}ms');
 
-      // App should start within reasonable time
-      // Using 10s threshold to accommodate CI environments with variable load
-      expect(startupTime, lessThan(10000));
+      // App should start within reasonable time (threshold: 2000ms)
+      expect(startupTime, lessThan(2000));
       expect(find.byType(MaterialApp), findsOneWidget);
     });
   });

@@ -9,6 +9,7 @@ import '../../../core/logging/app_logger.dart';
 import '../../advanced/ui/motion_bubble.dart';
 import '../../advanced/ui/transaction_bubble.dart';
 import '../../auth/data/auth_repository.dart';
+import '../data/message_forwarding_service.dart';
 import '../data/message_sending_service.dart';
 import '../domain/room_event.dart';
 import 'date_header.dart';
@@ -77,6 +78,7 @@ class VirtualizedMessageList extends ConsumerStatefulWidget {
     this.isLoadingMore = false,
     this.hasMoreMessages = true,
     this.scrollController,
+    this.onForwardMessage,
   });
 
   final String roomId;
@@ -99,6 +101,9 @@ class VirtualizedMessageList extends ConsumerStatefulWidget {
   /// Callback when user wants to delete a message
   final Future<void> Function(String messageId, {required bool forEveryone})
   onDeleteMessage;
+
+  /// Callback when user wants to forward a message
+  final Future<void> Function(RoomEvent message)? onForwardMessage;
 
   @override
   ConsumerState<VirtualizedMessageList> createState() =>
@@ -353,6 +358,7 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
       onEditMessage: widget.onEditMessage,
       onRetryMessage: widget.onRetryMessage,
       onDeleteMessage: widget.onDeleteMessage,
+      onForwardMessage: widget.onForwardMessage,
       enableKeepAlive: widget.config.enableKeepAlive,
       onSizeChanged: (size) {
         // Cache the measured size for scroll calculations
@@ -464,6 +470,7 @@ class _OptimizedMessageItem extends ConsumerStatefulWidget {
     super.key,
     this.enableKeepAlive = true,
     this.onSizeChanged,
+    this.onForwardMessage,
   });
 
   final RoomEvent message;
@@ -477,6 +484,7 @@ class _OptimizedMessageItem extends ConsumerStatefulWidget {
   final void Function(RoomEvent message) onRetryMessage;
   final Future<void> Function(String messageId, {required bool forEveryone})
   onDeleteMessage;
+  final Future<void> Function(RoomEvent message)? onForwardMessage;
 
   @override
   ConsumerState<_OptimizedMessageItem> createState() =>
@@ -531,6 +539,10 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
       isDeleted: widget.message.isDeleted,
     );
 
+    final canForward = MessageForwardingService.canForwardMessage(
+      widget.message,
+    );
+
     // Wrap in RepaintBoundary for paint isolation
     return RepaintBoundary(
       child: Container(
@@ -539,14 +551,19 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
           children: [
             if (widget.showDateHeader)
               DateHeader(timestamp: widget.message.createdAt),
-            _buildMessageWidget(isMe, canEdit, canDelete),
+            _buildMessageWidget(isMe, canEdit, canDelete, canForward),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMessageWidget(bool isMe, bool canEdit, bool canDelete) {
+  Widget _buildMessageWidget(
+    bool isMe,
+    bool canEdit,
+    bool canDelete,
+    bool canForward,
+  ) {
     switch (widget.message.type) {
       case RoomEventType.motion:
         return MotionBubble(event: widget.message, isMe: isMe);
@@ -566,6 +583,8 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
           canEdit: canEdit,
           onDelete: widget.onDeleteMessage,
           canDelete: canDelete,
+          onForward: widget.onForwardMessage,
+          canForward: canForward,
         );
     }
   }

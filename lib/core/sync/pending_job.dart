@@ -8,6 +8,7 @@ enum JobType {
   sendMediaMessage,
   editMessage,
   deleteMessage,
+  forwardMessage,
   uploadFile,
   createRoom,
   updateRoom,

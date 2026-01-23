@@ -183,6 +183,19 @@ class RoomEvents extends Table {
   /// Error message if send failed
   TextColumn get errorMessage => text().nullable()();
 
+  /// Room ID this message was forwarded from (null if not forwarded)
+  TextColumn get forwardedFromRoom => text().nullable()();
+
+  /// Event ID this message was forwarded from (null if not forwarded)
+  TextColumn get forwardedFromEvent => text().nullable()();
+
+  /// Number of times this message has been forwarded
+  IntColumn get forwardCount => integer().withDefault(const Constant(0))();
+
+  /// Whether this message is restricted from being forwarded
+  BoolColumn get forwardRestricted =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -458,7 +471,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -514,6 +527,13 @@ class AppDatabase extends _$AppDatabase {
           CREATE UNIQUE INDEX IF NOT EXISTS idx_read_receipts_unique
           ON read_receipts(event_id, profile_id)
         ''');
+      }
+      if (from <= 8) {
+        // Migration from v8 to v9: Add message forwarding columns
+        await m.addColumn(roomEvents, roomEvents.forwardedFromRoom);
+        await m.addColumn(roomEvents, roomEvents.forwardedFromEvent);
+        await m.addColumn(roomEvents, roomEvents.forwardCount);
+        await m.addColumn(roomEvents, roomEvents.forwardRestricted);
       }
     },
     beforeOpen: (details) async {
@@ -630,6 +650,10 @@ class AppDatabase extends _$AppDatabase {
     redactedBy: row.readNullable<String>('redacted_by'),
     retryCount: row.readNullable<int>('retry_count') ?? 0,
     errorMessage: row.readNullable<String>('error_message'),
+    forwardedFromRoom: row.readNullable<String>('forwarded_from_room'),
+    forwardedFromEvent: row.readNullable<String>('forwarded_from_event'),
+    forwardCount: row.readNullable<int>('forward_count') ?? 0,
+    forwardRestricted: row.readNullable<bool>('forward_restricted') ?? false,
   );
 
   /// Search messages by text content across all rooms

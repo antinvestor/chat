@@ -25,6 +25,8 @@ class MessageBubble extends ConsumerWidget {
     this.canEdit = false,
     this.onDelete,
     this.canDelete = false,
+    this.onForward,
+    this.canForward = false,
   });
   final RoomEvent message;
   final bool isMe;
@@ -37,6 +39,8 @@ class MessageBubble extends ConsumerWidget {
   final bool canEdit;
   final Function(String messageId, {required bool forEveryone})? onDelete;
   final bool canDelete;
+  final Function(RoomEvent message)? onForward;
+  final bool canForward;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -123,13 +127,49 @@ class MessageBubble extends ConsumerWidget {
                                 ),
                               ),
                             ),
+                          // Forwarded indicator
+                          if (message.isForwarded)
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                12,
+                                (!isMe && !shouldGroupWithPrevious) ? 2 : 8,
+                                12,
+                                4,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.shortcut,
+                                    size: 14,
+                                    color: isDarkMode
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Forwarded',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color: isDarkMode
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           // Message content with inline timestamp (WhatsApp style)
                           Stack(
                             children: [
                               Padding(
                                 padding: EdgeInsets.fromLTRB(
                                   12,
-                                  (!isMe && !shouldGroupWithPrevious) ? 0 : 8,
+                                  (message.isForwarded ||
+                                          (!isMe && !shouldGroupWithPrevious))
+                                      ? 0
+                                      : 8,
                                   12,
                                   6,
                                 ),
@@ -807,7 +847,7 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
-  /// Show context menu for message actions (reply, edit, copy)
+  /// Show context menu for message actions (reply, forward, edit, copy)
   void _showMessageMenu(BuildContext context, String text) {
     final theme = Theme.of(context);
 
@@ -830,6 +870,19 @@ class MessageBubble extends ConsumerWidget {
                   onTap: () {
                     Navigator.pop(context);
                     onReply?.call(message.id, text);
+                  },
+                ),
+              // Forward option
+              if (canForward && onForward != null)
+                ListTile(
+                  leading: Icon(
+                    Icons.shortcut,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: const Text('Forward'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onForward?.call(message);
                   },
                 ),
               // Edit option (only for own text messages within edit window)
