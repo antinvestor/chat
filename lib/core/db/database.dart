@@ -433,6 +433,41 @@ class ReadReceipts extends Table {
   IntColumn get readAt => integer()();
 }
 
+/// User reports for abuse/spam/harassment
+///
+/// Stores reports submitted by users about other users.
+/// Reports are sent to the backend for review and action.
+///
+/// Example:
+/// ```dart
+/// final reports = await db.reports.select().get();
+/// ```
+class Reports extends Table {
+  /// Unique report identifier
+  TextColumn get id => text()();
+
+  /// Profile ID of the user being reported
+  TextColumn get reportedUserId => text()();
+
+  /// Report reason category (spam, harassment, inappropriate_content, other)
+  TextColumn get reason => text()();
+
+  /// Additional details provided by the reporter
+  TextColumn get details => text().nullable()();
+
+  /// JSON array of event IDs used as evidence
+  TextColumn get evidenceEventIds => text().nullable()();
+
+  /// Timestamp when the report was created (milliseconds since epoch)
+  IntColumn get reportedAt => integer()();
+
+  /// Report status: pending, reviewed, resolved, dismissed
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -459,6 +494,7 @@ class ReadReceipts extends Table {
     UserSettings,
     Drafts,
     ReadReceipts,
+    Reports,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -534,6 +570,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(roomEvents, roomEvents.forwardedFromEvent);
         await m.addColumn(roomEvents, roomEvents.forwardCount);
         await m.addColumn(roomEvents, roomEvents.forwardRestricted);
+        // Migration from v8 to v9: Add reports table for user reports
+        await m.createTable(reports);
+        // Create index for efficient querying by reported user
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_reports_reported_user_id
+          ON reports(reported_user_id)
+        ''');
       }
     },
     beforeOpen: (details) async {
