@@ -98,6 +98,9 @@ abstract class RoomEvent with _$RoomEvent {
     String? forwardedFromEvent, // Original event ID this was forwarded from
     @Default(0) int forwardCount, // Times this message has been forwarded
     @Default(false) bool forwardRestricted, // Cannot be forwarded
+    // Disappearing messages
+    int?
+    expiresAt, // Timestamp when message expires (for disappearing messages)
   }) = _RoomEvent;
 
   factory RoomEvent.fromJson(Map<String, dynamic> json) =>
@@ -123,4 +126,11 @@ abstract class RoomEvent with _$RoomEvent {
   /// Returns true if the message can still auto-retry
   bool get canAutoRetry =>
       status == EventStatus.failed && retryCount < maxAutoRetries;
+
+  /// Returns true if this message is set to disappear
+  bool get isDisappearing => expiresAt != null;
+
+  /// Returns true if this message has expired and should be deleted
+  bool get hasExpired =>
+      expiresAt != null && DateTime.now().millisecondsSinceEpoch > expiresAt!;
 }

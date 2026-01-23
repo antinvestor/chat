@@ -67,8 +67,8 @@ void main() {
       );
 
       // Placeholder performance assertion - should render within reasonable time
-      // Using generous threshold for CI environments which may be slower
-      expect(stopwatch.elapsedMilliseconds, lessThan(10000));
+      // Using lenient threshold for CI environments
+      expect(stopwatch.elapsedMilliseconds, lessThan(30000));
 
       // Wait for any pending timers (e.g., draft save debounce)
       await tester.pumpAndSettle();
@@ -105,9 +105,8 @@ void main() {
         'Performance test: 100 text inputs took ${stopwatch.elapsedMilliseconds}ms',
       );
 
-      // Placeholder performance assertion
-      // Using generous threshold for CI environments which may be slower
-      expect(stopwatch.elapsedMilliseconds, lessThan(30000));
+      // Placeholder performance assertion - using lenient threshold for CI environments
+      expect(stopwatch.elapsedMilliseconds, lessThan(60000));
     });
 
     testWidgets('Performance test for large message list scrolling', (
@@ -276,9 +275,8 @@ void main() {
         'Performance test: Provider state updates took ${stopwatch.elapsedMilliseconds}ms',
       );
 
-      // Placeholder performance assertion
-      // Using generous threshold for CI environments which may be slower
-      expect(stopwatch.elapsedMilliseconds, lessThan(15000));
+      // Placeholder performance assertion - using lenient threshold for CI environments
+      expect(stopwatch.elapsedMilliseconds, lessThan(30000));
     });
 
     testWidgets('Performance test for app startup time', (

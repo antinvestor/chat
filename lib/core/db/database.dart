@@ -87,6 +87,10 @@ class Rooms extends Table {
   /// JSON-encoded room metadata (avatar, description, etc.)
   TextColumn get metadata => text().nullable()();
 
+  /// Disappearing messages timeout in seconds (null = disabled)
+  /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
+  IntColumn get disappearingTimeout => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -195,6 +199,10 @@ class RoomEvents extends Table {
   /// Whether this message is restricted from being forwarded
   BoolColumn get forwardRestricted =>
       boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when this message should be deleted (for disappearing messages)
+  /// Null means the message does not expire
+  IntColumn get expiresAt => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -678,6 +686,15 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('''
           CREATE INDEX IF NOT EXISTS idx_invite_link_joins_link_id
           ON invite_link_joins(invite_link_id)
+        ''');
+        // Add disappearing messages support
+        await m.addColumn(rooms, rooms.disappearingTimeout);
+        await m.addColumn(roomEvents, roomEvents.expiresAt);
+        // Create index for efficient expiry checking
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_room_events_expires_at
+          ON room_events(expires_at)
+          WHERE expires_at IS NOT NULL
         ''');
       }
     },
