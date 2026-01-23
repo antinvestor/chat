@@ -45,6 +45,7 @@ class SettingsKeys {
   // Security
   static const biometricEnabled = 'biometric_enabled';
   static const lockTimeoutMinutes = 'lock_timeout_minutes';
+  static const showNotificationsLocked = 'show_notifications_locked';
   static const fingerprintLockEnabled = 'fingerprint_lock_enabled';
 
   // Location
@@ -72,6 +73,7 @@ class SettingsDefaults {
   static const groupsAddPermission = 'everyone';
   static const biometricEnabled = false;
   static const lockTimeoutMinutes = 0;
+  static const showNotificationsLocked = true;
   static const fingerprintLockEnabled = false;
   static const liveLocationSharingEnabled = false;
   static const backupEnabled = false;
@@ -344,6 +346,13 @@ class SettingsService {
   Future<void> setLockTimeoutMinutes(int value) =>
       setInt(SettingsKeys.lockTimeoutMinutes, value);
 
+  bool get showNotificationsLocked => getBool(
+    SettingsKeys.showNotificationsLocked,
+    defaultValue: SettingsDefaults.showNotificationsLocked,
+  );
+  Future<void> setShowNotificationsLocked(bool value) =>
+      setBool(SettingsKeys.showNotificationsLocked, value);
+
   // Backup
   bool get backupEnabled => getBool(SettingsKeys.backupEnabled);
   Future<void> setBackupEnabled(bool value) =>
@@ -359,7 +368,6 @@ class SettingsService {
   // Fingerprint Lock
   bool get fingerprintLockEnabled => getBool(
     SettingsKeys.fingerprintLockEnabled,
-    defaultValue: SettingsDefaults.fingerprintLockEnabled,
   );
   Future<void> setFingerprintLockEnabled(bool value) =>
       setBool(SettingsKeys.fingerprintLockEnabled, value);
@@ -367,7 +375,6 @@ class SettingsService {
   // Live Location Sharing
   bool get liveLocationSharingEnabled => getBool(
     SettingsKeys.liveLocationSharingEnabled,
-    defaultValue: SettingsDefaults.liveLocationSharingEnabled,
   );
   Future<void> setLiveLocationSharingEnabled(bool value) =>
       setBool(SettingsKeys.liveLocationSharingEnabled, value);
