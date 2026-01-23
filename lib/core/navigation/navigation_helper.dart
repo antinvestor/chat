@@ -76,6 +76,11 @@ class NavigationHelper {
     context.push('/settings/storage/compression');
   }
 
+  /// Navigate to cache settings screen
+  static void navigateToCacheSettings(BuildContext context) {
+    context.push('/settings/storage/cache');
+  }
+
   /// Navigate to profile edit screen
   static void navigateToProfileEdit(BuildContext context) {
     context.push('/profile/edit');
@@ -155,6 +160,9 @@ extension NavigationContext on BuildContext {
 
   void navigateToMediaCompressionSettings() =>
       NavigationHelper.navigateToMediaCompressionSettings(this);
+
+  void navigateToCacheSettings() =>
+      NavigationHelper.navigateToCacheSettings(this);
 
   void navigateBack([String? fallbackRoute]) =>
       NavigationHelper.navigateBack(this, fallbackRoute: fallbackRoute);
