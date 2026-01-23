@@ -67,8 +67,8 @@ void main() {
       );
 
       // Placeholder performance assertion - should render within reasonable time
-      // Increased threshold for CI environments which may be slower
-      expect(stopwatch.elapsedMilliseconds, lessThan(30000));
+      // Using 10s threshold to accommodate CI environments with variable load
+      expect(stopwatch.elapsedMilliseconds, lessThan(10000));
 
       // Wait for any pending timers (e.g., draft save debounce)
       await tester.pumpAndSettle();
@@ -106,8 +106,8 @@ void main() {
       );
 
       // Placeholder performance assertion
-      // Increased threshold for CI environments which may be slower
-      expect(stopwatch.elapsedMilliseconds, lessThan(60000));
+      // Using 30s threshold to accommodate CI environments with variable load
+      expect(stopwatch.elapsedMilliseconds, lessThan(30000));
     });
 
     testWidgets('Performance test for large message list scrolling', (
@@ -277,8 +277,8 @@ void main() {
       );
 
       // Placeholder performance assertion
-      // Increased threshold for CI environments which may be slower
-      expect(stopwatch.elapsedMilliseconds, lessThan(30000));
+      // Using 10s threshold to accommodate CI environments with variable load
+      expect(stopwatch.elapsedMilliseconds, lessThan(10000));
     });
 
     testWidgets('Performance test for app startup time', (
@@ -317,8 +317,8 @@ void main() {
       developer.log('Performance test: App startup took ${startupTime}ms');
 
       // App should start within reasonable time
-      // Increased threshold for CI environments which may be slower
-      expect(startupTime, lessThan(30000));
+      // Using 10s threshold to accommodate CI environments with variable load
+      expect(startupTime, lessThan(10000));
       expect(find.byType(MaterialApp), findsOneWidget);
     });
   });

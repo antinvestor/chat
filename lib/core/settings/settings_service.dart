@@ -28,6 +28,7 @@ class SettingsKeys {
   // Notifications
   static const notificationSound = 'notification_sound';
   static const notificationVibrate = 'notification_vibrate';
+  static const notificationPreviewEnabled = 'notification_preview_enabled';
 
   // Media
   static const autoDownloadWifi = 'auto_download_wifi';
@@ -60,6 +61,7 @@ class SettingsDefaults {
   static const fontSize = 'medium';
   static const notificationSound = true;
   static const notificationVibrate = true;
+  static const notificationPreviewEnabled = true;
   static const autoDownloadWifi = true;
   static const autoDownloadMobile = false;
   static const readReceiptsEnabled = true;
@@ -270,6 +272,13 @@ class SettingsService {
   );
   Future<void> setNotificationVibrate(bool value) =>
       setBool(SettingsKeys.notificationVibrate, value);
+
+  bool get notificationPreviewEnabled => getBool(
+    SettingsKeys.notificationPreviewEnabled,
+    defaultValue: SettingsDefaults.notificationPreviewEnabled,
+  );
+  Future<void> setNotificationPreviewEnabled(bool value) =>
+      setBool(SettingsKeys.notificationPreviewEnabled, value);
 
   // Media
   bool get autoDownloadWifi => getBool(
