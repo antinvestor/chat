@@ -68,16 +68,31 @@ class RoomListTile extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              room.name,
-                              style: AppTheme.bodyText.copyWith(
-                                fontWeight: room.unreadCount > 0
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    room.name,
+                                    style: AppTheme.bodyText.copyWith(
+                                      fontWeight: room.unreadCount > 0
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                // Muted indicator
+                                if (room.isMuted) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.notifications_off,
+                                    size: 16,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                           if (room.lastMessageTimestamp != null)

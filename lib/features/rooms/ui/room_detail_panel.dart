@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
 import '../../messages/domain/room_event.dart';
+import '../../notifications/mute_service.dart';
 import '../data/detail_panel_providers.dart';
 import '../data/room_providers.dart';
+import '../domain/room.dart';
 import 'member_action_sheet.dart';
 
 /// Room detail panel showing room information, motions, transactions, and media
@@ -92,9 +94,11 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
   }
 
   void _showSettingsMenu(BuildContext context) {
+    final muteStateAsync = ref.watch(roomMuteStateProvider(widget.roomId));
+
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -102,7 +106,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
               leading: const Icon(Icons.edit),
               title: const Text('Edit Room Info'),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 // Navigate to group settings screen
                 context.navigateToGroupSettings(
                   roomId: widget.roomId,
@@ -114,7 +118,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
               leading: const Icon(Icons.person_add),
               title: const Text('Add Members'),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 // Navigate to add members screen
                 context.navigateToContactSelection();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -124,20 +128,48 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
                 );
               },
             ),
+            // Mute/Unmute option
+            muteStateAsync.when(
+              data: (isMuted) => ListTile(
+                leading: Icon(
+                  isMuted ? Icons.notifications : Icons.notifications_off,
+                ),
+                title: Text(
+                  isMuted ? 'Unmute Notifications' : 'Mute Notifications',
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  if (isMuted) {
+                    _unmuteRoom();
+                  } else {
+                    _showMuteDurationPicker(context);
+                  }
+                },
+              ),
+              loading: () => const ListTile(
+                leading: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                title: Text('Mute Notifications'),
+              ),
+              error: (_, _) => ListTile(
+                leading: const Icon(Icons.notifications_off),
+                title: const Text('Mute Notifications'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showMuteDurationPicker(context);
+                },
+              ),
+            ),
             ListTile(
               leading: const Icon(Icons.notifications),
               title: const Text('Notification Settings'),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 // Navigate to notification settings
                 context.navigateToNotificationSettings();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Notification settings for this room coming soon',
-                    ),
-                  ),
-                );
               },
             ),
             ListTile(
@@ -147,7 +179,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
                 style: TextStyle(color: Colors.red.shade600),
               ),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 _confirmLeaveRoom(context);
               },
             ),
@@ -155,6 +187,94 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
         ),
       ),
     );
+  }
+
+  /// Show the mute duration picker dialog
+  void _showMuteDurationPicker(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Mute Notifications'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Choose how long to mute this chat:'),
+            const SizedBox(height: 16),
+            ListTile(
+              title: const Text('8 hours'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _muteRoom(MuteDuration.eightHours);
+              },
+            ),
+            ListTile(
+              title: const Text('1 week'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _muteRoom(MuteDuration.oneWeek);
+              },
+            ),
+            ListTile(
+              title: const Text('Forever'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _muteRoom(MuteDuration.forever);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mute the room with the specified duration
+  Future<void> _muteRoom(MuteDuration duration) async {
+    try {
+      await ref
+          .read(roomMuteStateProvider(widget.roomId).notifier)
+          .mute(duration);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Notifications muted for ${duration.label}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to mute notifications: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Unmute the room
+  Future<void> _unmuteRoom() async {
+    try {
+      await ref.read(roomMuteStateProvider(widget.roomId).notifier).unmute();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Notifications unmuted')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to unmute notifications: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _confirmLeaveRoom(BuildContext context) {

@@ -1129,6 +1129,17 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _mutedUntilMeta = const VerificationMeta(
+    'mutedUntil',
+  );
+  @override
+  late final GeneratedColumn<int> mutedUntil = GeneratedColumn<int>(
+    'muted_until',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1139,6 +1150,7 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     unreadCount,
     metadata,
     disappearingTimeout,
+    mutedUntil,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1211,6 +1223,12 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         ),
       );
     }
+    if (data.containsKey('muted_until')) {
+      context.handle(
+        _mutedUntilMeta,
+        mutedUntil.isAcceptableOrUnknown(data['muted_until']!, _mutedUntilMeta),
+      );
+    }
     return context;
   }
 
@@ -1252,6 +1270,10 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         DriftSqlType.int,
         data['${effectivePrefix}disappearing_timeout'],
       ),
+      mutedUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}muted_until'],
+      ),
     );
   }
 
@@ -1286,6 +1308,12 @@ class Room extends DataClass implements Insertable<Room> {
   /// Disappearing messages timeout in seconds (null = disabled)
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   final int? disappearingTimeout;
+
+  /// Mute notifications until this timestamp (milliseconds since epoch)
+  /// - null = not muted
+  /// - 0 = muted forever
+  /// - timestamp = muted until that time
+  final int? mutedUntil;
   const Room({
     required this.id,
     this.name,
@@ -1295,6 +1323,7 @@ class Room extends DataClass implements Insertable<Room> {
     required this.unreadCount,
     this.metadata,
     this.disappearingTimeout,
+    this.mutedUntil,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1319,6 +1348,9 @@ class Room extends DataClass implements Insertable<Room> {
     if (!nullToAbsent || disappearingTimeout != null) {
       map['disappearing_timeout'] = Variable<int>(disappearingTimeout);
     }
+    if (!nullToAbsent || mutedUntil != null) {
+      map['muted_until'] = Variable<int>(mutedUntil);
+    }
     return map;
   }
 
@@ -1340,6 +1372,9 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: disappearingTimeout == null && nullToAbsent
           ? const Value.absent()
           : Value(disappearingTimeout),
+      mutedUntil: mutedUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mutedUntil),
     );
   }
 
@@ -1359,6 +1394,7 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: serializer.fromJson<int?>(
         json['disappearingTimeout'],
       ),
+      mutedUntil: serializer.fromJson<int?>(json['mutedUntil']),
     );
   }
   @override
@@ -1373,6 +1409,7 @@ class Room extends DataClass implements Insertable<Room> {
       'unreadCount': serializer.toJson<int>(unreadCount),
       'metadata': serializer.toJson<String?>(metadata),
       'disappearingTimeout': serializer.toJson<int?>(disappearingTimeout),
+      'mutedUntil': serializer.toJson<int?>(mutedUntil),
     };
   }
 
@@ -1385,6 +1422,7 @@ class Room extends DataClass implements Insertable<Room> {
     int? unreadCount,
     Value<String?> metadata = const Value.absent(),
     Value<int?> disappearingTimeout = const Value.absent(),
+    Value<int?> mutedUntil = const Value.absent(),
   }) => Room(
     id: id ?? this.id,
     name: name.present ? name.value : this.name,
@@ -1398,6 +1436,7 @@ class Room extends DataClass implements Insertable<Room> {
     disappearingTimeout: disappearingTimeout.present
         ? disappearingTimeout.value
         : this.disappearingTimeout,
+    mutedUntil: mutedUntil.present ? mutedUntil.value : this.mutedUntil,
   );
   Room copyWithCompanion(RoomsCompanion data) {
     return Room(
@@ -1417,6 +1456,9 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: data.disappearingTimeout.present
           ? data.disappearingTimeout.value
           : this.disappearingTimeout,
+      mutedUntil: data.mutedUntil.present
+          ? data.mutedUntil.value
+          : this.mutedUntil,
     );
   }
 
@@ -1430,7 +1472,8 @@ class Room extends DataClass implements Insertable<Room> {
           ..write('lastEventIndex: $lastEventIndex, ')
           ..write('unreadCount: $unreadCount, ')
           ..write('metadata: $metadata, ')
-          ..write('disappearingTimeout: $disappearingTimeout')
+          ..write('disappearingTimeout: $disappearingTimeout, ')
+          ..write('mutedUntil: $mutedUntil')
           ..write(')'))
         .toString();
   }
@@ -1445,6 +1488,7 @@ class Room extends DataClass implements Insertable<Room> {
     unreadCount,
     metadata,
     disappearingTimeout,
+    mutedUntil,
   );
   @override
   bool operator ==(Object other) =>
@@ -1457,7 +1501,8 @@ class Room extends DataClass implements Insertable<Room> {
           other.lastEventIndex == this.lastEventIndex &&
           other.unreadCount == this.unreadCount &&
           other.metadata == this.metadata &&
-          other.disappearingTimeout == this.disappearingTimeout);
+          other.disappearingTimeout == this.disappearingTimeout &&
+          other.mutedUntil == this.mutedUntil);
 }
 
 class RoomsCompanion extends UpdateCompanion<Room> {
@@ -1469,6 +1514,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
   final Value<int> unreadCount;
   final Value<String?> metadata;
   final Value<int?> disappearingTimeout;
+  final Value<int?> mutedUntil;
   final Value<int> rowid;
   const RoomsCompanion({
     this.id = const Value.absent(),
@@ -1479,6 +1525,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.unreadCount = const Value.absent(),
     this.metadata = const Value.absent(),
     this.disappearingTimeout = const Value.absent(),
+    this.mutedUntil = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomsCompanion.insert({
@@ -1490,6 +1537,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.unreadCount = const Value.absent(),
     this.metadata = const Value.absent(),
     this.disappearingTimeout = const Value.absent(),
+    this.mutedUntil = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Room> custom({
@@ -1501,6 +1549,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Expression<int>? unreadCount,
     Expression<String>? metadata,
     Expression<int>? disappearingTimeout,
+    Expression<int>? mutedUntil,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1513,6 +1562,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       if (metadata != null) 'metadata': metadata,
       if (disappearingTimeout != null)
         'disappearing_timeout': disappearingTimeout,
+      if (mutedUntil != null) 'muted_until': mutedUntil,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1526,6 +1576,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Value<int>? unreadCount,
     Value<String?>? metadata,
     Value<int?>? disappearingTimeout,
+    Value<int?>? mutedUntil,
     Value<int>? rowid,
   }) {
     return RoomsCompanion(
@@ -1537,6 +1588,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       unreadCount: unreadCount ?? this.unreadCount,
       metadata: metadata ?? this.metadata,
       disappearingTimeout: disappearingTimeout ?? this.disappearingTimeout,
+      mutedUntil: mutedUntil ?? this.mutedUntil,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1568,6 +1620,9 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     if (disappearingTimeout.present) {
       map['disappearing_timeout'] = Variable<int>(disappearingTimeout.value);
     }
+    if (mutedUntil.present) {
+      map['muted_until'] = Variable<int>(mutedUntil.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1585,6 +1640,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
           ..write('unreadCount: $unreadCount, ')
           ..write('metadata: $metadata, ')
           ..write('disappearingTimeout: $disappearingTimeout, ')
+          ..write('mutedUntil: $mutedUntil, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8262,6 +8318,7 @@ typedef $$RoomsTableCreateCompanionBuilder =
       Value<int> unreadCount,
       Value<String?> metadata,
       Value<int?> disappearingTimeout,
+      Value<int?> mutedUntil,
       Value<int> rowid,
     });
 typedef $$RoomsTableUpdateCompanionBuilder =
@@ -8274,6 +8331,7 @@ typedef $$RoomsTableUpdateCompanionBuilder =
       Value<int> unreadCount,
       Value<String?> metadata,
       Value<int?> disappearingTimeout,
+      Value<int?> mutedUntil,
       Value<int> rowid,
     });
 
@@ -8399,6 +8457,11 @@ class $$RoomsTableFilterComposer extends Composer<_$AppDatabase, $RoomsTable> {
 
   ColumnFilters<int> get disappearingTimeout => $composableBuilder(
     column: $table.disappearingTimeout,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8551,6 +8614,11 @@ class $$RoomsTableOrderingComposer
     column: $table.disappearingTimeout,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RoomsTableAnnotationComposer
@@ -8591,6 +8659,11 @@ class $$RoomsTableAnnotationComposer
 
   GeneratedColumn<int> get disappearingTimeout => $composableBuilder(
     column: $table.disappearingTimeout,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
     builder: (column) => column,
   );
 
@@ -8736,6 +8809,7 @@ class $$RoomsTableTableManager
                 Value<int> unreadCount = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
                 Value<int?> disappearingTimeout = const Value.absent(),
+                Value<int?> mutedUntil = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomsCompanion(
                 id: id,
@@ -8746,6 +8820,7 @@ class $$RoomsTableTableManager
                 unreadCount: unreadCount,
                 metadata: metadata,
                 disappearingTimeout: disappearingTimeout,
+                mutedUntil: mutedUntil,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8758,6 +8833,7 @@ class $$RoomsTableTableManager
                 Value<int> unreadCount = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
                 Value<int?> disappearingTimeout = const Value.absent(),
+                Value<int?> mutedUntil = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomsCompanion.insert(
                 id: id,
@@ -8768,6 +8844,7 @@ class $$RoomsTableTableManager
                 unreadCount: unreadCount,
                 metadata: metadata,
                 disappearingTimeout: disappearingTimeout,
+                mutedUntil: mutedUntil,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
