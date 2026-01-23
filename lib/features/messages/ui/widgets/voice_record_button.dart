@@ -270,19 +270,23 @@ class _VoiceRecordButtonState extends ConsumerState<VoiceRecordButton>
     }
   }
 
-  Widget _buildIdleState() => GestureDetector(
-    onLongPressStart: (_) => _startRecording(),
-    child: Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: AppTheme.getSubtleColor(context, AppTheme.primaryGreen),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        Icons.mic,
-        size: widget.iconSize,
-        color: AppTheme.primaryGreen,
+  Widget _buildIdleState() => Tooltip(
+    message: 'Voice Message',
+    child: GestureDetector(
+      onLongPressStart: (_) => _startRecording(),
+      onTap: _startRecording,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppTheme.getSubtleColor(context, AppTheme.primaryGreen),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.mic,
+          size: widget.iconSize,
+          color: AppTheme.primaryGreen,
+        ),
       ),
     ),
   );
