@@ -140,9 +140,7 @@ class NotificationGroupingService {
       );
 
       // iOS initialization settings
-      const iosSettings = DarwinInitializationSettings(
-        
-      );
+      const iosSettings = DarwinInitializationSettings();
 
       // Combined initialization settings
       const initSettings = InitializationSettings(
