@@ -44,6 +44,10 @@ class SettingsKeys {
   // Security
   static const biometricEnabled = 'biometric_enabled';
   static const lockTimeoutMinutes = 'lock_timeout_minutes';
+  static const fingerprintLockEnabled = 'fingerprint_lock_enabled';
+
+  // Location
+  static const liveLocationSharingEnabled = 'live_location_sharing_enabled';
 
   // Data
   static const backupEnabled = 'backup_enabled';
@@ -66,6 +70,8 @@ class SettingsDefaults {
   static const groupsAddPermission = 'everyone';
   static const biometricEnabled = false;
   static const lockTimeoutMinutes = 0;
+  static const fingerprintLockEnabled = false;
+  static const liveLocationSharingEnabled = false;
   static const backupEnabled = false;
   static const backupFrequency = 'weekly';
 }
@@ -340,4 +346,20 @@ class SettingsService {
   );
   Future<void> setBackupFrequency(String value) =>
       setString(SettingsKeys.backupFrequency, value);
+
+  // Fingerprint Lock
+  bool get fingerprintLockEnabled => getBool(
+    SettingsKeys.fingerprintLockEnabled,
+    defaultValue: SettingsDefaults.fingerprintLockEnabled,
+  );
+  Future<void> setFingerprintLockEnabled(bool value) =>
+      setBool(SettingsKeys.fingerprintLockEnabled, value);
+
+  // Live Location Sharing
+  bool get liveLocationSharingEnabled => getBool(
+    SettingsKeys.liveLocationSharingEnabled,
+    defaultValue: SettingsDefaults.liveLocationSharingEnabled,
+  );
+  Future<void> setLiveLocationSharingEnabled(bool value) =>
+      setBool(SettingsKeys.liveLocationSharingEnabled, value);
 }
