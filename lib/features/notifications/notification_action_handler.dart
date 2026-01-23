@@ -83,10 +83,7 @@ class NotificationActionHandler {
 
     AppLogger.info(
       'Sending reply from notification',
-      data: {
-        'roomId': roomId,
-        'textLength': trimmedText.length,
-      },
+      data: {'roomId': roomId, 'textLength': trimmedText.length},
     );
 
     try {
@@ -97,7 +94,9 @@ class NotificationActionHandler {
       );
 
       // Cancel the notification after successful reply
-      final richNotificationService = _ref.read(richNotificationServiceProvider);
+      final richNotificationService = _ref.read(
+        richNotificationServiceProvider,
+      );
       await richNotificationService.cancelNotification(roomId);
 
       AppLogger.info('Reply sent successfully from notification');
@@ -124,7 +123,9 @@ class NotificationActionHandler {
       await readReceiptRepository.markRoomAsRead(roomId);
 
       // Cancel the notification after marking as read
-      final richNotificationService = _ref.read(richNotificationServiceProvider);
+      final richNotificationService = _ref.read(
+        richNotificationServiceProvider,
+      );
       await richNotificationService.cancelNotification(roomId);
 
       AppLogger.info('Room marked as read from notification');

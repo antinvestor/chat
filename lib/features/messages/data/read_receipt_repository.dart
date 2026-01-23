@@ -164,8 +164,6 @@ class ReadReceiptRepository {
   /// for all unread messages. Used when user marks room as read from
   /// notification action.
   Future<void> markRoomAsRead(String roomId) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-
     // Reset unread count in room
     await _db.customStatement(
       'UPDATE rooms SET unread_count = 0 WHERE id = ?',

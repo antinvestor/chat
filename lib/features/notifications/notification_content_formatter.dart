@@ -119,10 +119,16 @@ class NotificationContentFormatter {
           return (_formatTextMessage(event.content), null);
 
         case RoomEventType.image:
-          return (_formatImageMessage(event.content), _extractImageUrl(event.content));
+          return (
+            _formatImageMessage(event.content),
+            _extractImageUrl(event.content),
+          );
 
         case RoomEventType.video:
-          return (_formatVideoMessage(event.content), _extractThumbnailUrl(event.content));
+          return (
+            _formatVideoMessage(event.content),
+            _extractThumbnailUrl(event.content),
+          );
 
         case RoomEventType.audio:
           return (_formatAudioMessage(event.content), null);
@@ -203,7 +209,8 @@ class NotificationContentFormatter {
 
   /// Format file message with filename
   String _formatFileMessage(Map<String, dynamic> content) {
-    final filename = content['filename'] as String? ?? content['name'] as String?;
+    final filename =
+        content['filename'] as String? ?? content['name'] as String?;
     if (filename != null && filename.isNotEmpty) {
       return 'File: ${_truncate(filename, maxNotificationTextLength - 6)}';
     }

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -34,17 +33,12 @@ class NotificationChannels {
 }
 
 /// Callback type for notification action handlers
-typedef NotificationActionCallback = void Function(
-  String actionId,
-  String? roomId,
-  String? payload,
-);
+typedef NotificationActionCallback =
+    void Function(String actionId, String? roomId, String? payload);
 
 /// Callback type for notification tap handlers
-typedef NotificationTapCallback = void Function(
-  String? roomId,
-  String? roomName,
-);
+typedef NotificationTapCallback =
+    void Function(String? roomId, String? roomName);
 
 /// Provider for RichNotificationService
 final richNotificationServiceProvider = Provider<RichNotificationService>(
@@ -68,7 +62,8 @@ class RichNotificationService {
   final Ref _ref;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-  final NotificationContentFormatter _formatter = NotificationContentFormatter();
+  final NotificationContentFormatter _formatter =
+      NotificationContentFormatter();
 
   bool _initialized = false;
   NotificationActionCallback? _onAction;
@@ -95,13 +90,12 @@ class RichNotificationService {
 
     try {
       // Initialize settings for Android
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
 
       // Initialize settings for iOS
       final darwinSettings = DarwinInitializationSettings(
-        requestAlertPermission: true,
-        requestBadgePermission: true,
-        requestSoundPermission: true,
         notificationCategories: _createDarwinNotificationCategories(),
       );
 
@@ -114,7 +108,8 @@ class RichNotificationService {
       await _localNotifications.initialize(
         initSettings,
         onDidReceiveNotificationResponse: _onNotificationResponse,
-        onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationResponse,
+        onDidReceiveBackgroundNotificationResponse:
+            _onBackgroundNotificationResponse,
       );
 
       // Create Android notification channels
@@ -150,18 +145,17 @@ class RichNotificationService {
             'Mark as Read',
           ),
         ],
-        options: {
-          DarwinNotificationCategoryOption.hiddenPreviewShowTitle,
-        },
+        options: {DarwinNotificationCategoryOption.hiddenPreviewShowTitle},
       ),
     ];
   }
 
   /// Create Android notification channels
   Future<void> _createAndroidNotificationChannels() async {
-    final androidPlugin =
-        _localNotifications.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
 
     if (androidPlugin == null) return;
 
@@ -172,8 +166,6 @@ class RichNotificationService {
         NotificationChannels.messagesName,
         description: NotificationChannels.messagesDescription,
         importance: Importance.high,
-        enableVibration: true,
-        showBadge: true,
       ),
     );
 
@@ -184,8 +176,6 @@ class RichNotificationService {
         NotificationChannels.callsName,
         description: NotificationChannels.callsDescription,
         importance: Importance.max,
-        enableVibration: true,
-        showBadge: true,
         sound: RawResourceAndroidNotificationSound('ringtone'),
       ),
     );
@@ -197,8 +187,6 @@ class RichNotificationService {
         NotificationChannels.groupsName,
         description: NotificationChannels.groupsDescription,
         importance: Importance.high,
-        enableVibration: true,
-        showBadge: true,
       ),
     );
 
@@ -222,11 +210,7 @@ class RichNotificationService {
 
     if (response.actionId != null) {
       // Handle action button tap
-      _onAction?.call(
-        response.actionId!,
-        roomId,
-        response.input ?? payload,
-      );
+      _onAction?.call(response.actionId!, roomId, response.input ?? payload);
     } else {
       // Handle notification tap
       _onTap?.call(roomId, roomName);
@@ -258,9 +242,8 @@ class RichNotificationService {
   Future<void> showMessageNotification({
     required RoomEvent event,
     required String senderName,
-    String? senderAvatarUrl,
+    required String roomId, String? senderAvatarUrl,
     String? roomName,
-    required String roomId,
   }) async {
     if (!_initialized) {
       AppLogger.warning('RichNotificationService not initialized');
@@ -289,9 +272,7 @@ class RichNotificationService {
       isGroupMessage: content.isGroupMessage,
     );
 
-    final darwinDetails = _buildDarwinNotificationDetails(
-      content: content,
-    );
+    final darwinDetails = _buildDarwinNotificationDetails(content: content);
 
     final notificationDetails = NotificationDetails(
       android: androidDetails,
@@ -377,17 +358,11 @@ class RichNotificationService {
         const AndroidNotificationAction(
           NotificationActions.reply,
           'Reply',
-          inputs: [
-            AndroidNotificationActionInput(
-              label: 'Type a message...',
-            ),
-          ],
-          showsUserInterface: false,
+          inputs: [AndroidNotificationActionInput(label: 'Type a message...')],
         ),
         const AndroidNotificationAction(
           NotificationActions.markAsRead,
           'Mark as Read',
-          showsUserInterface: false,
         ),
       ],
     );
@@ -409,9 +384,9 @@ class RichNotificationService {
   /// Fetch an image from URL and convert to Android bitmap
   Future<ByteArrayAndroidBitmap?> _fetchImageAsBitmap(String url) async {
     try {
-      final response = await http.get(Uri.parse(url)).timeout(
-            const Duration(seconds: 5),
-          );
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         return ByteArrayAndroidBitmap(response.bodyBytes);
       }
@@ -424,8 +399,7 @@ class RichNotificationService {
   /// Show a call notification
   Future<void> showCallNotification({
     required String callerName,
-    String? callerAvatarUrl,
-    required String roomId,
+    required String roomId, String? callerAvatarUrl,
     bool isVideoCall = false,
   }) async {
     if (!_initialized) {
@@ -460,12 +434,11 @@ class RichNotificationService {
         const AndroidNotificationAction(
           'decline_call',
           'Decline',
-          showsUserInterface: false,
         ),
       ],
     );
 
-    final darwinDetails = DarwinNotificationDetails(
+    const darwinDetails = DarwinNotificationDetails(
       categoryIdentifier: 'call_category',
       interruptionLevel: InterruptionLevel.timeSensitive,
     );
@@ -503,10 +476,7 @@ class RichNotificationService {
 void _onBackgroundNotificationResponse(NotificationResponse response) {
   AppLogger.info(
     'Background notification response',
-    data: {
-      'actionId': response.actionId,
-      'payload': response.payload,
-    },
+    data: {'actionId': response.actionId, 'payload': response.payload},
   );
   // Background handling is limited - will be processed when app opens
 }

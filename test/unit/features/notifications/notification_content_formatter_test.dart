@@ -12,15 +12,14 @@ void main() {
   RoomEvent createEvent({
     required RoomEventType type,
     Map<String, dynamic> content = const {},
-  }) =>
-      RoomEvent(
-        id: 'event-123',
-        roomId: 'room-456',
-        senderId: 'sender-789',
-        type: type,
-        content: content,
-        createdAt: DateTime.now().millisecondsSinceEpoch,
-      );
+  }) => RoomEvent(
+    id: 'event-123',
+    roomId: 'room-456',
+    senderId: 'sender-789',
+    type: type,
+    content: content,
+    createdAt: DateTime.now().millisecondsSinceEpoch,
+  );
 
   group('NotificationContentFormatter', () {
     group('title formatting', () {
@@ -30,10 +29,7 @@ void main() {
           content: {'text': 'Hello'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.title, equals('Alice'));
         expect(result.isGroupMessage, isFalse);
@@ -79,10 +75,7 @@ void main() {
           content: {'text': 'Short message'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Short message'));
         expect(result.imageUrl, isNull);
@@ -95,25 +88,16 @@ void main() {
           content: {'text': longText},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body.length, equals(100));
         expect(result.body, endsWith('...'));
       });
 
       test('handles missing text gracefully', () {
-        final event = createEvent(
-          type: RoomEventType.text,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.text, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals(''));
       });
@@ -126,10 +110,7 @@ void main() {
           content: {'url': 'https://example.com/image.jpg'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Photo'));
         expect(result.imageUrl, equals('https://example.com/image.jpg'));
@@ -144,10 +125,7 @@ void main() {
           },
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Photo: Beautiful sunset'));
       });
@@ -158,10 +136,7 @@ void main() {
           content: {'thumbnailUrl': 'https://example.com/thumb.jpg'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.imageUrl, equals('https://example.com/thumb.jpg'));
       });
@@ -174,10 +149,7 @@ void main() {
           content: {'url': 'https://example.com/video.mp4'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Video'));
       });
@@ -191,10 +163,7 @@ void main() {
           },
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Video: Check this out'));
       });
@@ -205,10 +174,7 @@ void main() {
           content: {'posterUrl': 'https://example.com/poster.jpg'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.imageUrl, equals('https://example.com/poster.jpg'));
       });
@@ -221,10 +187,7 @@ void main() {
           content: {'url': 'https://example.com/audio.m4a'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Voice message'));
       });
@@ -235,10 +198,7 @@ void main() {
           content: {'duration': 45000}, // 45 seconds
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Voice message (45s)'));
       });
@@ -249,10 +209,7 @@ void main() {
           content: {'duration': 125000}, // 2 minutes 5 seconds
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Voice message (2m 5s)'));
       });
@@ -263,10 +220,7 @@ void main() {
           content: {'duration': 120000}, // exactly 2 minutes
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Voice message (2m)'));
       });
@@ -274,15 +228,9 @@ void main() {
 
     group('file message formatting', () {
       test('shows "File" without filename', () {
-        final event = createEvent(
-          type: RoomEventType.file,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.file, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('File'));
       });
@@ -293,10 +241,7 @@ void main() {
           content: {'filename': 'document.pdf'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('File: document.pdf'));
       });
@@ -307,10 +252,7 @@ void main() {
           content: {'name': 'report.xlsx'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('File: report.xlsx'));
       });
@@ -320,41 +262,29 @@ void main() {
       test('shows emoji when present', () {
         final event = createEvent(
           type: RoomEventType.reaction,
-          content: {'emoji': ''},
+          content: {'emoji': '\u{1F44D}'}, // thumbs up emoji
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
-        expect(result.body, equals('Reacted with '));
+        expect(result.body, equals('Reacted with \u{1F44D}'));
       });
 
       test('uses reaction field as fallback', () {
         final event = createEvent(
           type: RoomEventType.reaction,
-          content: {'reaction': ''},
+          content: {'reaction': '\u{2764}'}, // heart emoji
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
-        expect(result.body, equals('Reacted with '));
+        expect(result.body, equals('Reacted with \u{2764}'));
       });
 
       test('shows generic message without emoji', () {
-        final event = createEvent(
-          type: RoomEventType.reaction,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.reaction, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Reacted to a message'));
       });
@@ -367,10 +297,7 @@ void main() {
           content: {'title': 'Budget approval'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Motion: Budget approval'));
       });
@@ -381,24 +308,15 @@ void main() {
           content: {'subject': 'New policy'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Motion: New policy'));
       });
 
       test('shows generic message without title', () {
-        final event = createEvent(
-          type: RoomEventType.motion,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.motion, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('New motion proposed'));
       });
@@ -411,24 +329,15 @@ void main() {
           content: {'vote': 'Yes'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Voted: Yes'));
       });
 
       test('shows generic message without vote', () {
-        final event = createEvent(
-          type: RoomEventType.vote,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.vote, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Cast a vote'));
       });
@@ -441,10 +350,7 @@ void main() {
           content: {'amount': 100, 'currency': 'KES'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Transaction: KES 100'));
       });
@@ -459,10 +365,7 @@ void main() {
           },
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(
           result.body,
@@ -476,24 +379,15 @@ void main() {
           content: {'description': 'Payment received'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Transaction: Payment received'));
       });
 
       test('shows generic message without details', () {
-        final event = createEvent(
-          type: RoomEventType.transaction,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.transaction, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('New transaction'));
       });
@@ -501,43 +395,25 @@ void main() {
 
     group('call message formatting', () {
       test('shows incoming call for callOffer', () {
-        final event = createEvent(
-          type: RoomEventType.callOffer,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.callOffer, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Incoming call'));
       });
 
       test('shows call answered for callAnswer', () {
-        final event = createEvent(
-          type: RoomEventType.callAnswer,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.callAnswer, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Call answered'));
       });
 
       test('shows call ended for callEnd', () {
-        final event = createEvent(
-          type: RoomEventType.callEnd,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.callEnd, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals('Call ended'));
       });
@@ -577,10 +453,7 @@ void main() {
       });
 
       test('hides video content', () {
-        final event = createEvent(
-          type: RoomEventType.video,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.video, content: {});
 
         final result = formatter.format(
           event: event,
@@ -626,7 +499,7 @@ void main() {
       test('hides reaction emoji', () {
         final event = createEvent(
           type: RoomEventType.reaction,
-          content: {'emoji': ''},
+          content: {'emoji': '\u{1F60A}'}, // smiling face emoji
         );
 
         final result = formatter.format(
@@ -678,10 +551,7 @@ void main() {
           content: {'text': null},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals(''));
       });
@@ -692,38 +562,23 @@ void main() {
           content: {'text': 'Hello'},
         );
 
-        final result = formatter.format(
-          event: event,
-          senderName: '',
-        );
+        final result = formatter.format(event: event, senderName: '');
 
         expect(result.title, equals(''));
       });
 
       test('handles roomKey events', () {
-        final event = createEvent(
-          type: RoomEventType.roomKey,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.roomKey, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals(''));
       });
 
       test('handles callIce events', () {
-        final event = createEvent(
-          type: RoomEventType.callIce,
-          content: {},
-        );
+        final event = createEvent(type: RoomEventType.callIce, content: {});
 
-        final result = formatter.format(
-          event: event,
-          senderName: 'Alice',
-        );
+        final result = formatter.format(event: event, senderName: 'Alice');
 
         expect(result.body, equals(''));
       });
