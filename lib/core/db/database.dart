@@ -187,7 +187,6 @@ class RoomEvents extends Table {
   /// Error message if send failed
   TextColumn get errorMessage => text().nullable()();
 
-
   /// Room ID this message was forwarded from (null if not forwarded)
   TextColumn get forwardedFromRoom => text().nullable()();
 
