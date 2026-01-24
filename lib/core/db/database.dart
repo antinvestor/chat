@@ -595,6 +595,52 @@ class InviteLinkJoins extends Table {
   TextColumn get status => text().withDefault(const Constant('approved'))();
 }
 
+/// Analytics events table for local event storage
+///
+/// Stores analytics events locally before batch upload to backend.
+/// Events are marked as synced after successful upload.
+///
+/// Example:
+/// ```dart
+/// final pendingEvents = await (db.analyticsEvents.select()
+///   ..where((t) => t.isSynced.equals(false))
+/// ).get();
+/// ```
+class AnalyticsEvents extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Unique event identifier (UUID)
+  TextColumn get eventId => text()();
+
+  /// Event type (e.g., 'screen_view', 'message_sent')
+  TextColumn get eventType => text()();
+
+  /// Event name for custom events
+  TextColumn get eventName => text()();
+
+  /// User ID associated with the event (nullable for anonymous)
+  TextColumn get userId => text().nullable()();
+
+  /// Session ID for grouping events
+  TextColumn get sessionId => text().nullable()();
+
+  /// Screen name where event occurred
+  TextColumn get screenName => text().nullable()();
+
+  /// JSON-encoded event properties
+  TextColumn get properties => text().nullable()();
+
+  /// Timestamp when event occurred (milliseconds since epoch)
+  IntColumn get timestamp => integer()();
+
+  /// Whether the event has been synced to backend
+  BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when event was synced
+  IntColumn get syncedAt => integer().nullable()();
+}
+
 /// Call history table storing records of voice and video calls
 ///
 /// Tracks all calls made or received, including duration, type,
@@ -678,6 +724,7 @@ class CallHistory extends Table {
     InviteLinks,
     InviteLinkJoins,
     CallHistory,
+    AnalyticsEvents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -690,7 +737,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -834,6 +881,26 @@ class AppDatabase extends _$AppDatabase {
         // Migration from v12 to v13: Add group member limit columns
         await m.addColumn(rooms, rooms.memberLimit);
         await m.addColumn(rooms, rooms.memberLimitEnabled);
+      }
+      if (from <= 13) {
+        // Migration from v13 to v14: Add analytics events table
+        await m.createTable(analyticsEvents);
+        // Create index for querying unsynced events
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_analytics_events_synced
+          ON analytics_events(is_synced)
+          WHERE is_synced = 0
+        ''');
+        // Create index for querying by timestamp
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp
+          ON analytics_events(timestamp DESC)
+        ''');
+        // Create unique index on event_id
+        await customStatement('''
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_events_event_id
+          ON analytics_events(event_id)
+        ''');
       }
     },
     beforeOpen: (details) async {

@@ -31,6 +31,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       SettingsDefaults.liveLocationSharingEnabled;
   bool _fingerprintLockEnabled = SettingsDefaults.fingerprintLockEnabled;
   bool _screenshotPreventionEnabled = false;
+  bool _analyticsEnabled = true;
 
   @override
   void initState() {
@@ -55,6 +56,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
             _settingsService.liveLocationSharingEnabled;
         _fingerprintLockEnabled = _settingsService.fingerprintLockEnabled;
         _screenshotPreventionEnabled = screenshotService.isEnabled;
+        _analyticsEnabled = _settingsService.analyticsEnabled;
         _isInitialized = true;
       });
     }
@@ -209,6 +211,23 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                   ],
                 ),
 
+                // Data & Analytics section
+                _buildSettingsSection(
+                  context,
+                  title: 'Data & Analytics',
+                  items: [
+                    _buildSwitchItem(
+                      context,
+                      title: 'Usage analytics',
+                      subtitle:
+                          'Help improve Chat by sharing anonymous usage data. '
+                          'This includes app crashes and feature usage, never message content.',
+                      value: _analyticsEnabled,
+                      onChanged: _toggleAnalytics,
+                    ),
+                  ],
+                ),
+
                 // Info section
                 _buildInfoSection(context),
               ],
@@ -284,6 +303,12 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       setState(() => _screenshotPreventionEnabled = value);
       _showSettingsSavedSnackBar('Screenshot prevention');
     }
+  }
+
+  void _toggleAnalytics(bool value) {
+    setState(() => _analyticsEnabled = value);
+    _settingsService.setAnalyticsEnabled(value);
+    _showSettingsSavedSnackBar('Usage analytics');
   }
 
   void _showSettingsSavedSnackBar(String settingName) {
