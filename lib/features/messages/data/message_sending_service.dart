@@ -37,6 +37,7 @@ class MessageSendingService {
     this._thumbnailService,
     this._getSubscriptionIdForRoom,
   );
+
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
   final FileUploadService _fileUploadService;
