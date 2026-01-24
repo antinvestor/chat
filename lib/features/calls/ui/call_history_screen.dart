@@ -259,18 +259,8 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
 
   String _monthName(int month) {
     const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return months[month - 1];
   }
@@ -286,9 +276,9 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
       await callManager.startCall(call.roomId);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to start call: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start call: $e')),
+        );
       }
     }
   }
@@ -312,12 +302,12 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
       ),
     );
 
-    if ((confirmed ?? false) && call.id != null) {
+    if (confirmed == true && call.id != null) {
       await ref.read(callHistoryRepositoryProvider).deleteCall(call.id!);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Call deleted')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Call deleted')),
+        );
       }
     }
   }
@@ -345,14 +335,12 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
       ),
     );
 
-    if (confirmed ?? false) {
-      final count = await ref
-          .read(callHistoryRepositoryProvider)
-          .clearAllHistory();
+    if (confirmed == true) {
+      final count = await ref.read(callHistoryRepositoryProvider).clearAllHistory();
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Cleared $count calls')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cleared $count calls')),
+        );
       }
     }
   }
@@ -416,7 +404,9 @@ class _CallHistoryTile extends StatelessWidget {
             Text(
               call.isIncoming ? 'Incoming' : 'Outgoing',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: call.isMissed ? Colors.red : theme.colorScheme.outline,
+                color: call.isMissed
+                    ? Colors.red
+                    : theme.colorScheme.outline,
               ),
             ),
             if (call.wasAnswered && call.duration > 0) ...[
@@ -442,7 +432,9 @@ class _CallHistoryTile extends StatelessWidget {
             const SizedBox(width: 8),
             IconButton(
               icon: Icon(
-                call.callType == CallType.video ? Icons.videocam : Icons.phone,
+                call.callType == CallType.video
+                    ? Icons.videocam
+                    : Icons.phone,
                 color: AppTheme.primaryGreen,
               ),
               onPressed: onCallBack,

@@ -1,6 +1,6 @@
+import 'package:chat/features/calls/domain/call_history_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stawi/features/calls/domain/call_history_entry.dart';
 
 void main() {
   group('CallType', () {
@@ -49,10 +49,7 @@ void main() {
     test('fromValue returns correct direction', () {
       expect(CallDirection.fromValue(0), equals(CallDirection.outgoing));
       expect(CallDirection.fromValue(1), equals(CallDirection.incoming));
-      expect(
-        CallDirection.fromValue(99),
-        equals(CallDirection.outgoing),
-      ); // fallback
+      expect(CallDirection.fromValue(99), equals(CallDirection.outgoing)); // fallback
     });
   });
 
@@ -86,7 +83,7 @@ void main() {
   });
 
   group('CallHistoryEntry', () {
-    const baseEntry = CallHistoryEntry(
+    final baseEntry = CallHistoryEntry(
       id: 1,
       roomId: 'room-123',
       callerId: 'caller-123',
@@ -237,7 +234,10 @@ void main() {
     });
 
     test('copyWith creates copy with updated fields', () {
-      final copy = baseEntry.copyWith(duration: 300, status: CallStatus.missed);
+      final copy = baseEntry.copyWith(
+        duration: 300,
+        status: CallStatus.missed,
+      );
 
       expect(copy.duration, equals(300));
       expect(copy.status, equals(CallStatus.missed));
