@@ -45,14 +45,25 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
 
   final tokenManager = TokenManager(
     persistTokens: (accessToken, refreshToken) async {
+      // IMPORTANT: We only manage access token here.
+      // Refresh token is managed exclusively by AuthService.
+      //
+      // Why? When OAuth server uses refresh token rotation, AuthService saves
+      // the NEW refresh token to storage during refresh. But TokenManager's
+      // setAccessToken() calls persistTokens with its OLD in-memory refresh
+      // token, which would overwrite the fresh one - causing the next refresh
+      // to fail and the user to be logged out unexpectedly.
+      //
+      // By only managing access token here, we avoid this race condition.
+      // The only exception is logout (both tokens null) where we clear both.
       if (accessToken != null) {
         await storage.write(key: 'access_token', value: accessToken);
       } else {
         await storage.delete(key: 'access_token');
       }
-      if (refreshToken != null) {
-        await storage.write(key: 'refresh_token', value: refreshToken);
-      } else {
+
+      // Only clear refresh token during logout (when both tokens are null)
+      if (accessToken == null && refreshToken == null) {
         await storage.delete(key: 'refresh_token');
       }
     },

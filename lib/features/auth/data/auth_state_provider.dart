@@ -100,8 +100,11 @@ class AuthStateNotifier extends _$AuthStateNotifier {
       AppLogger.info('Logout initiated');
       final authRepo = ref.read(authRepositoryProvider);
       final onboardingRepo = ref.read(onboardingRepositoryProvider);
+      final tokenManager = ref.read(tokenManagerProvider);
 
+      // Clear tokens from both storage and TokenManager's in-memory cache
       await authRepo.logout();
+      await tokenManager.clearTokens();
       await onboardingRepo.reset(); // Clear onboarding state for next login
 
       // Check if provider is still mounted after async operation
