@@ -115,7 +115,8 @@ class ScreenshotPreventionService {
 
   /// Temporarily disable screenshot prevention (e.g., for sharing)
   ///
-  /// Call [restoreScreenshotPrevention] to re-enable if it was previously enabled.
+  /// Call [restoreScreenshotPrevention] to re-enable if it was previously
+  /// enabled.
   Future<void> temporarilyDisable() async {
     if (_isEnabled && _isApplied) {
       try {
@@ -127,7 +128,9 @@ class ScreenshotPreventionService {
         _isApplied = false;
         AppLogger.debug('Screenshot prevention temporarily disabled');
       } catch (e) {
-        AppLogger.warning('Failed to temporarily disable screenshot prevention');
+        AppLogger.warning(
+          'Failed to temporarily disable screenshot prevention',
+        );
       }
     }
   }
