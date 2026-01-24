@@ -64,6 +64,22 @@ class E2EEncryptionService {
     try {
       AppLogger.info('Initializing E2E encryption service with vodozemac');
 
+      // Initialize vodozemac Rust library if not already done
+      // We use try-catch because isInitialized() throws if the library
+      // hasn't been touched yet, and init() throws if already initialized
+      try {
+        if (!vod.isInitialized()) {
+          AppLogger.debug('Initializing vodozemac Rust library');
+          await vod.init();
+          AppLogger.debug('Vodozemac Rust library initialized');
+        }
+      } on StateError {
+        // Library not initialized yet - this is expected on first run
+        AppLogger.debug('Initializing vodozemac Rust library');
+        await vod.init();
+        AppLogger.debug('Vodozemac Rust library initialized');
+      }
+
       // Try to load existing Olm account from storage
       final pickledAccount = await _storage.read(key: 'olm_account_pickle');
       final pickleKey = await _getOrCreatePickleKeyBytes();

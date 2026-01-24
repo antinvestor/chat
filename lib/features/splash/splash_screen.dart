@@ -55,18 +55,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       _fadeController.forward();
     }
 
-    return Stack(
-      children: [
-        // Main app (hidden until interactive)
-        if (_showChild)
-          FadeTransition(opacity: _fadeAnimation, child: widget.child),
+    // Wrap Stack in Directionality since it's outside MaterialApp
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
+        children: [
+          // Main app (hidden until interactive)
+          if (_showChild)
+            FadeTransition(opacity: _fadeAnimation, child: widget.child),
 
-        // Splash screen (visible until interactive)
-        // Wrapped in Directionality and Theme since it's outside MaterialApp
-        if (!_showChild || _fadeController.value < 1.0)
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Theme(
+          // Splash screen (visible until interactive)
+          // Wrapped in Theme since it's outside MaterialApp
+          if (!_showChild || _fadeController.value < 1.0)
+            Theme(
               data: AppTheme.lightTheme,
               child: IgnorePointer(
                 ignoring: _showChild,
@@ -77,8 +78,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
