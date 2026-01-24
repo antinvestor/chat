@@ -75,8 +75,10 @@ class ConnectivityService {
 
   void _triggerSync() {
     // Restart the sync engine to process pending jobs
-    _syncEngine.stop();
-    _syncEngine.start();
+    // Use async stop to ensure clean shutdown before restart
+    _syncEngine.stopAsync().then((_) {
+      _syncEngine.start();
+    });
   }
 
   /// Check if currently connected to the internet

@@ -5,6 +5,7 @@ import 'package:antinvestor_api_common/antinvestor_api_common.dart'
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/auth/token_refresh_lock.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
 import 'auth_repository.dart';
@@ -35,10 +36,13 @@ class TokenRefreshService {
     this._authRepository,
     this._onLogoutNeeded, {
     Future<void> Function(String token)? onTokenRefreshed,
-  }) : _onTokenRefreshed = onTokenRefreshed;
+    TokenRefreshLock? tokenRefreshLock,
+  }) : _onTokenRefreshed = onTokenRefreshed,
+       _tokenRefreshLock = tokenRefreshLock;
   final AuthRepository _authRepository;
   final Future<void> Function() _onLogoutNeeded;
   final Future<void> Function(String token)? _onTokenRefreshed;
+  final TokenRefreshLock? _tokenRefreshLock;
   Timer? _refreshTimer;
   Timer? _scheduledRefreshTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -194,8 +198,36 @@ class TokenRefreshService {
 
   /// Perform token refresh with retry logic for transient errors
   Future<void> _performRefreshWithRetry() async {
-    final result = await _authRepository.refreshTokenWithResult();
+    // Use shared lock if available to prevent concurrent refreshes
+    final lock = _tokenRefreshLock;
+    if (lock != null) {
+      final lockResult = await lock.acquireAndRefresh(() async {
+        return _authRepository.refreshTokenWithResult();
+      });
 
+      // If lockResult is null, another refresh was in progress
+      if (lockResult == null) {
+        AppLogger.debug(
+          'Token refresh was handled by another caller (SyncEngine)',
+        );
+        _consecutiveFailures = 0;
+        await _scheduleNextRefresh();
+        return;
+      }
+
+      await _handleRefreshResult(lockResult);
+      return;
+    }
+
+    // No lock available, proceed normally
+    final result = await _authRepository.refreshTokenWithResult();
+    await _handleRefreshResult(result);
+  }
+
+  /// Handle the result of a token refresh operation
+  Future<void> _handleRefreshResult(
+    ({TokenRefreshResult result, dynamic token, String? error}) result,
+  ) async {
     switch (result.result) {
       case TokenRefreshResult.success:
         _consecutiveFailures = 0;
@@ -318,8 +350,9 @@ class TokenRefreshService {
 TokenRefreshService tokenRefreshService(Ref ref) {
   final authRepository = ref.watch(authRepositoryProvider);
   final tokenManager = ref.watch(tokenManagerProvider);
+  final tokenRefreshLock = ref.watch(tokenRefreshLockProvider);
 
-  // Create service with logout callback and TokenManager sync
+  // Create service with logout callback, TokenManager sync, and shared lock
   final service = TokenRefreshService(
     authRepository,
     () async {
@@ -334,6 +367,7 @@ TokenRefreshService tokenRefreshService(Ref ref) {
 
       AppLogger.info('Auth state invalidated - user should see login screen');
     },
+    tokenRefreshLock: tokenRefreshLock,
     onTokenRefreshed: (String newToken) async {
       // Update TokenManager's in-memory cache so Connect RPC clients use the new token
       await tokenManager.setAccessToken(newToken);

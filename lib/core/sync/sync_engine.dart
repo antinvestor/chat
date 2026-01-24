@@ -5,6 +5,7 @@ import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     as common_types;
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/data/auth_repository.dart';
@@ -14,6 +15,7 @@ import '../../features/messages/data/read_receipt_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
+import '../auth/token_refresh_lock.dart';
 import '../crypto/e2e_encryption_service.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
@@ -41,11 +43,12 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final tokenManager = ref.watch(tokenManagerProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   final encryptionService = ref.watch(e2eEncryptionServiceProvider);
+  final tokenRefreshLock = ref.watch(tokenRefreshLockProvider);
 
   // Initialize encryption service
   await encryptionService.initialize();
 
-  return SyncEngine(
+  final engine = SyncEngine(
     gatewayClient,
     chatClient,
     ref.watch(messageRepositoryProvider),
@@ -57,40 +60,62 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     ref.watch(readReceiptRepositoryProvider),
     onTokenRefresh: () async {
       AppLogger.debug('SyncEngine: Starting token refresh via authRepo');
-      try {
-        // Use the robust token refresh with retry logic
-        final result = await authRepo.ensureValidAccessTokenWithStatus();
-        final newToken = result.token;
+      // Use the shared lock to prevent concurrent refreshes
+      final result = await tokenRefreshLock.acquireAndRefresh(() async {
+        try {
+          // Use the robust token refresh with retry logic
+          final refreshResult = await authRepo
+              .ensureValidAccessTokenWithStatus();
+          final newToken = refreshResult.token;
+          AppLogger.debug(
+            'SyncEngine: Token refresh result',
+            data: {
+              'hasToken': newToken != null,
+              'needsRelogin': refreshResult.needsRelogin,
+            },
+          );
+
+          // If re-login is required, throw a specific exception to signal permanent failure
+          if (refreshResult.needsRelogin) {
+            AppLogger.warning('SyncEngine: Token refresh requires re-login');
+            throw TokenRefreshPermanentError('User must re-authenticate');
+          }
+
+          // Update TokenManager's in-memory cache so subsequent requests use the new token
+          if (newToken != null) {
+            await tokenManager.setAccessToken(newToken);
+            AppLogger.debug('SyncEngine: TokenManager updated with new token');
+          }
+          return newToken;
+        } on Exception catch (e, st) {
+          AppLogger.error(
+            'SyncEngine: Token refresh failed with exception',
+            error: e,
+            stackTrace: st,
+          );
+          rethrow;
+        }
+      });
+
+      // If result is null, another refresh was in progress and completed
+      // Return the current token from storage
+      if (result == null) {
         AppLogger.debug(
-          'SyncEngine: Token refresh result',
-          data: {
-            'hasToken': newToken != null,
-            'needsRelogin': result.needsRelogin,
-          },
+          'SyncEngine: Token refresh was handled by another caller',
         );
-
-        // If re-login is required, throw a specific exception to signal permanent failure
-        if (result.needsRelogin) {
-          AppLogger.warning('SyncEngine: Token refresh requires re-login');
-          throw TokenRefreshPermanentError('User must re-authenticate');
-        }
-
-        // Update TokenManager's in-memory cache so subsequent requests use the new token
-        if (newToken != null) {
-          await tokenManager.setAccessToken(newToken);
-          AppLogger.debug('SyncEngine: TokenManager updated with new token');
-        }
-        return newToken;
-      } on Exception catch (e, st) {
-        AppLogger.error(
-          'SyncEngine: Token refresh failed with exception',
-          error: e,
-          stackTrace: st,
-        );
-        rethrow;
+        return authRepo.getAccessToken();
       }
+      return result;
     },
   );
+
+  // Register lifecycle observer
+  engine._registerLifecycleObserver();
+
+  // Cleanup on dispose
+  ref.onDispose(engine.dispose);
+
+  return engine;
 });
 
 /// Connection state for the real-time sync engine
@@ -122,6 +147,7 @@ typedef TokenRefreshCallback = Future<String?> Function();
 /// - Uploading pending messages from the offline queue
 /// - Handling typing indicators and read receipts
 /// - Managing connection state with automatic reconnection
+/// - Pausing on app background and resuming on foreground
 ///
 /// Example:
 /// ```dart
@@ -136,7 +162,7 @@ typedef TokenRefreshCallback = Future<String?> Function();
 /// // Send a message
 /// await syncEngine.sendSignal(event);
 /// ```
-class SyncEngine {
+class SyncEngine with WidgetsBindingObserver {
   SyncEngine(
     this._gatewayClient,
     this._chatClient,
@@ -162,16 +188,22 @@ class SyncEngine {
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
-  Timer? _uploadTimer;
+  StreamSubscription<List<domain_job.PendingJob>>? _jobWatchSubscription;
   bool _isUploading = false;
   bool _isConnected = false;
   bool _shouldStop = false; // Flag to stop the download loop
+  bool _isPaused = false; // Flag to track if paused due to app lifecycle
   int _reconnectAttempts = 0;
   int _authErrorCount = 0; // Track consecutive auth errors
   final Set<String> _processedEventIds = {}; // For event deduplication
 
+  // Completer for graceful stop/start coordination
+  Completer<void>? _stopCompleter;
+  bool _isLifecycleObserverRegistered = false;
+
   // Configuration
   static const _maxAuthErrors = 3; // Max auth errors before giving up
+  static const _streamReadTimeout = Duration(seconds: 60); // Read timeout
 
   final _typingEventsController = StreamController<pb.TypingEvent>.broadcast();
   Stream<pb.TypingEvent> get typingEvents => _typingEventsController.stream;
@@ -186,23 +218,101 @@ class SyncEngine {
   Stream<SyncConnectionState> get connectionState =>
       _connectionStateController.stream;
 
+  /// Get current connection state synchronously
+  SyncConnectionState get currentConnectionState => _isConnected
+      ? SyncConnectionState.connected
+      : SyncConnectionState.disconnected;
+
   // Exponential backoff configuration
   static const _initialBackoffMs = 1000; // 1 second
   static const _maxBackoffMs = 30000; // 30 seconds
   static const _maxReconnectAttempts = 5;
 
+  /// Register the lifecycle observer
+  void _registerLifecycleObserver() {
+    if (!_isLifecycleObserverRegistered) {
+      WidgetsBinding.instance.addObserver(this);
+      _isLifecycleObserverRegistered = true;
+      AppLogger.debug('SyncEngine: Lifecycle observer registered');
+    }
+  }
+
+  /// Handle app lifecycle changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _onAppResumed();
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        _onAppBackgrounded();
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // App is being destroyed or hidden
+        break;
+    }
+  }
+
+  /// Called when app comes to foreground
+  void _onAppResumed() {
+    if (_isPaused) {
+      AppLogger.info('SyncEngine: App resumed, restarting sync');
+      _isPaused = false;
+      start();
+    }
+  }
+
+  /// Called when app goes to background
+  void _onAppBackgrounded() {
+    if (!_isPaused && _isConnected) {
+      AppLogger.info('SyncEngine: App backgrounded, pausing sync');
+      _isPaused = true;
+      stop();
+    }
+  }
+
   void start() {
+    // Don't start if paused due to app lifecycle
+    if (_isPaused) {
+      AppLogger.debug('SyncEngine: Ignoring start() while paused');
+      return;
+    }
+
     _shouldStop = false;
     _startDownloadLoop();
     _startUploadLoop();
+  }
+
+  /// Stop the sync engine and wait for it to fully stop
+  Future<void> stopAsync() async {
+    if (_stopCompleter != null) {
+      // Already stopping, wait for completion
+      await _stopCompleter!.future;
+      return;
+    }
+
+    _stopCompleter = Completer<void>();
+    _shouldStop = true;
+
+    _connectSubscription?.cancel();
+    _connectSubscription = null;
+    _jobWatchSubscription?.cancel();
+    _jobWatchSubscription = null;
+    _isConnected = false;
+
+    // Small delay to ensure loops have exited
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    _stopCompleter?.complete();
+    _stopCompleter = null;
   }
 
   void stop() {
     _shouldStop = true; // Signal download loop to stop
     _connectSubscription?.cancel();
     _connectSubscription = null;
-    _uploadTimer?.cancel();
-    _uploadTimer = null;
+    _jobWatchSubscription?.cancel();
+    _jobWatchSubscription = null;
     _isConnected = false;
     // Note: Don't close stream controllers here as they may be reused
     // They will be closed when the engine is disposed
@@ -210,6 +320,12 @@ class SyncEngine {
 
   /// Permanently dispose of the sync engine (call only when no longer needed)
   void dispose() {
+    // Unregister lifecycle observer
+    if (_isLifecycleObserverRegistered) {
+      WidgetsBinding.instance.removeObserver(this);
+      _isLifecycleObserverRegistered = false;
+    }
+
     stop();
     _typingEventsController.close();
     _signalingEventsController.close();
@@ -299,30 +415,22 @@ class SyncEngine {
         _authErrorCount = 0; // Reset auth error count on successful connection
         _connectionStateController.add(SyncConnectionState.connected);
 
-        // Process stream events with yield to prevent blocking
-        await for (final response in stream) {
-          // Use microtask to ensure UI responsiveness
-          Future.microtask(() async {
-            try {
-              await _handleConnectResponse(response);
-            } catch (e, stackTrace) {
-              AppLogger.error(
-                'Error handling stream response in microtask',
-                error: e,
-                stackTrace: stackTrace,
-              );
-            }
-          });
-        }
+        // Process stream events with timeout to detect stalled connections
+        await _processStreamWithTimeout(stream);
       } catch (e, stackTrace) {
         final errorStr = e.toString().toLowerCase();
         final isAuthError = _isAuthenticationError(errorStr);
         final isNormalDisconnect = _isNormalDisconnect(errorStr);
+        final isTimeout = e is TimeoutException;
 
         // Log appropriately based on error type
         if (isNormalDisconnect) {
           // Normal server disconnection - just log as debug, will auto-reconnect
           AppLogger.debug('Sync connection closed by server, will reconnect');
+        } else if (isTimeout) {
+          AppLogger.warning(
+            'Sync connection timed out (no data for ${_streamReadTimeout.inSeconds}s), reconnecting',
+          );
         } else {
           AppLogger.error(
             'Sync connection error',
@@ -361,8 +469,8 @@ class SyncEngine {
                 AppLogger.info(
                   'Token refreshed after auth error, will retry connection',
                 );
-                _reconnectAttempts =
-                    0; // Reset reconnect attempts on successful refresh
+                _reconnectAttempts = 0;
+                _authErrorCount = 0; // Reset on successful refresh
                 // Small delay to prevent tight loop if refresh succeeds but connection still fails
                 await Future.delayed(const Duration(milliseconds: 500));
               } else {
@@ -393,7 +501,7 @@ class SyncEngine {
             continue;
           }
         } else {
-          // Not an auth error, reset auth error count
+          // Not an auth error, reset auth error count after successful backoff
           _authErrorCount = 0;
         }
       } finally {
@@ -425,6 +533,47 @@ class SyncEngine {
       }
 
       _reconnectAttempts++;
+    }
+  }
+
+  /// Process stream events with a timeout to detect stalled connections
+  Future<void> _processStreamWithTimeout(
+    Stream<pb.StreamResponse> stream,
+  ) async {
+    // Track last event time for timeout detection
+    var lastEventTime = DateTime.now();
+
+    await for (final response in stream) {
+      // Check for timeout since last event
+      final now = DateTime.now();
+      if (now.difference(lastEventTime) > _streamReadTimeout) {
+        throw TimeoutException(
+          'No data received for ${_streamReadTimeout.inSeconds} seconds',
+        );
+      }
+      lastEventTime = now;
+
+      // Check if we should stop
+      if (_shouldStop) {
+        AppLogger.debug('Stop requested during stream processing');
+        break;
+      }
+
+      // Reset auth error count on successful data receipt
+      _authErrorCount = 0;
+
+      // Use microtask to ensure UI responsiveness
+      Future.microtask(() async {
+        try {
+          await _handleConnectResponse(response);
+        } catch (e, stackTrace) {
+          AppLogger.error(
+            'Error handling stream response in microtask',
+            error: e,
+            stackTrace: stackTrace,
+          );
+        }
+      });
     }
   }
 
@@ -839,40 +988,59 @@ class SyncEngine {
   }
 
   void _startUploadLoop() {
-    // Cancel existing timer to prevent multiple timers running
-    _uploadTimer?.cancel();
+    // Cancel existing subscription to prevent multiple watchers
+    _jobWatchSubscription?.cancel();
 
     if (_shouldStop) return;
 
-    _uploadTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-      if (_isUploading || !_isConnected || _shouldStop) return;
-      _isUploading = true;
+    // Use reactive database watching instead of polling
+    _jobWatchSubscription = _jobRepo.watchPendingJobs().listen(
+      (jobs) async {
+        // Only process if connected and not already uploading
+        if (_isUploading || !_isConnected || _shouldStop) return;
+        if (jobs.isEmpty) return;
 
-      try {
-        final jobs = await _jobRepo.getPendingJobs();
+        _isUploading = true;
+        AppLogger.debug(
+          'Processing pending jobs',
+          data: {'count': jobs.length},
+        );
 
-        // Process each job in a microtask to prevent blocking
-        for (final job in jobs) {
-          Future.microtask(() async {
+        try {
+          // Process jobs sequentially to avoid overwhelming the server
+          for (final job in jobs) {
+            if (_shouldStop || !_isConnected) break;
+
             try {
               await _processJob(job);
             } catch (e, stackTrace) {
               AppLogger.error(
-                'Error processing job in microtask',
+                'Error processing job',
                 error: e,
                 stackTrace: stackTrace,
                 data: {'jobId': job.id, 'jobType': job.type.toString()},
               );
             }
-          });
+          }
+        } catch (e, stackTrace) {
+          // Log but don't crash
+          AppLogger.error(
+            'Upload loop error',
+            error: e,
+            stackTrace: stackTrace,
+          );
+        } finally {
+          _isUploading = false;
         }
-      } catch (e, stackTrace) {
-        // Log but don't crash
-        AppLogger.error('Upload loop error', error: e, stackTrace: stackTrace);
-      } finally {
-        _isUploading = false;
-      }
-    });
+      },
+      onError: (Object e, StackTrace stackTrace) {
+        AppLogger.error(
+          'Job watch stream error',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      },
+    );
   }
 
   Future<void> _processJob(domain_job.PendingJob job) async {
