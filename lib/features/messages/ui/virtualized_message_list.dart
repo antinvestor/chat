@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../advanced/ui/motion_bubble.dart';
 import '../../advanced/ui/transaction_bubble.dart';
-import '../../rooms/data/room_subscription_service.dart';
 import '../data/message_forwarding_service.dart';
 import '../data/message_sending_service.dart';
 import '../domain/room_event.dart';
@@ -72,6 +71,7 @@ class VirtualizedMessageList extends ConsumerStatefulWidget {
     required this.onRetryMessage,
     required this.onDeleteMessage,
     super.key,
+    this.currentUserSubscriptionId,
     this.config = const VirtualizedMessageListConfig(),
     this.onLoadMore,
     this.isLoadingMore = false,
@@ -82,6 +82,11 @@ class VirtualizedMessageList extends ConsumerStatefulWidget {
 
   final String roomId;
   final List<RoomEvent> messages;
+
+  /// Current user's subscription ID for this room
+  /// Used to determine if a message is from the current user (isMine)
+  /// Pass this from parent to avoid async race conditions
+  final String? currentUserSubscriptionId;
   final VirtualizedMessageListConfig config;
   final Future<void> Function()? onLoadMore;
   final bool isLoadingMore;
@@ -350,6 +355,7 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
     return _OptimizedMessageItem(
       key: ValueKey(message.id),
       message: message,
+      currentUserSubscriptionId: widget.currentUserSubscriptionId,
       showDateHeader: groupingInfo.showDateHeader,
       shouldGroupWithPrevious: groupingInfo.shouldGroupWithPrevious,
       removeTail: groupingInfo.removeTail,
@@ -467,12 +473,16 @@ class _OptimizedMessageItem extends ConsumerStatefulWidget {
     required this.onRetryMessage,
     required this.onDeleteMessage,
     super.key,
+    this.currentUserSubscriptionId,
     this.enableKeepAlive = true,
     this.onSizeChanged,
     this.onForwardMessage,
   });
 
   final RoomEvent message;
+
+  /// Current user's subscription ID - passed from parent to avoid async issues
+  final String? currentUserSubscriptionId;
   final bool showDateHeader;
   final bool shouldGroupWithPrevious;
   final bool removeTail;
@@ -520,11 +530,11 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
 
-    // Get current user's subscription ID for this room to determine if message is from me
-    final currentSubscriptionId = ref.watch(
-      currentUserSubscriptionIdProvider(widget.message.roomId),
-    );
-    final isMe = widget.message.senderId == currentSubscriptionId.value;
+    // Use subscription ID passed from parent to determine if message is from me
+    // This avoids async race conditions that caused messages to appear on wrong side
+    final isMe =
+        widget.currentUserSubscriptionId != null &&
+        widget.message.senderId == widget.currentUserSubscriptionId;
 
     // Use shared validation logic from MessageSendingService
     final canEdit = MessageSendingService.canEditMessage(

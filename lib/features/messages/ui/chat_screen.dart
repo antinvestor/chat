@@ -555,11 +555,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Send read receipts for messages being viewed
     _sendReadReceipts(messages);
 
+    // Get current user's subscription ID at the list level (not per-message)
+    // This ensures consistent "isMine" detection and avoids async race conditions
+    final currentSubscriptionIdAsync = ref.watch(
+      currentUserSubscriptionIdProvider(widget.roomId),
+    );
+
     // Use the optimized VirtualizedMessageList for better performance
     // with large message lists (10,000+ messages)
     return VirtualizedMessageList(
       roomId: widget.roomId,
       messages: messages,
+      currentUserSubscriptionId: currentSubscriptionIdAsync.value,
       scrollController: _scrollController,
       isLoadingMore: _isLoadingMore,
       hasMoreMessages: _hasMoreMessages,
