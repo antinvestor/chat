@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/networking/client.dart';
 import '../../onboarding/data/onboarding_repository.dart';
 import 'auth_repository.dart';
 
@@ -68,6 +69,13 @@ class AuthStateNotifier extends _$AuthStateNotifier {
         state = const AsyncValue.data(AuthState.unauthenticated);
         return;
       }
+
+      // CRITICAL: Reload TokenManager from storage after login
+      // AuthService saves tokens to secure storage, but TokenManager has its own
+      // in-memory cache that needs to be refreshed to pick up the new tokens.
+      // Without this, API clients won't have access to the freshly stored tokens.
+      final tokenManager = ref.read(tokenManagerProvider);
+      await reloadTokenManager(tokenManager);
 
       state = const AsyncValue.data(AuthState.authenticated);
       AppLogger.info('Login successful, state changed to authenticated');

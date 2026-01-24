@@ -318,3 +318,17 @@ final getAuthHeadersProvider = FutureProvider.autoDispose<connect.Headers>((
   }
   return headers;
 });
+
+/// Reloads TokenManager from secure storage
+///
+/// IMPORTANT: Call this after login to ensure API clients have the new tokens.
+/// After AuthService saves tokens to storage, TokenManager still has its old
+/// (empty) in-memory cache. This method reloads from storage.
+Future<void> reloadTokenManager(TokenManager tokenManager) async {
+  AppLogger.debug('Reloading TokenManager from storage');
+  await tokenManager.initialize();
+  AppLogger.debug(
+    'TokenManager reloaded',
+    data: {'hasToken': tokenManager.accessToken != null},
+  );
+}
