@@ -8,6 +8,7 @@ library;
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart';
 import 'package:antinvestor_api_common/antinvestor_api_common.dart';
 import 'package:antinvestor_api_device/antinvestor_api_device.dart';
+import 'package:antinvestor_api_files/antinvestor_api_files.dart';
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/io.dart' as connect_io;
@@ -19,6 +20,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../auth/token_refresh_coordinator.dart';
 import '../logging/app_logger.dart';
+import 'api_config.dart';
 import 'certificate_pinning.dart';
 
 /// Secure storage provider for token access
@@ -220,6 +222,7 @@ final chatClientProvider = FutureProvider<ChatClient>((ref) async {
 
   return newChatClient(
     createTransport: createTransportFactory(certificatePinning),
+    endpoint: ApiConfig.chatBaseUrl,
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
   );
@@ -236,6 +239,7 @@ final gatewayClientProvider = FutureProvider<GatewayClient>((ref) async {
 
   return newGatewayClient(
     createTransport: createTransportFactory(certificatePinning),
+    endpoint: ApiConfig.gatewayBaseUrl,
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
   );
@@ -252,6 +256,7 @@ final deviceClientProvider = FutureProvider<DeviceClient>((ref) async {
 
   return newDeviceClient(
     createTransport: createTransportFactory(certificatePinning),
+    endpoint: ApiConfig.devicesBaseUrl,
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
   );
@@ -268,6 +273,24 @@ final profileClientProvider = FutureProvider<ProfileClient>((ref) async {
 
   return newProfileClient(
     createTransport: createTransportFactory(certificatePinning),
+    endpoint: ApiConfig.profileBaseUrl,
+    tokenManager: tokenManager,
+    onTokenRefresh: onTokenRefresh,
+  );
+});
+
+/// Files client provider - uses newFilesClient with proper interceptors
+final filesClientProvider = FutureProvider<FilesClient>((ref) async {
+  final tokenManager = ref.watch(tokenManagerProvider);
+  final onTokenRefresh = ref.watch(tokenRefreshCallbackProvider);
+  final certificatePinning = ref.watch(certificatePinningProvider);
+
+  // Initialize token manager if not already initialized
+  await tokenManager.initialize();
+
+  return newFilesClient(
+    createTransport: createTransportFactory(certificatePinning),
+    endpoint: ApiConfig.filesBaseUrl,
     tokenManager: tokenManager,
     onTokenRefresh: onTokenRefresh,
   );
@@ -299,6 +322,13 @@ final profileServiceClientProvider = FutureProvider<ProfileServiceClient>((
   ref,
 ) async {
   final client = await ref.watch(profileClientProvider.future);
+  return client.stub;
+});
+
+final filesServiceClientProvider = FutureProvider<FilesServiceClient>((
+  ref,
+) async {
+  final client = await ref.watch(filesClientProvider.future);
   return client.stub;
 });
 
