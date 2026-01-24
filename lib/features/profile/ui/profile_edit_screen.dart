@@ -584,11 +584,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     }
   }
 
-  /// Resend verification code
-  Future<void> _resendVerificationCode(ContactInfo contact) async {
-    await _startVerification(contact);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
