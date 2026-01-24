@@ -17,6 +17,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/auth/data/auth_repository.dart';
+import '../auth/token_refresh_lock.dart';
+import '../logging/app_logger.dart';
 import 'certificate_pinning.dart';
 
 /// Secure storage provider for token access
@@ -31,9 +33,15 @@ final secureStorageProvider = Provider<FlutterSecureStorage>(
 /// - Reactive refresh on 401 (via interceptor)
 /// - Concurrent refresh prevention
 /// - Logout on permanent errors
+///
+/// CRITICAL: The onRefreshToken callback uses TokenRefreshLock to prevent
+/// race conditions with TokenRefreshService and SyncEngine. Without this,
+/// multiple concurrent refresh attempts could reuse the same refresh token,
+/// causing the OAuth2 server to revoke all tokens.
 final tokenManagerProvider = Provider<TokenManager>((ref) {
   final storage = ref.watch(secureStorageProvider);
   final authRepo = ref.watch(authRepositoryProvider);
+  final tokenRefreshLock = ref.watch(tokenRefreshLockProvider);
 
   final tokenManager = TokenManager(
     persistTokens: (accessToken, refreshToken) async {
@@ -57,16 +65,39 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
       return null;
     },
     onRefreshToken: (String? refreshToken) async {
-      // Use the auth repository to refresh the token via OIDC
-      final result = await authRepo.refreshTokenWithResult();
-      if (result.result != TokenRefreshResult.success) {
-        throw Exception(result.error ?? 'Token refresh failed');
+      // CRITICAL: Use shared lock to prevent concurrent refresh token usage
+      // This coordinates with TokenRefreshService and SyncEngine to ensure
+      // the refresh token is only used once at a time
+      AppLogger.debug('TokenManager: onRefreshToken called, acquiring lock');
+
+      final result = await tokenRefreshLock.acquireAndRefresh(() async {
+        AppLogger.debug('TokenManager: Lock acquired, performing refresh');
+        final refreshResult = await authRepo.refreshTokenWithResult();
+        if (refreshResult.result != TokenRefreshResult.success) {
+          throw Exception(refreshResult.error ?? 'Token refresh failed');
+        }
+        final newToken = await authRepo.getAccessToken();
+        if (newToken == null) {
+          throw Exception('Failed to get new access token after refresh');
+        }
+        AppLogger.debug('TokenManager: Refresh successful');
+        return newToken;
+      });
+
+      // If result is null, another refresh was in progress and completed
+      // Get the token from storage (which should now have the fresh token)
+      if (result == null) {
+        AppLogger.debug(
+          'TokenManager: Refresh was handled by another caller, getting token from storage',
+        );
+        final newToken = await authRepo.getAccessToken();
+        if (newToken == null) {
+          throw Exception('No access token available after concurrent refresh');
+        }
+        return newToken;
       }
-      final newToken = await authRepo.getAccessToken();
-      if (newToken == null) {
-        throw Exception('Failed to get new access token after refresh');
-      }
-      return newToken;
+
+      return result;
     },
     onLogout: () async {
       // Clear auth state when permanent error occurs
