@@ -87,6 +87,10 @@ class Rooms extends Table {
   /// JSON-encoded room metadata (avatar, description, etc.)
   TextColumn get metadata => text().nullable()();
 
+  /// Disappearing messages timeout in seconds (null = disabled)
+  /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
+  IntColumn get disappearingTimeout => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -182,6 +186,23 @@ class RoomEvents extends Table {
 
   /// Error message if send failed
   TextColumn get errorMessage => text().nullable()();
+
+  /// Room ID this message was forwarded from (null if not forwarded)
+  TextColumn get forwardedFromRoom => text().nullable()();
+
+  /// Event ID this message was forwarded from (null if not forwarded)
+  TextColumn get forwardedFromEvent => text().nullable()();
+
+  /// Number of times this message has been forwarded
+  IntColumn get forwardCount => integer().withDefault(const Constant(0))();
+
+  /// Whether this message is restricted from being forwarded
+  BoolColumn get forwardRestricted =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when this message should be deleted (for disappearing messages)
+  /// Null means the message does not expire
+  IntColumn get expiresAt => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -420,6 +441,123 @@ class ReadReceipts extends Table {
   IntColumn get readAt => integer()();
 }
 
+/// User reports for abuse/spam/harassment
+///
+/// Stores reports submitted by users about other users.
+/// Reports are sent to the backend for review and action.
+///
+/// Example:
+/// ```dart
+/// final reports = await db.reports.select().get();
+/// ```
+class Reports extends Table {
+  /// Unique report identifier
+  TextColumn get id => text()();
+
+  /// Profile ID of the user being reported
+  TextColumn get reportedUserId => text()();
+
+  /// Report reason category (spam, harassment, inappropriate_content, other)
+  TextColumn get reason => text()();
+
+  /// Additional details provided by the reporter
+  TextColumn get details => text().nullable()();
+
+  /// JSON array of event IDs used as evidence
+  TextColumn get evidenceEventIds => text().nullable()();
+
+  /// Timestamp when the report was created (milliseconds since epoch)
+  IntColumn get reportedAt => integer()();
+
+  /// Report status: pending, reviewed, resolved, dismissed
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Invite links for group room joining
+///
+/// Stores shareable invite links that allow users to join rooms
+/// via a unique code. Links can have expiration times, max uses,
+/// and can be revoked by admins.
+///
+/// Example:
+/// ```dart
+/// final link = await db.inviteLinks.select()
+///   .where((l) => l.code.equals('abc123'))
+///   .getSingleOrNull();
+/// if (link != null && !link.revoked) {
+///   // Process invite
+/// }
+/// ```
+class InviteLinks extends Table {
+  /// Unique invite link identifier
+  TextColumn get id => text()();
+
+  /// Room this invite links to (foreign key)
+  TextColumn get roomId => text().references(Rooms, #id)();
+
+  /// Unique invite code for URL (e.g., chat.app/join/{code})
+  TextColumn get code => text().unique()();
+
+  /// Profile ID of the user who created this link
+  TextColumn get createdBy => text()();
+
+  /// Creation timestamp (milliseconds since epoch)
+  IntColumn get createdAt => integer()();
+
+  /// Optional expiration timestamp (milliseconds since epoch, null = never expires)
+  IntColumn get expiresAt => integer().nullable()();
+
+  /// Optional maximum number of uses (null = unlimited)
+  IntColumn get maxUses => integer().nullable()();
+
+  /// Current number of times this link has been used
+  IntColumn get useCount => integer().withDefault(const Constant(0))();
+
+  /// Whether this link has been revoked by an admin
+  BoolColumn get revoked => boolean().withDefault(const Constant(false))();
+
+  /// Whether joining via this link requires admin approval
+  BoolColumn get requiresApproval =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Optional custom name/label for the link
+  TextColumn get name => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Tracks users who joined via invite links
+///
+/// Records each use of an invite link for analytics and
+/// "see who joined" functionality.
+///
+/// Example:
+/// ```dart
+/// final joins = await (db.inviteLinkJoins.select()
+///   ..where((j) => j.inviteLinkId.equals(linkId))
+/// ).get();
+/// ```
+class InviteLinkJoins extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// The invite link that was used
+  TextColumn get inviteLinkId => text().references(InviteLinks, #id)();
+
+  /// Profile ID of the user who joined
+  TextColumn get profileId => text()();
+
+  /// Timestamp when the user joined (milliseconds since epoch)
+  IntColumn get joinedAt => integer()();
+
+  /// Approval status: 'approved', 'pending', 'rejected'
+  TextColumn get status => text().withDefault(const Constant('approved'))();
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -446,6 +584,9 @@ class ReadReceipts extends Table {
     UserSettings,
     Drafts,
     ReadReceipts,
+    Reports,
+    InviteLinks,
+    InviteLinkJoins,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -458,7 +599,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -513,6 +654,47 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('''
           CREATE UNIQUE INDEX IF NOT EXISTS idx_read_receipts_unique
           ON read_receipts(event_id, profile_id)
+        ''');
+      }
+      if (from <= 8) {
+        // Migration from v8 to v9: Add message forwarding columns
+        await m.addColumn(roomEvents, roomEvents.forwardedFromRoom);
+        await m.addColumn(roomEvents, roomEvents.forwardedFromEvent);
+        await m.addColumn(roomEvents, roomEvents.forwardCount);
+        await m.addColumn(roomEvents, roomEvents.forwardRestricted);
+        // Migration from v8 to v9: Add reports table for user reports
+        await m.createTable(reports);
+        // Create index for efficient querying by reported user
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_reports_reported_user_id
+          ON reports(reported_user_id)
+        ''');
+        // Migration from v8 to v9: Add invite links tables
+        await m.createTable(inviteLinks);
+        await m.createTable(inviteLinkJoins);
+        // Create index for efficient querying by room
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_invite_links_room_id
+          ON invite_links(room_id)
+        ''');
+        // Create index for efficient querying by code
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_invite_links_code
+          ON invite_links(code)
+        ''');
+        // Create index for efficient querying joins by link
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_invite_link_joins_link_id
+          ON invite_link_joins(invite_link_id)
+        ''');
+        // Add disappearing messages support
+        await m.addColumn(rooms, rooms.disappearingTimeout);
+        await m.addColumn(roomEvents, roomEvents.expiresAt);
+        // Create index for efficient expiry checking
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_room_events_expires_at
+          ON room_events(expires_at)
+          WHERE expires_at IS NOT NULL
         ''');
       }
     },
@@ -630,6 +812,10 @@ class AppDatabase extends _$AppDatabase {
     redactedBy: row.readNullable<String>('redacted_by'),
     retryCount: row.readNullable<int>('retry_count') ?? 0,
     errorMessage: row.readNullable<String>('error_message'),
+    forwardedFromRoom: row.readNullable<String>('forwarded_from_room'),
+    forwardedFromEvent: row.readNullable<String>('forwarded_from_event'),
+    forwardCount: row.readNullable<int>('forward_count') ?? 0,
+    forwardRestricted: row.readNullable<bool>('forward_restricted') ?? false,
   );
 
   /// Search messages by text content across all rooms

@@ -16,7 +16,9 @@ T _$identity<T>(T value) => value;
 mixin _$Room {
 
  String get id; String get name; String get type;// 'direct' or 'group'
- String? get lastEventId; int get lastEventIndex; int get unreadCount; Map<String, dynamic>? get metadata;
+ String? get lastEventId; int get lastEventIndex; int get unreadCount; Map<String, dynamic>? get metadata;/// Disappearing messages timeout in seconds (null = disabled)
+/// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
+ int? get disappearingTimeout;
 /// Create a copy of Room
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +31,16 @@ $RoomCopyWith<Room> get copyWith => _$RoomCopyWithImpl<Room>(this as Room, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Room&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.lastEventId, lastEventId) || other.lastEventId == lastEventId)&&(identical(other.lastEventIndex, lastEventIndex) || other.lastEventIndex == lastEventIndex)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&const DeepCollectionEquality().equals(other.metadata, metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Room&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.lastEventId, lastEventId) || other.lastEventId == lastEventId)&&(identical(other.lastEventIndex, lastEventIndex) || other.lastEventIndex == lastEventIndex)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&const DeepCollectionEquality().equals(other.metadata, metadata)&&(identical(other.disappearingTimeout, disappearingTimeout) || other.disappearingTimeout == disappearingTimeout));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,type,lastEventId,lastEventIndex,unreadCount,const DeepCollectionEquality().hash(metadata));
+int get hashCode => Object.hash(runtimeType,id,name,type,lastEventId,lastEventIndex,unreadCount,const DeepCollectionEquality().hash(metadata),disappearingTimeout);
 
 @override
 String toString() {
-  return 'Room(id: $id, name: $name, type: $type, lastEventId: $lastEventId, lastEventIndex: $lastEventIndex, unreadCount: $unreadCount, metadata: $metadata)';
+  return 'Room(id: $id, name: $name, type: $type, lastEventId: $lastEventId, lastEventIndex: $lastEventIndex, unreadCount: $unreadCount, metadata: $metadata, disappearingTimeout: $disappearingTimeout)';
 }
 
 
@@ -49,7 +51,7 @@ abstract mixin class $RoomCopyWith<$Res>  {
   factory $RoomCopyWith(Room value, $Res Function(Room) _then) = _$RoomCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String type, String? lastEventId, int lastEventIndex, int unreadCount, Map<String, dynamic>? metadata
+ String id, String name, String type, String? lastEventId, int lastEventIndex, int unreadCount, Map<String, dynamic>? metadata, int? disappearingTimeout
 });
 
 
@@ -66,7 +68,7 @@ class _$RoomCopyWithImpl<$Res>
 
 /// Create a copy of Room
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? type = null,Object? lastEventId = freezed,Object? lastEventIndex = null,Object? unreadCount = null,Object? metadata = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? type = null,Object? lastEventId = freezed,Object? lastEventIndex = null,Object? unreadCount = null,Object? metadata = freezed,Object? disappearingTimeout = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -75,7 +77,8 @@ as String,lastEventId: freezed == lastEventId ? _self.lastEventId : lastEventId 
 as String?,lastEventIndex: null == lastEventIndex ? _self.lastEventIndex : lastEventIndex // ignore: cast_nullable_to_non_nullable
 as int,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
 as int,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,
+as Map<String, dynamic>?,disappearingTimeout: freezed == disappearingTimeout ? _self.disappearingTimeout : disappearingTimeout // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -160,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Room() when $default != null:
-return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata);case _:
+return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout);case _:
   return orElse();
 
 }
@@ -181,10 +184,10 @@ return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEvent
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout)  $default,) {final _that = this;
 switch (_that) {
 case _Room():
-return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata);case _:
+return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +204,10 @@ return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEvent
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout)?  $default,) {final _that = this;
 switch (_that) {
 case _Room() when $default != null:
-return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata);case _:
+return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout);case _:
   return null;
 
 }
@@ -216,7 +219,7 @@ return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEvent
 @JsonSerializable()
 
 class _Room implements Room {
-  const _Room({required this.id, required this.name, required this.type, this.lastEventId, this.lastEventIndex = 0, this.unreadCount = 0, final  Map<String, dynamic>? metadata}): _metadata = metadata;
+  const _Room({required this.id, required this.name, required this.type, this.lastEventId, this.lastEventIndex = 0, this.unreadCount = 0, final  Map<String, dynamic>? metadata, this.disappearingTimeout}): _metadata = metadata;
   factory _Room.fromJson(Map<String, dynamic> json) => _$RoomFromJson(json);
 
 @override final  String id;
@@ -235,6 +238,9 @@ class _Room implements Room {
   return EqualUnmodifiableMapView(value);
 }
 
+/// Disappearing messages timeout in seconds (null = disabled)
+/// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
+@override final  int? disappearingTimeout;
 
 /// Create a copy of Room
 /// with the given fields replaced by the non-null parameter values.
@@ -249,16 +255,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Room&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.lastEventId, lastEventId) || other.lastEventId == lastEventId)&&(identical(other.lastEventIndex, lastEventIndex) || other.lastEventIndex == lastEventIndex)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&const DeepCollectionEquality().equals(other._metadata, _metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Room&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.lastEventId, lastEventId) || other.lastEventId == lastEventId)&&(identical(other.lastEventIndex, lastEventIndex) || other.lastEventIndex == lastEventIndex)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&const DeepCollectionEquality().equals(other._metadata, _metadata)&&(identical(other.disappearingTimeout, disappearingTimeout) || other.disappearingTimeout == disappearingTimeout));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,type,lastEventId,lastEventIndex,unreadCount,const DeepCollectionEquality().hash(_metadata));
+int get hashCode => Object.hash(runtimeType,id,name,type,lastEventId,lastEventIndex,unreadCount,const DeepCollectionEquality().hash(_metadata),disappearingTimeout);
 
 @override
 String toString() {
-  return 'Room(id: $id, name: $name, type: $type, lastEventId: $lastEventId, lastEventIndex: $lastEventIndex, unreadCount: $unreadCount, metadata: $metadata)';
+  return 'Room(id: $id, name: $name, type: $type, lastEventId: $lastEventId, lastEventIndex: $lastEventIndex, unreadCount: $unreadCount, metadata: $metadata, disappearingTimeout: $disappearingTimeout)';
 }
 
 
@@ -269,7 +275,7 @@ abstract mixin class _$RoomCopyWith<$Res> implements $RoomCopyWith<$Res> {
   factory _$RoomCopyWith(_Room value, $Res Function(_Room) _then) = __$RoomCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String type, String? lastEventId, int lastEventIndex, int unreadCount, Map<String, dynamic>? metadata
+ String id, String name, String type, String? lastEventId, int lastEventIndex, int unreadCount, Map<String, dynamic>? metadata, int? disappearingTimeout
 });
 
 
@@ -286,7 +292,7 @@ class __$RoomCopyWithImpl<$Res>
 
 /// Create a copy of Room
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? type = null,Object? lastEventId = freezed,Object? lastEventIndex = null,Object? unreadCount = null,Object? metadata = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? type = null,Object? lastEventId = freezed,Object? lastEventIndex = null,Object? unreadCount = null,Object? metadata = freezed,Object? disappearingTimeout = freezed,}) {
   return _then(_Room(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -295,7 +301,8 @@ as String,lastEventId: freezed == lastEventId ? _self.lastEventId : lastEventId 
 as String?,lastEventIndex: null == lastEventIndex ? _self.lastEventIndex : lastEventIndex // ignore: cast_nullable_to_non_nullable
 as int,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
 as int,metadata: freezed == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,
+as Map<String, dynamic>?,disappearingTimeout: freezed == disappearingTimeout ? _self.disappearingTimeout : disappearingTimeout // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

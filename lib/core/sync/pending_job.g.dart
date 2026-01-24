@@ -30,6 +30,7 @@ const _$JobTypeEnumMap = {
   JobType.sendMediaMessage: 'sendMediaMessage',
   JobType.editMessage: 'editMessage',
   JobType.deleteMessage: 'deleteMessage',
+  JobType.forwardMessage: 'forwardMessage',
   JobType.uploadFile: 'uploadFile',
   JobType.createRoom: 'createRoom',
   JobType.updateRoom: 'updateRoom',
@@ -42,4 +43,10 @@ const _$JobTypeEnumMap = {
   JobType.leaveRoom: 'leaveRoom',
   JobType.vote: 'vote',
   JobType.syncContacts: 'syncContacts',
+  JobType.custom: 'custom',
+  JobType.createInviteLink: 'createInviteLink',
+  JobType.revokeInviteLink: 'revokeInviteLink',
+  JobType.useInviteLink: 'useInviteLink',
+  JobType.approveJoinRequest: 'approveJoinRequest',
+  JobType.rejectJoinRequest: 'rejectJoinRequest',
 };

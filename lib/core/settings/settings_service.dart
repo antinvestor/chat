@@ -28,6 +28,7 @@ class SettingsKeys {
   // Notifications
   static const notificationSound = 'notification_sound';
   static const notificationVibrate = 'notification_vibrate';
+  static const notificationPreviewEnabled = 'notification_preview_enabled';
 
   // Media
   static const autoDownloadWifi = 'auto_download_wifi';
@@ -44,10 +45,19 @@ class SettingsKeys {
   // Security
   static const biometricEnabled = 'biometric_enabled';
   static const lockTimeoutMinutes = 'lock_timeout_minutes';
+  static const showNotificationsLocked = 'show_notifications_locked';
+  static const fingerprintLockEnabled = 'fingerprint_lock_enabled';
+
+  // Location
+  static const liveLocationSharingEnabled = 'live_location_sharing_enabled';
 
   // Data
   static const backupEnabled = 'backup_enabled';
   static const backupFrequency = 'backup_frequency';
+
+  // Media Cache
+  static const mediaCacheSizeBytes = 'media_cache_size_bytes';
+  static const perRoomCacheEnabled = 'per_room_cache_enabled';
 }
 
 /// Default setting values
@@ -56,6 +66,7 @@ class SettingsDefaults {
   static const fontSize = 'medium';
   static const notificationSound = true;
   static const notificationVibrate = true;
+  static const notificationPreviewEnabled = true;
   static const autoDownloadWifi = true;
   static const autoDownloadMobile = false;
   static const readReceiptsEnabled = true;
@@ -65,9 +76,15 @@ class SettingsDefaults {
   static const aboutVisible = 'everyone';
   static const groupsAddPermission = 'everyone';
   static const biometricEnabled = false;
-  static const lockTimeoutMinutes = 0;
+  static const lockTimeoutMinutes = 1;
+  static const showNotificationsLocked = true;
+  static const fingerprintLockEnabled = false;
+  static const liveLocationSharingEnabled = false;
   static const backupEnabled = false;
   static const backupFrequency = 'weekly';
+  // Media Cache (500MB default)
+  static const mediaCacheSizeBytes = 500 * 1024 * 1024;
+  static const perRoomCacheEnabled = false;
 }
 
 /// Service for managing user settings persistence
@@ -265,6 +282,13 @@ class SettingsService {
   Future<void> setNotificationVibrate(bool value) =>
       setBool(SettingsKeys.notificationVibrate, value);
 
+  bool get notificationPreviewEnabled => getBool(
+    SettingsKeys.notificationPreviewEnabled,
+    defaultValue: SettingsDefaults.notificationPreviewEnabled,
+  );
+  Future<void> setNotificationPreviewEnabled(bool value) =>
+      setBool(SettingsKeys.notificationPreviewEnabled, value);
+
   // Media
   bool get autoDownloadWifi => getBool(
     SettingsKeys.autoDownloadWifi,
@@ -325,9 +349,19 @@ class SettingsService {
   Future<void> setBiometricEnabled(bool value) =>
       setBool(SettingsKeys.biometricEnabled, value);
 
-  int get lockTimeoutMinutes => getInt(SettingsKeys.lockTimeoutMinutes);
+  int get lockTimeoutMinutes => getInt(
+    SettingsKeys.lockTimeoutMinutes,
+    defaultValue: SettingsDefaults.lockTimeoutMinutes,
+  );
   Future<void> setLockTimeoutMinutes(int value) =>
       setInt(SettingsKeys.lockTimeoutMinutes, value);
+
+  bool get showNotificationsLocked => getBool(
+    SettingsKeys.showNotificationsLocked,
+    defaultValue: SettingsDefaults.showNotificationsLocked,
+  );
+  Future<void> setShowNotificationsLocked(bool value) =>
+      setBool(SettingsKeys.showNotificationsLocked, value);
 
   // Backup
   bool get backupEnabled => getBool(SettingsKeys.backupEnabled);
@@ -340,4 +374,28 @@ class SettingsService {
   );
   Future<void> setBackupFrequency(String value) =>
       setString(SettingsKeys.backupFrequency, value);
+
+  // Fingerprint Lock
+  bool get fingerprintLockEnabled =>
+      getBool(SettingsKeys.fingerprintLockEnabled);
+  Future<void> setFingerprintLockEnabled(bool value) =>
+      setBool(SettingsKeys.fingerprintLockEnabled, value);
+
+  // Live Location Sharing
+  bool get liveLocationSharingEnabled =>
+      getBool(SettingsKeys.liveLocationSharingEnabled);
+  Future<void> setLiveLocationSharingEnabled(bool value) =>
+      setBool(SettingsKeys.liveLocationSharingEnabled, value);
+
+  // Media Cache
+  int get mediaCacheSizeBytes => getInt(
+    SettingsKeys.mediaCacheSizeBytes,
+    defaultValue: SettingsDefaults.mediaCacheSizeBytes,
+  );
+  Future<void> setMediaCacheSizeBytes(int value) =>
+      setInt(SettingsKeys.mediaCacheSizeBytes, value);
+
+  bool get perRoomCacheEnabled => getBool(SettingsKeys.perRoomCacheEnabled);
+  Future<void> setPerRoomCacheEnabled(bool value) =>
+      setBool(SettingsKeys.perRoomCacheEnabled, value);
 }

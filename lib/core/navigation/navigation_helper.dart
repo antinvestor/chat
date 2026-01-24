@@ -60,6 +60,11 @@ class NavigationHelper {
     context.push('/settings/storage');
   }
 
+  /// Navigate to security settings screen
+  static void navigateToSecuritySettings(BuildContext context) {
+    context.push('/settings/security');
+  }
+
   /// Navigate to group settings screen
   static void navigateToGroupSettings(
     BuildContext context, {
@@ -74,6 +79,11 @@ class NavigationHelper {
   /// Navigate to media compression settings screen
   static void navigateToMediaCompressionSettings(BuildContext context) {
     context.push('/settings/storage/compression');
+  }
+
+  /// Navigate to cache settings screen
+  static void navigateToCacheSettings(BuildContext context) {
+    context.push('/settings/storage/cache');
   }
 
   /// Navigate to profile edit screen
@@ -144,6 +154,9 @@ extension NavigationContext on BuildContext {
   void navigateToStorageSettings() =>
       NavigationHelper.navigateToStorageSettings(this);
 
+  void navigateToSecuritySettings() =>
+      NavigationHelper.navigateToSecuritySettings(this);
+
   void navigateToGroupSettings({
     required String roomId,
     required String roomName,
@@ -155,6 +168,9 @@ extension NavigationContext on BuildContext {
 
   void navigateToMediaCompressionSettings() =>
       NavigationHelper.navigateToMediaCompressionSettings(this);
+
+  void navigateToCacheSettings() =>
+      NavigationHelper.navigateToCacheSettings(this);
 
   void navigateBack([String? fallbackRoute]) =>
       NavigationHelper.navigateBack(this, fallbackRoute: fallbackRoute);

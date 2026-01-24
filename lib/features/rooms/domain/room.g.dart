@@ -14,6 +14,7 @@ _Room _$RoomFromJson(Map<String, dynamic> json) => _Room(
   lastEventIndex: (json['lastEventIndex'] as num?)?.toInt() ?? 0,
   unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
   metadata: json['metadata'] as Map<String, dynamic>?,
+  disappearingTimeout: (json['disappearingTimeout'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$RoomToJson(_Room instance) => <String, dynamic>{
@@ -24,4 +25,5 @@ Map<String, dynamic> _$RoomToJson(_Room instance) => <String, dynamic>{
   'lastEventIndex': instance.lastEventIndex,
   'unreadCount': instance.unreadCount,
   'metadata': instance.metadata,
+  'disappearingTimeout': instance.disappearingTimeout,
 };

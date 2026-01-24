@@ -207,9 +207,20 @@ class StartupService extends _$StartupService {
     // Firebase is needed for notifications - initialize early
     if (isMobile) {
       state = state.copyWith(currentTask: 'Initializing Firebase...');
-      await Firebase.initializeApp();
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-      AppLogger.info('Firebase initialized');
+      try {
+        await Firebase.initializeApp();
+        FirebaseMessaging.onBackgroundMessage(
+          firebaseMessagingBackgroundHandler,
+        );
+        AppLogger.info('Firebase initialized');
+      } catch (e) {
+        // Firebase may not be configured (missing google-services.json)
+        // Continue without Firebase - notifications won't work
+        AppLogger.warning(
+          'Firebase initialization failed - notifications disabled',
+          data: {'error': e.toString()},
+        );
+      }
     }
 
     // Add breadcrumb for app start

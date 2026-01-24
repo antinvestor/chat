@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../features/contacts/data/contact_sync_repository.dart';
 import '../domain/room_event.dart';
 import 'read_receipt_indicator.dart';
+import 'widgets/voice_message_player.dart';
 
 class MessageBubble extends ConsumerWidget {
   const MessageBubble({
@@ -24,6 +25,8 @@ class MessageBubble extends ConsumerWidget {
     this.canEdit = false,
     this.onDelete,
     this.canDelete = false,
+    this.onForward,
+    this.canForward = false,
   });
   final RoomEvent message;
   final bool isMe;
@@ -36,6 +39,8 @@ class MessageBubble extends ConsumerWidget {
   final bool canEdit;
   final Function(String messageId, {required bool forEveryone})? onDelete;
   final bool canDelete;
+  final Function(RoomEvent message)? onForward;
+  final bool canForward;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -122,13 +127,49 @@ class MessageBubble extends ConsumerWidget {
                                 ),
                               ),
                             ),
+                          // Forwarded indicator
+                          if (message.isForwarded)
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                12,
+                                (!isMe && !shouldGroupWithPrevious) ? 2 : 8,
+                                12,
+                                4,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.shortcut,
+                                    size: 14,
+                                    color: isDarkMode
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Forwarded',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color: isDarkMode
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           // Message content with inline timestamp (WhatsApp style)
                           Stack(
                             children: [
                               Padding(
                                 padding: EdgeInsets.fromLTRB(
                                   12,
-                                  (!isMe && !shouldGroupWithPrevious) ? 0 : 8,
+                                  (message.isForwarded ||
+                                          (!isMe && !shouldGroupWithPrevious))
+                                      ? 0
+                                      : 8,
                                   12,
                                   6,
                                 ),
@@ -488,35 +529,38 @@ class MessageBubble extends ConsumerWidget {
   }
 
   Widget _buildAudioContent(BuildContext context) {
-    final duration = message.content['duration'] as int?;
+    final url = message.content['url'] as String? ?? '';
+    final localPath = message.content['localPath'] as String?;
+    final duration = message.content['duration'] as int? ?? 0;
     final isUploading = message.content['uploading'] == true;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+    // Show uploading state
+    if (isUploading) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
           ),
-          child: isUploading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(
-                  Icons.play_arrow,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Voice message', style: TextStyle(fontSize: 14)),
-            if (duration != null)
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sending voice message...',
+                style: TextStyle(fontSize: 14),
+              ),
               Text(
                 _formatDuration(duration),
                 style: TextStyle(
@@ -524,9 +568,18 @@ class MessageBubble extends ConsumerWidget {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      );
+    }
+
+    // Use polished VoiceMessagePlayer for playback
+    return VoiceMessagePlayer(
+      audioUrl: url,
+      localPath: localPath,
+      durationMs: duration,
+      isOwnMessage: isMe,
     );
   }
 
@@ -794,7 +847,7 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
-  /// Show context menu for message actions (reply, edit, copy)
+  /// Show context menu for message actions (reply, forward, edit, copy)
   void _showMessageMenu(BuildContext context, String text) {
     final theme = Theme.of(context);
 
@@ -817,6 +870,19 @@ class MessageBubble extends ConsumerWidget {
                   onTap: () {
                     Navigator.pop(context);
                     onReply?.call(message.id, text);
+                  },
+                ),
+              // Forward option
+              if (canForward && onForward != null)
+                ListTile(
+                  leading: Icon(
+                    Icons.shortcut,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: const Text('Forward'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onForward?.call(message);
                   },
                 ),
               // Edit option (only for own text messages within edit window)

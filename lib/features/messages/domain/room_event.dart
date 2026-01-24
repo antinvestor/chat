@@ -93,6 +93,14 @@ abstract class RoomEvent with _$RoomEvent {
     String? redactedBy, // Profile ID of who deleted (for admin deletions)
     @Default(0) int retryCount, // Number of send retry attempts
     String? errorMessage, // Error reason if failed
+    // Forwarding fields
+    String? forwardedFromRoom, // Room ID this was forwarded from
+    String? forwardedFromEvent, // Original event ID this was forwarded from
+    @Default(0) int forwardCount, // Times this message has been forwarded
+    @Default(false) bool forwardRestricted, // Cannot be forwarded
+    // Disappearing messages
+    int?
+    expiresAt, // Timestamp when message expires (for disappearing messages)
   }) = _RoomEvent;
 
   factory RoomEvent.fromJson(Map<String, dynamic> json) =>
@@ -105,6 +113,12 @@ abstract class RoomEvent with _$RoomEvent {
   /// Returns true if this message has been deleted/redacted
   bool get isDeleted => redacted;
 
+  /// Returns true if this message is a forwarded message
+  bool get isForwarded => forwardedFromEvent != null;
+
+  /// Returns true if this message can be forwarded
+  bool get canBeForwarded => !forwardRestricted && !isDeleted;
+
   /// Returns true if manual retry is required (exceeded auto-retry limit)
   bool get requiresManualRetry =>
       status == EventStatus.failed && retryCount >= maxAutoRetries;
@@ -112,4 +126,11 @@ abstract class RoomEvent with _$RoomEvent {
   /// Returns true if the message can still auto-retry
   bool get canAutoRetry =>
       status == EventStatus.failed && retryCount < maxAutoRetries;
+
+  /// Returns true if this message is set to disappear
+  bool get isDisappearing => expiresAt != null;
+
+  /// Returns true if this message has expired and should be deleted
+  bool get hasExpired =>
+      expiresAt != null && DateTime.now().millisecondsSinceEpoch > expiresAt!;
 }

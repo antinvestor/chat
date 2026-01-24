@@ -1119,6 +1119,16 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _disappearingTimeoutMeta =
+      const VerificationMeta('disappearingTimeout');
+  @override
+  late final GeneratedColumn<int> disappearingTimeout = GeneratedColumn<int>(
+    'disappearing_timeout',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1128,6 +1138,7 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     lastEventIndex,
     unreadCount,
     metadata,
+    disappearingTimeout,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1191,6 +1202,15 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         metadata.isAcceptableOrUnknown(data['metadata']!, _metadataMeta),
       );
     }
+    if (data.containsKey('disappearing_timeout')) {
+      context.handle(
+        _disappearingTimeoutMeta,
+        disappearingTimeout.isAcceptableOrUnknown(
+          data['disappearing_timeout']!,
+          _disappearingTimeoutMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1228,6 +1248,10 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         DriftSqlType.string,
         data['${effectivePrefix}metadata'],
       ),
+      disappearingTimeout: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}disappearing_timeout'],
+      ),
     );
   }
 
@@ -1258,6 +1282,10 @@ class Room extends DataClass implements Insertable<Room> {
 
   /// JSON-encoded room metadata (avatar, description, etc.)
   final String? metadata;
+
+  /// Disappearing messages timeout in seconds (null = disabled)
+  /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
+  final int? disappearingTimeout;
   const Room({
     required this.id,
     this.name,
@@ -1266,6 +1294,7 @@ class Room extends DataClass implements Insertable<Room> {
     this.lastEventIndex,
     required this.unreadCount,
     this.metadata,
+    this.disappearingTimeout,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1287,6 +1316,9 @@ class Room extends DataClass implements Insertable<Room> {
     if (!nullToAbsent || metadata != null) {
       map['metadata'] = Variable<String>(metadata);
     }
+    if (!nullToAbsent || disappearingTimeout != null) {
+      map['disappearing_timeout'] = Variable<int>(disappearingTimeout);
+    }
     return map;
   }
 
@@ -1305,6 +1337,9 @@ class Room extends DataClass implements Insertable<Room> {
       metadata: metadata == null && nullToAbsent
           ? const Value.absent()
           : Value(metadata),
+      disappearingTimeout: disappearingTimeout == null && nullToAbsent
+          ? const Value.absent()
+          : Value(disappearingTimeout),
     );
   }
 
@@ -1321,6 +1356,9 @@ class Room extends DataClass implements Insertable<Room> {
       lastEventIndex: serializer.fromJson<int?>(json['lastEventIndex']),
       unreadCount: serializer.fromJson<int>(json['unreadCount']),
       metadata: serializer.fromJson<String?>(json['metadata']),
+      disappearingTimeout: serializer.fromJson<int?>(
+        json['disappearingTimeout'],
+      ),
     );
   }
   @override
@@ -1334,6 +1372,7 @@ class Room extends DataClass implements Insertable<Room> {
       'lastEventIndex': serializer.toJson<int?>(lastEventIndex),
       'unreadCount': serializer.toJson<int>(unreadCount),
       'metadata': serializer.toJson<String?>(metadata),
+      'disappearingTimeout': serializer.toJson<int?>(disappearingTimeout),
     };
   }
 
@@ -1345,6 +1384,7 @@ class Room extends DataClass implements Insertable<Room> {
     Value<int?> lastEventIndex = const Value.absent(),
     int? unreadCount,
     Value<String?> metadata = const Value.absent(),
+    Value<int?> disappearingTimeout = const Value.absent(),
   }) => Room(
     id: id ?? this.id,
     name: name.present ? name.value : this.name,
@@ -1355,6 +1395,9 @@ class Room extends DataClass implements Insertable<Room> {
         : this.lastEventIndex,
     unreadCount: unreadCount ?? this.unreadCount,
     metadata: metadata.present ? metadata.value : this.metadata,
+    disappearingTimeout: disappearingTimeout.present
+        ? disappearingTimeout.value
+        : this.disappearingTimeout,
   );
   Room copyWithCompanion(RoomsCompanion data) {
     return Room(
@@ -1371,6 +1414,9 @@ class Room extends DataClass implements Insertable<Room> {
           ? data.unreadCount.value
           : this.unreadCount,
       metadata: data.metadata.present ? data.metadata.value : this.metadata,
+      disappearingTimeout: data.disappearingTimeout.present
+          ? data.disappearingTimeout.value
+          : this.disappearingTimeout,
     );
   }
 
@@ -1383,7 +1429,8 @@ class Room extends DataClass implements Insertable<Room> {
           ..write('lastEventId: $lastEventId, ')
           ..write('lastEventIndex: $lastEventIndex, ')
           ..write('unreadCount: $unreadCount, ')
-          ..write('metadata: $metadata')
+          ..write('metadata: $metadata, ')
+          ..write('disappearingTimeout: $disappearingTimeout')
           ..write(')'))
         .toString();
   }
@@ -1397,6 +1444,7 @@ class Room extends DataClass implements Insertable<Room> {
     lastEventIndex,
     unreadCount,
     metadata,
+    disappearingTimeout,
   );
   @override
   bool operator ==(Object other) =>
@@ -1408,7 +1456,8 @@ class Room extends DataClass implements Insertable<Room> {
           other.lastEventId == this.lastEventId &&
           other.lastEventIndex == this.lastEventIndex &&
           other.unreadCount == this.unreadCount &&
-          other.metadata == this.metadata);
+          other.metadata == this.metadata &&
+          other.disappearingTimeout == this.disappearingTimeout);
 }
 
 class RoomsCompanion extends UpdateCompanion<Room> {
@@ -1419,6 +1468,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
   final Value<int?> lastEventIndex;
   final Value<int> unreadCount;
   final Value<String?> metadata;
+  final Value<int?> disappearingTimeout;
   final Value<int> rowid;
   const RoomsCompanion({
     this.id = const Value.absent(),
@@ -1428,6 +1478,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.lastEventIndex = const Value.absent(),
     this.unreadCount = const Value.absent(),
     this.metadata = const Value.absent(),
+    this.disappearingTimeout = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomsCompanion.insert({
@@ -1438,6 +1489,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.lastEventIndex = const Value.absent(),
     this.unreadCount = const Value.absent(),
     this.metadata = const Value.absent(),
+    this.disappearingTimeout = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Room> custom({
@@ -1448,6 +1500,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Expression<int>? lastEventIndex,
     Expression<int>? unreadCount,
     Expression<String>? metadata,
+    Expression<int>? disappearingTimeout,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1458,6 +1511,8 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       if (lastEventIndex != null) 'last_event_index': lastEventIndex,
       if (unreadCount != null) 'unread_count': unreadCount,
       if (metadata != null) 'metadata': metadata,
+      if (disappearingTimeout != null)
+        'disappearing_timeout': disappearingTimeout,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1470,6 +1525,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Value<int?>? lastEventIndex,
     Value<int>? unreadCount,
     Value<String?>? metadata,
+    Value<int?>? disappearingTimeout,
     Value<int>? rowid,
   }) {
     return RoomsCompanion(
@@ -1480,6 +1536,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       lastEventIndex: lastEventIndex ?? this.lastEventIndex,
       unreadCount: unreadCount ?? this.unreadCount,
       metadata: metadata ?? this.metadata,
+      disappearingTimeout: disappearingTimeout ?? this.disappearingTimeout,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1508,6 +1565,9 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     if (metadata.present) {
       map['metadata'] = Variable<String>(metadata.value);
     }
+    if (disappearingTimeout.present) {
+      map['disappearing_timeout'] = Variable<int>(disappearingTimeout.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1524,6 +1584,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
           ..write('lastEventIndex: $lastEventIndex, ')
           ..write('unreadCount: $unreadCount, ')
           ..write('metadata: $metadata, ')
+          ..write('disappearingTimeout: $disappearingTimeout, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2156,6 +2217,67 @@ class $RoomEventsTable extends RoomEvents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _forwardedFromRoomMeta = const VerificationMeta(
+    'forwardedFromRoom',
+  );
+  @override
+  late final GeneratedColumn<String> forwardedFromRoom =
+      GeneratedColumn<String>(
+        'forwarded_from_room',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _forwardedFromEventMeta =
+      const VerificationMeta('forwardedFromEvent');
+  @override
+  late final GeneratedColumn<String> forwardedFromEvent =
+      GeneratedColumn<String>(
+        'forwarded_from_event',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _forwardCountMeta = const VerificationMeta(
+    'forwardCount',
+  );
+  @override
+  late final GeneratedColumn<int> forwardCount = GeneratedColumn<int>(
+    'forward_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _forwardRestrictedMeta = const VerificationMeta(
+    'forwardRestricted',
+  );
+  @override
+  late final GeneratedColumn<bool> forwardRestricted = GeneratedColumn<bool>(
+    'forward_restricted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("forward_restricted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _expiresAtMeta = const VerificationMeta(
+    'expiresAt',
+  );
+  @override
+  late final GeneratedColumn<int> expiresAt = GeneratedColumn<int>(
+    'expires_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2176,6 +2298,11 @@ class $RoomEventsTable extends RoomEvents
     redactedBy,
     retryCount,
     errorMessage,
+    forwardedFromRoom,
+    forwardedFromEvent,
+    forwardCount,
+    forwardRestricted,
+    expiresAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2311,6 +2438,48 @@ class $RoomEventsTable extends RoomEvents
         ),
       );
     }
+    if (data.containsKey('forwarded_from_room')) {
+      context.handle(
+        _forwardedFromRoomMeta,
+        forwardedFromRoom.isAcceptableOrUnknown(
+          data['forwarded_from_room']!,
+          _forwardedFromRoomMeta,
+        ),
+      );
+    }
+    if (data.containsKey('forwarded_from_event')) {
+      context.handle(
+        _forwardedFromEventMeta,
+        forwardedFromEvent.isAcceptableOrUnknown(
+          data['forwarded_from_event']!,
+          _forwardedFromEventMeta,
+        ),
+      );
+    }
+    if (data.containsKey('forward_count')) {
+      context.handle(
+        _forwardCountMeta,
+        forwardCount.isAcceptableOrUnknown(
+          data['forward_count']!,
+          _forwardCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('forward_restricted')) {
+      context.handle(
+        _forwardRestrictedMeta,
+        forwardRestricted.isAcceptableOrUnknown(
+          data['forward_restricted']!,
+          _forwardRestrictedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(
+        _expiresAtMeta,
+        expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
+      );
+    }
     return context;
   }
 
@@ -2392,6 +2561,26 @@ class $RoomEventsTable extends RoomEvents
         DriftSqlType.string,
         data['${effectivePrefix}error_message'],
       ),
+      forwardedFromRoom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}forwarded_from_room'],
+      ),
+      forwardedFromEvent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}forwarded_from_event'],
+      ),
+      forwardCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}forward_count'],
+      )!,
+      forwardRestricted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}forward_restricted'],
+      )!,
+      expiresAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expires_at'],
+      ),
     );
   }
 
@@ -2455,6 +2644,22 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
 
   /// Error message if send failed
   final String? errorMessage;
+
+  /// Room ID this message was forwarded from (null if not forwarded)
+  final String? forwardedFromRoom;
+
+  /// Event ID this message was forwarded from (null if not forwarded)
+  final String? forwardedFromEvent;
+
+  /// Number of times this message has been forwarded
+  final int forwardCount;
+
+  /// Whether this message is restricted from being forwarded
+  final bool forwardRestricted;
+
+  /// Timestamp when this message should be deleted (for disappearing messages)
+  /// Null means the message does not expire
+  final int? expiresAt;
   const RoomEvent({
     required this.id,
     required this.roomId,
@@ -2474,6 +2679,11 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     this.redactedBy,
     required this.retryCount,
     this.errorMessage,
+    this.forwardedFromRoom,
+    this.forwardedFromEvent,
+    required this.forwardCount,
+    required this.forwardRestricted,
+    this.expiresAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2517,6 +2727,17 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     map['retry_count'] = Variable<int>(retryCount);
     if (!nullToAbsent || errorMessage != null) {
       map['error_message'] = Variable<String>(errorMessage);
+    }
+    if (!nullToAbsent || forwardedFromRoom != null) {
+      map['forwarded_from_room'] = Variable<String>(forwardedFromRoom);
+    }
+    if (!nullToAbsent || forwardedFromEvent != null) {
+      map['forwarded_from_event'] = Variable<String>(forwardedFromEvent);
+    }
+    map['forward_count'] = Variable<int>(forwardCount);
+    map['forward_restricted'] = Variable<bool>(forwardRestricted);
+    if (!nullToAbsent || expiresAt != null) {
+      map['expires_at'] = Variable<int>(expiresAt);
     }
     return map;
   }
@@ -2563,6 +2784,17 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       errorMessage: errorMessage == null && nullToAbsent
           ? const Value.absent()
           : Value(errorMessage),
+      forwardedFromRoom: forwardedFromRoom == null && nullToAbsent
+          ? const Value.absent()
+          : Value(forwardedFromRoom),
+      forwardedFromEvent: forwardedFromEvent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(forwardedFromEvent),
+      forwardCount: Value(forwardCount),
+      forwardRestricted: Value(forwardRestricted),
+      expiresAt: expiresAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expiresAt),
     );
   }
 
@@ -2590,6 +2822,15 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       redactedBy: serializer.fromJson<String?>(json['redactedBy']),
       retryCount: serializer.fromJson<int>(json['retryCount']),
       errorMessage: serializer.fromJson<String?>(json['errorMessage']),
+      forwardedFromRoom: serializer.fromJson<String?>(
+        json['forwardedFromRoom'],
+      ),
+      forwardedFromEvent: serializer.fromJson<String?>(
+        json['forwardedFromEvent'],
+      ),
+      forwardCount: serializer.fromJson<int>(json['forwardCount']),
+      forwardRestricted: serializer.fromJson<bool>(json['forwardRestricted']),
+      expiresAt: serializer.fromJson<int?>(json['expiresAt']),
     );
   }
   @override
@@ -2614,6 +2855,11 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       'redactedBy': serializer.toJson<String?>(redactedBy),
       'retryCount': serializer.toJson<int>(retryCount),
       'errorMessage': serializer.toJson<String?>(errorMessage),
+      'forwardedFromRoom': serializer.toJson<String?>(forwardedFromRoom),
+      'forwardedFromEvent': serializer.toJson<String?>(forwardedFromEvent),
+      'forwardCount': serializer.toJson<int>(forwardCount),
+      'forwardRestricted': serializer.toJson<bool>(forwardRestricted),
+      'expiresAt': serializer.toJson<int?>(expiresAt),
     };
   }
 
@@ -2636,6 +2882,11 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     Value<String?> redactedBy = const Value.absent(),
     int? retryCount,
     Value<String?> errorMessage = const Value.absent(),
+    Value<String?> forwardedFromRoom = const Value.absent(),
+    Value<String?> forwardedFromEvent = const Value.absent(),
+    int? forwardCount,
+    bool? forwardRestricted,
+    Value<int?> expiresAt = const Value.absent(),
   }) => RoomEvent(
     id: id ?? this.id,
     roomId: roomId ?? this.roomId,
@@ -2659,6 +2910,15 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     redactedBy: redactedBy.present ? redactedBy.value : this.redactedBy,
     retryCount: retryCount ?? this.retryCount,
     errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
+    forwardedFromRoom: forwardedFromRoom.present
+        ? forwardedFromRoom.value
+        : this.forwardedFromRoom,
+    forwardedFromEvent: forwardedFromEvent.present
+        ? forwardedFromEvent.value
+        : this.forwardedFromEvent,
+    forwardCount: forwardCount ?? this.forwardCount,
+    forwardRestricted: forwardRestricted ?? this.forwardRestricted,
+    expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
   );
   RoomEvent copyWithCompanion(RoomEventsCompanion data) {
     return RoomEvent(
@@ -2692,6 +2952,19 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       errorMessage: data.errorMessage.present
           ? data.errorMessage.value
           : this.errorMessage,
+      forwardedFromRoom: data.forwardedFromRoom.present
+          ? data.forwardedFromRoom.value
+          : this.forwardedFromRoom,
+      forwardedFromEvent: data.forwardedFromEvent.present
+          ? data.forwardedFromEvent.value
+          : this.forwardedFromEvent,
+      forwardCount: data.forwardCount.present
+          ? data.forwardCount.value
+          : this.forwardCount,
+      forwardRestricted: data.forwardRestricted.present
+          ? data.forwardRestricted.value
+          : this.forwardRestricted,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
     );
   }
 
@@ -2715,13 +2988,18 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ..write('redactedAt: $redactedAt, ')
           ..write('redactedBy: $redactedBy, ')
           ..write('retryCount: $retryCount, ')
-          ..write('errorMessage: $errorMessage')
+          ..write('errorMessage: $errorMessage, ')
+          ..write('forwardedFromRoom: $forwardedFromRoom, ')
+          ..write('forwardedFromEvent: $forwardedFromEvent, ')
+          ..write('forwardCount: $forwardCount, ')
+          ..write('forwardRestricted: $forwardRestricted, ')
+          ..write('expiresAt: $expiresAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     roomId,
     senderId,
@@ -2740,7 +3018,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     redactedBy,
     retryCount,
     errorMessage,
-  );
+    forwardedFromRoom,
+    forwardedFromEvent,
+    forwardCount,
+    forwardRestricted,
+    expiresAt,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2762,7 +3045,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           other.redactedAt == this.redactedAt &&
           other.redactedBy == this.redactedBy &&
           other.retryCount == this.retryCount &&
-          other.errorMessage == this.errorMessage);
+          other.errorMessage == this.errorMessage &&
+          other.forwardedFromRoom == this.forwardedFromRoom &&
+          other.forwardedFromEvent == this.forwardedFromEvent &&
+          other.forwardCount == this.forwardCount &&
+          other.forwardRestricted == this.forwardRestricted &&
+          other.expiresAt == this.expiresAt);
 }
 
 class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
@@ -2784,6 +3072,11 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
   final Value<String?> redactedBy;
   final Value<int> retryCount;
   final Value<String?> errorMessage;
+  final Value<String?> forwardedFromRoom;
+  final Value<String?> forwardedFromEvent;
+  final Value<int> forwardCount;
+  final Value<bool> forwardRestricted;
+  final Value<int?> expiresAt;
   final Value<int> rowid;
   const RoomEventsCompanion({
     this.id = const Value.absent(),
@@ -2804,6 +3097,11 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.redactedBy = const Value.absent(),
     this.retryCount = const Value.absent(),
     this.errorMessage = const Value.absent(),
+    this.forwardedFromRoom = const Value.absent(),
+    this.forwardedFromEvent = const Value.absent(),
+    this.forwardCount = const Value.absent(),
+    this.forwardRestricted = const Value.absent(),
+    this.expiresAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomEventsCompanion.insert({
@@ -2825,6 +3123,11 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.redactedBy = const Value.absent(),
     this.retryCount = const Value.absent(),
     this.errorMessage = const Value.absent(),
+    this.forwardedFromRoom = const Value.absent(),
+    this.forwardedFromEvent = const Value.absent(),
+    this.forwardCount = const Value.absent(),
+    this.forwardRestricted = const Value.absent(),
+    this.expiresAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        roomId = Value(roomId),
@@ -2849,6 +3152,11 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Expression<String>? redactedBy,
     Expression<int>? retryCount,
     Expression<String>? errorMessage,
+    Expression<String>? forwardedFromRoom,
+    Expression<String>? forwardedFromEvent,
+    Expression<int>? forwardCount,
+    Expression<bool>? forwardRestricted,
+    Expression<int>? expiresAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2870,6 +3178,12 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       if (redactedBy != null) 'redacted_by': redactedBy,
       if (retryCount != null) 'retry_count': retryCount,
       if (errorMessage != null) 'error_message': errorMessage,
+      if (forwardedFromRoom != null) 'forwarded_from_room': forwardedFromRoom,
+      if (forwardedFromEvent != null)
+        'forwarded_from_event': forwardedFromEvent,
+      if (forwardCount != null) 'forward_count': forwardCount,
+      if (forwardRestricted != null) 'forward_restricted': forwardRestricted,
+      if (expiresAt != null) 'expires_at': expiresAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2893,6 +3207,11 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Value<String?>? redactedBy,
     Value<int>? retryCount,
     Value<String?>? errorMessage,
+    Value<String?>? forwardedFromRoom,
+    Value<String?>? forwardedFromEvent,
+    Value<int>? forwardCount,
+    Value<bool>? forwardRestricted,
+    Value<int?>? expiresAt,
     Value<int>? rowid,
   }) {
     return RoomEventsCompanion(
@@ -2914,6 +3233,11 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       redactedBy: redactedBy ?? this.redactedBy,
       retryCount: retryCount ?? this.retryCount,
       errorMessage: errorMessage ?? this.errorMessage,
+      forwardedFromRoom: forwardedFromRoom ?? this.forwardedFromRoom,
+      forwardedFromEvent: forwardedFromEvent ?? this.forwardedFromEvent,
+      forwardCount: forwardCount ?? this.forwardCount,
+      forwardRestricted: forwardRestricted ?? this.forwardRestricted,
+      expiresAt: expiresAt ?? this.expiresAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2975,6 +3299,21 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     if (errorMessage.present) {
       map['error_message'] = Variable<String>(errorMessage.value);
     }
+    if (forwardedFromRoom.present) {
+      map['forwarded_from_room'] = Variable<String>(forwardedFromRoom.value);
+    }
+    if (forwardedFromEvent.present) {
+      map['forwarded_from_event'] = Variable<String>(forwardedFromEvent.value);
+    }
+    if (forwardCount.present) {
+      map['forward_count'] = Variable<int>(forwardCount.value);
+    }
+    if (forwardRestricted.present) {
+      map['forward_restricted'] = Variable<bool>(forwardRestricted.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<int>(expiresAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3002,6 +3341,11 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
           ..write('redactedBy: $redactedBy, ')
           ..write('retryCount: $retryCount, ')
           ..write('errorMessage: $errorMessage, ')
+          ..write('forwardedFromRoom: $forwardedFromRoom, ')
+          ..write('forwardedFromEvent: $forwardedFromEvent, ')
+          ..write('forwardCount: $forwardCount, ')
+          ..write('forwardRestricted: $forwardRestricted, ')
+          ..write('expiresAt: $expiresAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5756,6 +6100,1539 @@ class ReadReceiptsCompanion extends UpdateCompanion<ReadReceipt> {
   }
 }
 
+class $ReportsTable extends Reports with TableInfo<$ReportsTable, Report> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReportsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reportedUserIdMeta = const VerificationMeta(
+    'reportedUserId',
+  );
+  @override
+  late final GeneratedColumn<String> reportedUserId = GeneratedColumn<String>(
+    'reported_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _detailsMeta = const VerificationMeta(
+    'details',
+  );
+  @override
+  late final GeneratedColumn<String> details = GeneratedColumn<String>(
+    'details',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _evidenceEventIdsMeta = const VerificationMeta(
+    'evidenceEventIds',
+  );
+  @override
+  late final GeneratedColumn<String> evidenceEventIds = GeneratedColumn<String>(
+    'evidence_event_ids',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reportedAtMeta = const VerificationMeta(
+    'reportedAt',
+  );
+  @override
+  late final GeneratedColumn<int> reportedAt = GeneratedColumn<int>(
+    'reported_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    reportedUserId,
+    reason,
+    details,
+    evidenceEventIds,
+    reportedAt,
+    status,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reports';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Report> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('reported_user_id')) {
+      context.handle(
+        _reportedUserIdMeta,
+        reportedUserId.isAcceptableOrUnknown(
+          data['reported_user_id']!,
+          _reportedUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_reportedUserIdMeta);
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reasonMeta);
+    }
+    if (data.containsKey('details')) {
+      context.handle(
+        _detailsMeta,
+        details.isAcceptableOrUnknown(data['details']!, _detailsMeta),
+      );
+    }
+    if (data.containsKey('evidence_event_ids')) {
+      context.handle(
+        _evidenceEventIdsMeta,
+        evidenceEventIds.isAcceptableOrUnknown(
+          data['evidence_event_ids']!,
+          _evidenceEventIdsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reported_at')) {
+      context.handle(
+        _reportedAtMeta,
+        reportedAt.isAcceptableOrUnknown(data['reported_at']!, _reportedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reportedAtMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Report map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Report(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      reportedUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reported_user_id'],
+      )!,
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      )!,
+      details: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}details'],
+      ),
+      evidenceEventIds: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}evidence_event_ids'],
+      ),
+      reportedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reported_at'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+    );
+  }
+
+  @override
+  $ReportsTable createAlias(String alias) {
+    return $ReportsTable(attachedDatabase, alias);
+  }
+}
+
+class Report extends DataClass implements Insertable<Report> {
+  /// Unique report identifier
+  final String id;
+
+  /// Profile ID of the user being reported
+  final String reportedUserId;
+
+  /// Report reason category (spam, harassment, inappropriate_content, other)
+  final String reason;
+
+  /// Additional details provided by the reporter
+  final String? details;
+
+  /// JSON array of event IDs used as evidence
+  final String? evidenceEventIds;
+
+  /// Timestamp when the report was created (milliseconds since epoch)
+  final int reportedAt;
+
+  /// Report status: pending, reviewed, resolved, dismissed
+  final String status;
+  const Report({
+    required this.id,
+    required this.reportedUserId,
+    required this.reason,
+    this.details,
+    this.evidenceEventIds,
+    required this.reportedAt,
+    required this.status,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['reported_user_id'] = Variable<String>(reportedUserId);
+    map['reason'] = Variable<String>(reason);
+    if (!nullToAbsent || details != null) {
+      map['details'] = Variable<String>(details);
+    }
+    if (!nullToAbsent || evidenceEventIds != null) {
+      map['evidence_event_ids'] = Variable<String>(evidenceEventIds);
+    }
+    map['reported_at'] = Variable<int>(reportedAt);
+    map['status'] = Variable<String>(status);
+    return map;
+  }
+
+  ReportsCompanion toCompanion(bool nullToAbsent) {
+    return ReportsCompanion(
+      id: Value(id),
+      reportedUserId: Value(reportedUserId),
+      reason: Value(reason),
+      details: details == null && nullToAbsent
+          ? const Value.absent()
+          : Value(details),
+      evidenceEventIds: evidenceEventIds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(evidenceEventIds),
+      reportedAt: Value(reportedAt),
+      status: Value(status),
+    );
+  }
+
+  factory Report.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Report(
+      id: serializer.fromJson<String>(json['id']),
+      reportedUserId: serializer.fromJson<String>(json['reportedUserId']),
+      reason: serializer.fromJson<String>(json['reason']),
+      details: serializer.fromJson<String?>(json['details']),
+      evidenceEventIds: serializer.fromJson<String?>(json['evidenceEventIds']),
+      reportedAt: serializer.fromJson<int>(json['reportedAt']),
+      status: serializer.fromJson<String>(json['status']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'reportedUserId': serializer.toJson<String>(reportedUserId),
+      'reason': serializer.toJson<String>(reason),
+      'details': serializer.toJson<String?>(details),
+      'evidenceEventIds': serializer.toJson<String?>(evidenceEventIds),
+      'reportedAt': serializer.toJson<int>(reportedAt),
+      'status': serializer.toJson<String>(status),
+    };
+  }
+
+  Report copyWith({
+    String? id,
+    String? reportedUserId,
+    String? reason,
+    Value<String?> details = const Value.absent(),
+    Value<String?> evidenceEventIds = const Value.absent(),
+    int? reportedAt,
+    String? status,
+  }) => Report(
+    id: id ?? this.id,
+    reportedUserId: reportedUserId ?? this.reportedUserId,
+    reason: reason ?? this.reason,
+    details: details.present ? details.value : this.details,
+    evidenceEventIds: evidenceEventIds.present
+        ? evidenceEventIds.value
+        : this.evidenceEventIds,
+    reportedAt: reportedAt ?? this.reportedAt,
+    status: status ?? this.status,
+  );
+  Report copyWithCompanion(ReportsCompanion data) {
+    return Report(
+      id: data.id.present ? data.id.value : this.id,
+      reportedUserId: data.reportedUserId.present
+          ? data.reportedUserId.value
+          : this.reportedUserId,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      details: data.details.present ? data.details.value : this.details,
+      evidenceEventIds: data.evidenceEventIds.present
+          ? data.evidenceEventIds.value
+          : this.evidenceEventIds,
+      reportedAt: data.reportedAt.present
+          ? data.reportedAt.value
+          : this.reportedAt,
+      status: data.status.present ? data.status.value : this.status,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Report(')
+          ..write('id: $id, ')
+          ..write('reportedUserId: $reportedUserId, ')
+          ..write('reason: $reason, ')
+          ..write('details: $details, ')
+          ..write('evidenceEventIds: $evidenceEventIds, ')
+          ..write('reportedAt: $reportedAt, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    reportedUserId,
+    reason,
+    details,
+    evidenceEventIds,
+    reportedAt,
+    status,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Report &&
+          other.id == this.id &&
+          other.reportedUserId == this.reportedUserId &&
+          other.reason == this.reason &&
+          other.details == this.details &&
+          other.evidenceEventIds == this.evidenceEventIds &&
+          other.reportedAt == this.reportedAt &&
+          other.status == this.status);
+}
+
+class ReportsCompanion extends UpdateCompanion<Report> {
+  final Value<String> id;
+  final Value<String> reportedUserId;
+  final Value<String> reason;
+  final Value<String?> details;
+  final Value<String?> evidenceEventIds;
+  final Value<int> reportedAt;
+  final Value<String> status;
+  final Value<int> rowid;
+  const ReportsCompanion({
+    this.id = const Value.absent(),
+    this.reportedUserId = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.details = const Value.absent(),
+    this.evidenceEventIds = const Value.absent(),
+    this.reportedAt = const Value.absent(),
+    this.status = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReportsCompanion.insert({
+    required String id,
+    required String reportedUserId,
+    required String reason,
+    this.details = const Value.absent(),
+    this.evidenceEventIds = const Value.absent(),
+    required int reportedAt,
+    this.status = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       reportedUserId = Value(reportedUserId),
+       reason = Value(reason),
+       reportedAt = Value(reportedAt);
+  static Insertable<Report> custom({
+    Expression<String>? id,
+    Expression<String>? reportedUserId,
+    Expression<String>? reason,
+    Expression<String>? details,
+    Expression<String>? evidenceEventIds,
+    Expression<int>? reportedAt,
+    Expression<String>? status,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (reportedUserId != null) 'reported_user_id': reportedUserId,
+      if (reason != null) 'reason': reason,
+      if (details != null) 'details': details,
+      if (evidenceEventIds != null) 'evidence_event_ids': evidenceEventIds,
+      if (reportedAt != null) 'reported_at': reportedAt,
+      if (status != null) 'status': status,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReportsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? reportedUserId,
+    Value<String>? reason,
+    Value<String?>? details,
+    Value<String?>? evidenceEventIds,
+    Value<int>? reportedAt,
+    Value<String>? status,
+    Value<int>? rowid,
+  }) {
+    return ReportsCompanion(
+      id: id ?? this.id,
+      reportedUserId: reportedUserId ?? this.reportedUserId,
+      reason: reason ?? this.reason,
+      details: details ?? this.details,
+      evidenceEventIds: evidenceEventIds ?? this.evidenceEventIds,
+      reportedAt: reportedAt ?? this.reportedAt,
+      status: status ?? this.status,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (reportedUserId.present) {
+      map['reported_user_id'] = Variable<String>(reportedUserId.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (details.present) {
+      map['details'] = Variable<String>(details.value);
+    }
+    if (evidenceEventIds.present) {
+      map['evidence_event_ids'] = Variable<String>(evidenceEventIds.value);
+    }
+    if (reportedAt.present) {
+      map['reported_at'] = Variable<int>(reportedAt.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportsCompanion(')
+          ..write('id: $id, ')
+          ..write('reportedUserId: $reportedUserId, ')
+          ..write('reason: $reason, ')
+          ..write('details: $details, ')
+          ..write('evidenceEventIds: $evidenceEventIds, ')
+          ..write('reportedAt: $reportedAt, ')
+          ..write('status: $status, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $InviteLinksTable extends InviteLinks
+    with TableInfo<$InviteLinksTable, InviteLink> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InviteLinksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roomIdMeta = const VerificationMeta('roomId');
+  @override
+  late final GeneratedColumn<String> roomId = GeneratedColumn<String>(
+    'room_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES rooms (id)',
+    ),
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<String> createdBy = GeneratedColumn<String>(
+    'created_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expiresAtMeta = const VerificationMeta(
+    'expiresAt',
+  );
+  @override
+  late final GeneratedColumn<int> expiresAt = GeneratedColumn<int>(
+    'expires_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _maxUsesMeta = const VerificationMeta(
+    'maxUses',
+  );
+  @override
+  late final GeneratedColumn<int> maxUses = GeneratedColumn<int>(
+    'max_uses',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _useCountMeta = const VerificationMeta(
+    'useCount',
+  );
+  @override
+  late final GeneratedColumn<int> useCount = GeneratedColumn<int>(
+    'use_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _revokedMeta = const VerificationMeta(
+    'revoked',
+  );
+  @override
+  late final GeneratedColumn<bool> revoked = GeneratedColumn<bool>(
+    'revoked',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("revoked" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _requiresApprovalMeta = const VerificationMeta(
+    'requiresApproval',
+  );
+  @override
+  late final GeneratedColumn<bool> requiresApproval = GeneratedColumn<bool>(
+    'requires_approval',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("requires_approval" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    roomId,
+    code,
+    createdBy,
+    createdAt,
+    expiresAt,
+    maxUses,
+    useCount,
+    revoked,
+    requiresApproval,
+    name,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'invite_links';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<InviteLink> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('room_id')) {
+      context.handle(
+        _roomIdMeta,
+        roomId.isAcceptableOrUnknown(data['room_id']!, _roomIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roomIdMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('expires_at')) {
+      context.handle(
+        _expiresAtMeta,
+        expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
+      );
+    }
+    if (data.containsKey('max_uses')) {
+      context.handle(
+        _maxUsesMeta,
+        maxUses.isAcceptableOrUnknown(data['max_uses']!, _maxUsesMeta),
+      );
+    }
+    if (data.containsKey('use_count')) {
+      context.handle(
+        _useCountMeta,
+        useCount.isAcceptableOrUnknown(data['use_count']!, _useCountMeta),
+      );
+    }
+    if (data.containsKey('revoked')) {
+      context.handle(
+        _revokedMeta,
+        revoked.isAcceptableOrUnknown(data['revoked']!, _revokedMeta),
+      );
+    }
+    if (data.containsKey('requires_approval')) {
+      context.handle(
+        _requiresApprovalMeta,
+        requiresApproval.isAcceptableOrUnknown(
+          data['requires_approval']!,
+          _requiresApprovalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InviteLink map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InviteLink(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      roomId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}room_id'],
+      )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      )!,
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_by'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      expiresAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expires_at'],
+      ),
+      maxUses: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}max_uses'],
+      ),
+      useCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}use_count'],
+      )!,
+      revoked: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}revoked'],
+      )!,
+      requiresApproval: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}requires_approval'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+    );
+  }
+
+  @override
+  $InviteLinksTable createAlias(String alias) {
+    return $InviteLinksTable(attachedDatabase, alias);
+  }
+}
+
+class InviteLink extends DataClass implements Insertable<InviteLink> {
+  /// Unique invite link identifier
+  final String id;
+
+  /// Room this invite links to (foreign key)
+  final String roomId;
+
+  /// Unique invite code for URL (e.g., chat.app/join/{code})
+  final String code;
+
+  /// Profile ID of the user who created this link
+  final String createdBy;
+
+  /// Creation timestamp (milliseconds since epoch)
+  final int createdAt;
+
+  /// Optional expiration timestamp (milliseconds since epoch, null = never expires)
+  final int? expiresAt;
+
+  /// Optional maximum number of uses (null = unlimited)
+  final int? maxUses;
+
+  /// Current number of times this link has been used
+  final int useCount;
+
+  /// Whether this link has been revoked by an admin
+  final bool revoked;
+
+  /// Whether joining via this link requires admin approval
+  final bool requiresApproval;
+
+  /// Optional custom name/label for the link
+  final String? name;
+  const InviteLink({
+    required this.id,
+    required this.roomId,
+    required this.code,
+    required this.createdBy,
+    required this.createdAt,
+    this.expiresAt,
+    this.maxUses,
+    required this.useCount,
+    required this.revoked,
+    required this.requiresApproval,
+    this.name,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['room_id'] = Variable<String>(roomId);
+    map['code'] = Variable<String>(code);
+    map['created_by'] = Variable<String>(createdBy);
+    map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || expiresAt != null) {
+      map['expires_at'] = Variable<int>(expiresAt);
+    }
+    if (!nullToAbsent || maxUses != null) {
+      map['max_uses'] = Variable<int>(maxUses);
+    }
+    map['use_count'] = Variable<int>(useCount);
+    map['revoked'] = Variable<bool>(revoked);
+    map['requires_approval'] = Variable<bool>(requiresApproval);
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    return map;
+  }
+
+  InviteLinksCompanion toCompanion(bool nullToAbsent) {
+    return InviteLinksCompanion(
+      id: Value(id),
+      roomId: Value(roomId),
+      code: Value(code),
+      createdBy: Value(createdBy),
+      createdAt: Value(createdAt),
+      expiresAt: expiresAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expiresAt),
+      maxUses: maxUses == null && nullToAbsent
+          ? const Value.absent()
+          : Value(maxUses),
+      useCount: Value(useCount),
+      revoked: Value(revoked),
+      requiresApproval: Value(requiresApproval),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+    );
+  }
+
+  factory InviteLink.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InviteLink(
+      id: serializer.fromJson<String>(json['id']),
+      roomId: serializer.fromJson<String>(json['roomId']),
+      code: serializer.fromJson<String>(json['code']),
+      createdBy: serializer.fromJson<String>(json['createdBy']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      expiresAt: serializer.fromJson<int?>(json['expiresAt']),
+      maxUses: serializer.fromJson<int?>(json['maxUses']),
+      useCount: serializer.fromJson<int>(json['useCount']),
+      revoked: serializer.fromJson<bool>(json['revoked']),
+      requiresApproval: serializer.fromJson<bool>(json['requiresApproval']),
+      name: serializer.fromJson<String?>(json['name']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'roomId': serializer.toJson<String>(roomId),
+      'code': serializer.toJson<String>(code),
+      'createdBy': serializer.toJson<String>(createdBy),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'expiresAt': serializer.toJson<int?>(expiresAt),
+      'maxUses': serializer.toJson<int?>(maxUses),
+      'useCount': serializer.toJson<int>(useCount),
+      'revoked': serializer.toJson<bool>(revoked),
+      'requiresApproval': serializer.toJson<bool>(requiresApproval),
+      'name': serializer.toJson<String?>(name),
+    };
+  }
+
+  InviteLink copyWith({
+    String? id,
+    String? roomId,
+    String? code,
+    String? createdBy,
+    int? createdAt,
+    Value<int?> expiresAt = const Value.absent(),
+    Value<int?> maxUses = const Value.absent(),
+    int? useCount,
+    bool? revoked,
+    bool? requiresApproval,
+    Value<String?> name = const Value.absent(),
+  }) => InviteLink(
+    id: id ?? this.id,
+    roomId: roomId ?? this.roomId,
+    code: code ?? this.code,
+    createdBy: createdBy ?? this.createdBy,
+    createdAt: createdAt ?? this.createdAt,
+    expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
+    maxUses: maxUses.present ? maxUses.value : this.maxUses,
+    useCount: useCount ?? this.useCount,
+    revoked: revoked ?? this.revoked,
+    requiresApproval: requiresApproval ?? this.requiresApproval,
+    name: name.present ? name.value : this.name,
+  );
+  InviteLink copyWithCompanion(InviteLinksCompanion data) {
+    return InviteLink(
+      id: data.id.present ? data.id.value : this.id,
+      roomId: data.roomId.present ? data.roomId.value : this.roomId,
+      code: data.code.present ? data.code.value : this.code,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      maxUses: data.maxUses.present ? data.maxUses.value : this.maxUses,
+      useCount: data.useCount.present ? data.useCount.value : this.useCount,
+      revoked: data.revoked.present ? data.revoked.value : this.revoked,
+      requiresApproval: data.requiresApproval.present
+          ? data.requiresApproval.value
+          : this.requiresApproval,
+      name: data.name.present ? data.name.value : this.name,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InviteLink(')
+          ..write('id: $id, ')
+          ..write('roomId: $roomId, ')
+          ..write('code: $code, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('maxUses: $maxUses, ')
+          ..write('useCount: $useCount, ')
+          ..write('revoked: $revoked, ')
+          ..write('requiresApproval: $requiresApproval, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    roomId,
+    code,
+    createdBy,
+    createdAt,
+    expiresAt,
+    maxUses,
+    useCount,
+    revoked,
+    requiresApproval,
+    name,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InviteLink &&
+          other.id == this.id &&
+          other.roomId == this.roomId &&
+          other.code == this.code &&
+          other.createdBy == this.createdBy &&
+          other.createdAt == this.createdAt &&
+          other.expiresAt == this.expiresAt &&
+          other.maxUses == this.maxUses &&
+          other.useCount == this.useCount &&
+          other.revoked == this.revoked &&
+          other.requiresApproval == this.requiresApproval &&
+          other.name == this.name);
+}
+
+class InviteLinksCompanion extends UpdateCompanion<InviteLink> {
+  final Value<String> id;
+  final Value<String> roomId;
+  final Value<String> code;
+  final Value<String> createdBy;
+  final Value<int> createdAt;
+  final Value<int?> expiresAt;
+  final Value<int?> maxUses;
+  final Value<int> useCount;
+  final Value<bool> revoked;
+  final Value<bool> requiresApproval;
+  final Value<String?> name;
+  final Value<int> rowid;
+  const InviteLinksCompanion({
+    this.id = const Value.absent(),
+    this.roomId = const Value.absent(),
+    this.code = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.expiresAt = const Value.absent(),
+    this.maxUses = const Value.absent(),
+    this.useCount = const Value.absent(),
+    this.revoked = const Value.absent(),
+    this.requiresApproval = const Value.absent(),
+    this.name = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InviteLinksCompanion.insert({
+    required String id,
+    required String roomId,
+    required String code,
+    required String createdBy,
+    required int createdAt,
+    this.expiresAt = const Value.absent(),
+    this.maxUses = const Value.absent(),
+    this.useCount = const Value.absent(),
+    this.revoked = const Value.absent(),
+    this.requiresApproval = const Value.absent(),
+    this.name = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       roomId = Value(roomId),
+       code = Value(code),
+       createdBy = Value(createdBy),
+       createdAt = Value(createdAt);
+  static Insertable<InviteLink> custom({
+    Expression<String>? id,
+    Expression<String>? roomId,
+    Expression<String>? code,
+    Expression<String>? createdBy,
+    Expression<int>? createdAt,
+    Expression<int>? expiresAt,
+    Expression<int>? maxUses,
+    Expression<int>? useCount,
+    Expression<bool>? revoked,
+    Expression<bool>? requiresApproval,
+    Expression<String>? name,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (roomId != null) 'room_id': roomId,
+      if (code != null) 'code': code,
+      if (createdBy != null) 'created_by': createdBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (expiresAt != null) 'expires_at': expiresAt,
+      if (maxUses != null) 'max_uses': maxUses,
+      if (useCount != null) 'use_count': useCount,
+      if (revoked != null) 'revoked': revoked,
+      if (requiresApproval != null) 'requires_approval': requiresApproval,
+      if (name != null) 'name': name,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InviteLinksCompanion copyWith({
+    Value<String>? id,
+    Value<String>? roomId,
+    Value<String>? code,
+    Value<String>? createdBy,
+    Value<int>? createdAt,
+    Value<int?>? expiresAt,
+    Value<int?>? maxUses,
+    Value<int>? useCount,
+    Value<bool>? revoked,
+    Value<bool>? requiresApproval,
+    Value<String?>? name,
+    Value<int>? rowid,
+  }) {
+    return InviteLinksCompanion(
+      id: id ?? this.id,
+      roomId: roomId ?? this.roomId,
+      code: code ?? this.code,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      maxUses: maxUses ?? this.maxUses,
+      useCount: useCount ?? this.useCount,
+      revoked: revoked ?? this.revoked,
+      requiresApproval: requiresApproval ?? this.requiresApproval,
+      name: name ?? this.name,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (roomId.present) {
+      map['room_id'] = Variable<String>(roomId.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<String>(createdBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (expiresAt.present) {
+      map['expires_at'] = Variable<int>(expiresAt.value);
+    }
+    if (maxUses.present) {
+      map['max_uses'] = Variable<int>(maxUses.value);
+    }
+    if (useCount.present) {
+      map['use_count'] = Variable<int>(useCount.value);
+    }
+    if (revoked.present) {
+      map['revoked'] = Variable<bool>(revoked.value);
+    }
+    if (requiresApproval.present) {
+      map['requires_approval'] = Variable<bool>(requiresApproval.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InviteLinksCompanion(')
+          ..write('id: $id, ')
+          ..write('roomId: $roomId, ')
+          ..write('code: $code, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('maxUses: $maxUses, ')
+          ..write('useCount: $useCount, ')
+          ..write('revoked: $revoked, ')
+          ..write('requiresApproval: $requiresApproval, ')
+          ..write('name: $name, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $InviteLinkJoinsTable extends InviteLinkJoins
+    with TableInfo<$InviteLinkJoinsTable, InviteLinkJoin> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InviteLinkJoinsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _inviteLinkIdMeta = const VerificationMeta(
+    'inviteLinkId',
+  );
+  @override
+  late final GeneratedColumn<String> inviteLinkId = GeneratedColumn<String>(
+    'invite_link_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES invite_links (id)',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<String> profileId = GeneratedColumn<String>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _joinedAtMeta = const VerificationMeta(
+    'joinedAt',
+  );
+  @override
+  late final GeneratedColumn<int> joinedAt = GeneratedColumn<int>(
+    'joined_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('approved'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    inviteLinkId,
+    profileId,
+    joinedAt,
+    status,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'invite_link_joins';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<InviteLinkJoin> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('invite_link_id')) {
+      context.handle(
+        _inviteLinkIdMeta,
+        inviteLinkId.isAcceptableOrUnknown(
+          data['invite_link_id']!,
+          _inviteLinkIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_inviteLinkIdMeta);
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('joined_at')) {
+      context.handle(
+        _joinedAtMeta,
+        joinedAt.isAcceptableOrUnknown(data['joined_at']!, _joinedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_joinedAtMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InviteLinkJoin map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InviteLinkJoin(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      inviteLinkId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}invite_link_id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      joinedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}joined_at'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+    );
+  }
+
+  @override
+  $InviteLinkJoinsTable createAlias(String alias) {
+    return $InviteLinkJoinsTable(attachedDatabase, alias);
+  }
+}
+
+class InviteLinkJoin extends DataClass implements Insertable<InviteLinkJoin> {
+  /// Auto-incrementing primary key
+  final int id;
+
+  /// The invite link that was used
+  final String inviteLinkId;
+
+  /// Profile ID of the user who joined
+  final String profileId;
+
+  /// Timestamp when the user joined (milliseconds since epoch)
+  final int joinedAt;
+
+  /// Approval status: 'approved', 'pending', 'rejected'
+  final String status;
+  const InviteLinkJoin({
+    required this.id,
+    required this.inviteLinkId,
+    required this.profileId,
+    required this.joinedAt,
+    required this.status,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['invite_link_id'] = Variable<String>(inviteLinkId);
+    map['profile_id'] = Variable<String>(profileId);
+    map['joined_at'] = Variable<int>(joinedAt);
+    map['status'] = Variable<String>(status);
+    return map;
+  }
+
+  InviteLinkJoinsCompanion toCompanion(bool nullToAbsent) {
+    return InviteLinkJoinsCompanion(
+      id: Value(id),
+      inviteLinkId: Value(inviteLinkId),
+      profileId: Value(profileId),
+      joinedAt: Value(joinedAt),
+      status: Value(status),
+    );
+  }
+
+  factory InviteLinkJoin.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InviteLinkJoin(
+      id: serializer.fromJson<int>(json['id']),
+      inviteLinkId: serializer.fromJson<String>(json['inviteLinkId']),
+      profileId: serializer.fromJson<String>(json['profileId']),
+      joinedAt: serializer.fromJson<int>(json['joinedAt']),
+      status: serializer.fromJson<String>(json['status']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'inviteLinkId': serializer.toJson<String>(inviteLinkId),
+      'profileId': serializer.toJson<String>(profileId),
+      'joinedAt': serializer.toJson<int>(joinedAt),
+      'status': serializer.toJson<String>(status),
+    };
+  }
+
+  InviteLinkJoin copyWith({
+    int? id,
+    String? inviteLinkId,
+    String? profileId,
+    int? joinedAt,
+    String? status,
+  }) => InviteLinkJoin(
+    id: id ?? this.id,
+    inviteLinkId: inviteLinkId ?? this.inviteLinkId,
+    profileId: profileId ?? this.profileId,
+    joinedAt: joinedAt ?? this.joinedAt,
+    status: status ?? this.status,
+  );
+  InviteLinkJoin copyWithCompanion(InviteLinkJoinsCompanion data) {
+    return InviteLinkJoin(
+      id: data.id.present ? data.id.value : this.id,
+      inviteLinkId: data.inviteLinkId.present
+          ? data.inviteLinkId.value
+          : this.inviteLinkId,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      joinedAt: data.joinedAt.present ? data.joinedAt.value : this.joinedAt,
+      status: data.status.present ? data.status.value : this.status,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InviteLinkJoin(')
+          ..write('id: $id, ')
+          ..write('inviteLinkId: $inviteLinkId, ')
+          ..write('profileId: $profileId, ')
+          ..write('joinedAt: $joinedAt, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, inviteLinkId, profileId, joinedAt, status);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InviteLinkJoin &&
+          other.id == this.id &&
+          other.inviteLinkId == this.inviteLinkId &&
+          other.profileId == this.profileId &&
+          other.joinedAt == this.joinedAt &&
+          other.status == this.status);
+}
+
+class InviteLinkJoinsCompanion extends UpdateCompanion<InviteLinkJoin> {
+  final Value<int> id;
+  final Value<String> inviteLinkId;
+  final Value<String> profileId;
+  final Value<int> joinedAt;
+  final Value<String> status;
+  const InviteLinkJoinsCompanion({
+    this.id = const Value.absent(),
+    this.inviteLinkId = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.joinedAt = const Value.absent(),
+    this.status = const Value.absent(),
+  });
+  InviteLinkJoinsCompanion.insert({
+    this.id = const Value.absent(),
+    required String inviteLinkId,
+    required String profileId,
+    required int joinedAt,
+    this.status = const Value.absent(),
+  }) : inviteLinkId = Value(inviteLinkId),
+       profileId = Value(profileId),
+       joinedAt = Value(joinedAt);
+  static Insertable<InviteLinkJoin> custom({
+    Expression<int>? id,
+    Expression<String>? inviteLinkId,
+    Expression<String>? profileId,
+    Expression<int>? joinedAt,
+    Expression<String>? status,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (inviteLinkId != null) 'invite_link_id': inviteLinkId,
+      if (profileId != null) 'profile_id': profileId,
+      if (joinedAt != null) 'joined_at': joinedAt,
+      if (status != null) 'status': status,
+    });
+  }
+
+  InviteLinkJoinsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? inviteLinkId,
+    Value<String>? profileId,
+    Value<int>? joinedAt,
+    Value<String>? status,
+  }) {
+    return InviteLinkJoinsCompanion(
+      id: id ?? this.id,
+      inviteLinkId: inviteLinkId ?? this.inviteLinkId,
+      profileId: profileId ?? this.profileId,
+      joinedAt: joinedAt ?? this.joinedAt,
+      status: status ?? this.status,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (inviteLinkId.present) {
+      map['invite_link_id'] = Variable<String>(inviteLinkId.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<String>(profileId.value);
+    }
+    if (joinedAt.present) {
+      map['joined_at'] = Variable<int>(joinedAt.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InviteLinkJoinsCompanion(')
+          ..write('id: $id, ')
+          ..write('inviteLinkId: $inviteLinkId, ')
+          ..write('profileId: $profileId, ')
+          ..write('joinedAt: $joinedAt, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5772,6 +7649,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $UserSettingsTable userSettings = $UserSettingsTable(this);
   late final $DraftsTable drafts = $DraftsTable(this);
   late final $ReadReceiptsTable readReceipts = $ReadReceiptsTable(this);
+  late final $ReportsTable reports = $ReportsTable(this);
+  late final $InviteLinksTable inviteLinks = $InviteLinksTable(this);
+  late final $InviteLinkJoinsTable inviteLinkJoins = $InviteLinkJoinsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5790,6 +7672,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     userSettings,
     drafts,
     readReceipts,
+    reports,
+    inviteLinks,
+    inviteLinkJoins,
   ];
 }
 
@@ -6312,6 +8197,7 @@ typedef $$RoomsTableCreateCompanionBuilder =
       Value<int?> lastEventIndex,
       Value<int> unreadCount,
       Value<String?> metadata,
+      Value<int?> disappearingTimeout,
       Value<int> rowid,
     });
 typedef $$RoomsTableUpdateCompanionBuilder =
@@ -6323,6 +8209,7 @@ typedef $$RoomsTableUpdateCompanionBuilder =
       Value<int?> lastEventIndex,
       Value<int> unreadCount,
       Value<String?> metadata,
+      Value<int?> disappearingTimeout,
       Value<int> rowid,
     });
 
@@ -6383,6 +8270,24 @@ final class $$RoomsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$InviteLinksTable, List<InviteLink>>
+  _inviteLinksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.inviteLinks,
+    aliasName: $_aliasNameGenerator(db.rooms.id, db.inviteLinks.roomId),
+  );
+
+  $$InviteLinksTableProcessedTableManager get inviteLinksRefs {
+    final manager = $$InviteLinksTableTableManager(
+      $_db,
+      $_db.inviteLinks,
+    ).filter((f) => f.roomId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_inviteLinksRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$RoomsTableFilterComposer extends Composer<_$AppDatabase, $RoomsTable> {
@@ -6425,6 +8330,11 @@ class $$RoomsTableFilterComposer extends Composer<_$AppDatabase, $RoomsTable> {
 
   ColumnFilters<String> get metadata => $composableBuilder(
     column: $table.metadata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get disappearingTimeout => $composableBuilder(
+    column: $table.disappearingTimeout,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6502,6 +8412,31 @@ class $$RoomsTableFilterComposer extends Composer<_$AppDatabase, $RoomsTable> {
     );
     return f(composer);
   }
+
+  Expression<bool> inviteLinksRefs(
+    Expression<bool> Function($$InviteLinksTableFilterComposer f) f,
+  ) {
+    final $$InviteLinksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.inviteLinks,
+      getReferencedColumn: (t) => t.roomId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InviteLinksTableFilterComposer(
+            $db: $db,
+            $table: $db.inviteLinks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$RoomsTableOrderingComposer
@@ -6547,6 +8482,11 @@ class $$RoomsTableOrderingComposer
     column: $table.metadata,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get disappearingTimeout => $composableBuilder(
+    column: $table.disappearingTimeout,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RoomsTableAnnotationComposer
@@ -6584,6 +8524,11 @@ class $$RoomsTableAnnotationComposer
 
   GeneratedColumn<String> get metadata =>
       $composableBuilder(column: $table.metadata, builder: (column) => column);
+
+  GeneratedColumn<int> get disappearingTimeout => $composableBuilder(
+    column: $table.disappearingTimeout,
+    builder: (column) => column,
+  );
 
   Expression<T> roomMembersRefs<T extends Object>(
     Expression<T> Function($$RoomMembersTableAnnotationComposer a) f,
@@ -6659,6 +8604,31 @@ class $$RoomsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> inviteLinksRefs<T extends Object>(
+    Expression<T> Function($$InviteLinksTableAnnotationComposer a) f,
+  ) {
+    final $$InviteLinksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.inviteLinks,
+      getReferencedColumn: (t) => t.roomId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InviteLinksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.inviteLinks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$RoomsTableTableManager
@@ -6678,6 +8648,7 @@ class $$RoomsTableTableManager
             bool roomMembersRefs,
             bool roomEventsRefs,
             bool transactionsRefs,
+            bool inviteLinksRefs,
           })
         > {
   $$RoomsTableTableManager(_$AppDatabase db, $RoomsTable table)
@@ -6700,6 +8671,7 @@ class $$RoomsTableTableManager
                 Value<int?> lastEventIndex = const Value.absent(),
                 Value<int> unreadCount = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
+                Value<int?> disappearingTimeout = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomsCompanion(
                 id: id,
@@ -6709,6 +8681,7 @@ class $$RoomsTableTableManager
                 lastEventIndex: lastEventIndex,
                 unreadCount: unreadCount,
                 metadata: metadata,
+                disappearingTimeout: disappearingTimeout,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6720,6 +8693,7 @@ class $$RoomsTableTableManager
                 Value<int?> lastEventIndex = const Value.absent(),
                 Value<int> unreadCount = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
+                Value<int?> disappearingTimeout = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomsCompanion.insert(
                 id: id,
@@ -6729,6 +8703,7 @@ class $$RoomsTableTableManager
                 lastEventIndex: lastEventIndex,
                 unreadCount: unreadCount,
                 metadata: metadata,
+                disappearingTimeout: disappearingTimeout,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6742,6 +8717,7 @@ class $$RoomsTableTableManager
                 roomMembersRefs = false,
                 roomEventsRefs = false,
                 transactionsRefs = false,
+                inviteLinksRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -6749,6 +8725,7 @@ class $$RoomsTableTableManager
                     if (roomMembersRefs) db.roomMembers,
                     if (roomEventsRefs) db.roomEvents,
                     if (transactionsRefs) db.transactions,
+                    if (inviteLinksRefs) db.inviteLinks,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -6812,6 +8789,27 @@ class $$RoomsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (inviteLinksRefs)
+                        await $_getPrefetchedData<
+                          Room,
+                          $RoomsTable,
+                          InviteLink
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RoomsTableReferences
+                              ._inviteLinksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RoomsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).inviteLinksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.roomId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6836,6 +8834,7 @@ typedef $$RoomsTableProcessedTableManager =
         bool roomMembersRefs,
         bool roomEventsRefs,
         bool transactionsRefs,
+        bool inviteLinksRefs,
       })
     >;
 typedef $$RoomMembersTableCreateCompanionBuilder =
@@ -7197,6 +9196,11 @@ typedef $$RoomEventsTableCreateCompanionBuilder =
       Value<String?> redactedBy,
       Value<int> retryCount,
       Value<String?> errorMessage,
+      Value<String?> forwardedFromRoom,
+      Value<String?> forwardedFromEvent,
+      Value<int> forwardCount,
+      Value<bool> forwardRestricted,
+      Value<int?> expiresAt,
       Value<int> rowid,
     });
 typedef $$RoomEventsTableUpdateCompanionBuilder =
@@ -7219,6 +9223,11 @@ typedef $$RoomEventsTableUpdateCompanionBuilder =
       Value<String?> redactedBy,
       Value<int> retryCount,
       Value<String?> errorMessage,
+      Value<String?> forwardedFromRoom,
+      Value<String?> forwardedFromEvent,
+      Value<int> forwardCount,
+      Value<bool> forwardRestricted,
+      Value<int?> expiresAt,
       Value<int> rowid,
     });
 
@@ -7336,6 +9345,31 @@ class $$RoomEventsTableFilterComposer
 
   ColumnFilters<String> get errorMessage => $composableBuilder(
     column: $table.errorMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get forwardedFromRoom => $composableBuilder(
+    column: $table.forwardedFromRoom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get forwardedFromEvent => $composableBuilder(
+    column: $table.forwardedFromEvent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get forwardCount => $composableBuilder(
+    column: $table.forwardCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get forwardRestricted => $composableBuilder(
+    column: $table.forwardRestricted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7457,6 +9491,31 @@ class $$RoomEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get forwardedFromRoom => $composableBuilder(
+    column: $table.forwardedFromRoom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get forwardedFromEvent => $composableBuilder(
+    column: $table.forwardedFromEvent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get forwardCount => $composableBuilder(
+    column: $table.forwardCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get forwardRestricted => $composableBuilder(
+    column: $table.forwardRestricted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RoomsTableOrderingComposer get roomId {
     final $$RoomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -7553,6 +9612,29 @@ class $$RoomEventsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get forwardedFromRoom => $composableBuilder(
+    column: $table.forwardedFromRoom,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get forwardedFromEvent => $composableBuilder(
+    column: $table.forwardedFromEvent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get forwardCount => $composableBuilder(
+    column: $table.forwardCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get forwardRestricted => $composableBuilder(
+    column: $table.forwardRestricted,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+
   $$RoomsTableAnnotationComposer get roomId {
     final $$RoomsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -7623,6 +9705,11 @@ class $$RoomEventsTableTableManager
                 Value<String?> redactedBy = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
+                Value<String?> forwardedFromRoom = const Value.absent(),
+                Value<String?> forwardedFromEvent = const Value.absent(),
+                Value<int> forwardCount = const Value.absent(),
+                Value<bool> forwardRestricted = const Value.absent(),
+                Value<int?> expiresAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion(
                 id: id,
@@ -7643,6 +9730,11 @@ class $$RoomEventsTableTableManager
                 redactedBy: redactedBy,
                 retryCount: retryCount,
                 errorMessage: errorMessage,
+                forwardedFromRoom: forwardedFromRoom,
+                forwardedFromEvent: forwardedFromEvent,
+                forwardCount: forwardCount,
+                forwardRestricted: forwardRestricted,
+                expiresAt: expiresAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7665,6 +9757,11 @@ class $$RoomEventsTableTableManager
                 Value<String?> redactedBy = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
+                Value<String?> forwardedFromRoom = const Value.absent(),
+                Value<String?> forwardedFromEvent = const Value.absent(),
+                Value<int> forwardCount = const Value.absent(),
+                Value<bool> forwardRestricted = const Value.absent(),
+                Value<int?> expiresAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion.insert(
                 id: id,
@@ -7685,6 +9782,11 @@ class $$RoomEventsTableTableManager
                 redactedBy: redactedBy,
                 retryCount: retryCount,
                 errorMessage: errorMessage,
+                forwardedFromRoom: forwardedFromRoom,
+                forwardedFromEvent: forwardedFromEvent,
+                forwardCount: forwardCount,
+                forwardRestricted: forwardRestricted,
+                expiresAt: expiresAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -9368,6 +11470,1103 @@ typedef $$ReadReceiptsTableProcessedTableManager =
       ReadReceipt,
       PrefetchHooks Function()
     >;
+typedef $$ReportsTableCreateCompanionBuilder =
+    ReportsCompanion Function({
+      required String id,
+      required String reportedUserId,
+      required String reason,
+      Value<String?> details,
+      Value<String?> evidenceEventIds,
+      required int reportedAt,
+      Value<String> status,
+      Value<int> rowid,
+    });
+typedef $$ReportsTableUpdateCompanionBuilder =
+    ReportsCompanion Function({
+      Value<String> id,
+      Value<String> reportedUserId,
+      Value<String> reason,
+      Value<String?> details,
+      Value<String?> evidenceEventIds,
+      Value<int> reportedAt,
+      Value<String> status,
+      Value<int> rowid,
+    });
+
+class $$ReportsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReportsTable> {
+  $$ReportsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reportedUserId => $composableBuilder(
+    column: $table.reportedUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get details => $composableBuilder(
+    column: $table.details,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get evidenceEventIds => $composableBuilder(
+    column: $table.evidenceEventIds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reportedAt => $composableBuilder(
+    column: $table.reportedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReportsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReportsTable> {
+  $$ReportsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reportedUserId => $composableBuilder(
+    column: $table.reportedUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get details => $composableBuilder(
+    column: $table.details,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get evidenceEventIds => $composableBuilder(
+    column: $table.evidenceEventIds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reportedAt => $composableBuilder(
+    column: $table.reportedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReportsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReportsTable> {
+  $$ReportsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get reportedUserId => $composableBuilder(
+    column: $table.reportedUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<String> get details =>
+      $composableBuilder(column: $table.details, builder: (column) => column);
+
+  GeneratedColumn<String> get evidenceEventIds => $composableBuilder(
+    column: $table.evidenceEventIds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reportedAt => $composableBuilder(
+    column: $table.reportedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+}
+
+class $$ReportsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReportsTable,
+          Report,
+          $$ReportsTableFilterComposer,
+          $$ReportsTableOrderingComposer,
+          $$ReportsTableAnnotationComposer,
+          $$ReportsTableCreateCompanionBuilder,
+          $$ReportsTableUpdateCompanionBuilder,
+          (Report, BaseReferences<_$AppDatabase, $ReportsTable, Report>),
+          Report,
+          PrefetchHooks Function()
+        > {
+  $$ReportsTableTableManager(_$AppDatabase db, $ReportsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReportsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReportsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReportsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> reportedUserId = const Value.absent(),
+                Value<String> reason = const Value.absent(),
+                Value<String?> details = const Value.absent(),
+                Value<String?> evidenceEventIds = const Value.absent(),
+                Value<int> reportedAt = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReportsCompanion(
+                id: id,
+                reportedUserId: reportedUserId,
+                reason: reason,
+                details: details,
+                evidenceEventIds: evidenceEventIds,
+                reportedAt: reportedAt,
+                status: status,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String reportedUserId,
+                required String reason,
+                Value<String?> details = const Value.absent(),
+                Value<String?> evidenceEventIds = const Value.absent(),
+                required int reportedAt,
+                Value<String> status = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReportsCompanion.insert(
+                id: id,
+                reportedUserId: reportedUserId,
+                reason: reason,
+                details: details,
+                evidenceEventIds: evidenceEventIds,
+                reportedAt: reportedAt,
+                status: status,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReportsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReportsTable,
+      Report,
+      $$ReportsTableFilterComposer,
+      $$ReportsTableOrderingComposer,
+      $$ReportsTableAnnotationComposer,
+      $$ReportsTableCreateCompanionBuilder,
+      $$ReportsTableUpdateCompanionBuilder,
+      (Report, BaseReferences<_$AppDatabase, $ReportsTable, Report>),
+      Report,
+      PrefetchHooks Function()
+    >;
+typedef $$InviteLinksTableCreateCompanionBuilder =
+    InviteLinksCompanion Function({
+      required String id,
+      required String roomId,
+      required String code,
+      required String createdBy,
+      required int createdAt,
+      Value<int?> expiresAt,
+      Value<int?> maxUses,
+      Value<int> useCount,
+      Value<bool> revoked,
+      Value<bool> requiresApproval,
+      Value<String?> name,
+      Value<int> rowid,
+    });
+typedef $$InviteLinksTableUpdateCompanionBuilder =
+    InviteLinksCompanion Function({
+      Value<String> id,
+      Value<String> roomId,
+      Value<String> code,
+      Value<String> createdBy,
+      Value<int> createdAt,
+      Value<int?> expiresAt,
+      Value<int?> maxUses,
+      Value<int> useCount,
+      Value<bool> revoked,
+      Value<bool> requiresApproval,
+      Value<String?> name,
+      Value<int> rowid,
+    });
+
+final class $$InviteLinksTableReferences
+    extends BaseReferences<_$AppDatabase, $InviteLinksTable, InviteLink> {
+  $$InviteLinksTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $RoomsTable _roomIdTable(_$AppDatabase db) => db.rooms.createAlias(
+    $_aliasNameGenerator(db.inviteLinks.roomId, db.rooms.id),
+  );
+
+  $$RoomsTableProcessedTableManager get roomId {
+    final $_column = $_itemColumn<String>('room_id')!;
+
+    final manager = $$RoomsTableTableManager(
+      $_db,
+      $_db.rooms,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_roomIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$InviteLinkJoinsTable, List<InviteLinkJoin>>
+  _inviteLinkJoinsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.inviteLinkJoins,
+    aliasName: $_aliasNameGenerator(
+      db.inviteLinks.id,
+      db.inviteLinkJoins.inviteLinkId,
+    ),
+  );
+
+  $$InviteLinkJoinsTableProcessedTableManager get inviteLinkJoinsRefs {
+    final manager = $$InviteLinkJoinsTableTableManager(
+      $_db,
+      $_db.inviteLinkJoins,
+    ).filter((f) => f.inviteLinkId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _inviteLinkJoinsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$InviteLinksTableFilterComposer
+    extends Composer<_$AppDatabase, $InviteLinksTable> {
+  $$InviteLinksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdBy => $composableBuilder(
+    column: $table.createdBy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get maxUses => $composableBuilder(
+    column: $table.maxUses,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get useCount => $composableBuilder(
+    column: $table.useCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get revoked => $composableBuilder(
+    column: $table.revoked,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get requiresApproval => $composableBuilder(
+    column: $table.requiresApproval,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$RoomsTableFilterComposer get roomId {
+    final $$RoomsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.roomId,
+      referencedTable: $db.rooms,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoomsTableFilterComposer(
+            $db: $db,
+            $table: $db.rooms,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> inviteLinkJoinsRefs(
+    Expression<bool> Function($$InviteLinkJoinsTableFilterComposer f) f,
+  ) {
+    final $$InviteLinkJoinsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.inviteLinkJoins,
+      getReferencedColumn: (t) => t.inviteLinkId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InviteLinkJoinsTableFilterComposer(
+            $db: $db,
+            $table: $db.inviteLinkJoins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$InviteLinksTableOrderingComposer
+    extends Composer<_$AppDatabase, $InviteLinksTable> {
+  $$InviteLinksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdBy => $composableBuilder(
+    column: $table.createdBy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expiresAt => $composableBuilder(
+    column: $table.expiresAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get maxUses => $composableBuilder(
+    column: $table.maxUses,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get useCount => $composableBuilder(
+    column: $table.useCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get revoked => $composableBuilder(
+    column: $table.revoked,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get requiresApproval => $composableBuilder(
+    column: $table.requiresApproval,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$RoomsTableOrderingComposer get roomId {
+    final $$RoomsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.roomId,
+      referencedTable: $db.rooms,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoomsTableOrderingComposer(
+            $db: $db,
+            $table: $db.rooms,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InviteLinksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InviteLinksTable> {
+  $$InviteLinksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get createdBy =>
+      $composableBuilder(column: $table.createdBy, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get expiresAt =>
+      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
+
+  GeneratedColumn<int> get maxUses =>
+      $composableBuilder(column: $table.maxUses, builder: (column) => column);
+
+  GeneratedColumn<int> get useCount =>
+      $composableBuilder(column: $table.useCount, builder: (column) => column);
+
+  GeneratedColumn<bool> get revoked =>
+      $composableBuilder(column: $table.revoked, builder: (column) => column);
+
+  GeneratedColumn<bool> get requiresApproval => $composableBuilder(
+    column: $table.requiresApproval,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  $$RoomsTableAnnotationComposer get roomId {
+    final $$RoomsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.roomId,
+      referencedTable: $db.rooms,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoomsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.rooms,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> inviteLinkJoinsRefs<T extends Object>(
+    Expression<T> Function($$InviteLinkJoinsTableAnnotationComposer a) f,
+  ) {
+    final $$InviteLinkJoinsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.inviteLinkJoins,
+      getReferencedColumn: (t) => t.inviteLinkId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InviteLinkJoinsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.inviteLinkJoins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$InviteLinksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InviteLinksTable,
+          InviteLink,
+          $$InviteLinksTableFilterComposer,
+          $$InviteLinksTableOrderingComposer,
+          $$InviteLinksTableAnnotationComposer,
+          $$InviteLinksTableCreateCompanionBuilder,
+          $$InviteLinksTableUpdateCompanionBuilder,
+          (InviteLink, $$InviteLinksTableReferences),
+          InviteLink,
+          PrefetchHooks Function({bool roomId, bool inviteLinkJoinsRefs})
+        > {
+  $$InviteLinksTableTableManager(_$AppDatabase db, $InviteLinksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InviteLinksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InviteLinksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InviteLinksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> roomId = const Value.absent(),
+                Value<String> code = const Value.absent(),
+                Value<String> createdBy = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int?> expiresAt = const Value.absent(),
+                Value<int?> maxUses = const Value.absent(),
+                Value<int> useCount = const Value.absent(),
+                Value<bool> revoked = const Value.absent(),
+                Value<bool> requiresApproval = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InviteLinksCompanion(
+                id: id,
+                roomId: roomId,
+                code: code,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                expiresAt: expiresAt,
+                maxUses: maxUses,
+                useCount: useCount,
+                revoked: revoked,
+                requiresApproval: requiresApproval,
+                name: name,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String roomId,
+                required String code,
+                required String createdBy,
+                required int createdAt,
+                Value<int?> expiresAt = const Value.absent(),
+                Value<int?> maxUses = const Value.absent(),
+                Value<int> useCount = const Value.absent(),
+                Value<bool> revoked = const Value.absent(),
+                Value<bool> requiresApproval = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InviteLinksCompanion.insert(
+                id: id,
+                roomId: roomId,
+                code: code,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                expiresAt: expiresAt,
+                maxUses: maxUses,
+                useCount: useCount,
+                revoked: revoked,
+                requiresApproval: requiresApproval,
+                name: name,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$InviteLinksTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({roomId = false, inviteLinkJoinsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (inviteLinkJoinsRefs) db.inviteLinkJoins,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (roomId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.roomId,
+                                    referencedTable:
+                                        $$InviteLinksTableReferences
+                                            ._roomIdTable(db),
+                                    referencedColumn:
+                                        $$InviteLinksTableReferences
+                                            ._roomIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (inviteLinkJoinsRefs)
+                        await $_getPrefetchedData<
+                          InviteLink,
+                          $InviteLinksTable,
+                          InviteLinkJoin
+                        >(
+                          currentTable: table,
+                          referencedTable: $$InviteLinksTableReferences
+                              ._inviteLinkJoinsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$InviteLinksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).inviteLinkJoinsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.inviteLinkId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$InviteLinksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InviteLinksTable,
+      InviteLink,
+      $$InviteLinksTableFilterComposer,
+      $$InviteLinksTableOrderingComposer,
+      $$InviteLinksTableAnnotationComposer,
+      $$InviteLinksTableCreateCompanionBuilder,
+      $$InviteLinksTableUpdateCompanionBuilder,
+      (InviteLink, $$InviteLinksTableReferences),
+      InviteLink,
+      PrefetchHooks Function({bool roomId, bool inviteLinkJoinsRefs})
+    >;
+typedef $$InviteLinkJoinsTableCreateCompanionBuilder =
+    InviteLinkJoinsCompanion Function({
+      Value<int> id,
+      required String inviteLinkId,
+      required String profileId,
+      required int joinedAt,
+      Value<String> status,
+    });
+typedef $$InviteLinkJoinsTableUpdateCompanionBuilder =
+    InviteLinkJoinsCompanion Function({
+      Value<int> id,
+      Value<String> inviteLinkId,
+      Value<String> profileId,
+      Value<int> joinedAt,
+      Value<String> status,
+    });
+
+final class $$InviteLinkJoinsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $InviteLinkJoinsTable, InviteLinkJoin> {
+  $$InviteLinkJoinsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $InviteLinksTable _inviteLinkIdTable(_$AppDatabase db) =>
+      db.inviteLinks.createAlias(
+        $_aliasNameGenerator(
+          db.inviteLinkJoins.inviteLinkId,
+          db.inviteLinks.id,
+        ),
+      );
+
+  $$InviteLinksTableProcessedTableManager get inviteLinkId {
+    final $_column = $_itemColumn<String>('invite_link_id')!;
+
+    final manager = $$InviteLinksTableTableManager(
+      $_db,
+      $_db.inviteLinks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_inviteLinkIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$InviteLinkJoinsTableFilterComposer
+    extends Composer<_$AppDatabase, $InviteLinkJoinsTable> {
+  $$InviteLinkJoinsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get joinedAt => $composableBuilder(
+    column: $table.joinedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$InviteLinksTableFilterComposer get inviteLinkId {
+    final $$InviteLinksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inviteLinkId,
+      referencedTable: $db.inviteLinks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InviteLinksTableFilterComposer(
+            $db: $db,
+            $table: $db.inviteLinks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InviteLinkJoinsTableOrderingComposer
+    extends Composer<_$AppDatabase, $InviteLinkJoinsTable> {
+  $$InviteLinkJoinsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get profileId => $composableBuilder(
+    column: $table.profileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get joinedAt => $composableBuilder(
+    column: $table.joinedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$InviteLinksTableOrderingComposer get inviteLinkId {
+    final $$InviteLinksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inviteLinkId,
+      referencedTable: $db.inviteLinks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InviteLinksTableOrderingComposer(
+            $db: $db,
+            $table: $db.inviteLinks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InviteLinkJoinsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InviteLinkJoinsTable> {
+  $$InviteLinkJoinsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get profileId =>
+      $composableBuilder(column: $table.profileId, builder: (column) => column);
+
+  GeneratedColumn<int> get joinedAt =>
+      $composableBuilder(column: $table.joinedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  $$InviteLinksTableAnnotationComposer get inviteLinkId {
+    final $$InviteLinksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inviteLinkId,
+      referencedTable: $db.inviteLinks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InviteLinksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.inviteLinks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$InviteLinkJoinsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InviteLinkJoinsTable,
+          InviteLinkJoin,
+          $$InviteLinkJoinsTableFilterComposer,
+          $$InviteLinkJoinsTableOrderingComposer,
+          $$InviteLinkJoinsTableAnnotationComposer,
+          $$InviteLinkJoinsTableCreateCompanionBuilder,
+          $$InviteLinkJoinsTableUpdateCompanionBuilder,
+          (InviteLinkJoin, $$InviteLinkJoinsTableReferences),
+          InviteLinkJoin,
+          PrefetchHooks Function({bool inviteLinkId})
+        > {
+  $$InviteLinkJoinsTableTableManager(
+    _$AppDatabase db,
+    $InviteLinkJoinsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InviteLinkJoinsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InviteLinkJoinsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InviteLinkJoinsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> inviteLinkId = const Value.absent(),
+                Value<String> profileId = const Value.absent(),
+                Value<int> joinedAt = const Value.absent(),
+                Value<String> status = const Value.absent(),
+              }) => InviteLinkJoinsCompanion(
+                id: id,
+                inviteLinkId: inviteLinkId,
+                profileId: profileId,
+                joinedAt: joinedAt,
+                status: status,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String inviteLinkId,
+                required String profileId,
+                required int joinedAt,
+                Value<String> status = const Value.absent(),
+              }) => InviteLinkJoinsCompanion.insert(
+                id: id,
+                inviteLinkId: inviteLinkId,
+                profileId: profileId,
+                joinedAt: joinedAt,
+                status: status,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$InviteLinkJoinsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({inviteLinkId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (inviteLinkId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.inviteLinkId,
+                                referencedTable:
+                                    $$InviteLinkJoinsTableReferences
+                                        ._inviteLinkIdTable(db),
+                                referencedColumn:
+                                    $$InviteLinkJoinsTableReferences
+                                        ._inviteLinkIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$InviteLinkJoinsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InviteLinkJoinsTable,
+      InviteLinkJoin,
+      $$InviteLinkJoinsTableFilterComposer,
+      $$InviteLinkJoinsTableOrderingComposer,
+      $$InviteLinkJoinsTableAnnotationComposer,
+      $$InviteLinkJoinsTableCreateCompanionBuilder,
+      $$InviteLinkJoinsTableUpdateCompanionBuilder,
+      (InviteLinkJoin, $$InviteLinkJoinsTableReferences),
+      InviteLinkJoin,
+      PrefetchHooks Function({bool inviteLinkId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9398,4 +12597,10 @@ class $AppDatabaseManager {
       $$DraftsTableTableManager(_db, _db.drafts);
   $$ReadReceiptsTableTableManager get readReceipts =>
       $$ReadReceiptsTableTableManager(_db, _db.readReceipts);
+  $$ReportsTableTableManager get reports =>
+      $$ReportsTableTableManager(_db, _db.reports);
+  $$InviteLinksTableTableManager get inviteLinks =>
+      $$InviteLinksTableTableManager(_db, _db.inviteLinks);
+  $$InviteLinkJoinsTableTableManager get inviteLinkJoins =>
+      $$InviteLinkJoinsTableTableManager(_db, _db.inviteLinkJoins);
 }

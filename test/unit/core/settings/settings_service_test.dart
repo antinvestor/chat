@@ -575,7 +575,7 @@ void main() {
       expect(SettingsDefaults.aboutVisible, equals('everyone'));
       expect(SettingsDefaults.groupsAddPermission, equals('everyone'));
       expect(SettingsDefaults.biometricEnabled, isFalse);
-      expect(SettingsDefaults.lockTimeoutMinutes, equals(0));
+      expect(SettingsDefaults.lockTimeoutMinutes, equals(1));
       expect(SettingsDefaults.backupEnabled, isFalse);
       expect(SettingsDefaults.backupFrequency, equals('weekly'));
     });

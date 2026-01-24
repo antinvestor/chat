@@ -62,13 +62,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           FadeTransition(opacity: _fadeAnimation, child: widget.child),
 
         // Splash screen (visible until interactive)
+        // Wrapped in Directionality and Theme since it's outside MaterialApp
         if (!_showChild || _fadeController.value < 1.0)
-          IgnorePointer(
-            ignoring: _showChild,
-            child: AnimatedOpacity(
-              opacity: _showChild ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 300),
-              child: _SplashContent(progress: progress),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Theme(
+              data: AppTheme.lightTheme,
+              child: IgnorePointer(
+                ignoring: _showChild,
+                child: AnimatedOpacity(
+                  opacity: _showChild ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: _SplashContent(progress: progress),
+                ),
+              ),
             ),
           ),
       ],
@@ -82,7 +89,10 @@ class _SplashContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Use MediaQuery to detect system dark mode since we're outside MaterialApp
+    final platformBrightness =
+        MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
+    final isDark = platformBrightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: isDark

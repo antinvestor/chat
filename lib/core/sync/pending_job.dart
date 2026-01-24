@@ -8,6 +8,7 @@ enum JobType {
   sendMediaMessage,
   editMessage,
   deleteMessage,
+  forwardMessage,
   uploadFile,
   createRoom,
   updateRoom,
@@ -20,6 +21,12 @@ enum JobType {
   leaveRoom,
   vote,
   syncContacts,
+  custom, // For custom jobs like reports
+  createInviteLink,
+  revokeInviteLink,
+  useInviteLink,
+  approveJoinRequest,
+  rejectJoinRequest,
 }
 
 @freezed
