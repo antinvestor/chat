@@ -228,6 +228,10 @@ class SyncEngine with WidgetsBindingObserver {
   static const _maxBackoffMs = 30000; // 30 seconds
   static const _maxReconnectAttempts = 5;
 
+  // Room member sync cache to avoid redundant syncs
+  final Map<String, DateTime> _roomMemberSyncCache = {};
+  static const _roomMemberSyncCacheDuration = Duration(minutes: 5);
+
   /// Register the lifecycle observer
   void _registerLifecycleObserver() {
     if (!_isLifecycleObserverRegistered) {
@@ -1711,18 +1715,178 @@ class SyncEngine with WidgetsBindingObserver {
   ///
   /// Note: This method works for both authenticated and anonymous subscriptions
   /// The subscription ID is independent of profile ID.
-  Future<String?> getCurrentSubscriptionId(String roomId) async {
+  ///
+  /// @param roomId The room to get subscription for
+  /// @param syncIfMissing If true, sync room members when subscription not found
+  /// @param maxRetries Number of sync attempts before giving up (only used if syncIfMissing)
+  Future<String?> getCurrentSubscriptionId(
+    String roomId, {
+    bool syncIfMissing = false,
+    int maxRetries = 2,
+  }) async {
     final currentProfileId = await _authRepository.getCurrentProfileId();
     final currentContactId = await _authRepository.getCurrentContactId();
     if (currentContactId == null) return null;
 
-    // Use repository to find the subscription ID for the current profile
-    // Pass empty string for profileId if null to handle anonymous subscriptions
-    return _roomMemberRepository.getCurrentSubscriptionId(
+    // First attempt - check local database
+    var subscriptionId = await _roomMemberRepository.getCurrentSubscriptionId(
       roomId,
       currentProfileId ?? '', // Empty string for anonymous subscriptions
       currentContactId,
     );
+
+    if (subscriptionId != null) {
+      return subscriptionId;
+    }
+
+    // Subscription not found - try syncing if enabled
+    if (!syncIfMissing) {
+      return null;
+    }
+
+    AppLogger.debug(
+      'Subscription not found locally, attempting sync',
+      data: {'roomId': roomId, 'maxRetries': maxRetries},
+    );
+
+    // Sync and retry
+    for (var retry = 0; retry < maxRetries; retry++) {
+      try {
+        await _syncRoomMembersIfNeeded(roomId, forceSync: retry > 0);
+
+        subscriptionId = await _roomMemberRepository.getCurrentSubscriptionId(
+          roomId,
+          currentProfileId ?? '',
+          currentContactId,
+        );
+
+        if (subscriptionId != null) {
+          AppLogger.info(
+            'Subscription found after sync',
+            data: {'roomId': roomId, 'attempt': retry + 1},
+          );
+          return subscriptionId;
+        }
+      } catch (e, stackTrace) {
+        AppLogger.warning(
+          'Room member sync failed',
+          data: {'roomId': roomId, 'attempt': retry + 1, 'error': e.toString()},
+        );
+        if (retry == maxRetries - 1) {
+          AppLogger.error(
+            'All sync attempts failed',
+            error: e,
+            stackTrace: stackTrace,
+            data: {'roomId': roomId},
+          );
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// Sync room members from server if not recently synced
+  ///
+  /// @param roomId The room to sync members for
+  /// @param forceSync If true, sync even if recently synced
+  Future<void> _syncRoomMembersIfNeeded(
+    String roomId, {
+    bool forceSync = false,
+  }) async {
+    // Check cache
+    if (!forceSync) {
+      final lastSync = _roomMemberSyncCache[roomId];
+      if (lastSync != null) {
+        final elapsed = DateTime.now().difference(lastSync);
+        if (elapsed < _roomMemberSyncCacheDuration) {
+          AppLogger.debug(
+            'Skipping room member sync - recently synced',
+            data: {
+              'roomId': roomId,
+              'elapsedSeconds': elapsed.inSeconds,
+              'cacheSeconds': _roomMemberSyncCacheDuration.inSeconds,
+            },
+          );
+          return;
+        }
+      }
+    }
+
+    // Perform sync
+    await _syncRoomMembers(roomId);
+
+    // Update cache
+    _roomMemberSyncCache[roomId] = DateTime.now();
+  }
+
+  /// Sync room members from server
+  ///
+  /// @param roomId The room to sync members for
+  Future<void> _syncRoomMembers(String roomId) async {
+    try {
+      // Create request to search room subscriptions
+      final request = pb.SearchRoomSubscriptionsRequest(roomId: roomId);
+
+      // Fetch subscriptions from API
+      final response = await _chatClient.searchRoomSubscriptions(request);
+
+      var memberCount = 0;
+
+      // Process each subscription from the response
+      for (final subscription in response.members) {
+        // Extract subscription ID from API response
+        final subscriptionId = subscription.id;
+
+        // Extract profileId and contactId from ContactLink
+        final profileId =
+            subscription.hasMember() && subscription.member.hasProfileId()
+            ? subscription.member.profileId
+            : null;
+        final contactId =
+            subscription.hasMember() && subscription.member.hasContactId()
+            ? subscription.member.contactId
+            : null;
+
+        // Extract role (use first role if multiple, or null)
+        final role = subscription.roles.isNotEmpty
+            ? subscription.roles.first
+            : null;
+
+        // Note: joinedAt is available via subscription.joinedAt but
+        // createSubscription uses current timestamp for simplicity
+
+        // Insert or update room member using repository
+        await _roomMemberRepository.createSubscription(
+          subscriptionId: subscriptionId,
+          roomId: subscription.roomId,
+          profileId: profileId,
+          contactId: contactId,
+          role: role,
+        );
+
+        memberCount++;
+      }
+
+      AppLogger.info(
+        'Room members synced via SyncEngine',
+        data: {'roomId': roomId, 'memberCount': memberCount},
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to sync room members',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'roomId': roomId},
+      );
+      rethrow;
+    }
+  }
+
+  /// Public method to sync room members for a specific room
+  /// Can be called by external services when needed
+  Future<void> syncRoomMembers(String roomId, {bool forceSync = false}) async {
+    await _syncRoomMembersIfNeeded(roomId, forceSync: forceSync);
   }
 
   /// Check if a SUBSCRIPTION ID belongs to the current profile's contact
@@ -1777,14 +1941,22 @@ class SyncEngine with WidgetsBindingObserver {
       _subscriptionService.getAnonymousSubscriptions(roomId: roomId);
 
   /// Send typing event to server
+  ///
+  /// If subscription is not found locally, attempts to sync room members
+  /// and retry before giving up.
   Future<void> sendTyping(String roomId, bool isTyping) async {
     try {
-      // Get current profile's subscription ID for this room
-      final subscriptionId = await getCurrentSubscriptionId(roomId);
+      // Get current profile's subscription ID with sync fallback
+      final subscriptionId = await getCurrentSubscriptionId(
+        roomId,
+        syncIfMissing: true,
+        maxRetries: 1, // Single retry for typing (low priority)
+      );
+
       if (subscriptionId == null) {
-        // This can happen during initial sync before room membership is established
+        // Even after sync, subscription not found - user may not be in room
         AppLogger.debug(
-          'Cannot send typing event: subscription not found for room',
+          'Cannot send typing event: subscription not found after sync',
           data: {'roomId': roomId},
         );
         return;
@@ -1819,15 +1991,22 @@ class SyncEngine with WidgetsBindingObserver {
   }
 
   /// Send read receipts for messages
+  ///
+  /// If subscription is not found locally, attempts to sync room members
+  /// and retry before giving up.
   Future<void> sendReadReceipts(String roomId, List<String> messageIds) async {
     try {
-      // Get current profile's subscription ID for this room
-      final subscriptionId = await getCurrentSubscriptionId(roomId);
+      // Get current profile's subscription ID with sync fallback
+      final subscriptionId = await getCurrentSubscriptionId(
+        roomId,
+        syncIfMissing: true,
+        maxRetries: 1, // Single retry for read receipts (low priority)
+      );
+
       if (subscriptionId == null) {
-        // This can happen during initial sync before room membership is established
-        // Use debug level since it's expected behavior
+        // Even after sync, subscription not found - user may not be in room
         AppLogger.debug(
-          'Cannot send read receipts: subscription not found for room',
+          'Cannot send read receipts: subscription not found after sync',
           data: {'roomId': roomId},
         );
         return;
@@ -1868,16 +2047,23 @@ class SyncEngine with WidgetsBindingObserver {
 
   /// Send message immediately through live connection
   /// Falls back to job queue if connection is not available
+  ///
+  /// If subscription is not found locally, attempts to sync room members
+  /// and retry before failing.
   Future<void> sendMessageDirect(domain.RoomEvent event) async {
     if (!_isConnected) {
       throw Exception('Not connected to server');
     }
 
     try {
-      // Get current profile's subscription ID for this room
-      final subscriptionId = await getCurrentSubscriptionId(event.roomId);
+      // Get current profile's subscription ID with sync fallback
+      final subscriptionId = await getCurrentSubscriptionId(
+        event.roomId,
+        syncIfMissing: true,
+      );
+
       if (subscriptionId == null) {
-        throw Exception('Profile not in room');
+        throw Exception('Subscription not found for room ${event.roomId}');
       }
 
       // Create timestamp

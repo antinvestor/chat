@@ -14,6 +14,7 @@ import '../../../core/sync/sync_engine.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
+import '../../rooms/data/room_providers.dart';
 import '../../rooms/data/room_subscription_service.dart';
 import '../data/message_providers.dart';
 import '../data/message_sending_service.dart';
@@ -340,6 +341,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Sync room members on room entry to ensure subscription is available
+    // This runs once per room entry and uses caching to avoid redundant syncs
+    ref.watch(syncRoomMembersOnEntryProvider(widget.roomId));
+
     final messagesAsync = ref.watch(messagesStreamProvider(widget.roomId));
 
     return Scaffold(

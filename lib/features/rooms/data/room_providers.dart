@@ -1,11 +1,33 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/logging/app_logger.dart';
 import '../../messages/data/draft_repository.dart';
 import '../domain/room.dart' as domain;
 import '../domain/room_with_last_message.dart';
 import 'room_service.dart';
 
 part 'room_providers.g.dart';
+
+/// Provider that syncs room members when entering a room
+///
+/// This ensures that the current user's subscription is available in the local
+/// database before attempting to send messages or perform other operations.
+/// Uses caching to avoid redundant syncs.
+@riverpod
+Future<void> syncRoomMembersOnEntry(Ref ref, String roomId) async {
+  try {
+    final service = await ref.watch(roomServiceProvider.future);
+    await service.syncRoomMembers(roomId);
+    AppLogger.debug('Room members synced on entry', data: {'roomId': roomId});
+  } catch (e) {
+    // Log but don't throw - sync failure shouldn't block room entry
+    // The AuthContextService will retry sync when subscription is needed
+    AppLogger.warning(
+      'Room member sync on entry failed',
+      data: {'roomId': roomId, 'error': e.toString()},
+    );
+  }
+}
 
 /// Provider for getting a room by ID
 @riverpod

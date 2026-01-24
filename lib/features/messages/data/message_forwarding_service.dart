@@ -1,12 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xid/xid.dart';
 
+import '../../../core/auth/auth_context.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
-import '../../auth/data/auth_repository.dart';
-import '../../rooms/data/room_subscription_service.dart';
 import '../domain/room_event.dart' as domain;
 import 'message_providers.dart';
 import 'message_repository.dart';
@@ -253,25 +252,12 @@ final messageForwardingServiceProvider = Provider<MessageForwardingService>((
 ) {
   final messageRepo = ref.watch(messageRepositoryProvider);
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
-  final authRepo = ref.watch(authRepositoryProvider);
-  final subscriptionService = ref.watch(roomSubscriptionServiceProvider);
+  final authContextService = ref.watch(authContextServiceProvider);
 
   return MessageForwardingService(messageRepo, jobRepo, (String roomId) async {
-    // Get current user's profile and contact IDs
-    final profileId = await authRepo.getCurrentProfileId();
-    final contactId = await authRepo.getCurrentContactId();
-    if (profileId == null || contactId == null) {
-      throw Exception('User not authenticated - cannot get subscription ID');
-    }
-    // Look up current user's subscription ID for this room
-    final subscriptionId = await subscriptionService.getCurrentSubscriptionId(
+    // Use AuthContextService for atomic auth state and automatic sync
+    return authContextService.requireSubscriptionIdForRoom(
       roomId,
-      profileId,
-      contactId,
     );
-    if (subscriptionId == null) {
-      throw Exception('No subscription found for room $roomId');
-    }
-    return subscriptionId;
   });
 });
