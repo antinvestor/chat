@@ -2278,6 +2278,32 @@ class $RoomEventsTable extends RoomEvents
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _starredMeta = const VerificationMeta(
+    'starred',
+  );
+  @override
+  late final GeneratedColumn<bool> starred = GeneratedColumn<bool>(
+    'starred',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("starred" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _starredAtMeta = const VerificationMeta(
+    'starredAt',
+  );
+  @override
+  late final GeneratedColumn<int> starredAt = GeneratedColumn<int>(
+    'starred_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2303,6 +2329,8 @@ class $RoomEventsTable extends RoomEvents
     forwardCount,
     forwardRestricted,
     expiresAt,
+    starred,
+    starredAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2480,6 +2508,18 @@ class $RoomEventsTable extends RoomEvents
         expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
       );
     }
+    if (data.containsKey('starred')) {
+      context.handle(
+        _starredMeta,
+        starred.isAcceptableOrUnknown(data['starred']!, _starredMeta),
+      );
+    }
+    if (data.containsKey('starred_at')) {
+      context.handle(
+        _starredAtMeta,
+        starredAt.isAcceptableOrUnknown(data['starred_at']!, _starredAtMeta),
+      );
+    }
     return context;
   }
 
@@ -2581,6 +2621,14 @@ class $RoomEventsTable extends RoomEvents
         DriftSqlType.int,
         data['${effectivePrefix}expires_at'],
       ),
+      starred: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}starred'],
+      )!,
+      starredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}starred_at'],
+      ),
     );
   }
 
@@ -2661,6 +2709,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
   /// Timestamp when this message should be deleted (for disappearing messages)
   /// Null means the message does not expire
   final int? expiresAt;
+
+  /// Whether this message has been starred by the user
+  final bool starred;
+
+  /// Timestamp when this message was starred (null if not starred)
+  final int? starredAt;
   const RoomEvent({
     required this.id,
     required this.roomId,
@@ -2685,6 +2739,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     required this.forwardCount,
     required this.forwardRestricted,
     this.expiresAt,
+    required this.starred,
+    this.starredAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2739,6 +2795,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     map['forward_restricted'] = Variable<bool>(forwardRestricted);
     if (!nullToAbsent || expiresAt != null) {
       map['expires_at'] = Variable<int>(expiresAt);
+    }
+    map['starred'] = Variable<bool>(starred);
+    if (!nullToAbsent || starredAt != null) {
+      map['starred_at'] = Variable<int>(starredAt);
     }
     return map;
   }
@@ -2796,6 +2856,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       expiresAt: expiresAt == null && nullToAbsent
           ? const Value.absent()
           : Value(expiresAt),
+      starred: Value(starred),
+      starredAt: starredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(starredAt),
     );
   }
 
@@ -2832,6 +2896,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       forwardCount: serializer.fromJson<int>(json['forwardCount']),
       forwardRestricted: serializer.fromJson<bool>(json['forwardRestricted']),
       expiresAt: serializer.fromJson<int?>(json['expiresAt']),
+      starred: serializer.fromJson<bool>(json['starred']),
+      starredAt: serializer.fromJson<int?>(json['starredAt']),
     );
   }
   @override
@@ -2861,6 +2927,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       'forwardCount': serializer.toJson<int>(forwardCount),
       'forwardRestricted': serializer.toJson<bool>(forwardRestricted),
       'expiresAt': serializer.toJson<int?>(expiresAt),
+      'starred': serializer.toJson<bool>(starred),
+      'starredAt': serializer.toJson<int?>(starredAt),
     };
   }
 
@@ -2888,6 +2956,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     int? forwardCount,
     bool? forwardRestricted,
     Value<int?> expiresAt = const Value.absent(),
+    bool? starred,
+    Value<int?> starredAt = const Value.absent(),
   }) => RoomEvent(
     id: id ?? this.id,
     roomId: roomId ?? this.roomId,
@@ -2920,6 +2990,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     forwardCount: forwardCount ?? this.forwardCount,
     forwardRestricted: forwardRestricted ?? this.forwardRestricted,
     expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
+    starred: starred ?? this.starred,
+    starredAt: starredAt.present ? starredAt.value : this.starredAt,
   );
   RoomEvent copyWithCompanion(RoomEventsCompanion data) {
     return RoomEvent(
@@ -2966,6 +3038,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ? data.forwardRestricted.value
           : this.forwardRestricted,
       expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      starred: data.starred.present ? data.starred.value : this.starred,
+      starredAt: data.starredAt.present ? data.starredAt.value : this.starredAt,
     );
   }
 
@@ -2994,7 +3068,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ..write('forwardedFromEvent: $forwardedFromEvent, ')
           ..write('forwardCount: $forwardCount, ')
           ..write('forwardRestricted: $forwardRestricted, ')
-          ..write('expiresAt: $expiresAt')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('starred: $starred, ')
+          ..write('starredAt: $starredAt')
           ..write(')'))
         .toString();
   }
@@ -3024,6 +3100,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     forwardCount,
     forwardRestricted,
     expiresAt,
+    starred,
+    starredAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -3051,7 +3129,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           other.forwardedFromEvent == this.forwardedFromEvent &&
           other.forwardCount == this.forwardCount &&
           other.forwardRestricted == this.forwardRestricted &&
-          other.expiresAt == this.expiresAt);
+          other.expiresAt == this.expiresAt &&
+          other.starred == this.starred &&
+          other.starredAt == this.starredAt);
 }
 
 class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
@@ -3078,6 +3158,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
   final Value<int> forwardCount;
   final Value<bool> forwardRestricted;
   final Value<int?> expiresAt;
+  final Value<bool> starred;
+  final Value<int?> starredAt;
   final Value<int> rowid;
   const RoomEventsCompanion({
     this.id = const Value.absent(),
@@ -3103,6 +3185,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.forwardCount = const Value.absent(),
     this.forwardRestricted = const Value.absent(),
     this.expiresAt = const Value.absent(),
+    this.starred = const Value.absent(),
+    this.starredAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomEventsCompanion.insert({
@@ -3129,6 +3213,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.forwardCount = const Value.absent(),
     this.forwardRestricted = const Value.absent(),
     this.expiresAt = const Value.absent(),
+    this.starred = const Value.absent(),
+    this.starredAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        roomId = Value(roomId),
@@ -3158,6 +3244,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Expression<int>? forwardCount,
     Expression<bool>? forwardRestricted,
     Expression<int>? expiresAt,
+    Expression<bool>? starred,
+    Expression<int>? starredAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3185,6 +3273,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       if (forwardCount != null) 'forward_count': forwardCount,
       if (forwardRestricted != null) 'forward_restricted': forwardRestricted,
       if (expiresAt != null) 'expires_at': expiresAt,
+      if (starred != null) 'starred': starred,
+      if (starredAt != null) 'starred_at': starredAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3213,6 +3303,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Value<int>? forwardCount,
     Value<bool>? forwardRestricted,
     Value<int?>? expiresAt,
+    Value<bool>? starred,
+    Value<int?>? starredAt,
     Value<int>? rowid,
   }) {
     return RoomEventsCompanion(
@@ -3239,6 +3331,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       forwardCount: forwardCount ?? this.forwardCount,
       forwardRestricted: forwardRestricted ?? this.forwardRestricted,
       expiresAt: expiresAt ?? this.expiresAt,
+      starred: starred ?? this.starred,
+      starredAt: starredAt ?? this.starredAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3315,6 +3409,12 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     if (expiresAt.present) {
       map['expires_at'] = Variable<int>(expiresAt.value);
     }
+    if (starred.present) {
+      map['starred'] = Variable<bool>(starred.value);
+    }
+    if (starredAt.present) {
+      map['starred_at'] = Variable<int>(starredAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3347,6 +3447,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
           ..write('forwardCount: $forwardCount, ')
           ..write('forwardRestricted: $forwardRestricted, ')
           ..write('expiresAt: $expiresAt, ')
+          ..write('starred: $starred, ')
+          ..write('starredAt: $starredAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9265,6 +9367,8 @@ typedef $$RoomEventsTableCreateCompanionBuilder =
       Value<int> forwardCount,
       Value<bool> forwardRestricted,
       Value<int?> expiresAt,
+      Value<bool> starred,
+      Value<int?> starredAt,
       Value<int> rowid,
     });
 typedef $$RoomEventsTableUpdateCompanionBuilder =
@@ -9292,6 +9396,8 @@ typedef $$RoomEventsTableUpdateCompanionBuilder =
       Value<int> forwardCount,
       Value<bool> forwardRestricted,
       Value<int?> expiresAt,
+      Value<bool> starred,
+      Value<int?> starredAt,
       Value<int> rowid,
     });
 
@@ -9434,6 +9540,16 @@ class $$RoomEventsTableFilterComposer
 
   ColumnFilters<int> get expiresAt => $composableBuilder(
     column: $table.expiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get starred => $composableBuilder(
+    column: $table.starred,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get starredAt => $composableBuilder(
+    column: $table.starredAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9580,6 +9696,16 @@ class $$RoomEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get starred => $composableBuilder(
+    column: $table.starred,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get starredAt => $composableBuilder(
+    column: $table.starredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RoomsTableOrderingComposer get roomId {
     final $$RoomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9699,6 +9825,12 @@ class $$RoomEventsTableAnnotationComposer
   GeneratedColumn<int> get expiresAt =>
       $composableBuilder(column: $table.expiresAt, builder: (column) => column);
 
+  GeneratedColumn<bool> get starred =>
+      $composableBuilder(column: $table.starred, builder: (column) => column);
+
+  GeneratedColumn<int> get starredAt =>
+      $composableBuilder(column: $table.starredAt, builder: (column) => column);
+
   $$RoomsTableAnnotationComposer get roomId {
     final $$RoomsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -9774,6 +9906,8 @@ class $$RoomEventsTableTableManager
                 Value<int> forwardCount = const Value.absent(),
                 Value<bool> forwardRestricted = const Value.absent(),
                 Value<int?> expiresAt = const Value.absent(),
+                Value<bool> starred = const Value.absent(),
+                Value<int?> starredAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion(
                 id: id,
@@ -9799,6 +9933,8 @@ class $$RoomEventsTableTableManager
                 forwardCount: forwardCount,
                 forwardRestricted: forwardRestricted,
                 expiresAt: expiresAt,
+                starred: starred,
+                starredAt: starredAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9826,6 +9962,8 @@ class $$RoomEventsTableTableManager
                 Value<int> forwardCount = const Value.absent(),
                 Value<bool> forwardRestricted = const Value.absent(),
                 Value<int?> expiresAt = const Value.absent(),
+                Value<bool> starred = const Value.absent(),
+                Value<int?> starredAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion.insert(
                 id: id,
@@ -9851,6 +9989,8 @@ class $$RoomEventsTableTableManager
                 forwardCount: forwardCount,
                 forwardRestricted: forwardRestricted,
                 expiresAt: expiresAt,
+                starred: starred,
+                starredAt: starredAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
