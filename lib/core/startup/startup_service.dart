@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/data/token_refresh_service.dart';
 import '../../features/contacts/services/contact_background_sync_task.dart';
 import '../../features/notifications/badge_service.dart';
 import '../../features/notifications/notification_service.dart';
@@ -292,6 +293,12 @@ class StartupService extends _$StartupService {
     state = state.copyWith(currentTask: 'Starting sync...');
     final syncEngine = await ref.read(syncEngineProvider.future);
     syncEngine.start();
+
+    // Start background token refresh service
+    // This ensures tokens are proactively refreshed before they expire,
+    // minimizing the chance of auth errors during API calls
+    final tokenRefreshService = ref.read(tokenRefreshServiceProvider);
+    tokenRefreshService.start();
 
     AppLogger.info('Essential initialization complete');
   }

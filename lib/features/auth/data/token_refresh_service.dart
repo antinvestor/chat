@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     show TokenRefreshResult;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/logging/app_logger.dart';
@@ -18,7 +19,17 @@ part 'token_refresh_service.g.dart';
 /// - Smart scheduling: Schedules next refresh based on token expiry time
 /// - Retry with backoff: Retries transient failures with exponential backoff
 /// - Graceful degradation: Only logs out on permanent errors
+/// - Connectivity awareness: Doesn't count failures when offline
 /// - TokenManager sync: Updates TokenManager's in-memory cache after refresh
+///
+/// IMPORTANT: This service is designed to minimize re-login requirements.
+/// Users should only need to re-login when:
+/// 1. The refresh token is explicitly revoked by the server
+/// 2. The refresh token expires (typically months/years)
+/// 3. The user explicitly logs out
+///
+/// Network issues, server errors, and other transient failures will NOT
+/// cause logout - the service will keep retrying indefinitely.
 class TokenRefreshService {
   TokenRefreshService(
     this._authRepository,
@@ -30,14 +41,20 @@ class TokenRefreshService {
   final Future<void> Function(String token)? _onTokenRefreshed;
   Timer? _refreshTimer;
   Timer? _scheduledRefreshTimer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isRefreshing = false;
   int _consecutiveFailures = 0;
+  bool _isWaitingForConnectivity = false;
 
   // Configuration
-  static const _maxConsecutiveFailures = 5;
+  // Note: We use a high failure threshold because transient errors should
+  // never cause logout - only permanent OAuth errors should.
+  static const _maxConsecutiveFailures = 10;
   static const _baseRetryDelay = Duration(seconds: 5);
-  static const _maxRetryDelay = Duration(minutes: 2);
+  static const _maxRetryDelay = Duration(minutes: 5);
   static const _fallbackCheckInterval = Duration(seconds: 30);
+  // After this many failures, we'll wait for connectivity before retrying
+  static const _waitForConnectivityThreshold = 3;
 
   /// Start the token refresh service
   /// Uses smart scheduling based on token expiry time
@@ -55,6 +72,11 @@ class TokenRefreshService {
       (_) => _checkAndRefreshIfNeeded(),
     );
 
+    // Listen for connectivity changes to retry when coming back online
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _onConnectivityChanged,
+    );
+
     // Also check immediately on start
     _checkAndRefreshIfNeeded();
   }
@@ -65,9 +87,34 @@ class TokenRefreshService {
     _refreshTimer = null;
     _scheduledRefreshTimer?.cancel();
     _scheduledRefreshTimer = null;
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
     _isRefreshing = false;
     _consecutiveFailures = 0;
+    _isWaitingForConnectivity = false;
     AppLogger.debug('Token refresh service stopped');
+  }
+
+  /// Handle connectivity changes - retry when coming back online
+  void _onConnectivityChanged(List<ConnectivityResult> results) {
+    final hasConnection = results.any(
+      (r) =>
+          r == ConnectivityResult.wifi ||
+          r == ConnectivityResult.mobile ||
+          r == ConnectivityResult.ethernet,
+    );
+
+    if (hasConnection && _isWaitingForConnectivity) {
+      AppLogger.info(
+        'Connectivity restored, resuming token refresh',
+        data: {'previousFailures': _consecutiveFailures},
+      );
+      _isWaitingForConnectivity = false;
+      // Reset failure counter when connectivity returns
+      // This gives the user a fresh set of retry attempts
+      _consecutiveFailures = 0;
+      _checkAndRefreshIfNeeded();
+    }
   }
 
   /// Schedule the next refresh based on token expiry time
@@ -182,14 +229,39 @@ class TokenRefreshService {
       case TokenRefreshResult.transientError:
         _consecutiveFailures++;
 
-        if (_consecutiveFailures >= _maxConsecutiveFailures) {
-          AppLogger.error(
-            'Max consecutive refresh failures reached, prompting re-login',
-            data: {'failures': _consecutiveFailures},
+        // After several failures, check connectivity before continuing
+        if (_consecutiveFailures >= _waitForConnectivityThreshold) {
+          final connectivity = await Connectivity().checkConnectivity();
+          final hasConnection = connectivity.any(
+            (r) =>
+                r == ConnectivityResult.wifi ||
+                r == ConnectivityResult.mobile ||
+                r == ConnectivityResult.ethernet,
           );
-          await _onLogoutNeeded();
-          stop();
-          return;
+
+          if (!hasConnection) {
+            // No connectivity - wait for it to return instead of retrying
+            AppLogger.info(
+              'No connectivity detected, waiting for network to resume',
+              data: {'consecutiveFailures': _consecutiveFailures},
+            );
+            _isWaitingForConnectivity = true;
+            // Don't schedule retry - connectivity listener will trigger it
+            return;
+          }
+        }
+
+        // Even with max failures, we DON'T logout on transient errors
+        // The user has valid credentials, just network/server issues
+        if (_consecutiveFailures >= _maxConsecutiveFailures) {
+          AppLogger.warning(
+            'Many consecutive refresh failures, but keeping session active',
+            data: {
+              'failures': _consecutiveFailures,
+              'action': 'Will keep retrying with longer delays',
+            },
+          );
+          // Don't logout - just use max delay and keep trying
         }
 
         // Calculate retry delay with exponential backoff

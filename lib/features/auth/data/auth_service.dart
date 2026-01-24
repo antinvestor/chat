@@ -426,28 +426,80 @@ class AuthService {
   }
 
   /// Check if an error indicates permanent refresh failure
-  /// We are VERY conservative here - only truly permanent errors cause logout.
+  /// We are EXTREMELY conservative here - only truly permanent errors cause logout.
   /// Network issues, timeouts, and ambiguous errors are treated as transient.
+  ///
+  /// DESIGN PRINCIPLE: It is FAR better to retry unnecessarily than to
+  /// incorrectly log out a user. A logged-out user loses their session
+  /// and must re-authenticate, which is a poor user experience.
   ///
   /// Permanent errors (user must re-authenticate):
   /// - invalid_grant: Refresh token is invalid or expired (OAuth2 standard)
-  /// - invalid_client: Client credentials are wrong
-  /// - unauthorized_client: Client not authorized for this grant type
-  /// - access_denied: User explicitly denied access
-  /// - Explicit refresh token revocation messages
+  /// - invalid_client: Client credentials are wrong (should never happen)
+  /// - unauthorized_client: Client not allowed for this grant type
+  /// - access_denied: User explicitly denied/revoked access
+  /// - Explicit refresh token revocation messages from OAuth server
   ///
   /// Transient errors (retry later):
-  /// - Network errors, timeouts
-  /// - Server errors (5xx)
-  /// - Rate limiting
-  /// - Ambiguous "expired" or "invalid" without context
+  /// - Network errors, connection refused, DNS failures
+  /// - Timeouts (connection, read, write)
+  /// - Server errors (5xx, 503, 502, etc.)
+  /// - Rate limiting (429)
+  /// - TLS/SSL errors
+  /// - Any ambiguous "expired" or "invalid" without OAuth2 error code context
+  /// - ANY error we're not 100% sure about
   bool _isPermanentRefreshError(String errorStr) {
+    // FIRST: Check for known transient error patterns
+    // If any of these are present, it's definitely NOT permanent
+    const transientPatterns = [
+      'timeout',
+      'timed out',
+      'connection refused',
+      'connection reset',
+      'connection closed',
+      'no route to host',
+      'network is unreachable',
+      'host not found',
+      'dns',
+      'socket',
+      'eof',
+      'broken pipe',
+      'ssl',
+      'tls',
+      'certificate',
+      'handshake',
+      '5xx',
+      '500',
+      '502',
+      '503',
+      '504',
+      '429', // Rate limiting
+      'too many requests',
+      'rate limit',
+      'temporarily unavailable',
+      'service unavailable',
+      'try again',
+      'retry',
+    ];
+
+    for (final pattern in transientPatterns) {
+      if (errorStr.contains(pattern)) {
+        AppLogger.debug(
+          'Transient error pattern detected, not treating as permanent',
+          data: {'pattern': pattern},
+        );
+        return false;
+      }
+    }
+
     // OAuth2 standard error codes that indicate permanent failure
+    // These are the ONLY error codes from RFC 6749 that indicate
+    // the refresh token itself is invalid
     const permanentOAuthErrors = [
-      'invalid_grant', // Refresh token expired/invalid
-      'invalid_client', // Wrong client credentials
-      'unauthorized_client', // Client not allowed
-      'access_denied', // User denied access
+      'invalid_grant', // Refresh token expired/invalid (the main one)
+      'invalid_client', // Wrong client credentials (shouldn't happen in production)
+      'unauthorized_client', // Client not allowed for this grant type
+      'access_denied', // User explicitly denied access
     ];
 
     // Check for OAuth2 standard errors
@@ -458,15 +510,14 @@ class AuthService {
       }
     }
 
-    // Check for explicit refresh token revocation messages
-    // Be very specific to avoid false positives
+    // Check for VERY explicit refresh token revocation messages
+    // These must be exact phrases that OAuth servers return
     const permanentMessages = [
-      'refresh token expired',
-      'refresh token is invalid',
       'refresh token has been revoked',
-      'refresh_token is invalid',
-      'refresh_token has expired',
+      'refresh token was revoked',
+      'refresh_token has been revoked',
       'the refresh token is no longer valid',
+      'refresh token is no longer active',
     ];
 
     for (final message in permanentMessages) {
@@ -476,18 +527,17 @@ class AuthService {
       }
     }
 
-    // If error contains both "refresh" and specific failure indicators
-    if (errorStr.contains('refresh') &&
-        (errorStr.contains('revoked') ||
-            errorStr.contains('invalid') ||
-            errorStr.contains('expired'))) {
-      AppLogger.debug('Permanent error: refresh token specific failure');
-      return true;
-    }
+    // NOTE: We do NOT check for generic "refresh" + "invalid/expired" patterns
+    // because these could be network error messages that happen to contain
+    // these words. Only explicit OAuth2 error codes should trigger logout.
 
     // All other errors are transient - be conservative to avoid unnecessary logouts
-    // This includes: network errors, timeouts, 5xx errors, rate limiting,
-    // and any ambiguous error messages
+    AppLogger.debug(
+      'Error not recognized as permanent, treating as transient',
+      data: {
+        'errorPreview': errorStr.substring(0, errorStr.length.clamp(0, 100)),
+      },
+    );
     return false;
   }
 
