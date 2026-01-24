@@ -139,10 +139,11 @@ class RoomEvents extends Table {
   /// Room this event belongs to (foreign key)
   TextColumn get roomId => text().references(Rooms, #id)();
 
-  /// Profile ID of the sender from ContactLink
+  /// Subscription ID of the sender (room-specific identifier)
+  /// Use RoomMembers table to look up the profile ID from this subscription ID
   TextColumn get senderId => text()();
 
-  /// Contact ID of the sender from ContactLink (nullable)
+  /// Contact ID of the sender (nullable, for additional context)
   TextColumn get senderContactId => text().nullable()();
 
   /// Event type as integer (text=0, image=1, video=2, etc.)

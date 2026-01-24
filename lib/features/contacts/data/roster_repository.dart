@@ -553,14 +553,18 @@ class ProfileWithContacts {
   final ProfileData profile;
   final List<RosterEntry> contacts;
 
-  /// Get display name - prefer profile name, fallback to first contact display name
+  /// Get display name - prefer local contact name, fallback to profile name
+  /// Priority: 1. Local contact name (from device), 2. Profile name (from server), 3. Profile ID
   String get displayName {
-    if (profile.name != null && profile.name!.isNotEmpty) {
-      return profile.name!;
-    }
+    // First priority: local contact display name (from user's device contacts)
     if (contacts.isNotEmpty && contacts.first.displayName != null) {
       return contacts.first.displayName!;
     }
+    // Second priority: profile name from server
+    if (profile.name != null && profile.name!.isNotEmpty) {
+      return profile.name!;
+    }
+    // Last resort: profile ID
     return profile.id;
   }
 

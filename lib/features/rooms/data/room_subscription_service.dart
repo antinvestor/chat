@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/db/database.dart';
+import '../../../features/auth/data/auth_repository.dart';
 import 'room_member_repository.dart';
 
 part 'room_subscription_service.g.dart';
@@ -132,3 +133,36 @@ class RoomSubscriptionService {
 @riverpod
 RoomSubscriptionService roomSubscriptionService(Ref ref) =>
     RoomSubscriptionService(RoomMemberRepository(AppDatabase.instance));
+
+/// Provider for current user's subscription ID for a specific room
+/// Returns the subscription ID or null if not found
+@riverpod
+Future<String?> currentUserSubscriptionId(Ref ref, String roomId) async {
+  final authRepo = ref.watch(authRepositoryProvider);
+  final subscriptionService = ref.watch(roomSubscriptionServiceProvider);
+
+  final profileId = await authRepo.getCurrentProfileId();
+  final contactId = await authRepo.getCurrentContactId();
+
+  if (profileId == null || contactId == null) {
+    return null;
+  }
+
+  return subscriptionService.getCurrentSubscriptionId(
+    roomId,
+    profileId,
+    contactId,
+  );
+}
+
+/// Provider to look up profile ID from a subscription ID
+/// Returns the profile ID or null if subscription not found
+@riverpod
+Future<String?> profileIdFromSubscription(
+  Ref ref,
+  String subscriptionId,
+) async {
+  final subscriptionService = ref.watch(roomSubscriptionServiceProvider);
+  final member = await subscriptionService.getSubscription(subscriptionId);
+  return member?.profileId;
+}

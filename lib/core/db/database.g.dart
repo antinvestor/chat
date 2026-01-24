@@ -2597,10 +2597,11 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
   /// Room this event belongs to (foreign key)
   final String roomId;
 
-  /// Profile ID of the sender from ContactLink
+  /// Subscription ID of the sender (room-specific identifier)
+  /// Use RoomMembers table to look up the profile ID from this subscription ID
   final String senderId;
 
-  /// Contact ID of the sender from ContactLink (nullable)
+  /// Contact ID of the sender (nullable, for additional context)
   final String? senderContactId;
 
   /// Event type as integer (text=0, image=1, video=2, etc.)

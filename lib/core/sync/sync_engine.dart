@@ -781,26 +781,26 @@ class SyncEngine with WidgetsBindingObserver {
       }
     }
 
-    // Extract sender info using subscription ID
+    // Extract sender subscription ID directly from server event
+    // senderId stores the subscription ID, not profile ID
+    // Profile ID can be looked up via RoomMembers when needed for display
     final subscriptionId = event.hasSubscriptionId()
         ? event.subscriptionId
         : '';
 
-    // Get profile info for the subscription
-    String? senderId;
+    // Optionally get contact ID for the sender (for additional context)
     String? senderContactId;
     if (subscriptionId.isNotEmpty) {
       final member = await _roomMemberRepository.getSubscription(
         subscriptionId,
       );
-      senderId = member?.profileId;
       senderContactId = member?.contactId;
     }
 
     final roomEvent = domain.RoomEvent(
       id: event.id,
       roomId: event.roomId,
-      senderId: senderId ?? '',
+      senderId: subscriptionId, // Store subscription ID directly
       senderContactId: senderContactId,
       type: _mapProtoEventType(event.type),
       content: content,
@@ -1782,8 +1782,9 @@ class SyncEngine with WidgetsBindingObserver {
       // Get current profile's subscription ID for this room
       final subscriptionId = await getCurrentSubscriptionId(roomId);
       if (subscriptionId == null) {
-        AppLogger.warning(
-          'Cannot send typing event: profile not in room',
+        // This can happen during initial sync before room membership is established
+        AppLogger.debug(
+          'Cannot send typing event: subscription not found for room',
           data: {'roomId': roomId},
         );
         return;
@@ -1823,8 +1824,10 @@ class SyncEngine with WidgetsBindingObserver {
       // Get current profile's subscription ID for this room
       final subscriptionId = await getCurrentSubscriptionId(roomId);
       if (subscriptionId == null) {
-        AppLogger.warning(
-          'Cannot send read receipts: profile not in room',
+        // This can happen during initial sync before room membership is established
+        // Use debug level since it's expected behavior
+        AppLogger.debug(
+          'Cannot send read receipts: subscription not found for room',
           data: {'roomId': roomId},
         );
         return;

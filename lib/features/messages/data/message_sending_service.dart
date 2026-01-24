@@ -15,6 +15,7 @@ import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../../../features/auth/data/auth_repository.dart';
+import '../../../features/rooms/data/room_subscription_service.dart';
 import '../domain/room_event.dart' as domain;
 import 'file_upload_service.dart';
 import 'message_providers.dart';
@@ -35,7 +36,7 @@ class MessageSendingService {
     this._encryptionService,
     this._compressionService,
     this._thumbnailService,
-    this._getCurrentProfileId,
+    this._getSubscriptionIdForRoom,
   );
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
@@ -43,7 +44,10 @@ class MessageSendingService {
   final E2EEncryptionService _encryptionService;
   final MediaCompressionService _compressionService;
   final ThumbnailService _thumbnailService;
-  final Future<String> Function() _getCurrentProfileId;
+
+  /// Callback to get current user's subscription ID for a room
+  /// Returns the subscription ID or throws if not found
+  final Future<String> Function(String roomId) _getSubscriptionIdForRoom;
 
   /// Send a text message
   ///
@@ -57,7 +61,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getCurrentProfileId();
+    final senderId = await _getSubscriptionIdForRoom(roomId);
 
     var content = <String, dynamic>{'text': text};
 
@@ -284,7 +288,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getCurrentProfileId();
+    final senderId = await _getSubscriptionIdForRoom(roomId);
     final fileName = file.path.split('/').last;
     final fileSize = await file.length();
 
@@ -432,7 +436,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getCurrentProfileId();
+    final senderId = await _getSubscriptionIdForRoom(roomId);
 
     final event = domain.RoomEvent(
       id: localId,
@@ -468,7 +472,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getCurrentProfileId();
+    final senderId = await _getSubscriptionIdForRoom(payload.roomId);
 
     // Create the content with type marker for recipient detection
     final content = {'type': 'roomKey', ...payload.toJson()};
@@ -588,7 +592,12 @@ class MessageSendingService {
     required String newText,
     Duration editWindow = const Duration(minutes: 15),
   }) async {
-    final currentUserId = await _getCurrentProfileId();
+    // Get the original message first to get roomId
+    final originalEvent = await _messageRepo.getEventById(messageId);
+    if (originalEvent == null) return false;
+
+    // Get current user's subscription ID for this room
+    final currentUserId = await _getSubscriptionIdForRoom(originalEvent.roomId);
 
     // Check if message can be edited
     final canEdit = await _messageRepo.canEditMessage(
@@ -604,10 +613,6 @@ class MessageSendingService {
       );
       return false;
     }
-
-    // Get the original message
-    final originalEvent = await _messageRepo.getEventById(messageId);
-    if (originalEvent == null) return false;
 
     // Preserve original content if first edit
     final originalContent = originalEvent.isEdited
@@ -637,7 +642,10 @@ class MessageSendingService {
 
   /// Check if a message can be edited (async - fetches from DB)
   Future<bool> canEdit(String messageId) async {
-    final currentUserId = await _getCurrentProfileId();
+    // Get message first to get roomId
+    final event = await _messageRepo.getEventById(messageId);
+    if (event == null) return false;
+    final currentUserId = await _getSubscriptionIdForRoom(event.roomId);
     return _messageRepo.canEditMessage(messageId, currentUserId);
   }
 
@@ -680,7 +688,11 @@ class MessageSendingService {
     required String messageId,
     Duration deleteWindow = const Duration(hours: 24),
   }) async {
-    final currentUserId = await _getCurrentProfileId();
+    // Get the message first to get roomId
+    final event = await _messageRepo.getEventById(messageId);
+    if (event == null) return false;
+
+    final currentUserId = await _getSubscriptionIdForRoom(event.roomId);
 
     // Check if message can be deleted
     final canDelete = await _messageRepo.canDeleteMessage(
@@ -725,7 +737,10 @@ class MessageSendingService {
 
   /// Check if a message can be deleted (async - fetches from DB)
   Future<bool> canDelete(String messageId, {bool isAdmin = false}) async {
-    final currentUserId = await _getCurrentProfileId();
+    // Get message first to get roomId
+    final event = await _messageRepo.getEventById(messageId);
+    if (event == null) return false;
+    final currentUserId = await _getSubscriptionIdForRoom(event.roomId);
     return _messageRepo.canDeleteMessage(
       messageId,
       currentUserId,
@@ -784,6 +799,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
   final compressionService = ref.watch(mediaCompressionServiceProvider);
   final thumbnailService = ref.watch(thumbnailServiceProvider);
   final authRepo = ref.watch(authRepositoryProvider);
+  final subscriptionService = ref.watch(roomSubscriptionServiceProvider);
 
   return MessageSendingService(
     messageRepo,
@@ -792,9 +808,23 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
     encryptionService,
     compressionService,
     thumbnailService,
-    () async {
+    (String roomId) async {
+      // Get current user's profile and contact IDs
       final profileId = await authRepo.getCurrentProfileId();
-      return profileId ?? 'unknown_user';
+      final contactId = await authRepo.getCurrentContactId();
+      if (profileId == null || contactId == null) {
+        throw Exception('User not authenticated - cannot get subscription ID');
+      }
+      // Look up current user's subscription ID for this room
+      final subscriptionId = await subscriptionService.getCurrentSubscriptionId(
+        roomId,
+        profileId,
+        contactId,
+      );
+      if (subscriptionId == null) {
+        throw Exception('No subscription found for room $roomId');
+      }
+      return subscriptionId;
     },
   );
 });

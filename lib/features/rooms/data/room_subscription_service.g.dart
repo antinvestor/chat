@@ -60,3 +60,173 @@ final class RoomSubscriptionServiceProvider
 
 String _$roomSubscriptionServiceHash() =>
     r'a4131d399bff894e97b638b2ecde52d854e6312c';
+
+/// Provider for current user's subscription ID for a specific room
+/// Returns the subscription ID or null if not found
+
+@ProviderFor(currentUserSubscriptionId)
+final currentUserSubscriptionIdProvider = CurrentUserSubscriptionIdFamily._();
+
+/// Provider for current user's subscription ID for a specific room
+/// Returns the subscription ID or null if not found
+
+final class CurrentUserSubscriptionIdProvider
+    extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
+    with $FutureModifier<String?>, $FutureProvider<String?> {
+  /// Provider for current user's subscription ID for a specific room
+  /// Returns the subscription ID or null if not found
+  CurrentUserSubscriptionIdProvider._({
+    required CurrentUserSubscriptionIdFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'currentUserSubscriptionIdProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentUserSubscriptionIdHash();
+
+  @override
+  String toString() {
+    return r'currentUserSubscriptionIdProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<String?> create(Ref ref) {
+    final argument = this.argument as String;
+    return currentUserSubscriptionId(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CurrentUserSubscriptionIdProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$currentUserSubscriptionIdHash() =>
+    r'2ab2ed937c60cce23e7f549ee6565e172940880d';
+
+/// Provider for current user's subscription ID for a specific room
+/// Returns the subscription ID or null if not found
+
+final class CurrentUserSubscriptionIdFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<String?>, String> {
+  CurrentUserSubscriptionIdFamily._()
+    : super(
+        retry: null,
+        name: r'currentUserSubscriptionIdProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider for current user's subscription ID for a specific room
+  /// Returns the subscription ID or null if not found
+
+  CurrentUserSubscriptionIdProvider call(String roomId) =>
+      CurrentUserSubscriptionIdProvider._(argument: roomId, from: this);
+
+  @override
+  String toString() => r'currentUserSubscriptionIdProvider';
+}
+
+/// Provider to look up profile ID from a subscription ID
+/// Returns the profile ID or null if subscription not found
+
+@ProviderFor(profileIdFromSubscription)
+final profileIdFromSubscriptionProvider = ProfileIdFromSubscriptionFamily._();
+
+/// Provider to look up profile ID from a subscription ID
+/// Returns the profile ID or null if subscription not found
+
+final class ProfileIdFromSubscriptionProvider
+    extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
+    with $FutureModifier<String?>, $FutureProvider<String?> {
+  /// Provider to look up profile ID from a subscription ID
+  /// Returns the profile ID or null if subscription not found
+  ProfileIdFromSubscriptionProvider._({
+    required ProfileIdFromSubscriptionFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'profileIdFromSubscriptionProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileIdFromSubscriptionHash();
+
+  @override
+  String toString() {
+    return r'profileIdFromSubscriptionProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<String?> create(Ref ref) {
+    final argument = this.argument as String;
+    return profileIdFromSubscription(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProfileIdFromSubscriptionProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$profileIdFromSubscriptionHash() =>
+    r'108ef9b51b29245ae12db1892a0811a3c3461f07';
+
+/// Provider to look up profile ID from a subscription ID
+/// Returns the profile ID or null if subscription not found
+
+final class ProfileIdFromSubscriptionFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<String?>, String> {
+  ProfileIdFromSubscriptionFamily._()
+    : super(
+        retry: null,
+        name: r'profileIdFromSubscriptionProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provider to look up profile ID from a subscription ID
+  /// Returns the profile ID or null if subscription not found
+
+  ProfileIdFromSubscriptionProvider call(String subscriptionId) =>
+      ProfileIdFromSubscriptionProvider._(argument: subscriptionId, from: this);
+
+  @override
+  String toString() => r'profileIdFromSubscriptionProvider';
+}

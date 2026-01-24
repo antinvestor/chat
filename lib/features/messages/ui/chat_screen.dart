@@ -12,9 +12,9 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../auth/data/auth_repository.dart';
 import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
+import '../../rooms/data/room_subscription_service.dart';
 import '../data/message_providers.dart';
 import '../data/message_sending_service.dart';
 import '../data/typing_provider.dart';
@@ -102,14 +102,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     _readReceiptDebounce = Timer(const Duration(milliseconds: 500), () async {
       try {
-        final currentProfileIdAsync = ref.read(currentProfileIdProvider);
-        final currentProfileId = currentProfileIdAsync.value ?? '';
-        if (currentProfileId.isEmpty) return;
+        // Get current user's subscription ID for this room
+        final currentSubscriptionIdAsync = ref.read(
+          currentUserSubscriptionIdProvider(widget.roomId),
+        );
+        final currentSubscriptionId = currentSubscriptionIdAsync.value ?? '';
+        if (currentSubscriptionId.isEmpty) return;
 
         final unreadIds = messages
             .where(
               (m) =>
-                  m.senderId != currentProfileId &&
+                  m.senderId != currentSubscriptionId &&
                   m.status != EventStatus.read,
             )
             .map((m) => m.id)

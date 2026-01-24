@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../features/contacts/data/contact_sync_repository.dart';
+import '../../../features/rooms/data/room_subscription_service.dart';
 import '../domain/room_event.dart';
 import 'read_receipt_indicator.dart';
 import 'widgets/voice_message_player.dart';
@@ -1004,19 +1005,32 @@ class MessageBubble extends ConsumerWidget {
   }
 
   String _getSenderName(WidgetRef ref) {
-    // Try to get sender name from profiles
+    // message.senderId is a subscription ID, need to look up the profile
+    // First, get the profile ID from the subscription
+    final profileIdAsync = ref.watch(
+      profileIdFromSubscriptionProvider(message.senderId),
+    );
     final profilesAsync = ref.watch(profilesWithContactsProvider);
+
+    // Get the profile ID (or use senderId as fallback if lookup fails)
+    final profileId = profileIdAsync.when(
+      data: (id) => id,
+      loading: () => null,
+      error: (_, _) => null,
+    );
 
     return profilesAsync.when(
       data: (profiles) {
-        // Find profile matching sender ID
-        final senderProfile = profiles
-            .where((p) => p.profile.id == message.senderId)
-            .firstOrNull;
-        if (senderProfile != null) {
-          return senderProfile.displayName;
+        if (profileId != null) {
+          // Find profile matching the looked-up profile ID
+          final senderProfile = profiles
+              .where((p) => p.profile.id == profileId)
+              .firstOrNull;
+          if (senderProfile != null) {
+            return senderProfile.displayName;
+          }
         }
-        // Fallback to sender ID if profile not found
+        // Fallback to sender ID (subscription ID) if profile not found
         return message.senderId;
       },
       loading: () => message.senderId,

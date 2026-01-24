@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../advanced/ui/motion_bubble.dart';
 import '../../advanced/ui/transaction_bubble.dart';
-import '../../auth/data/auth_repository.dart';
+import '../../rooms/data/room_subscription_service.dart';
 import '../data/message_forwarding_service.dart';
 import '../data/message_sending_service.dart';
 import '../domain/room_event.dart';
@@ -258,13 +258,15 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
       _averageFrameTime =
           ((_averageFrameTime * (_frameCount - 1)) + frameTime) / _frameCount;
 
-      // Log if frame time exceeds 16ms (60fps threshold)
-      if (frameTime > 16.67) {
+      // Only log significant jank (>33ms = below 30fps) and only every 100 frames
+      // to avoid log spam during normal scrolling
+      if (frameTime > 33.33 && _frameCount % 100 == 0) {
         AppLogger.debug(
-          'Frame exceeded 60fps threshold',
+          'Significant frame jank detected',
           data: {
             'frameTime': '${frameTime.toStringAsFixed(2)}ms',
             'average': '${_averageFrameTime.toStringAsFixed(2)}ms',
+            'frameCount': _frameCount,
           },
         );
       }
@@ -518,8 +520,11 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
 
-    final currentProfileId = ref.watch(currentProfileIdProvider);
-    final isMe = widget.message.senderId == currentProfileId.value;
+    // Get current user's subscription ID for this room to determine if message is from me
+    final currentSubscriptionId = ref.watch(
+      currentUserSubscriptionIdProvider(widget.message.roomId),
+    );
+    final isMe = widget.message.senderId == currentSubscriptionId.value;
 
     // Use shared validation logic from MessageSendingService
     final canEdit = MessageSendingService.canEditMessage(
