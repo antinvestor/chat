@@ -67,8 +67,13 @@ extension MuteDurationExtension on MuteDuration {
 ///   unreadCount: 5,
 /// );
 /// ```
+/// Default member limit for groups
+const int defaultMemberLimit = 256;
+
 @freezed
 abstract class Room with _$Room {
+  const Room._();
+
   const factory Room({
     required String id,
     required String name,
@@ -87,6 +92,12 @@ abstract class Room with _$Room {
     /// - 0 = muted forever
     /// - timestamp = muted until that time
     int? mutedUntil,
+
+    /// Maximum number of members allowed (null = default 256)
+    int? memberLimit,
+
+    /// Whether member limit is enforced
+    @Default(true) bool memberLimitEnabled,
   }) = _Room;
   const Room._();
 
@@ -120,5 +131,27 @@ abstract class Room with _$Room {
     } else {
       return '${duration.inMinutes}m';
     }
+  }
+
+  /// Get the effective member limit (uses default if not set)
+  int get effectiveMemberLimit => memberLimit ?? defaultMemberLimit;
+
+  /// Check if this is a group room
+  bool get isGroup => type == 'group';
+
+  /// Check if this is a direct message room
+  bool get isDirect => type == 'direct';
+
+  /// Check if the room can accept more members
+  bool canAddMembers(int currentMemberCount) {
+    if (!memberLimitEnabled) return true;
+    return currentMemberCount < effectiveMemberLimit;
+  }
+
+  /// Get remaining member slots
+  int getRemainingSlots(int currentMemberCount) {
+    if (!memberLimitEnabled) return defaultMemberLimit;
+    final limit = effectiveMemberLimit;
+    return (limit - currentMemberCount).clamp(0, limit);
   }
 }
