@@ -109,6 +109,14 @@ class Rooms extends Table {
   /// - timestamp = muted until that time
   IntColumn get mutedUntil => integer().nullable()();
 
+  /// Maximum number of members allowed in this room (null = default 256)
+  IntColumn get memberLimit => integer().nullable()();
+
+  /// Whether member limit is enforced (only applicable for groups)
+  BoolColumn get memberLimitEnabled =>
+      boolean().withDefault(const Constant(true))();
+
+  @override
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -682,7 +690,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -821,6 +829,11 @@ class AppDatabase extends _$AppDatabase {
           ON call_history(is_read, is_deleted)
           WHERE is_deleted = 0
         ''');
+      }
+      if (from <= 12) {
+        // Migration from v12 to v13: Add group member limit columns
+        await m.addColumn(rooms, rooms.memberLimit);
+        await m.addColumn(rooms, rooms.memberLimitEnabled);
       }
     },
     beforeOpen: (details) async {
