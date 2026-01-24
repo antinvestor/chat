@@ -519,7 +519,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: isVerifying ? null : () => Navigator.pop(dialogContext),
+              onPressed:
+                  isVerifying ? null : () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             TextButton(
