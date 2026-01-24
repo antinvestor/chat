@@ -1021,6 +1021,8 @@ class AppDatabase extends _$AppDatabase {
     forwardedFromEvent: row.readNullable<String>('forwarded_from_event'),
     forwardCount: row.readNullable<int>('forward_count') ?? 0,
     forwardRestricted: row.readNullable<bool>('forward_restricted') ?? false,
+    starred: row.readNullable<bool>('starred') ?? false,
+    starredAt: row.readNullable<int>('starred_at'),
   );
 
   /// Search messages by text content across all rooms

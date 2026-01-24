@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../data/message_repository.dart';
+import '../data/message_providers.dart';
 import '../domain/room_event.dart';
-import '../../rooms/data/room_repository.dart';
+import '../../rooms/data/room_providers.dart';
 
 /// Provider for starred messages
 final starredMessagesProvider = FutureProvider<List<RoomEvent>>((ref) async {
@@ -200,7 +200,7 @@ class _StarredMessageTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final roomAsync = ref.watch(roomProvider(message.roomId));
+    final roomAsync = ref.watch(roomByIdProvider(message.roomId));
     final theme = Theme.of(context);
 
     return Card(
