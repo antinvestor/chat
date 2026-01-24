@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/logging/app_logger.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/user_info_provider.dart';
@@ -74,8 +75,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
       // Load contacts
       _contacts = await profileRepo.getContacts();
-    } catch (e) {
-      debugPrint('Failed to load profile: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to load profile',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (mounted) {
         _showError('Failed to load profile. Please try again.');
       }
@@ -199,8 +204,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         );
         context.navigateBack();
       }
-    } catch (e) {
-      debugPrint('Failed to save profile: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to save profile',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _showError('Failed to save profile. Please try again.');
     } finally {
       if (mounted) {
