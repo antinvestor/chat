@@ -187,7 +187,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       final statusUpdated = await _updateStatus(profileRepo);
       if (!statusUpdated) return;
 
-      final photoUpdated = await _updateProfilePhoto(profileRepo)
+      final photoUpdated = await _updateProfilePhoto(profileRepo);
       if (!photoUpdated) return;
 
       if (mounted) {
