@@ -5,9 +5,8 @@ import 'package:antinvestor_api_common/antinvestor_api_common.dart'
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../core/auth/token_refresh_lock.dart';
+import '../../../core/auth/token_refresh_coordinator.dart';
 import '../../../core/logging/app_logger.dart';
-import '../../../core/networking/client.dart';
 import 'auth_repository.dart';
 import 'auth_state_provider.dart';
 
@@ -21,7 +20,9 @@ part 'token_refresh_service.g.dart';
 /// - Retry with backoff: Retries transient failures with exponential backoff
 /// - Graceful degradation: Only logs out on permanent errors
 /// - Connectivity awareness: Doesn't count failures when offline
-/// - TokenManager sync: Updates TokenManager's in-memory cache after refresh
+///
+/// All token refresh operations are delegated to [TokenRefreshCoordinator]
+/// to ensure consistent behavior across the entire application.
 ///
 /// IMPORTANT: This service is designed to minimize re-login requirements.
 /// Users should only need to re-login when:
@@ -34,15 +35,14 @@ part 'token_refresh_service.g.dart';
 class TokenRefreshService {
   TokenRefreshService(
     this._authRepository,
-    this._onLogoutNeeded, {
-    Future<void> Function(String token)? onTokenRefreshed,
-    TokenRefreshLock? tokenRefreshLock,
-  }) : _onTokenRefreshed = onTokenRefreshed,
-       _tokenRefreshLock = tokenRefreshLock;
+    this._coordinator,
+    this._onLogoutNeeded,
+  );
+
   final AuthRepository _authRepository;
+  final TokenRefreshCoordinator _coordinator;
   final Future<void> Function() _onLogoutNeeded;
-  final Future<void> Function(String token)? _onTokenRefreshed;
-  final TokenRefreshLock? _tokenRefreshLock;
+
   Timer? _refreshTimer;
   Timer? _scheduledRefreshTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -190,59 +190,38 @@ class TokenRefreshService {
       }
 
       AppLogger.info('Token expired or about to expire, refreshing...');
-      await _performRefreshWithRetry();
+      await _performRefresh();
     } finally {
       _isRefreshing = false;
     }
   }
 
-  /// Perform token refresh with retry logic for transient errors
-  Future<void> _performRefreshWithRetry() async {
-    // Use shared lock if available to prevent concurrent refreshes
-    final lock = _tokenRefreshLock;
-    if (lock != null) {
-      final lockResult = await lock.acquireAndRefresh(() async {
-        return _authRepository.refreshTokenWithResult();
-      });
+  /// Perform token refresh via the coordinator
+  Future<void> _performRefresh() async {
+    // Delegate ALL refresh logic to the coordinator
+    // This ensures consistent behavior across TokenManager, SyncEngine,
+    // and TokenRefreshService
+    final result = await _coordinator.refresh(source: 'TokenRefreshService');
 
-      // If lockResult is null, another refresh was in progress
-      if (lockResult == null) {
-        AppLogger.debug(
-          'Token refresh was handled by another caller (SyncEngine)',
-        );
-        _consecutiveFailures = 0;
-        await _scheduleNextRefresh();
-        return;
-      }
-
-      await _handleRefreshResult(lockResult);
-      return;
-    }
-
-    // No lock available, proceed normally
-    final result = await _authRepository.refreshTokenWithResult();
     await _handleRefreshResult(result);
   }
 
   /// Handle the result of a token refresh operation
   Future<void> _handleRefreshResult(
-    ({TokenRefreshResult result, dynamic token, String? error}) result,
+    TokenRefreshCoordinatorResult result,
   ) async {
     switch (result.result) {
       case TokenRefreshResult.success:
         _consecutiveFailures = 0;
-        AppLogger.info('Background token refresh successful');
 
-        // Update TokenManager's in-memory cache so Connect RPC clients use the new token
-        if (_onTokenRefreshed != null) {
-          final newToken = await _authRepository.getAccessToken();
-          if (newToken != null) {
-            await _onTokenRefreshed(newToken);
-            AppLogger.debug('TokenManager updated with new token');
-          }
+        if (result.wasHandledByAnotherCaller) {
+          AppLogger.debug('Token refresh was handled by another caller');
+        } else {
+          AppLogger.info('Background token refresh successful');
         }
 
-        // Schedule next refresh based on new token expiry
+        // The coordinator already updated TokenManager's in-memory cache
+        // Just schedule the next refresh
         await _scheduleNextRefresh();
         break;
 
@@ -349,33 +328,21 @@ class TokenRefreshService {
 @riverpod
 TokenRefreshService tokenRefreshService(Ref ref) {
   final authRepository = ref.watch(authRepositoryProvider);
-  final tokenManager = ref.watch(tokenManagerProvider);
-  final tokenRefreshLock = ref.watch(tokenRefreshLockProvider);
+  final coordinator = ref.watch(tokenRefreshCoordinatorProvider);
 
-  // Create service with logout callback, TokenManager sync, and shared lock
-  final service = TokenRefreshService(
-    authRepository,
-    () async {
-      AppLogger.warning('Token refresh service triggering re-login flow');
+  // Create service with logout callback and coordinator
+  final service = TokenRefreshService(authRepository, coordinator, () async {
+    AppLogger.warning('Token refresh service triggering re-login flow');
 
-      // Logout by clearing tokens
-      await authRepository.logout();
+    // Logout by clearing tokens
+    await authRepository.logout();
 
-      // Invalidate the auth state notifier to trigger UI update
-      // This ensures the user sees the login screen instead of hanging
-      ref.invalidate(authStateProvider);
+    // Invalidate the auth state notifier to trigger UI update
+    // This ensures the user sees the login screen instead of hanging
+    ref.invalidate(authStateProvider);
 
-      AppLogger.info('Auth state invalidated - user should see login screen');
-    },
-    tokenRefreshLock: tokenRefreshLock,
-    onTokenRefreshed: (String newToken) async {
-      // Update TokenManager's in-memory cache so Connect RPC clients use the new token
-      await tokenManager.setAccessToken(newToken);
-      AppLogger.debug(
-        'TokenManager in-memory cache updated after background refresh',
-      );
-    },
-  );
+    AppLogger.info('Auth state invalidated - user should see login screen');
+  });
 
   // Cleanup when provider is disposed
   ref.onDispose(service.stop);

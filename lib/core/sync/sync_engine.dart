@@ -15,7 +15,7 @@ import '../../features/messages/data/read_receipt_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
-import '../auth/token_refresh_lock.dart';
+import '../auth/token_refresh_coordinator.dart';
 import '../crypto/e2e_encryption_service.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
@@ -40,10 +40,9 @@ class TokenRefreshPermanentError implements Exception {
 final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final gatewayClient = await ref.watch(gatewayServiceClientProvider.future);
   final chatClient = await ref.watch(chatServiceClientProvider.future);
-  final tokenManager = ref.watch(tokenManagerProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   final encryptionService = ref.watch(e2eEncryptionServiceProvider);
-  final tokenRefreshLock = ref.watch(tokenRefreshLockProvider);
+  final coordinator = ref.watch(tokenRefreshCoordinatorProvider);
 
   // Initialize encryption service
   await encryptionService.initialize();
@@ -59,53 +58,31 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     encryptionService,
     ref.watch(readReceiptRepositoryProvider),
     onTokenRefresh: () async {
-      AppLogger.debug('SyncEngine: Starting token refresh via authRepo');
-      // Use the shared lock to prevent concurrent refreshes
-      final result = await tokenRefreshLock.acquireAndRefresh(() async {
-        try {
-          // Use the robust token refresh with retry logic
-          final refreshResult = await authRepo
-              .ensureValidAccessTokenWithStatus();
-          final newToken = refreshResult.token;
-          AppLogger.debug(
-            'SyncEngine: Token refresh result',
-            data: {
-              'hasToken': newToken != null,
-              'needsRelogin': refreshResult.needsRelogin,
-            },
-          );
+      // Delegate ALL token refresh logic to the coordinator
+      // This ensures consistent behavior across TokenManager, SyncEngine,
+      // and TokenRefreshService
+      AppLogger.debug(
+        'SyncEngine: Token refresh requested, delegating to coordinator',
+      );
 
-          // If re-login is required, throw a specific exception to signal permanent failure
-          if (refreshResult.needsRelogin) {
-            AppLogger.warning('SyncEngine: Token refresh requires re-login');
-            throw TokenRefreshPermanentError('User must re-authenticate');
-          }
+      final result = await coordinator.refresh(source: 'SyncEngine');
 
-          // Update TokenManager's in-memory cache so subsequent requests use the new token
-          if (newToken != null) {
-            await tokenManager.setAccessToken(newToken);
-            AppLogger.debug('SyncEngine: TokenManager updated with new token');
-          }
-          return newToken;
-        } on Exception catch (e, st) {
-          AppLogger.error(
-            'SyncEngine: Token refresh failed with exception',
-            error: e,
-            stackTrace: st,
+      if (!result.success) {
+        if (result.result == common_types.TokenRefreshResult.permanentError) {
+          throw TokenRefreshPermanentError(
+            result.error ?? 'User must re-authenticate',
           );
-          rethrow;
         }
-      });
-
-      // If result is null, another refresh was in progress and completed
-      // Return the current token from storage
-      if (result == null) {
-        AppLogger.debug(
-          'SyncEngine: Token refresh was handled by another caller',
+        // Transient error - return null to signal retry later
+        AppLogger.warning(
+          'SyncEngine: Token refresh failed (transient)',
+          data: {'error': result.error},
         );
-        return authRepo.getAccessToken();
+        return null;
       }
-      return result;
+
+      AppLogger.debug('SyncEngine: Token refresh successful via coordinator');
+      return result.accessToken;
     },
   );
 

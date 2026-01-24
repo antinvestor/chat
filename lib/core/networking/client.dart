@@ -17,7 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/auth/data/auth_repository.dart';
-import '../auth/token_refresh_lock.dart';
+import '../auth/token_refresh_coordinator.dart';
 import '../logging/app_logger.dart';
 import 'certificate_pinning.dart';
 
@@ -29,19 +29,17 @@ final secureStorageProvider = Provider<FlutterSecureStorage>(
 /// Token manager provider using antinvestor_api_common TokenManager
 ///
 /// TokenManager handles:
-/// - Persistent storage of tokens
-/// - Reactive refresh on 401 (via interceptor)
-/// - Concurrent refresh prevention
+/// - Persistent storage of tokens (access token only - refresh token managed by AuthService)
+/// - Reactive refresh on 401 (via TokenRefreshCoordinator)
+/// - Concurrent refresh prevention (via TokenRefreshCoordinator)
 /// - Logout on permanent errors
 ///
-/// CRITICAL: The onRefreshToken callback uses TokenRefreshLock to prevent
-/// race conditions with TokenRefreshService and SyncEngine. Without this,
-/// multiple concurrent refresh attempts could reuse the same refresh token,
-/// causing the OAuth2 server to revoke all tokens.
+/// All token refresh operations are delegated to [TokenRefreshCoordinator]
+/// to ensure consistent behavior across the entire application.
 final tokenManagerProvider = Provider<TokenManager>((ref) {
   final storage = ref.watch(secureStorageProvider);
   final authRepo = ref.watch(authRepositoryProvider);
-  final tokenRefreshLock = ref.watch(tokenRefreshLockProvider);
+  final coordinator = ref.watch(tokenRefreshCoordinatorProvider);
 
   final tokenManager = TokenManager(
     persistTokens: (accessToken, refreshToken) async {
@@ -76,39 +74,22 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
       return null;
     },
     onRefreshToken: (String? refreshToken) async {
-      // CRITICAL: Use shared lock to prevent concurrent refresh token usage
-      // This coordinates with TokenRefreshService and SyncEngine to ensure
-      // the refresh token is only used once at a time
-      AppLogger.debug('TokenManager: onRefreshToken called, acquiring lock');
+      // Delegate ALL token refresh logic to the coordinator
+      // This ensures consistent behavior across TokenManager, SyncEngine,
+      // and TokenRefreshService
+      AppLogger.debug(
+        'TokenManager: onRefreshToken called, delegating to coordinator',
+      );
 
-      final result = await tokenRefreshLock.acquireAndRefresh(() async {
-        AppLogger.debug('TokenManager: Lock acquired, performing refresh');
-        final refreshResult = await authRepo.refreshTokenWithResult();
-        if (refreshResult.result != TokenRefreshResult.success) {
-          throw Exception(refreshResult.error ?? 'Token refresh failed');
-        }
-        final newToken = await authRepo.getAccessToken();
-        if (newToken == null) {
-          throw Exception('Failed to get new access token after refresh');
-        }
-        AppLogger.debug('TokenManager: Refresh successful');
-        return newToken;
-      });
+      final result = await coordinator.refresh(source: 'TokenManager');
 
-      // If result is null, another refresh was in progress and completed
-      // Get the token from storage (which should now have the fresh token)
-      if (result == null) {
-        AppLogger.debug(
-          'TokenManager: Refresh was handled by another caller, getting token from storage',
-        );
-        final newToken = await authRepo.getAccessToken();
-        if (newToken == null) {
-          throw Exception('No access token available after concurrent refresh');
-        }
-        return newToken;
+      if (!result.success) {
+        throw Exception(result.error ?? 'Token refresh failed');
       }
 
-      return result;
+      // The coordinator already updated our in-memory cache via setAccessToken()
+      // Just return the token for the external package's expectations
+      return result.accessToken!;
     },
     onLogout: () async {
       // Clear auth state when permanent error occurs
@@ -116,26 +97,35 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
     },
   );
 
+  // CRITICAL: Set the TokenManager reference on the coordinator
+  // This allows the coordinator to update our in-memory cache after refresh
+  coordinator.setTokenManager(tokenManager);
+
   ref.onDispose(tokenManager.dispose);
 
   return tokenManager;
 });
 
-/// Token refresh callback provider - delegates to TokenManager's performRefresh
+/// Token refresh callback provider - uses the coordinator for consistent behavior
+///
+/// This callback can be passed to API clients that need a refresh callback.
+/// It delegates to the TokenRefreshCoordinator to ensure consistent handling.
 final tokenRefreshCallbackProvider = Provider<TokenRefreshCallback>((ref) {
-  final tokenManager = ref.watch(tokenManagerProvider);
+  final coordinator = ref.watch(tokenRefreshCoordinatorProvider);
 
   return (String? refreshToken) async {
-    // Use TokenManager's built-in refresh which handles concurrent requests
-    final result = await tokenManager.performRefresh();
-    if (result != TokenRefreshResult.success) {
-      throw Exception('Token refresh failed');
+    final result = await coordinator.refresh(source: 'ApiClient');
+
+    if (!result.success) {
+      if (result.result == TokenRefreshResult.permanentError) {
+        throw TokenRefreshPermanentException(
+          result.error ?? 'Token refresh failed permanently',
+        );
+      }
+      throw Exception(result.error ?? 'Token refresh failed');
     }
-    final token = tokenManager.accessToken;
-    if (token == null) {
-      throw Exception('No access token after refresh');
-    }
-    return token;
+
+    return result.accessToken!;
   };
 });
 
