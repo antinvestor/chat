@@ -1298,6 +1298,233 @@ void main() {
       });
     });
 
+    group('expired messages (disappearing messages)', () {
+      test('getExpiredMessages returns messages past expiry time', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final pastExpiry = now - 1000; // 1 second ago
+        final futureExpiry = now + 60000; // 1 minute in future
+
+        // Expired message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Expired message'},
+            createdAt: now - 10000,
+            expiresAt: pastExpiry,
+          ),
+        );
+
+        // Not expired message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-not-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Not expired message'},
+            createdAt: now - 5000,
+            expiresAt: futureExpiry,
+          ),
+        );
+
+        // No expiry (permanent) message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-permanent',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Permanent message'},
+            createdAt: now,
+          ),
+        );
+
+        final expiredMessages = await repository.getExpiredMessages();
+
+        expect(expiredMessages.length, equals(1));
+        expect(expiredMessages[0].id, equals('event-expired'));
+      });
+
+      test('getExpiredMessages returns empty list when no expired messages', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final futureExpiry = now + 60000;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Not expired'},
+            createdAt: now,
+            expiresAt: futureExpiry,
+          ),
+        );
+
+        final expiredMessages = await repository.getExpiredMessages();
+        expect(expiredMessages, isEmpty);
+      });
+
+      test('deleteExpiredMessages removes expired messages', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final pastExpiry = now - 1000;
+        final futureExpiry = now + 60000;
+
+        // Expired messages
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-expired-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Expired 1'},
+            createdAt: now - 10000,
+            expiresAt: pastExpiry,
+          ),
+        );
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-expired-2',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Expired 2'},
+            createdAt: now - 9000,
+            expiresAt: pastExpiry - 500,
+          ),
+        );
+
+        // Not expired message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-not-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Not expired'},
+            createdAt: now,
+            expiresAt: futureExpiry,
+          ),
+        );
+
+        // Permanent message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-permanent',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Permanent'},
+            createdAt: now,
+          ),
+        );
+
+        final deletedCount = await repository.deleteExpiredMessages();
+
+        expect(deletedCount, equals(2));
+
+        // Verify expired messages are gone
+        expect(await repository.getEventById('event-expired-1'), isNull);
+        expect(await repository.getEventById('event-expired-2'), isNull);
+
+        // Verify non-expired and permanent messages remain
+        expect(await repository.getEventById('event-not-expired'), isNotNull);
+        expect(await repository.getEventById('event-permanent'), isNotNull);
+      });
+
+      test('deleteExpiredMessages returns 0 when no expired messages', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Permanent'},
+            createdAt: now,
+          ),
+        );
+
+        final deletedCount = await repository.deleteExpiredMessages();
+        expect(deletedCount, equals(0));
+      });
+
+      test('setMessageExpiry sets expiration time for message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final expiresAt = now + 60000;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            createdAt: now,
+          ),
+        );
+
+        // Initially no expiry
+        var event = await repository.getEventById('event-1');
+        expect(event!.expiresAt, isNull);
+        expect(event.isDisappearing, isFalse);
+
+        // Set expiry
+        await repository.setMessageExpiry('event-1', expiresAt);
+
+        event = await repository.getEventById('event-1');
+        expect(event!.expiresAt, equals(expiresAt));
+        expect(event.isDisappearing, isTrue);
+      });
+
+      test('message isExpired returns correct value', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        // Create message with past expiry
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Expired'},
+            createdAt: now - 10000,
+            expiresAt: now - 1000,
+          ),
+        );
+
+        // Create message with future expiry
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-not-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Not expired'},
+            createdAt: now,
+            expiresAt: now + 60000,
+          ),
+        );
+
+        final expiredEvent = await repository.getEventById('event-expired');
+        final notExpiredEvent = await repository.getEventById('event-not-expired');
+
+        expect(expiredEvent!.isExpired, isTrue);
+        expect(notExpiredEvent!.isExpired, isFalse);
+      });
+    });
+
     group('message deletion with isDeleted flag', () {
       test('new messages have isDeleted as false', () async {
         await createTestRoom('room-1');

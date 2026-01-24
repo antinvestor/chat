@@ -149,7 +149,7 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
       });
 
       // Sync contacts
-      final repo = await ref.read(contactSyncRepositoryProvider.future);
+      final repo = await ref.read(rosterRepositoryProvider.future);
       final syncedContacts = await repo.syncContacts();
 
       if (!mounted) return;
