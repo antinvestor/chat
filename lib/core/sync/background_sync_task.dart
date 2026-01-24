@@ -82,7 +82,15 @@ class BackgroundSyncTask {
       );
       final chatClient = ChatServiceClient(transport);
 
-      // Process pending jobs
+      // Download new messages from subscribed rooms
+      await _downloadNewMessages(
+        database,
+        messageRepo,
+        chatClient,
+        authHeaders,
+      );
+
+      // Process pending jobs (uploads)
       final success = await _processPendingJobs(
         jobRepo,
         messageRepo,
@@ -171,6 +179,123 @@ class BackgroundSyncTask {
         stackTrace: stackTrace,
       );
       return false;
+    }
+  }
+
+  /// Download new messages from subscribed rooms
+  static Future<void> _downloadNewMessages(
+    AppDatabase database,
+    MessageRepository messageRepo,
+    ChatServiceClient chatClient,
+    connect.Headers authHeaders,
+  ) async {
+    try {
+      // Get list of rooms the user is subscribed to
+      final rooms = await database.select(database.rooms).get();
+
+      if (rooms.isEmpty) {
+        AppLogger.debug('No rooms to sync in background');
+        return;
+      }
+
+      AppLogger.info(
+        'Downloading messages for rooms in background',
+        data: {'roomCount': rooms.length},
+      );
+
+      var totalMessages = 0;
+
+      // Fetch recent messages for each room (limit to prevent long background tasks)
+      for (final room in rooms.take(10)) {
+        // Limit to 10 rooms per background sync
+        try {
+          final request = pb.GetHistoryRequest(
+            roomId: room.id,
+            cursor: common.PageCursor(limit: 20), // Get last 20 messages
+            forward: false,
+          );
+
+          final response = await chatClient.getHistory(
+            request,
+            headers: authHeaders,
+          );
+
+          for (final event in response.events) {
+            if (event.id.isEmpty || event.roomId.isEmpty) continue;
+
+            // Extract content from payload
+            var content = <String, dynamic>{};
+            if (event.hasPayload()) {
+              final payload = event.payload;
+              if (payload.hasText()) {
+                content = {'text': payload.text.body};
+              } else if (payload.hasAttachment()) {
+                content = {
+                  'attachmentId': payload.attachment.attachmentId,
+                  'fileName': payload.attachment.filename,
+                  'mimeType': payload.attachment.mimeType,
+                  'size': payload.attachment.sizeBytes.toInt(),
+                };
+              }
+            }
+
+            final roomEvent = domain.RoomEvent(
+              id: event.id,
+              roomId: event.roomId,
+              senderId: event.hasSubscriptionId() ? event.subscriptionId : '',
+              type: _mapProtoEventTypeToLocal(event.type),
+              content: content,
+              parentId: event.hasParentId() ? event.parentId : null,
+              status: domain.EventStatus.delivered,
+              createdAt: event.hasSentAt()
+                  ? event.sentAt.seconds.toInt() * 1000 +
+                        event.sentAt.nanos ~/ 1000000
+                  : DateTime.now().millisecondsSinceEpoch,
+              serverTs: event.hasSentAt()
+                  ? event.sentAt.seconds.toInt() * 1000 +
+                        event.sentAt.nanos ~/ 1000000
+                  : null,
+            );
+
+            await messageRepo.insertMessage(roomEvent);
+            totalMessages++;
+          }
+        } catch (e) {
+          AppLogger.warning(
+            'Failed to fetch history for room in background',
+            data: {'roomId': room.id, 'error': e.toString()},
+          );
+          // Continue with other rooms
+        }
+      }
+
+      AppLogger.info(
+        'Background message download completed',
+        data: {'totalMessages': totalMessages},
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Error downloading messages in background',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      // Don't rethrow - this is a best-effort operation
+    }
+  }
+
+  /// Map proto event type to local domain type
+  static domain.RoomEventType _mapProtoEventTypeToLocal(pb.RoomEventType type) {
+    switch (type) {
+      case pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE:
+        return domain.RoomEventType.text;
+      case pb.RoomEventType.ROOM_EVENT_TYPE_REACTION:
+        return domain.RoomEventType.reaction;
+      case pb.RoomEventType.ROOM_EVENT_TYPE_CALL:
+        return domain.RoomEventType.callOffer;
+      case pb.RoomEventType.ROOM_EVENT_TYPE_MOTION:
+        return domain.RoomEventType.motion;
+      default:
+        return domain.RoomEventType.text;
     }
   }
 

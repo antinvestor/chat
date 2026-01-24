@@ -295,6 +295,10 @@ class PendingJobs extends Table {
 
   /// Job status: 'pending', 'processing', 'completed', 'failed'
   TextColumn get status => text().withDefault(const Constant('pending'))();
+
+  /// Earliest time this job can be retried (for exponential backoff)
+  /// Null means job can be processed immediately
+  IntColumn get nextRetryAt => integer().nullable()();
 }
 
 /// Financial transactions within group savings (chama) rooms

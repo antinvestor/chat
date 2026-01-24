@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
@@ -172,7 +173,16 @@ class SyncEngine with WidgetsBindingObserver {
   bool _isPaused = false; // Flag to track if paused due to app lifecycle
   int _reconnectAttempts = 0;
   int _authErrorCount = 0; // Track consecutive auth errors
-  final Set<String> _processedEventIds = {}; // For event deduplication
+
+  // Lock to prevent multiple concurrent connection attempts
+  Completer<void>? _connectionLock;
+
+  // Random for jitter in reconnection backoff
+  final _random = Random();
+
+  // Controller for bidirectional stream requests
+  // This keeps the stream open so we can send multiple messages (hello, typing, receipts, etc.)
+  StreamController<pb.StreamRequest>? _requestController;
 
   // Completer for graceful stop/start coordination
   Completer<void>? _stopCompleter;
@@ -245,7 +255,9 @@ class SyncEngine with WidgetsBindingObserver {
 
   /// Called when app goes to background
   void _onAppBackgrounded() {
-    if (!_isPaused && _isConnected) {
+    // Stop sync if connected OR if currently attempting to connect
+    // This prevents wasting resources on connection attempts while backgrounded
+    if (!_isPaused && (_isConnected || _connectionLock != null)) {
       AppLogger.info('SyncEngine: App backgrounded, pausing sync');
       _isPaused = true;
       stop();
@@ -295,7 +307,18 @@ class SyncEngine with WidgetsBindingObserver {
     _jobWatchSubscription?.cancel();
     _jobWatchSubscription = null;
     _isConnected = false;
-    // Note: Don't close stream controllers here as they may be reused
+
+    // Close the request controller to end the bidirectional stream gracefully
+    _requestController?.close();
+    _requestController = null;
+
+    // Release connection lock if held
+    if (_connectionLock != null && !_connectionLock!.isCompleted) {
+      _connectionLock!.complete();
+    }
+    _connectionLock = null;
+
+    // Note: Don't close broadcast stream controllers here as they may be reused
     // They will be closed when the engine is disposed
   }
 
@@ -368,13 +391,25 @@ class SyncEngine with WidgetsBindingObserver {
   }
 
   Future<void> _startDownloadLoop() async {
+    // Prevent multiple concurrent connection attempts
+    if (_connectionLock != null) {
+      AppLogger.debug('Connection attempt already in progress, skipping');
+      return;
+    }
     if (_isConnected || _shouldStop) return;
+
+    // Acquire connection lock
+    _connectionLock = Completer<void>();
 
     _connectionStateController.add(SyncConnectionState.connecting);
 
     // Run connection loop in a way that doesn't block the main thread
     while (!_shouldStop) {
       try {
+        // Create a StreamController for bidirectional communication
+        // This stays open so we can send multiple requests (hello, typing, receipts, etc.)
+        _requestController = StreamController<pb.StreamRequest>();
+
         // Add client capabilities for server-side feature detection
         final hello = pb.StreamHello(
           capabilities: {
@@ -386,11 +421,15 @@ class SyncEngine with WidgetsBindingObserver {
           },
           clientTime: common_types.Timestamp.fromDateTime(DateTime.now()),
         );
-        final request = pb.StreamRequest(hello: hello);
+        final helloRequest = pb.StreamRequest(hello: hello);
+
+        // Send hello as the first message
+        _requestController!.add(helloRequest);
 
         // Don't pass manual headers - let the interceptor handle authorization
         // This ensures token refresh works correctly on 401
-        final stream = _gatewayClient.stream(Stream.value(request));
+        // Use the controller's stream which stays open for bidirectional communication
+        final stream = _gatewayClient.stream(_requestController!.stream);
         _isConnected = true;
         _reconnectAttempts = 0;
         _authErrorCount = 0; // Reset auth error count on successful connection
@@ -488,6 +527,10 @@ class SyncEngine with WidgetsBindingObserver {
       } finally {
         _isConnected = false;
         _connectionStateController.add(SyncConnectionState.disconnected);
+
+        // Close the request controller to clean up resources
+        await _requestController?.close();
+        _requestController = null;
       }
 
       // Check if we should stop before waiting
@@ -515,25 +558,38 @@ class SyncEngine with WidgetsBindingObserver {
 
       _reconnectAttempts++;
     }
+
+    // Release connection lock when loop exits
+    _connectionLock?.complete();
+    _connectionLock = null;
   }
 
   /// Process stream events with a timeout to detect stalled connections
+  ///
+  /// Uses Stream.timeout() for proper timeout detection - this triggers
+  /// even when no messages arrive (unlike manual checks which only run
+  /// when messages are received).
   Future<void> _processStreamWithTimeout(
     Stream<pb.StreamResponse> stream,
   ) async {
-    // Track last event time for timeout detection
-    var lastEventTime = DateTime.now();
-
-    await for (final response in stream) {
-      // Check for timeout since last event
-      final now = DateTime.now();
-      if (now.difference(lastEventTime) > _streamReadTimeout) {
-        throw TimeoutException(
-          'No data received for ${_streamReadTimeout.inSeconds} seconds',
+    // Use Stream.timeout() for proper timeout detection
+    // This will throw TimeoutException if no data arrives within the timeout
+    final timedStream = stream.timeout(
+      _streamReadTimeout,
+      onTimeout: (sink) {
+        sink.addError(
+          TimeoutException(
+            'No data received for ${_streamReadTimeout.inSeconds} seconds',
+          ),
         );
-      }
-      lastEventTime = now;
+        sink.close();
+      },
+    );
 
+    // Process messages sequentially to maintain order and prevent queue overflow
+    // Using await for ensures backpressure - we won't accept new messages
+    // until the current one is processed
+    await for (final response in timedStream) {
       // Check if we should stop
       if (_shouldStop) {
         AppLogger.debug('Stop requested during stream processing');
@@ -543,18 +599,18 @@ class SyncEngine with WidgetsBindingObserver {
       // Reset auth error count on successful data receipt
       _authErrorCount = 0;
 
-      // Use microtask to ensure UI responsiveness
-      Future.microtask(() async {
-        try {
-          await _handleConnectResponse(response);
-        } catch (e, stackTrace) {
-          AppLogger.error(
-            'Error handling stream response in microtask',
-            error: e,
-            stackTrace: stackTrace,
-          );
-        }
-      });
+      // Process synchronously to maintain message order
+      // This also provides natural backpressure
+      try {
+        await _handleConnectResponse(response);
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Error handling stream response',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        // Continue processing other messages even if one fails
+      }
     }
   }
 
@@ -592,7 +648,31 @@ class SyncEngine with WidgetsBindingObserver {
     if (delay > _maxBackoffMs) {
       delay = _maxBackoffMs;
     }
-    return Duration(milliseconds: delay);
+    // Add jitter (0-25% of delay) to prevent thundering herd
+    final jitter = (_random.nextDouble() * 0.25 * delay).toInt();
+    return Duration(milliseconds: delay + jitter);
+  }
+
+  /// Send a request through the bidirectional stream
+  ///
+  /// Returns true if the request was sent, false if not connected
+  bool _sendRequest(pb.StreamRequest request) {
+    final controller = _requestController;
+    if (controller == null || controller.isClosed) {
+      AppLogger.warning(
+        'Cannot send request: stream not connected',
+        data: {'hasController': controller != null},
+      );
+      return false;
+    }
+
+    try {
+      controller.add(request);
+      return true;
+    } catch (e) {
+      AppLogger.error('Failed to send request through stream', error: e);
+      return false;
+    }
   }
 
   Future<void> _handleConnectResponse(pb.StreamResponse response) async {
@@ -629,17 +709,8 @@ class SyncEngine with WidgetsBindingObserver {
       return;
     }
 
-    // Deduplicate events
-    if (_processedEventIds.contains(event.id)) {
-      return;
-    }
-    _processedEventIds.add(event.id);
-
-    // Keep deduplication set bounded (last 1000 events)
-    if (_processedEventIds.length > 1000) {
-      final toRemove = _processedEventIds.take(100).toList();
-      _processedEventIds.removeAll(toRemove);
-    }
+    // Note: Deduplication is handled by the database's unique constraint on event ID
+    // XIDs provide natural ordering, so we rely on the DB for both ordering and uniqueness
 
     // Extract content from typed payload fields
     var content = <String, dynamic>{};
@@ -1950,14 +2021,14 @@ class SyncEngine with WidgetsBindingObserver {
       // Wrap in ClientCommand
       final command = pb.ClientCommand(typing: typingEvent);
 
-      // Send via gateway stream (same connection as messages)
+      // Send via existing bidirectional stream
       final request = pb.StreamRequest(command: command);
-      _gatewayClient.stream(Stream.value(request));
-
-      AppLogger.debug(
-        'Typing event sent',
-        data: {'roomId': roomId, 'typing': isTyping},
-      );
+      if (_sendRequest(request)) {
+        AppLogger.debug(
+          'Typing event sent',
+          data: {'roomId': roomId, 'typing': isTyping},
+        );
+      }
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to send typing event',
@@ -2005,14 +2076,14 @@ class SyncEngine with WidgetsBindingObserver {
       // Wrap in ClientCommand
       final command = pb.ClientCommand(readMarker: readEvent);
 
-      // Send via gateway stream (same connection as messages)
+      // Send via existing bidirectional stream
       final request = pb.StreamRequest(command: command);
-      _gatewayClient.stream(Stream.value(request));
-
-      AppLogger.debug(
-        'Read receipt sent',
-        data: {'roomId': roomId, 'upToEventId': latestMessageId},
-      );
+      if (_sendRequest(request)) {
+        AppLogger.debug(
+          'Read receipt sent',
+          data: {'roomId': roomId, 'upToEventId': latestMessageId},
+        );
+      }
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to send read receipts',
@@ -2082,9 +2153,11 @@ class SyncEngine with WidgetsBindingObserver {
       // Wrap in ClientCommand
       final command = pb.ClientCommand(event: roomEvent);
 
-      // Send via gateway stream
+      // Send via existing bidirectional stream
       final request = pb.StreamRequest(command: command);
-      _gatewayClient.stream(Stream.value(request));
+      if (!_sendRequest(request)) {
+        throw Exception('Failed to send message: stream not connected');
+      }
 
       // Update local message status to sent
       await _messageRepo.updateMessageStatus(event.id, domain.EventStatus.sent);

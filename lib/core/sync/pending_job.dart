@@ -38,6 +38,7 @@ abstract class PendingJob with _$PendingJob {
     required int createdAt,
     @Default(0) int retryCount,
     @Default('pending') String status,
+    int? nextRetryAt, // Earliest time this job can be retried
   }) = _PendingJob;
 
   factory PendingJob.fromJson(Map<String, dynamic> json) =>
