@@ -11,6 +11,7 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
 import '../../auth/data/user_info_provider.dart';
 import '../../messages/data/file_upload_service.dart';
+import '../domain/user_status.dart';
 
 /// Contact type enum for phone/email management
 enum ContactType { email, phone }
@@ -143,6 +144,77 @@ class ProfileRepository {
       AppLogger.error('Failed to update bio', error: e, stackTrace: stackTrace);
       return ProfileUpdateResult.failure(e.toString());
     }
+  }
+
+  /// Update the user's status
+  ///
+  /// [status] The new status to set
+  /// [statusMessage] Optional custom status message (e.g., "In a meeting")
+  Future<ProfileUpdateResult> updateStatus(
+    UserStatus status, {
+    String? statusMessage,
+  }) async {
+    try {
+      final profileClient = await _ref.read(profileClientProvider.future);
+      final userInfo = await _ref.read(userInfoProvider.future);
+
+      if (userInfo?.id == null) {
+        return ProfileUpdateResult.failure('User not authenticated');
+      }
+
+      final properties = common.Struct()
+        ..fields['status'] = (common.Value()..numberValue = status.value.toDouble());
+
+      if (statusMessage != null) {
+        properties.fields['status_message'] =
+            (common.Value()..stringValue = statusMessage);
+      }
+
+      final request = pb.UpdateRequest(
+        id: userInfo!.id,
+        properties: properties,
+      );
+
+      await profileClient.stub.update(request);
+
+      // Update local database
+      await _updateLocalProfile(
+        status: status,
+        statusMessage: statusMessage,
+      );
+
+      AppLogger.info('Profile status updated', data: {
+        'status': status.name,
+        'statusMessage': statusMessage,
+      });
+      return ProfileUpdateResult.success();
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to update status',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return ProfileUpdateResult.failure(e.toString());
+    }
+  }
+
+  /// Get the current user's status
+  Future<UserStatus> getCurrentStatus() async {
+    final profile = await getCurrentProfile();
+    if (profile == null) return UserStatus.offline;
+    return UserStatus.fromValue(profile.status);
+  }
+
+  /// Get the current user's status message
+  Future<String?> getCurrentStatusMessage() async {
+    final profile = await getCurrentProfile();
+    return profile?.statusMessage;
+  }
+
+  /// Clear the user's status message (keeps status)
+  Future<ProfileUpdateResult> clearStatusMessage() async {
+    final currentStatus = await getCurrentStatus();
+    return updateStatus(currentStatus, statusMessage: '');
   }
 
   /// Update the user's profile photo
@@ -338,6 +410,8 @@ class ProfileRepository {
     String? name,
     String? avatarUrl,
     String? bio,
+    UserStatus? status,
+    String? statusMessage,
   }) async {
     final db = AppDatabase.instance;
     final userInfo = await _ref.read(userInfoProvider.future);
@@ -363,6 +437,8 @@ class ProfileRepository {
       metadata = jsonEncode(metadataMap);
     }
 
+    final now = DateTime.now().millisecondsSinceEpoch;
+
     final companion = ProfilesCompanion(
       id: drift.Value(userInfo!.id!),
       name: name != null ? drift.Value(name) : const drift.Value.absent(),
@@ -372,7 +448,16 @@ class ProfileRepository {
       metadata: metadata != null
           ? drift.Value(metadata)
           : const drift.Value.absent(),
-      updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+      status: status != null
+          ? drift.Value(status.value)
+          : const drift.Value.absent(),
+      statusMessage: statusMessage != null
+          ? drift.Value(statusMessage)
+          : const drift.Value.absent(),
+      statusUpdatedAt: status != null
+          ? drift.Value(now)
+          : const drift.Value.absent(),
+      updatedAt: drift.Value(now),
     );
 
     await db.into(db.profiles).insertOnConflictUpdate(companion);
@@ -397,6 +482,8 @@ class ProfileRepository {
         String? name;
         String? avatarUrl;
         String? bio;
+        int? status;
+        String? statusMessage;
         if (profile.hasProperties()) {
           final props = profile.properties;
           if (props.fields.containsKey('name')) {
@@ -408,6 +495,12 @@ class ProfileRepository {
           if (props.fields.containsKey('bio')) {
             bio = props.fields['bio']?.stringValue;
           }
+          if (props.fields.containsKey('status')) {
+            status = props.fields['status']?.numberValue.toInt();
+          }
+          if (props.fields.containsKey('status_message')) {
+            statusMessage = props.fields['status_message']?.stringValue;
+          }
         }
 
         // Build metadata JSON if bio is present
@@ -415,6 +508,8 @@ class ProfileRepository {
         if (bio != null) {
           metadata = jsonEncode({'bio': bio});
         }
+
+        final now = DateTime.now().millisecondsSinceEpoch;
 
         await db
             .into(db.profiles)
@@ -426,7 +521,16 @@ class ProfileRepository {
                 metadata: metadata != null
                     ? drift.Value(metadata)
                     : const drift.Value.absent(),
-                updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+                status: status != null
+                    ? drift.Value(status)
+                    : const drift.Value.absent(),
+                statusMessage: statusMessage != null
+                    ? drift.Value(statusMessage)
+                    : const drift.Value.absent(),
+                statusUpdatedAt: status != null
+                    ? drift.Value(now)
+                    : const drift.Value.absent(),
+                updatedAt: drift.Value(now),
               ),
             );
 

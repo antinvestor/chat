@@ -7,6 +7,7 @@ import '../features/auth/data/auth_state_provider.dart';
 import '../features/auth/ui/login_screen.dart';
 import '../features/contacts/ui/contact_selection_screen.dart';
 import '../features/messages/ui/chat_screen.dart';
+import '../features/messages/ui/starred_messages_screen.dart';
 import '../features/profile/ui/profile_edit_screen.dart';
 import '../features/profile/ui/profile_screen.dart';
 import '../features/rooms/ui/group_settings_screen.dart';
@@ -140,6 +141,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const ProfileEditScreen(),
+      ),
+      GoRoute(
+        path: '/messages/starred',
+        builder: (context, state) => const StarredMessagesScreen(),
       ),
     ],
   );
