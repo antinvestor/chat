@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../rooms/data/room_providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/message_providers.dart';
 import '../domain/room_event.dart';
+import '../../rooms/data/room_providers.dart';
+
+/// Provider for starred messages
+final starredMessagesProvider = FutureProvider<List<RoomEvent>>((ref) async {
+  final db = ref.watch(messageRepositoryProvider);
+  return db.getStarredMessages();
+});
 
 /// Provider for starred messages stream (reactive)
 final starredMessagesStreamProvider = StreamProvider<List<RoomEvent>>((ref) {
@@ -28,15 +35,14 @@ class StarredMessagesScreen extends ConsumerWidget {
         title: const Text('Starred Messages'),
         actions: [
           starredMessages.whenOrNull(
-                data: (messages) => messages.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.delete_sweep),
-                        tooltip: 'Clear all starred',
-                        onPressed: () => _showClearAllDialog(context, ref),
-                      )
-                    : null,
-              ) ??
-              const SizedBox.shrink(),
+            data: (messages) => messages.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.delete_sweep),
+                    tooltip: 'Clear all starred',
+                    onPressed: () => _showClearAllDialog(context, ref),
+                  )
+                : null,
+          ) ?? const SizedBox.shrink(),
         ],
       ),
       body: starredMessages.when(
@@ -84,15 +90,15 @@ class StarredMessagesScreen extends ConsumerWidget {
           Text(
             'No starred messages',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+                  color: Theme.of(context).colorScheme.outline,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Star important messages to find them easily later',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+                  color: Theme.of(context).colorScheme.outline,
+                ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -121,10 +127,7 @@ class StarredMessagesScreen extends ConsumerWidget {
 
   void _navigateToMessage(BuildContext context, RoomEvent message) {
     // Navigate to the room containing this message
-    context.push(
-      '/room/${message.roomId}',
-      extra: {'highlightEventId': message.id},
-    );
+    context.push('/room/${message.roomId}', extra: {'highlightEventId': message.id});
   }
 
   Future<void> _unstarMessage(
@@ -170,14 +173,14 @@ class StarredMessagesScreen extends ConsumerWidget {
       ),
     );
 
-    if ((confirmed ?? false) && context.mounted) {
+    if (confirmed == true && context.mounted) {
       final repo = ref.read(messageRepositoryProvider);
       final count = await repo.clearAllStarredMessages();
 
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Unstarred $count messages')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unstarred $count messages')),
+        );
       }
     }
   }
@@ -233,7 +236,7 @@ class _StarredMessageTile extends ConsumerWidget {
                           color: theme.colorScheme.outline,
                         ),
                       ),
-                      error: (_, _) => Text(
+                      error: (_, __) => Text(
                         'Unknown Room',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.outline,
