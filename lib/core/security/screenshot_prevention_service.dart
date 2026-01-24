@@ -20,7 +20,8 @@ class ScreenshotPreventionService {
 
   final KeyManager _keyManager;
 
-  static const _methodChannel = MethodChannel('chat.app/screenshot_prevention');
+  static const _methodChannel =
+      MethodChannel('chat.app/screenshot_prevention');
   static const _enabledKey = 'screenshot_prevention_enabled';
 
   bool _isEnabled = false;
