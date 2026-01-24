@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart' as pb;
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -132,11 +132,26 @@ Future<String?> validateAndFormatPhoneNumber(
 /// Convert region code string to IsoCode enum
 IsoCode _regionToIsoCode(String regionCode) {
   try {
-    return IsoCode.values.firstWhere(
-      (code) => code.name.toUpperCase() == regionCode.toUpperCase(),
-      orElse: () => IsoCode.US, // Default to US if not found
+    final upperRegion = regionCode.toUpperCase();
+    final matchingCode = IsoCode.values.cast<IsoCode?>().firstWhere(
+      (code) => code!.name.toUpperCase() == upperRegion,
+      orElse: () => null,
     );
+
+    if (matchingCode != null) {
+      return matchingCode;
+    }
+
+    AppLogger.warning(
+      'Unknown region code, falling back to US',
+      data: {'regionCode': regionCode},
+    );
+    return IsoCode.US;
   } catch (e) {
+    AppLogger.debug(
+      'Error converting region to IsoCode',
+      data: {'regionCode': regionCode, 'error': e.toString()},
+    );
     return IsoCode.US;
   }
 }
@@ -314,13 +329,47 @@ String? _getCountryCodeForRegion(String regionCode) {
 }
 
 /// Get the device's region code from platform locale
+/// Checks all available locales and returns the first valid country code
+/// Works on all platforms including web
 String _getDeviceRegionCode() {
   try {
-    // Get locale from platform dispatcher
-    final locale = WidgetsBinding.instance.platformDispatcher.locale;
-    if (locale.countryCode != null && locale.countryCode!.isNotEmpty) {
-      return locale.countryCode!;
+    // Use PlatformDispatcher.instance directly for web compatibility
+    // This works even if WidgetsBinding hasn't been initialized
+    final platformDispatcher = ui.PlatformDispatcher.instance;
+
+    // First, try the primary locale
+    final primaryLocale = platformDispatcher.locale;
+    if (primaryLocale.countryCode != null &&
+        primaryLocale.countryCode!.isNotEmpty) {
+      AppLogger.debug(
+        'Got region from primary locale',
+        data: {'region': primaryLocale.countryCode},
+      );
+      return primaryLocale.countryCode!;
     }
+
+    // If primary locale doesn't have a country code, check all locales
+    // This list includes all user-preferred locales in order of preference
+    final locales = platformDispatcher.locales;
+    for (final locale in locales) {
+      if (locale.countryCode != null && locale.countryCode!.isNotEmpty) {
+        AppLogger.debug(
+          'Got region from locale list',
+          data: {'region': locale.countryCode, 'locale': locale.toString()},
+        );
+        return locale.countryCode!;
+      }
+    }
+
+    // Log when no country code found in any locale
+    AppLogger.warning(
+      'No country code found in device locales',
+      data: {
+        'primaryLocale': primaryLocale.toString(),
+        'localeCount': locales.length,
+        'locales': locales.map((l) => l.toString()).toList(),
+      },
+    );
   } catch (e) {
     AppLogger.debug(
       'Failed to get locale region',
@@ -328,7 +377,10 @@ String _getDeviceRegionCode() {
     );
   }
 
-  // Fallback if locale not available
+  // Fallback - this should be rare with the improved detection above
+  AppLogger.warning(
+    'Using fallback region code US - device locale detection failed',
+  );
   return 'US';
 }
 
