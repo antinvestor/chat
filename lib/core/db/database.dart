@@ -211,6 +211,12 @@ class RoomEvents extends Table {
   /// Null means the message does not expire
   IntColumn get expiresAt => integer().nullable()();
 
+  /// Whether this message is starred/bookmarked by the user
+  BoolColumn get starred => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when the message was starred (for sorting starred messages)
+  IntColumn get starredAt => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -610,7 +616,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -711,6 +717,17 @@ class AppDatabase extends _$AppDatabase {
       if (from <= 9) {
         // Migration from v9 to v10: Add mute notifications support
         await m.addColumn(rooms, rooms.mutedUntil);
+      }
+      if (from <= 10) {
+        // Migration from v10 to v11: Add starred messages support
+        await m.addColumn(roomEvents, roomEvents.starred);
+        await m.addColumn(roomEvents, roomEvents.starredAt);
+        // Create index for efficient starred message querying
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_room_events_starred
+          ON room_events(starred, starred_at)
+          WHERE starred = 1
+        ''');
       }
     },
     beforeOpen: (details) async {
