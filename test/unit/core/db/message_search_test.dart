@@ -259,7 +259,7 @@ void main() {
       });
 
       test('schema version is 10', () {
-        // Version 10 includes mute functionality (mutedUntil column)
+        // Version 10 includes mute and starred messages functionality
         expect(db.schemaVersion, equals(10));
       });
     });
