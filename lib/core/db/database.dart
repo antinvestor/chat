@@ -204,6 +204,12 @@ class RoomEvents extends Table {
   /// Null means the message does not expire
   IntColumn get expiresAt => integer().nullable()();
 
+  /// Whether this message is starred/bookmarked by the user
+  BoolColumn get starred => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when the message was starred (for sorting starred messages)
+  IntColumn get starredAt => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -599,7 +605,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -695,6 +701,17 @@ class AppDatabase extends _$AppDatabase {
           CREATE INDEX IF NOT EXISTS idx_room_events_expires_at
           ON room_events(expires_at)
           WHERE expires_at IS NOT NULL
+        ''');
+      }
+      if (from <= 9) {
+        // Migration from v9 to v10: Add starred messages support
+        await m.addColumn(roomEvents, roomEvents.starred);
+        await m.addColumn(roomEvents, roomEvents.starredAt);
+        // Create index for efficient starred message querying
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_room_events_starred
+          ON room_events(starred, starred_at)
+          WHERE starred = 1
         ''');
       }
     },
