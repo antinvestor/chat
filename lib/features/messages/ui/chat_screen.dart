@@ -55,6 +55,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Add scroll listener for scroll-to-bottom FAB
     _scrollController.addListener(_onScroll);
     // Preload chat background patterns for better performance
+    // Note: _black pattern is dark (for light theme), regular is light (for dark theme)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       precacheImage(const AssetImage('assets/chat_pattern.webp'), context);
       precacheImage(
@@ -363,9 +364,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ? null
                       : DecorationImage(
                           image: AssetImage(
+                            // Use light pattern on dark theme, dark pattern on light theme
                             Theme.of(context).brightness == Brightness.dark
-                                ? 'assets/chat_pattern_black.webp'
-                                : 'assets/chat_pattern.webp',
+                                ? 'assets/chat_pattern.webp' // Light pattern for dark background
+                                : 'assets/chat_pattern_black.webp', // Dark pattern for light background
                           ),
                           repeat: ImageRepeat.repeat,
                           fit: BoxFit.none,

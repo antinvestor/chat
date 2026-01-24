@@ -133,9 +133,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // App Logo / Icon
+                // Use light banner on dark theme, dark banner on light theme
                 Hero(
                   tag: 'info-logo',
-                  child: Image.asset('assets/banner_transparent_black.png'),
+                  child: Image.asset(
+                    theme.brightness == Brightness.dark
+                        ? 'assets/banner_transparent.png' // Light banner for dark background
+                        : 'assets/banner_transparent_black.png', // Dark banner for light background
+                  ),
                 ),
                 const SizedBox(height: 12),
 
