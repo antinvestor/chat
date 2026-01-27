@@ -163,6 +163,35 @@ jobs:
           echo "Web build size: $(( WEB_SIZE / 1024 / 1024 )) MB"
           echo "::notice::Web build size: $(( WEB_SIZE / 1024 / 1024 )) MB"
 
+  build-linux:
+    name: Build Linux
+    needs: [analyze, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake ninja-build libgtk-3-dev libsecret-1-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
+      - name: Setup Flutter
+        uses: ./.github/actions/flutter-setup
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Build Linux (debug)
+        run: flutter build linux --debug
+
+      - name: Report Linux build size
+        run: |
+          BUNDLE_SIZE=$(du -sb build/linux/x64/debug/bundle | cut -f1)
+          echo "Linux bundle size: $(( BUNDLE_SIZE / 1024 / 1024 )) MB"
+          echo "::notice::Linux bundle size: $(( BUNDLE_SIZE / 1024 / 1024 )) MB"
+
   # ============================================
   # PHASE 3: Optional quality checks
   # ============================================
@@ -192,7 +221,7 @@ jobs:
 
   ci-summary:
     name: CI Summary
-    needs: [analyze, test, security, build-android, build-web]
+    needs: [analyze, test, security, build-android, build-web, build-linux]
     runs-on: ubuntu-latest
     if: always()
 
@@ -208,12 +237,14 @@ jobs:
           echo "| Security | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Android Build | ${{ needs.build-android.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Web Build | ${{ needs.build-web.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux Build | ${{ needs.build-linux.result }} |" >> $GITHUB_STEP_SUMMARY
 
           # Fail if any required job failed
           if [ "${{ needs.analyze.result }}" == "failure" ] || \
              [ "${{ needs.test.result }}" == "failure" ] || \
              [ "${{ needs.build-android.result }}" == "failure" ] || \
-             [ "${{ needs.build-web.result }}" == "failure" ]; then
+             [ "${{ needs.build-web.result }}" == "failure" ] || \
+             [ "${{ needs.build-linux.result }}" == "failure" ]; then
             echo ""
             echo "::error::One or more required checks failed"
             exit 1

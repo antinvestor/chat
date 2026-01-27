@@ -245,3 +245,86 @@ jobs:
           name: web-build-${{ inputs.environment }}
           path: build/web/
           retention-days: 14
+
+  # Linux Build
+  build-linux:
+    name: Linux (${{ inputs.build_type }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake ninja-build libgtk-3-dev libsecret-1-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
+      - name: Setup Flutter
+        uses: ./.github/actions/flutter-setup
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Build Linux
+        run: |
+          BUILD_ARGS="${{ inputs.build_type == 'release' && '--release' || '--debug' }}"
+          [ -n "${{ inputs.version }}" ] && BUILD_ARGS="$BUILD_ARGS --build-name=${{ inputs.version }}"
+          flutter build linux $BUILD_ARGS
+
+      - name: Package Linux bundle
+        run: |
+          BUILD_MODE=${{ inputs.build_type == 'release' && 'release' || 'debug' }}
+          tar -czf linux-bundle.tar.gz -C build/linux/x64/${BUILD_MODE}/bundle .
+
+      - name: Upload Linux bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundle-${{ inputs.environment }}
+          path: linux-bundle.tar.gz
+          retention-days: 14
+
+  # macOS Build
+  build-macos:
+    name: macOS (${{ inputs.build_type }})
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: ./.github/actions/flutter-setup
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      # Cache CocoaPods
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: macos/Pods
+          key: macos-pods-${{ runner.os }}-${{ hashFiles('macos/Podfile.lock') }}
+          restore-keys: macos-pods-${{ runner.os }}-
+
+      - name: Install CocoaPods
+        run: cd macos && pod install --repo-update || pod install
+
+      - name: Build macOS
+        run: |
+          BUILD_ARGS="${{ inputs.build_type == 'release' && '--release' || '--debug' }}"
+          [ -n "${{ inputs.version }}" ] && BUILD_ARGS="$BUILD_ARGS --build-name=${{ inputs.version }}"
+          flutter build macos $BUILD_ARGS
+
+      - name: Package macOS app
+        run: |
+          BUILD_MODE=${{ inputs.build_type == 'release' && 'Release' || 'Debug' }}
+          cd build/macos/Build/Products/${BUILD_MODE}
+          zip -r ${GITHUB_WORKSPACE}/macos-app.zip *.app
+
+      - name: Upload macOS app
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app-${{ inputs.environment }}
+          path: macos-app.zip
+          retention-days: 14

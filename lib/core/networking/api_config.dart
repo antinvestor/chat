@@ -1,19 +1,45 @@
 /// API endpoint configuration for AntInvestor services
 ///
 /// Each service has its own dedicated endpoint for optimal routing
-/// and load balancing.
+/// and load balancing. Endpoints can be overridden at build time via
+/// `--dart-define`, e.g.:
+/// ```
+/// flutter build web --dart-define=CHAT_URL=https://chat-staging.antinvestor.com
+/// ```
 class ApiConfig {
   const ApiConfig._();
-  // Service endpoints
-  static const String chatBaseUrl = 'https://chat.antinvestor.com';
-  static const String gatewayBaseUrl = 'https://gateway.antinvestor.com';
-  static const String devicesBaseUrl = 'https://devices.antinvestor.com';
-  static const String filesBaseUrl = 'https://files.antinvestor.com';
-  static const String profileBaseUrl = 'https://profile.antinvestor.com';
 
-  // OAuth2 configuration
-  static const String oauth2IssuerUrl = 'https://oauth2.antinvestor.com';
-  static const String oauth2ClientId = '9bsv0s0hijjg02qk7l1g';
+  // Service endpoints (configurable via --dart-define)
+  static const String chatBaseUrl = String.fromEnvironment(
+    'CHAT_URL',
+    defaultValue: 'https://chat.antinvestor.com',
+  );
+  static const String gatewayBaseUrl = String.fromEnvironment(
+    'GATEWAY_URL',
+    defaultValue: 'https://gateway.antinvestor.com',
+  );
+  static const String devicesBaseUrl = String.fromEnvironment(
+    'DEVICES_URL',
+    defaultValue: 'https://devices.antinvestor.com',
+  );
+  static const String filesBaseUrl = String.fromEnvironment(
+    'FILES_URL',
+    defaultValue: 'https://files.antinvestor.com',
+  );
+  static const String profileBaseUrl = String.fromEnvironment(
+    'PROFILE_URL',
+    defaultValue: 'https://profile.antinvestor.com',
+  );
+
+  // OAuth2 configuration (configurable via --dart-define)
+  static const String oauth2IssuerUrl = String.fromEnvironment(
+    'OAUTH2_ISSUER_URL',
+    defaultValue: 'https://oauth2.antinvestor.com',
+  );
+  static const String oauth2ClientId = String.fromEnvironment(
+    'OAUTH2_CLIENT_ID',
+    defaultValue: '9bsv0s0hijjg02qk7l1g',
+  );
 
   // Connection settings optimized for low-resource devices
   static const Duration connectionTimeout = Duration(seconds: 30);

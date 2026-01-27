@@ -136,6 +136,12 @@ jobs:
           [ -d "artifacts/web-build-production" ] && \
             (cd artifacts/web-build-production && zip -r ../../release-assets/chat-${VERSION}-web.zip .)
 
+          [ -f "artifacts/linux-bundle-production/linux-bundle.tar.gz" ] && \
+            cp artifacts/linux-bundle-production/linux-bundle.tar.gz release-assets/chat-${VERSION}-linux-x64.tar.gz
+
+          [ -f "artifacts/macos-app-production/macos-app.zip" ] && \
+            cp artifacts/macos-app-production/macos-app.zip release-assets/chat-${VERSION}-macos.zip
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:

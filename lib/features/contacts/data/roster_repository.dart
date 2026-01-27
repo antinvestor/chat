@@ -7,12 +7,12 @@ import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart' show SqliteException;
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 import 'package:sim_card_code/sim_card_code.dart';
+import 'package:sqlite3/common.dart' show SqliteException;
 import 'package:xid/xid.dart';
 
 import '../../../core/db/database.dart';
