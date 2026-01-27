@@ -32,6 +32,9 @@ enum RoomEventType {
 
   /// Room key sharing for E2EE session keys
   roomKey,
+
+  /// Room state change (created, updated, deleted, member changes)
+  roomChange,
 }
 
 /// Status of a message/event in its delivery lifecycle

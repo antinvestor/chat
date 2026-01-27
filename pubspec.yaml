@@ -32,7 +32,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  antinvestor_api_chat: ^1.52.24
+  antinvestor_api_chat: ^1.53.0
   antinvestor_api_common: ^1.52.0
   antinvestor_api_device: ^1.52.1
   antinvestor_api_files: ^1.52.1

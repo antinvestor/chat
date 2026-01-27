@@ -45,10 +45,10 @@ packages:
     dependency: "direct main"
     description:
       name: antinvestor_api_chat
-      sha256: d04146f4a24a8fd8e293090e91d2976da09d30e52f236661c166dd9911c5a103
+      sha256: d044268721e1fc5bdda9db87d9095382db5b25b36c92b8f52817b4d3dcc6d520
       url: "https://pub.dev"
     source: hosted
-    version: "1.52.24"
+    version: "1.53.0"
   antinvestor_api_common:
     dependency: "direct main"
     description:

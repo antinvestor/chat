@@ -214,6 +214,7 @@ class BackgroundSyncTask {
 
             // Extract content from payload
             var content = <String, dynamic>{};
+            var eventType = _mapProtoEventTypeToLocal(event.type);
             if (event.hasPayload()) {
               final payload = event.payload;
               if (payload.hasText()) {
@@ -225,6 +226,29 @@ class BackgroundSyncTask {
                   'mimeType': payload.attachment.mimeType,
                   'size': payload.attachment.sizeBytes.toInt(),
                 };
+              } else if (payload.hasRoomChange()) {
+                final roomChange = payload.roomChange;
+                content = {
+                  'text': roomChange.body,
+                  'body': roomChange.body,
+                  'action': roomChange.action.name,
+                  'actorSubscriptionId': roomChange.actorSubscriptionId,
+                  'targetSubscriptionIds': roomChange.targetSubscriptionIds
+                      .toList(),
+                  'isRoomChange': true,
+                };
+                eventType = domain.RoomEventType.roomChange;
+              } else if (payload.hasModeration()) {
+                final moderation = payload.moderation;
+                content = {
+                  'text': moderation.body,
+                  'body': moderation.body,
+                  'actorSubscriptionId': moderation.actorSubscriptionId,
+                  'targetSubscriptionIds': moderation.targetSubscriptionIds
+                      .toList(),
+                  'isModeration': true,
+                };
+                eventType = domain.RoomEventType.roomChange;
               }
             }
 
@@ -232,7 +256,7 @@ class BackgroundSyncTask {
               id: event.id,
               roomId: event.roomId,
               senderId: event.hasSubscriptionId() ? event.subscriptionId : '',
-              type: _mapProtoEventTypeToLocal(event.type),
+              type: eventType,
               content: content,
               parentId: event.hasParentId() ? event.parentId : null,
               status: domain.EventStatus.delivered,
@@ -729,6 +753,9 @@ class BackgroundSyncTask {
       case domain.RoomEventType.roomKey:
         // Room key events are sent as messages for E2EE key exchange
         return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
+      case domain.RoomEventType.roomChange:
+        // Room change events are system events
+        return pb.RoomEventType.ROOM_EVENT_TYPE_EVENT;
     }
   }
 }

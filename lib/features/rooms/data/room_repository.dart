@@ -111,6 +111,37 @@ class RoomRepository {
         .write(RoomsCompanion(unreadCount: Value(count)));
   }
 
+  /// Update room name from server-pushed change
+  Future<void> updateRoomName(String roomId, String name) async {
+    await (_database.update(_database.rooms)..where((t) => t.id.equals(roomId)))
+        .write(RoomsCompanion(name: Value(name)));
+  }
+
+  /// Update room metadata from server-pushed change (merges with existing)
+  Future<void> updateRoomMetadata(
+    String roomId,
+    Map<String, dynamic> newMetadata,
+  ) async {
+    final existing = await getRoomById(roomId);
+    if (existing == null) return;
+
+    final merged = {...?existing.metadata, ...newMetadata};
+
+    await (_database.update(_database.rooms)..where((t) => t.id.equals(roomId)))
+        .write(RoomsCompanion(metadata: Value(jsonEncode(merged))));
+  }
+
+  /// Mark room as deleted from server-pushed change
+  Future<void> markRoomDeleted(String roomId) async {
+    final existing = await getRoomById(roomId);
+    if (existing == null) return;
+
+    final metadata = {...?existing.metadata, 'deleted': true};
+
+    await (_database.update(_database.rooms)..where((t) => t.id.equals(roomId)))
+        .write(RoomsCompanion(metadata: Value(jsonEncode(metadata))));
+  }
+
   domain.Room _toRoom(Room row) => domain.Room(
     id: row.id,
     name: row.name ?? '',

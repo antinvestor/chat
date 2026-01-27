@@ -44,7 +44,7 @@ final class StartupServiceProvider
   }
 }
 
-String _$startupServiceHash() => r'8e9e93dbb6a8987400736f23f0e47c0d844c14c1';
+String _$startupServiceHash() => r'05edfee145d96c032e731a0123dbee0cea0d7240';
 
 /// Manages phased app initialization for optimized startup time
 

@@ -108,6 +108,8 @@ class NotificationContentFormatter {
         return 'Call activity';
       case RoomEventType.roomKey:
         return 'Security update';
+      case RoomEventType.roomChange:
+        return 'Group update';
     }
   }
 
@@ -161,6 +163,13 @@ class NotificationContentFormatter {
         case RoomEventType.roomKey:
           // These are internal events, shouldn't normally be shown
           return ('', null);
+
+        case RoomEventType.roomChange:
+          final body =
+              event.content['body'] as String? ??
+              event.content['text'] as String? ??
+              'Group updated';
+          return (body, null);
       }
     } catch (e, stackTrace) {
       AppLogger.error(

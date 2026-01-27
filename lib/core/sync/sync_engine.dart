@@ -15,6 +15,7 @@ import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/data/read_receipt_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/rooms/data/room_member_repository.dart';
+import '../../features/rooms/data/room_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
 import '../../features/rooms/data/room_sync_manager.dart';
 import '../auth/token_refresh_coordinator.dart';
@@ -61,6 +62,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     encryptionService,
     ref.watch(readReceiptRepositoryProvider),
     roomSyncManager,
+    RoomRepository(AppDatabase.instance),
     onTokenRefresh: () async {
       // Delegate ALL token refresh logic to the coordinator
       // This ensures consistent behavior across TokenManager, SyncEngine,
@@ -154,7 +156,8 @@ class SyncEngine with WidgetsBindingObserver {
     this._subscriptionService,
     this._encryptionService,
     this._readReceiptRepo,
-    this._roomSyncManager, {
+    this._roomSyncManager,
+    this._roomRepository, {
     TokenRefreshCallback? onTokenRefresh,
   }) : _onTokenRefresh = onTokenRefresh;
 
@@ -168,6 +171,7 @@ class SyncEngine with WidgetsBindingObserver {
   final E2EEncryptionService _encryptionService;
   final ReadReceiptRepository _readReceiptRepo;
   final RoomSyncManager _roomSyncManager;
+  final RoomRepository _roomRepository;
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
@@ -835,8 +839,28 @@ class SyncEngine with WidgetsBindingObserver {
           'callId': payload.call.callId,
           'callType': payload.call.action.toString(),
         };
+      } else if (payload.hasRoomChange()) {
+        // Handle room change events (typed replacement for moderation)
+        await _processRoomChangeEvent(
+          event.roomId,
+          payload.roomChange,
+          event.hasSubscriptionId() ? event.subscriptionId : '',
+        );
+
+        // Extract room change content for display as system message
+        final roomChange = payload.roomChange;
+        content = {
+          'text': roomChange.body, // For text rendering compatibility
+          'body': roomChange.body,
+          'action': roomChange.action.name,
+          'actorSubscriptionId': roomChange.actorSubscriptionId,
+          'targetSubscriptionIds': roomChange.targetSubscriptionIds.toList(),
+          'isRoomChange': true,
+          if (roomChange.hasDetails())
+            'details': _structToMap(roomChange.details),
+        };
       } else if (payload.hasModeration()) {
-        // Handle moderation events (room created, members added/removed)
+        // Handle legacy moderation events (backward compatibility)
         await _processModerationEvent(
           event.roomId,
           payload.moderation,
@@ -846,6 +870,7 @@ class SyncEngine with WidgetsBindingObserver {
         // Extract moderation content for display as system message
         final moderation = payload.moderation;
         content = {
+          'text': moderation.body, // For text rendering compatibility
           'body': moderation.body,
           'actorSubscriptionId': moderation.actorSubscriptionId,
           'targetSubscriptionIds': moderation.targetSubscriptionIds.toList(),
@@ -870,12 +895,18 @@ class SyncEngine with WidgetsBindingObserver {
       senderContactId = member?.contactId;
     }
 
+    // Determine domain event type - override for room change/moderation events
+    final domainType =
+        (content['isRoomChange'] == true || content['isModeration'] == true)
+        ? domain.RoomEventType.roomChange
+        : _mapProtoEventType(event.type);
+
     final roomEvent = domain.RoomEvent(
       id: event.id,
       roomId: event.roomId,
       senderId: subscriptionId, // Store subscription ID directly
       senderContactId: senderContactId,
-      type: _mapProtoEventType(event.type),
+      type: domainType,
       content: content,
       parentId: event.hasParentId() ? event.parentId : null,
       status: domain.EventStatus.delivered,
@@ -1050,6 +1081,156 @@ class SyncEngine with WidgetsBindingObserver {
         error: e,
         stackTrace: stackTrace,
         data: {'roomId': roomId, 'body': moderation.body},
+      );
+    }
+  }
+
+  /// Process room change events using the typed RoomChangeAction enum
+  ///
+  /// Replaces the legacy moderation event text parsing with structured actions:
+  /// - CREATED: Store subscription IDs, notify RoomSyncManager
+  /// - UPDATED: Apply room metadata changes from details Struct
+  /// - DELETED: Mark room as deleted locally
+  /// - MEMBER_ADDED: Store new member subscriptions
+  /// - MEMBER_REMOVED: Remove member subscriptions
+  /// - ROLE_CHANGED: Update member roles
+  Future<void> _processRoomChangeEvent(
+    String roomId,
+    pb.RoomChangeContent roomChange,
+    String actorSubscriptionId,
+  ) async {
+    try {
+      final targetSubscriptionIds = roomChange.targetSubscriptionIds.toList();
+      final action = roomChange.action;
+
+      AppLogger.info(
+        'Processing room change event',
+        data: {
+          'roomId': roomId,
+          'action': action.name,
+          'actorSubscriptionId': actorSubscriptionId.isNotEmpty
+              ? actorSubscriptionId.substring(
+                  0,
+                  actorSubscriptionId.length < 8
+                      ? actorSubscriptionId.length
+                      : 8,
+                )
+              : 'unknown',
+          'targetCount': targetSubscriptionIds.length,
+        },
+      );
+
+      switch (action) {
+        case pb.RoomChangeAction.ROOM_CHANGE_ACTION_CREATED:
+          // Store all subscription IDs from the event
+          for (final subscriptionId in targetSubscriptionIds) {
+            await _roomMemberRepository.createSubscription(
+              subscriptionId: subscriptionId,
+              roomId: roomId,
+            );
+          }
+          // Notify RoomSyncManager - all members in targetSubscriptionIds
+          _roomSyncManager.onMembersReceived(roomId, targetSubscriptionIds);
+
+        case pb.RoomChangeAction.ROOM_CHANGE_ACTION_UPDATED:
+          // Apply room changes from the details Struct
+          if (roomChange.hasDetails()) {
+            final details = _structToMap(roomChange.details);
+            final name = details['name'] as String?;
+            final description = details['description'] as String?;
+            final avatarUrl = details['avatarUrl'] as String?;
+
+            if (name != null) {
+              await _roomRepository.updateRoomName(roomId, name);
+            }
+
+            // Build metadata updates from details
+            final metadataUpdates = <String, dynamic>{};
+            if (description != null) {
+              metadataUpdates['description'] = description;
+            }
+            if (avatarUrl != null) {
+              metadataUpdates['avatarUrl'] = avatarUrl;
+            }
+            // Forward any other detail fields as metadata
+            for (final entry in details.entries) {
+              if (!{'name', 'description', 'avatarUrl'}.contains(entry.key)) {
+                metadataUpdates[entry.key] = entry.value;
+              }
+            }
+            if (metadataUpdates.isNotEmpty) {
+              await _roomRepository.updateRoomMetadata(roomId, metadataUpdates);
+            }
+          }
+
+          AppLogger.info('Room updated from server', data: {'roomId': roomId});
+
+        case pb.RoomChangeAction.ROOM_CHANGE_ACTION_DELETED:
+          await _roomRepository.markRoomDeleted(roomId);
+          _roomSyncManager.disposeRoom(roomId);
+
+          AppLogger.info(
+            'Room marked deleted from server',
+            data: {'roomId': roomId},
+          );
+
+        case pb.RoomChangeAction.ROOM_CHANGE_ACTION_MEMBER_ADDED:
+          for (final subscriptionId in targetSubscriptionIds) {
+            await _roomMemberRepository.createSubscription(
+              subscriptionId: subscriptionId,
+              roomId: roomId,
+            );
+          }
+          // Notify RoomSyncManager for each added member
+          for (final subscriptionId in targetSubscriptionIds) {
+            await _roomSyncManager.onMemberAdded(roomId, subscriptionId);
+          }
+
+        case pb.RoomChangeAction.ROOM_CHANGE_ACTION_MEMBER_REMOVED:
+          for (final subscriptionId in targetSubscriptionIds) {
+            await _roomMemberRepository.removeSubscription(subscriptionId);
+            await _roomSyncManager.onMemberRemoved(roomId, subscriptionId);
+          }
+
+        case pb.RoomChangeAction.ROOM_CHANGE_ACTION_ROLE_CHANGED:
+          // Extract new role from details
+          if (roomChange.hasDetails()) {
+            final details = _structToMap(roomChange.details);
+            final newRole = details['role'] as String?;
+            if (newRole != null) {
+              for (final subscriptionId in targetSubscriptionIds) {
+                await _roomMemberRepository.updateMemberRole(
+                  subscriptionId: subscriptionId,
+                  newRole: newRole,
+                );
+              }
+            }
+          }
+
+        default:
+          AppLogger.debug(
+            'Unhandled room change action',
+            data: {'action': action.name, 'roomId': roomId},
+          );
+      }
+
+      // Also store the actor's subscription if provided
+      if (actorSubscriptionId.isNotEmpty) {
+        await _roomMemberRepository.createSubscription(
+          subscriptionId: actorSubscriptionId,
+          roomId: roomId,
+        );
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Error processing room change event',
+        error: e,
+        stackTrace: stackTrace,
+        data: {
+          'roomId': roomId,
+          'action': roomChange.action.name,
+          'body': roomChange.body,
+        },
       );
     }
   }
@@ -1850,6 +2031,9 @@ class SyncEngine with WidgetsBindingObserver {
       case domain.RoomEventType.roomKey:
         // Room key events are sent as encrypted messages for key exchange
         return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
+      case domain.RoomEventType.roomChange:
+        // Room change events are system events
+        return pb.RoomEventType.ROOM_EVENT_TYPE_EVENT;
     }
   }
 
