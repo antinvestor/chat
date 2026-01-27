@@ -16,6 +16,7 @@ import '../../features/messages/data/read_receipt_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
+import '../../features/rooms/data/room_sync_manager.dart';
 import '../auth/token_refresh_coordinator.dart';
 import '../crypto/e2e_encryption_service.dart';
 import '../db/database.dart';
@@ -44,6 +45,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final authRepo = ref.watch(authRepositoryProvider);
   final encryptionService = ref.watch(e2eEncryptionServiceProvider);
   final coordinator = ref.watch(tokenRefreshCoordinatorProvider);
+  final roomSyncManager = ref.watch(roomSyncManagerProvider);
 
   // Initialize encryption service
   await encryptionService.initialize();
@@ -58,6 +60,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     ref.watch(roomSubscriptionServiceProvider),
     encryptionService,
     ref.watch(readReceiptRepositoryProvider),
+    roomSyncManager,
     onTokenRefresh: () async {
       // Delegate ALL token refresh logic to the coordinator
       // This ensures consistent behavior across TokenManager, SyncEngine,
@@ -150,7 +153,8 @@ class SyncEngine with WidgetsBindingObserver {
     this._roomMemberRepository,
     this._subscriptionService,
     this._encryptionService,
-    this._readReceiptRepo, {
+    this._readReceiptRepo,
+    this._roomSyncManager, {
     TokenRefreshCallback? onTokenRefresh,
   }) : _onTokenRefresh = onTokenRefresh;
 
@@ -163,6 +167,7 @@ class SyncEngine with WidgetsBindingObserver {
   final RoomSubscriptionService _subscriptionService;
   final E2EEncryptionService _encryptionService;
   final ReadReceiptRepository _readReceiptRepo;
+  final RoomSyncManager _roomSyncManager;
   final TokenRefreshCallback? _onTokenRefresh;
 
   StreamSubscription? _connectSubscription;
@@ -830,6 +835,22 @@ class SyncEngine with WidgetsBindingObserver {
           'callId': payload.call.callId,
           'callType': payload.call.action.toString(),
         };
+      } else if (payload.hasModeration()) {
+        // Handle moderation events (room created, members added/removed)
+        await _processModerationEvent(
+          event.roomId,
+          payload.moderation,
+          event.hasSubscriptionId() ? event.subscriptionId : '',
+        );
+
+        // Extract moderation content for display as system message
+        final moderation = payload.moderation;
+        content = {
+          'body': moderation.body,
+          'actorSubscriptionId': moderation.actorSubscriptionId,
+          'targetSubscriptionIds': moderation.targetSubscriptionIds.toList(),
+          'isModeration': true,
+        };
       }
     }
 
@@ -925,6 +946,110 @@ class SyncEngine with WidgetsBindingObserver {
         error: e,
         stackTrace: stackTrace,
         data: {'eventId': event.id, 'type': event.type.toString()},
+      );
+    }
+  }
+
+  /// Process moderation events (room created, members added/removed)
+  ///
+  /// These events contain subscription IDs for room members.
+  /// When we receive a moderation event:
+  /// 1. Store all subscription IDs in the RoomMembers table
+  /// 2. Notify RoomSyncManager to check if we now have current user's subscription
+  /// 3. Handle member removals by cleaning up local state
+  Future<void> _processModerationEvent(
+    String roomId,
+    pb.ModerationContent moderation,
+    String actorSubscriptionId,
+  ) async {
+    try {
+      final targetSubscriptionIds = moderation.targetSubscriptionIds.toList();
+      final body = moderation.body.toLowerCase();
+
+      AppLogger.info(
+        'Processing moderation event',
+        data: {
+          'roomId': roomId,
+          'body': moderation.body,
+          'actorSubscriptionId': actorSubscriptionId.isNotEmpty
+              ? actorSubscriptionId.substring(0, 8)
+              : 'unknown',
+          'targetCount': targetSubscriptionIds.length,
+        },
+      );
+
+      // Determine action type from body text
+      final isRoomCreated =
+          body.contains('created') || body.contains('room created');
+      final isMemberAdded = body.contains('added') || body.contains('joined');
+      final isMemberRemoved =
+          body.contains('removed') ||
+          body.contains('left') ||
+          body.contains('kicked');
+
+      if (isRoomCreated || isMemberAdded) {
+        // Store all subscription IDs from the event
+        for (final subscriptionId in targetSubscriptionIds) {
+          final created = await _roomMemberRepository.createSubscription(
+            subscriptionId: subscriptionId,
+            roomId: roomId,
+            // Note: profileId/contactId not available in moderation event
+            // Will be populated when profile info is fetched or from API sync
+          );
+
+          if (created) {
+            AppLogger.debug(
+              'Created subscription from moderation event',
+              data: {
+                'subscriptionId': subscriptionId.substring(0, 8),
+                'roomId': roomId,
+              },
+            );
+          }
+        }
+
+        // Notify RoomSyncManager about new members
+        if (isRoomCreated) {
+          // For room creation, all members are in targetSubscriptionIds
+          _roomSyncManager.onMembersReceived(roomId, targetSubscriptionIds);
+        } else {
+          // For member addition, notify for each added member
+          for (final subscriptionId in targetSubscriptionIds) {
+            await _roomSyncManager.onMemberAdded(roomId, subscriptionId);
+          }
+        }
+      } else if (isMemberRemoved) {
+        // Handle member removal
+        for (final subscriptionId in targetSubscriptionIds) {
+          // Remove subscription from local database
+          await _roomMemberRepository.removeSubscription(subscriptionId);
+
+          // Notify RoomSyncManager about member removal
+          await _roomSyncManager.onMemberRemoved(roomId, subscriptionId);
+
+          AppLogger.debug(
+            'Removed subscription from moderation event',
+            data: {
+              'subscriptionId': subscriptionId.substring(0, 8),
+              'roomId': roomId,
+            },
+          );
+        }
+      }
+
+      // Also store the actor's subscription if provided and not empty
+      if (actorSubscriptionId.isNotEmpty) {
+        await _roomMemberRepository.createSubscription(
+          subscriptionId: actorSubscriptionId,
+          roomId: roomId,
+        );
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Error processing moderation event',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'roomId': roomId, 'body': moderation.body},
       );
     }
   }
@@ -1209,11 +1334,36 @@ class SyncEngine with WidgetsBindingObserver {
     final response = await _chatClient.createRoom(request);
 
     if (response.hasRoom()) {
+      final roomId = response.room.id;
       AppLogger.info(
         'Room created on server',
-        data: {'localId': payload['id'], 'serverId': response.room.id},
+        data: {'localId': payload['id'], 'serverId': roomId},
       );
-      // Room is already saved locally, server confirmed creation
+
+      // Notify RoomSyncManager that the room is confirmed on server
+      // This transitions room from CREATING to SYNCING state
+      // Member subscription IDs will arrive via moderation event
+      _roomSyncManager.onRoomConfirmedByServer(roomId);
+
+      // Perform API sync as a fallback in case moderation events
+      // don't arrive in time. Mark as complete regardless of outcome
+      // to not block the user.
+      try {
+        await _syncRoomMembers(roomId);
+        AppLogger.debug(
+          'Room members synced after creation',
+          data: {'roomId': roomId},
+        );
+      } catch (e) {
+        AppLogger.warning(
+          'API sync failed after room creation',
+          data: {'roomId': roomId, 'error': e.toString()},
+        );
+      }
+
+      // Always mark API sync complete - room exists on server,
+      // user should be able to use it
+      await _roomSyncManager.onApiSyncComplete(roomId);
     } else if (response.hasError()) {
       AppLogger.error(
         'Server rejected room creation',

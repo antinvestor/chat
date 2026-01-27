@@ -1,0 +1,82 @@
+/// Room synchronization state for tracking room readiness
+///
+/// This enum represents the lifecycle states of a room from creation
+/// to being ready for messaging.
+enum RoomSyncState {
+  /// Room created locally, job queued for server sync.
+  /// User can navigate to room but cannot send messages yet.
+  creating,
+
+  /// Room exists on server, waiting for member subscription data.
+  /// This state is entered after server confirms room creation
+  /// but before we have the current user's subscription ID.
+  syncing,
+
+  /// Room is fully ready - has current user's subscription ID.
+  /// User can send messages, typing indicators, and read receipts.
+  ready,
+}
+
+/// Status object combining sync state with subscription information
+class RoomSyncStatus {
+  const RoomSyncStatus({
+    required this.state,
+    this.currentUserSubscriptionId,
+    this.lastSyncAttempt,
+    this.syncError,
+  });
+
+  /// Factory for creating initial creating state
+  factory RoomSyncStatus.creating() =>
+      const RoomSyncStatus(state: RoomSyncState.creating);
+
+  /// Factory for creating syncing state
+  factory RoomSyncStatus.syncing({DateTime? lastSyncAttempt}) => RoomSyncStatus(
+    state: RoomSyncState.syncing,
+    lastSyncAttempt: lastSyncAttempt,
+  );
+
+  /// Factory for creating ready state with subscription ID
+  factory RoomSyncStatus.ready(String subscriptionId) => RoomSyncStatus(
+    state: RoomSyncState.ready,
+    currentUserSubscriptionId: subscriptionId,
+  );
+
+  /// The current sync state
+  final RoomSyncState state;
+
+  /// The current user's subscription ID for this room (available when ready)
+  final String? currentUserSubscriptionId;
+
+  /// Timestamp of last sync attempt (for retry logic)
+  final DateTime? lastSyncAttempt;
+
+  /// Error message if sync failed (internal use, not shown to users)
+  final String? syncError;
+
+  /// Whether the user can send messages in this room
+  bool get canSendMessages =>
+      state == RoomSyncState.ready && currentUserSubscriptionId != null;
+
+  /// Whether the room is still being set up
+  bool get isSettingUp =>
+      state == RoomSyncState.creating || state == RoomSyncState.syncing;
+
+  /// Copy with updated fields
+  RoomSyncStatus copyWith({
+    RoomSyncState? state,
+    String? currentUserSubscriptionId,
+    DateTime? lastSyncAttempt,
+    String? syncError,
+  }) => RoomSyncStatus(
+    state: state ?? this.state,
+    currentUserSubscriptionId:
+        currentUserSubscriptionId ?? this.currentUserSubscriptionId,
+    lastSyncAttempt: lastSyncAttempt ?? this.lastSyncAttempt,
+    syncError: syncError ?? this.syncError,
+  );
+
+  @override
+  String toString() =>
+      'RoomSyncStatus(state: $state, subscriptionId: ${currentUserSubscriptionId?.substring(0, 8) ?? "null"})';
+}

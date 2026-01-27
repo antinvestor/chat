@@ -1,4 +1,4 @@
-name: chat
+name: stawi
 description: "Secure group credit and savings management application with end-to-end encryption, real-time messaging, and comprehensive financial tracking features. Built with Flutter for cross-platform mobile experiences."
 homepage: "https://github.com/antinvestor/chat"
 repository: "https://github.com/antinvestor/chat"
@@ -88,6 +88,7 @@ dependencies:
   video_thumbnail: ^0.5.3
   qr_flutter: ^4.1.0
   share_plus: ^10.0.0
+  sim_card_code: ^0.1.0
 
   vodozemac: any
 dev_dependencies:

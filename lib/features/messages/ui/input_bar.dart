@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../rooms/data/room_providers.dart';
+import '../../rooms/data/room_sync_state.dart';
 import '../data/typing_provider.dart';
 import '../services/voice_recording_service.dart';
 
@@ -213,6 +215,9 @@ class _InputBarState extends ConsumerState<InputBar>
     final isDark = theme.brightness == Brightness.dark;
     final primaryColor = theme.colorScheme.primary;
 
+    // Watch room sync status to determine if input should be enabled
+    final syncStatusAsync = ref.watch(roomSyncStatusProvider(widget.roomId));
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
@@ -226,21 +231,54 @@ class _InputBarState extends ConsumerState<InputBar>
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Reply preview
-            if (widget.replyingToMessageId != null) _buildReplyPreview(theme),
-
-            // Voice recording UI
-            if (_isVoiceRecording)
-              _buildVoiceRecordingUI(theme)
-            else
-              // Main input row
-              _buildInputRow(theme, isDark, primaryColor),
-          ],
+        // Optimistic UI: show enabled input by default
+        // Only show disabled state when we explicitly know room is being created
+        child: syncStatusAsync.when(
+          data: (syncStatus) =>
+              _buildInputContent(theme, isDark, primaryColor, syncStatus),
+          // While loading, show enabled input (optimistic)
+          loading: () => _buildInputContent(
+            theme,
+            isDark,
+            primaryColor,
+            const RoomSyncStatus(state: RoomSyncState.ready),
+          ),
+          // On error, show enabled input (graceful degradation)
+          error: (error, stack) => _buildInputContent(
+            theme,
+            isDark,
+            primaryColor,
+            const RoomSyncStatus(state: RoomSyncState.ready),
+          ),
         ),
       ),
+    );
+  }
+
+  /// Build the main input content based on sync status
+  Widget _buildInputContent(
+    ThemeData theme,
+    bool isDark,
+    Color primaryColor,
+    RoomSyncStatus syncStatus,
+  ) {
+    // Determine if sending is enabled based on room sync state
+    final canSend = syncStatus.state == RoomSyncState.ready;
+
+    // Always show the input row - just disable send button if not ready
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Reply preview
+        if (widget.replyingToMessageId != null) _buildReplyPreview(theme),
+
+        // Voice recording UI
+        if (_isVoiceRecording)
+          _buildVoiceRecordingUI(theme, canSend: canSend)
+        else
+          // Main input row - text field always enabled for drafts
+          _buildInputRow(theme, isDark, primaryColor, canSend: canSend),
+      ],
     );
   }
 
@@ -299,131 +337,137 @@ class _InputBarState extends ConsumerState<InputBar>
     ),
   );
 
-  Widget _buildVoiceRecordingUI(ThemeData theme) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    child: Row(
-      children: [
-        // Recording indicator
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: Colors.red,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.red.withValues(alpha: 0.5),
-                blurRadius: 6,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          _formatDuration(_recordingDuration),
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        ),
-        const Spacer(),
-        // Cancel button
-        TextButton(
-          onPressed: _cancelVoiceRecording,
-          child: Text('Cancel', style: TextStyle(color: Colors.red.shade600)),
-        ),
-        const SizedBox(width: 8),
-        // Send button
-        _buildSendButton(theme, isRecording: true),
-      ],
-    ),
-  );
-
-  Widget _buildInputRow(ThemeData theme, bool isDark, Color primaryColor) =>
-      Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+  Widget _buildVoiceRecordingUI(ThemeData theme, {bool canSend = true}) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Input field container
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 44),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF2A2A2A)
-                      : const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // Attachment button
-                    _buildIconButton(
-                      icon: Icons.attach_file,
-                      onTap: widget.onAttachment,
-                      theme: theme,
-                    ),
-                    // Text field
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        maxLines: 5,
-                        minLines: 1,
-                        textCapitalization: TextCapitalization.sentences,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: widget.isEncryptionEnabled
-                              ? 'Encrypted message'
-                              : 'Message',
-                          hintStyle: TextStyle(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.5,
-                            ),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 12,
-                          ),
-                          isDense: true,
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
-                    ),
-                    // Encryption indicator
-                    if (widget.isEncryptionEnabled)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4, bottom: 10),
-                        child: Icon(
-                          Icons.lock,
-                          size: 16,
-                          color: Colors.green.shade600,
-                        ),
-                      ),
-                    // Camera button (only when no text)
-                    if (!_hasText)
-                      _buildIconButton(
-                        icon: Icons.camera_alt,
-                        onTap: widget.onCamera,
-                        theme: theme,
-                      ),
-                  ],
-                ),
+            // Recording indicator
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withValues(alpha: 0.5),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              _formatDuration(_recordingDuration),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+            const Spacer(),
+            // Cancel button
+            TextButton(
+              onPressed: _cancelVoiceRecording,
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red.shade600),
               ),
             ),
             const SizedBox(width: 8),
-            // Send/Mic button
-            _buildSendButton(theme),
+            // Send button
+            _buildSendButton(theme, isRecording: true, canSend: canSend),
           ],
         ),
       );
+
+  Widget _buildInputRow(
+    ThemeData theme,
+    bool isDark,
+    Color primaryColor, {
+    bool canSend = true,
+  }) => Padding(
+    padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Input field container
+        Expanded(
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Attachment button
+                _buildIconButton(
+                  icon: Icons.attach_file,
+                  onTap: widget.onAttachment,
+                  theme: theme,
+                ),
+                // Text field
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    maxLines: 5,
+                    minLines: 1,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: widget.isEncryptionEnabled
+                          ? 'Encrypted message'
+                          : 'Message',
+                      hintStyle: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 12,
+                      ),
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
+                ),
+                // Encryption indicator
+                if (widget.isEncryptionEnabled)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4, bottom: 10),
+                    child: Icon(
+                      Icons.lock,
+                      size: 16,
+                      color: Colors.green.shade600,
+                    ),
+                  ),
+                // Camera button (only when no text)
+                if (!_hasText)
+                  _buildIconButton(
+                    icon: Icons.camera_alt,
+                    onTap: widget.onCamera,
+                    theme: theme,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Send/Mic button
+        _buildSendButton(theme, canSend: canSend),
+      ],
+    ),
+  );
 
   Widget _buildIconButton({
     required IconData icon,
@@ -445,22 +489,33 @@ class _InputBarState extends ConsumerState<InputBar>
     ),
   );
 
-  Widget _buildSendButton(ThemeData theme, {bool isRecording = false}) {
+  Widget _buildSendButton(
+    ThemeData theme, {
+    bool isRecording = false,
+    bool canSend = true,
+  }) {
     final primaryColor = theme.colorScheme.primary;
     final showSend = _hasText || isRecording;
 
+    // Determine if actions are enabled
+    final sendEnabled = canSend && showSend;
+    final micEnabled = canSend && !showSend;
+
     return GestureDetector(
-      onTap: showSend
+      onTap: sendEnabled
           ? (isRecording ? _stopVoiceRecording : _sendMessage)
           : null,
-      onLongPressStart: !showSend ? (_) => _startVoiceRecording() : null,
-      onLongPressEnd: !showSend ? (_) => _stopVoiceRecording() : null,
+      onLongPressStart: micEnabled ? (_) => _startVoiceRecording() : null,
+      onLongPressEnd: micEnabled ? (_) => _stopVoiceRecording() : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: showSend ? primaryColor : Colors.transparent,
+          // Grey out the button when sending is disabled
+          color: showSend
+              ? (canSend ? primaryColor : Colors.grey.shade400)
+              : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: AnimatedSwitcher(
@@ -472,13 +527,15 @@ class _InputBarState extends ConsumerState<InputBar>
                   isRecording ? Icons.send : Icons.send,
                   key: const ValueKey('send'),
                   size: 20,
-                  color: Colors.white,
+                  color: canSend ? Colors.white : Colors.grey.shade200,
                 )
               : Icon(
                   Icons.mic,
                   key: const ValueKey('mic'),
                   size: 22,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: canSend
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.3),
                 ),
         ),
       ),

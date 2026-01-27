@@ -5,6 +5,7 @@ import '../../../core/navigation/navigation_helper.dart';
 import '../../profile/data/profile_providers.dart';
 import '../data/detail_panel_providers.dart';
 import '../data/room_service.dart';
+import '../data/room_subscription_service.dart';
 
 /// Member role constants
 class MemberRole {

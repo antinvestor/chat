@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
-    show TokenManager, TokenRefreshResult;
+    show JwtUtils, TokenManager, TokenRefreshResult;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/data/auth_repository.dart';
@@ -243,6 +243,29 @@ class TokenRefreshCoordinator {
 
         // Update TokenManager's in-memory cache
         await _updateTokenManagerCache(newToken, source);
+
+        // Log JWT claims for debugging "invalid authentication claims" errors
+        try {
+          final claims = JwtUtils.getClaims(newToken);
+          final expiry = JwtUtils.getTokenExpiry(newToken);
+          AppLogger.debug(
+            'TokenRefreshCoordinator: New token claims',
+            data: {
+              'sub': claims['sub'],
+              'iss': claims['iss'],
+              'aud': claims['aud'],
+              'scope': claims['scope'] ?? claims['scp'],
+              'exp': expiry?.toIso8601String(),
+              'azp': claims['azp'],
+              'client_id': claims['client_id'],
+            },
+          );
+        } catch (e) {
+          AppLogger.warning(
+            'TokenRefreshCoordinator: Failed to decode JWT claims',
+            data: {'error': e.toString()},
+          );
+        }
 
         _emitEvent(
           TokenRefreshEventType.succeeded,

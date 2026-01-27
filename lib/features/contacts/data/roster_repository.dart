@@ -7,10 +7,12 @@ import 'package:antinvestor_api_profile/antinvestor_api_profile.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart' show SqliteException;
 import 'package:flutter_contacts/flutter_contacts.dart' as flutter_contacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_numbers_parser/phone_numbers_parser.dart';
+import 'package:sim_card_code/sim_card_code.dart';
 import 'package:xid/xid.dart';
 
 import '../../../core/db/database.dart';
@@ -82,8 +84,8 @@ Future<String?> validateAndFormatPhoneNumber(
   }
 
   try {
-    // Use provided region, or get from device locale
-    final region = regionCode ?? _getDeviceRegionCode();
+    // Use provided region, or get from SIM card / device locale
+    final region = regionCode ?? await _getDeviceRegionCodeAsync();
 
     // Thorough phone number normalization
     final normalizedPhone = _normalizePhoneNumber(phone, region);
@@ -113,11 +115,6 @@ Future<String?> validateAndFormatPhoneNumber(
 
     // Get E.164 format (international format with +)
     final formatted = parsedPhone.international;
-
-    AppLogger.debug(
-      'Phone validated successfully',
-      data: {'original': phone, 'formatted': formatted, 'region': region},
-    );
 
     return formatted;
   } catch (e) {
@@ -328,10 +325,39 @@ String? _getCountryCodeForRegion(String regionCode) {
   return countryCodes[regionCode.toUpperCase()];
 }
 
-/// Get the device's region code from platform locale
-/// Checks all available locales and returns the first valid country code
+/// Get the device's region code, preferring SIM card country code
+/// Falls back to device locale if SIM card info is unavailable
+/// Works on all platforms including web (web uses locale only)
+Future<String> _getDeviceRegionCodeAsync() async {
+  // First, try to get country code from SIM card (most accurate for mobile)
+  try {
+    final simCountryCode = await SimCardManager.simCountryCode;
+    if (simCountryCode != null && simCountryCode.isNotEmpty) {
+      final upperCode = simCountryCode.toUpperCase();
+      return upperCode;
+    }
+
+    // Try network country code as fallback
+    final networkCountryCode = await SimCardManager.networkCountryCode;
+    if (networkCountryCode != null && networkCountryCode.isNotEmpty) {
+      final upperCode = networkCountryCode.toUpperCase();
+      AppLogger.debug('Got region from network', data: {'region': upperCode});
+      return upperCode;
+    }
+  } catch (e) {
+    AppLogger.debug(
+      'SIM card country code unavailable',
+      data: {'error': e.toString()},
+    );
+  }
+
+  // Fall back to device locale
+  return _getDeviceRegionCodeFromLocale();
+}
+
+/// Get the device's region code from platform locale (synchronous fallback)
 /// Works on all platforms including web
-String _getDeviceRegionCode() {
+String _getDeviceRegionCodeFromLocale() {
   try {
     // Use PlatformDispatcher.instance directly for web compatibility
     // This works even if WidgetsBinding hasn't been initialized
@@ -902,7 +928,7 @@ class RosterRepository implements ContactSyncRepository {
       final contactsHash = _computeContactsHash(deviceContacts);
 
       // Thorough contact processing with validation
-      final deviceRegion = _getDeviceRegionCode();
+      final deviceRegion = await _getDeviceRegionCodeAsync();
       final contactRequests = <pb.RawContact>[];
       final contactLookup = <String, flutter_contacts.Contact>{};
       final processedContacts = <String>{};
@@ -1693,18 +1719,81 @@ class RosterRepository implements ContactSyncRepository {
   }
 
   /// Store roster entries in local database efficiently
+  /// Handles FK constraint errors gracefully by skipping problematic entries
   Future<void> _storeRosterEntries(List<RosterEntry> entries) async {
     if (entries.isEmpty) return;
 
-    await _database.batch((batch) {
-      for (final entry in entries) {
-        batch.insert(
-          _database.roster,
-          entry.toCompanion(),
-          mode: InsertMode.insertOrReplace,
+    // Try batch insert first for efficiency
+    try {
+      await _database.batch((batch) {
+        for (final entry in entries) {
+          batch.insert(
+            _database.roster,
+            entry.toCompanion(),
+            mode: InsertMode.insertOrReplace,
+          );
+        }
+      });
+    } on SqliteException catch (e) {
+      // FK constraint error - fall back to individual inserts with error handling
+      if (e.message.contains('FOREIGN KEY constraint failed') ||
+          e.extendedResultCode == 787) {
+        AppLogger.debug(
+          '[Roster] Batch insert failed with FK constraint, trying individual inserts',
+          data: {'entriesCount': entries.length},
         );
+        await _storeRosterEntriesIndividually(entries);
+      } else {
+        rethrow;
       }
-    });
+    }
+  }
+
+  /// Store roster entries one at a time, skipping those with FK constraint errors
+  Future<void> _storeRosterEntriesIndividually(
+    List<RosterEntry> entries,
+  ) async {
+    var successCount = 0;
+    var skippedCount = 0;
+
+    for (final entry in entries) {
+      try {
+        await _database
+            .into(_database.roster)
+            .insertOnConflictUpdate(entry.toCompanion());
+        successCount++;
+      } on SqliteException catch (e) {
+        // Skip entries with FK constraint errors (profile doesn't exist)
+        if (e.message.contains('FOREIGN KEY constraint failed') ||
+            e.extendedResultCode == 787) {
+          AppLogger.debug(
+            '[Roster] Skipping entry with missing profile',
+            data: {
+              'entryId': entry.id,
+              'profileId': entry.profileId,
+              'contactDetail': entry.contactDetail,
+            },
+          );
+          skippedCount++;
+        } else {
+          // Log other errors but continue
+          AppLogger.warning(
+            '[Roster] Failed to store entry',
+            data: {'entryId': entry.id, 'error': e.message},
+          );
+          skippedCount++;
+        }
+      }
+    }
+
+    AppLogger.debug(
+      '[Roster] Individual insert completed',
+      data: {
+        'total': entries.length,
+        'success': successCount,
+        'skipped': skippedCount,
+      },
+    );
   }
 
   // ============================================================================

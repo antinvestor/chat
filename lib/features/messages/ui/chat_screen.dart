@@ -136,14 +136,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final messagingService = ref.read(messageSendingServiceProvider);
 
-    // Send message - the service handles optimistic updates internally
-    // by inserting into the local DB which triggers the stream update
-    messagingService.sendTextMessage(
-      roomId: widget.roomId,
-      text: text.trim(),
-      encrypt: _isEncryptionEnabled,
-    );
-
     // Clear reply state immediately for better UX
     if (replyToMessageId != null) {
       setState(() {
@@ -152,16 +144,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
     }
 
-    // Scroll to bottom to see the new message
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
+    try {
+      // Send message - the service handles optimistic updates internally
+      // by inserting into the local DB which triggers the stream update
+      await messagingService.sendTextMessage(
+        roomId: widget.roomId,
+        text: text.trim(),
+        encrypt: _isEncryptionEnabled,
+        replyToId: replyToMessageId,
+      );
+
+      // Scroll to bottom to see the new message
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } catch (e) {
+      AppLogger.error('Failed to send message', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send message: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () =>
+                  _sendMessage(text, replyToMessageId: replyToMessageId),
+            ),
+          ),
         );
       }
-    });
+    }
   }
 
   void _onReplyToMessage(String messageId, String messageText) {

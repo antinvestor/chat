@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:antinvestor_api_chat/antinvestor_api_chat.dart' as pb;
@@ -8,12 +7,13 @@ import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/io.dart' as connect_io;
 import 'package:connectrpc/protobuf.dart' as connect_protobuf;
 import 'package:connectrpc/protocol/connect.dart' as connect_protocol;
+import 'package:drift/drift.dart';
 import 'package:fixnum/fixnum.dart' as fixnum;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/notifications/badge_service.dart';
+import '../auth/shared_token_service.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
 import '../networking/api_config.dart';
@@ -33,37 +33,23 @@ class BackgroundSyncTask {
       final jobRepo = PendingJobRepository(database);
       final messageRepo = MessageRepository(database);
 
-      // Get auth token
-      const storage = FlutterSecureStorage();
-      final accessToken = await storage.read(key: 'access_token');
+      // Get auth token using SharedTokenService
+      // This validates expiry and will refresh if needed
+      final tokenService = SharedTokenService.instance;
+      final accessToken = await tokenService.getAccessToken();
 
       if (accessToken == null) {
-        AppLogger.debug('No access token found, skipping background sync');
-        return true; // Not a failure, just nothing to do
+        // Log token info for debugging
+        final tokenInfo = await tokenService.getTokenInfo();
+        AppLogger.debug(
+          'No valid access token for background sync',
+          data: tokenInfo,
+        );
+        return true; // Not a failure - foreground will refresh and retry
       }
 
-      // Get profile ID from ID token
-      final idToken = await storage.read(key: 'id_token');
-      String? currentProfileId;
-      if (idToken != null) {
-        try {
-          final parts = idToken.split('.');
-          if (parts.length >= 3) {
-            final payload = parts[1];
-            // Pad base64 string if needed
-            final padding = (4 - payload.length % 4) % 4;
-            final paddedPayload = payload + '=' * padding;
-            final decoded = utf8.decode(base64.decode(paddedPayload));
-            final claims = json.decode(decoded) as Map<String, dynamic>;
-            currentProfileId = claims['sub'] as String?;
-          }
-        } catch (e) {
-          AppLogger.error(
-            'Failed to decode ID token for background sync',
-            error: e,
-          );
-        }
-      }
+      // Get profile ID from ID token using SharedTokenService
+      final currentProfileId = await tokenService.getProfileId();
 
       // Create auth headers
       final authHeaders = connect.Headers();
@@ -92,6 +78,7 @@ class BackgroundSyncTask {
 
       // Process pending jobs (uploads)
       final success = await _processPendingJobs(
+        database,
         jobRepo,
         messageRepo,
         chatClient,
@@ -131,6 +118,7 @@ class BackgroundSyncTask {
 
   /// Process all pending upload jobs
   static Future<bool> _processPendingJobs(
+    AppDatabase database,
     PendingJobRepository jobRepo,
     MessageRepository messageRepo,
     ChatServiceClient chatClient,
@@ -153,6 +141,7 @@ class BackgroundSyncTask {
       for (final job in jobs) {
         try {
           await _processJob(
+            database,
             job,
             chatClient,
             messageRepo,
@@ -301,6 +290,7 @@ class BackgroundSyncTask {
 
   /// Process a single job
   static Future<void> _processJob(
+    AppDatabase database,
     domain_job.PendingJob job,
     ChatServiceClient chatClient,
     MessageRepository messageRepo,
@@ -320,7 +310,7 @@ class BackgroundSyncTask {
         );
         break;
       case domain_job.JobType.createRoom:
-        await _processCreateRoom(job, chatClient, authHeaders);
+        await _processCreateRoom(database, job, chatClient, authHeaders);
         break;
       case domain_job.JobType.updateRoom:
         await _processUpdateRoom(job, chatClient, authHeaders);
@@ -355,6 +345,7 @@ class BackgroundSyncTask {
 
   /// Create a room
   static Future<void> _processCreateRoom(
+    AppDatabase database,
     domain_job.PendingJob job,
     ChatServiceClient chatClient,
     connect.Headers authHeaders,
@@ -385,13 +376,89 @@ class BackgroundSyncTask {
     final response = await chatClient.createRoom(request, headers: authHeaders);
 
     if (response.hasRoom()) {
+      final roomId = response.room.id;
       AppLogger.debug(
         'Room created in background',
-        data: {'localId': payload['id'], 'serverId': response.room.id},
+        data: {'localId': payload['id'], 'serverId': roomId},
       );
+
+      // CRITICAL: Sync room members immediately after room creation
+      // This ensures the current user's subscription ID is available
+      // for sending messages when the app comes back to foreground
+      try {
+        await _syncRoomMembers(database, chatClient, authHeaders, roomId);
+        AppLogger.debug(
+          'Room members synced after background creation',
+          data: {'roomId': roomId},
+        );
+      } catch (e) {
+        // Log but don't fail - the sync will retry when app comes to foreground
+        AppLogger.warning(
+          'Failed to sync room members after background creation',
+          data: {'roomId': roomId, 'error': e.toString()},
+        );
+      }
     } else if (response.hasError()) {
       throw Exception('Room creation failed: ${response.error.message}');
     }
+  }
+
+  /// Sync room members from server to local database
+  static Future<void> _syncRoomMembers(
+    AppDatabase database,
+    ChatServiceClient chatClient,
+    connect.Headers authHeaders,
+    String roomId,
+  ) async {
+    // Fetch subscriptions from API
+    final request = pb.SearchRoomSubscriptionsRequest(roomId: roomId);
+    final response = await chatClient.searchRoomSubscriptions(
+      request,
+      headers: authHeaders,
+    );
+
+    var memberCount = 0;
+
+    // Process each subscription from the response
+    for (final subscription in response.members) {
+      final subscriptionId = subscription.id;
+
+      // Extract profileId and contactId from ContactLink
+      final profileId =
+          subscription.hasMember() && subscription.member.hasProfileId()
+          ? subscription.member.profileId
+          : null;
+      final contactId =
+          subscription.hasMember() && subscription.member.hasContactId()
+          ? subscription.member.contactId
+          : null;
+
+      // Extract role (use first role if multiple, or null)
+      final role = subscription.roles.isNotEmpty
+          ? subscription.roles.first
+          : null;
+
+      // Insert or update room member
+      await database
+          .into(database.roomMembers)
+          .insertOnConflictUpdate(
+            RoomMembersCompanion.insert(
+              subscriptionId: subscriptionId,
+              roomId: subscription.roomId,
+              profileId: Value(profileId),
+              contactId: Value(contactId),
+              role: Value(role),
+              joinedAt: Value(DateTime.now().millisecondsSinceEpoch),
+            ),
+          );
+
+      memberCount++;
+    }
+
+    AppLogger.debug(
+      'Room members synced in background',
+      data: {'roomId': roomId, 'memberCount': memberCount},
+    );
   }
 
   /// Update a room

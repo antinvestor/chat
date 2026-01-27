@@ -13,6 +13,9 @@ part of 'room_providers.dart';
 /// This ensures that the current user's subscription is available in the local
 /// database before attempting to send messages or perform other operations.
 /// Uses caching to avoid redundant syncs.
+///
+/// Also notifies RoomSyncManager when sync completes, which may transition
+/// the room to READY state if subscription is found.
 
 @ProviderFor(syncRoomMembersOnEntry)
 final syncRoomMembersOnEntryProvider = SyncRoomMembersOnEntryFamily._();
@@ -22,6 +25,9 @@ final syncRoomMembersOnEntryProvider = SyncRoomMembersOnEntryFamily._();
 /// This ensures that the current user's subscription is available in the local
 /// database before attempting to send messages or perform other operations.
 /// Uses caching to avoid redundant syncs.
+///
+/// Also notifies RoomSyncManager when sync completes, which may transition
+/// the room to READY state if subscription is found.
 
 final class SyncRoomMembersOnEntryProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
@@ -31,6 +37,9 @@ final class SyncRoomMembersOnEntryProvider
   /// This ensures that the current user's subscription is available in the local
   /// database before attempting to send messages or perform other operations.
   /// Uses caching to avoid redundant syncs.
+  ///
+  /// Also notifies RoomSyncManager when sync completes, which may transition
+  /// the room to READY state if subscription is found.
   SyncRoomMembersOnEntryProvider._({
     required SyncRoomMembersOnEntryFamily super.from,
     required String super.argument,
@@ -76,13 +85,16 @@ final class SyncRoomMembersOnEntryProvider
 }
 
 String _$syncRoomMembersOnEntryHash() =>
-    r'50f52a4cf76cd7527f6400833197e4f9504186a5';
+    r'053a965cd84e2bd5fec1479f897daa6c805487a8';
 
 /// Provider that syncs room members when entering a room
 ///
 /// This ensures that the current user's subscription is available in the local
 /// database before attempting to send messages or perform other operations.
 /// Uses caching to avoid redundant syncs.
+///
+/// Also notifies RoomSyncManager when sync completes, which may transition
+/// the room to READY state if subscription is found.
 
 final class SyncRoomMembersOnEntryFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
@@ -100,6 +112,9 @@ final class SyncRoomMembersOnEntryFamily extends $Family
   /// This ensures that the current user's subscription is available in the local
   /// database before attempting to send messages or perform other operations.
   /// Uses caching to avoid redundant syncs.
+  ///
+  /// Also notifies RoomSyncManager when sync completes, which may transition
+  /// the room to READY state if subscription is found.
 
   SyncRoomMembersOnEntryProvider call(String roomId) =>
       SyncRoomMembersOnEntryProvider._(argument: roomId, from: this);

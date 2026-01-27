@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/auth/data/auth_repository.dart';
+import '../auth/shared_token_service.dart';
 import '../auth/token_refresh_coordinator.dart';
 import '../logging/app_logger.dart';
 import 'api_config.dart';
@@ -103,7 +104,14 @@ final tokenManagerProvider = Provider<TokenManager>((ref) {
   // This allows the coordinator to update our in-memory cache after refresh
   coordinator.setTokenManager(tokenManager);
 
-  ref.onDispose(tokenManager.dispose);
+  // Set TokenManager on SharedTokenService for unified access
+  // This enables both foreground and background to use the same service
+  SharedTokenService.instance.setTokenManager(tokenManager);
+
+  ref.onDispose(() {
+    tokenManager.dispose();
+    SharedTokenService.instance.clearTokenManager();
+  });
 
   return tokenManager;
 });

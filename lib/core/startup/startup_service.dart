@@ -15,8 +15,10 @@ import '../../features/notifications/badge_service.dart';
 import '../../features/notifications/notification_service.dart';
 import '../error/error_tracking_service.dart';
 import '../logging/app_logger.dart';
+import '../networking/client.dart';
 import '../networking/connectivity_service.dart';
 import '../sync/background_sync_task.dart';
+import '../sync/post_login_sync_service.dart';
 import '../sync/sync_engine.dart';
 import 'startup_metrics.dart';
 
@@ -268,6 +270,18 @@ class StartupService extends _$StartupService {
 
     AppLogger.info('Valid access token obtained');
 
+    // IMPORTANT: Reload TokenManager from storage to sync its in-memory cache
+    // AuthService saves tokens to storage, but TokenManager has its own cache
+    // that needs to be refreshed for API clients to use the new token
+    final tokenManager = ref.read(tokenManagerProvider);
+    await reloadTokenManager(tokenManager);
+
+    // Invalidate API client providers to force them to recreate with fresh token
+    // This is needed because FutureProviders cache their result
+    ref.invalidate(chatClientProvider);
+    ref.invalidate(chatServiceClientProvider);
+    AppLogger.debug('Invalidated chat client providers to pick up new token');
+
     // Set user context for error tracking
     if (ErrorTrackingService.isInitialized) {
       final userInfoMap = await authRepo.getUserInfo();
@@ -289,16 +303,43 @@ class StartupService extends _$StartupService {
     state = state.copyWith(currentTask: 'Checking network...');
     await _waitForNetworkWithTimeout();
 
-    // Start sync engine
-    state = state.copyWith(currentTask: 'Starting sync...');
-    final syncEngine = await ref.read(syncEngineProvider.future);
-    syncEngine.start();
-
     // Start background token refresh service
     // This ensures tokens are proactively refreshed before they expire,
     // minimizing the chance of auth errors during API calls
     final tokenRefreshService = ref.read(tokenRefreshServiceProvider);
     tokenRefreshService.start();
+
+    // Create post-login sync service (not a provider to avoid lifecycle issues)
+    final postLoginSync = await createPostLoginSyncService(ref);
+
+    // Check if this is first login (no local rooms)
+    final hasLocalRooms = await postLoginSync.hasLocalRooms();
+
+    if (!hasLocalRooms) {
+      // First login: Sync rooms first, then start real-time engine
+      // This ensures user sees their rooms immediately after login
+      // Note: No progress update - sync happens silently in background
+      AppLogger.info(
+        'First login detected - syncing rooms before starting engine',
+      );
+      await postLoginSync.runPostLoginSync();
+
+      // Now start sync engine for real-time updates
+      final syncEngine = await ref.read(syncEngineProvider.future);
+      syncEngine.start();
+    } else {
+      // Returning user: Start sync engine first for real-time updates
+      final syncEngine = await ref.read(syncEngineProvider.future);
+      syncEngine.start();
+
+      // Run post-login sync in background (non-blocking)
+      // This catches any rooms created on other devices, etc.
+      unawaited(
+        postLoginSync.runPostLoginSync().then((_) {
+          AppLogger.debug('Background post-login sync completed');
+        }),
+      );
+    }
 
     AppLogger.info('Essential initialization complete');
   }

@@ -12,6 +12,9 @@ import '../../../core/sync/sync_engine.dart';
 import '../domain/room.dart' as domain;
 import 'room_member_repository.dart';
 import 'room_repository.dart';
+import 'room_subscription_service.dart';
+import 'room_sync_manager.dart';
+import 'room_sync_state.dart';
 
 /// Service for managing rooms with offline-first support
 /// All operations are saved locally first, then queued for server sync
@@ -23,12 +26,14 @@ class RoomService {
     this._chatClient,
     this._database,
     this._memberRepo,
+    this._roomSyncManager,
   );
   final RoomRepository _roomRepo;
   final PendingJobRepository _jobRepo;
   final pb_chat.ChatServiceClient _chatClient;
   final AppDatabase _database;
   final RoomMemberRepository _memberRepo;
+  final RoomSyncManager _roomSyncManager;
 
   /// Create a new room (group or direct chat)
   /// Saves locally first, then queues for server sync
@@ -36,6 +41,9 @@ class RoomService {
   /// Universal messaging: Pass all contact IDs regardless of platform status.
   /// The server will determine which members are on-platform vs off-platform,
   /// handle credit checks, and forward messages via notification service as needed.
+  ///
+  /// The room starts in CREATING state. User can navigate to it but cannot
+  /// send messages until it transitions to READY (has subscription ID).
   Future<domain.Room> createRoom({
     required String name,
     required String type,
@@ -56,11 +64,16 @@ class RoomService {
         'description': description ?? '',
         'isPrivate': isPrivate,
         'pendingSync': true,
+        'syncState': RoomSyncState.creating.name, // Track sync state
       },
     );
 
     // Save locally first
     await _roomRepo.insertRoom(room);
+
+    // Notify RoomSyncManager that room is being created
+    // This sets the room to CREATING state for UI display
+    _roomSyncManager.onRoomCreatedLocally(roomId);
 
     // Queue for server sync - server handles all member types
     await _jobRepo.addJob(JobType.createRoom, {
@@ -493,15 +506,18 @@ final roomServiceProvider = FutureProvider<RoomService>((ref) async {
   final chatClient = await ref.watch(chatServiceClientProvider.future);
   final database = AppDatabase.instance;
   final memberRepo = ref.watch(roomMemberRepositoryProvider);
-  return RoomService(roomRepo, jobRepo, chatClient, database, memberRepo);
+  final roomSyncManager = ref.watch(roomSyncManagerProvider);
+  return RoomService(
+    roomRepo,
+    jobRepo,
+    chatClient,
+    database,
+    memberRepo,
+    roomSyncManager,
+  );
 });
 
 /// Provider for RoomRepository
 final roomRepositoryProvider = Provider<RoomRepository>(
   (ref) => RoomRepository(AppDatabase.instance),
-);
-
-/// Provider for RoomMemberRepository
-final roomMemberRepositoryProvider = Provider<RoomMemberRepository>(
-  (ref) => RoomMemberRepository(AppDatabase.instance),
 );

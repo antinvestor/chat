@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/logging/app_logger.dart';
@@ -5,23 +6,82 @@ import '../../messages/data/draft_repository.dart';
 import '../domain/room.dart' as domain;
 import '../domain/room_with_last_message.dart';
 import 'room_service.dart';
+import 'room_sync_manager.dart';
+import 'room_sync_state.dart';
 
 part 'room_providers.g.dart';
+
+/// Stream provider for watching room sync status
+///
+/// This provider watches the sync status of a specific room, allowing the UI
+/// to react to state changes (CREATING -> SYNCING -> READY).
+///
+/// Usage:
+/// ```dart
+/// final syncStatus = ref.watch(roomSyncStatusProvider(roomId));
+/// syncStatus.when(
+///   data: (status) => status.canSendMessages ? EnabledInput() : DisabledInput(),
+///   loading: () => LoadingInput(),
+///   error: (e, s) => DisabledInput(),
+/// );
+/// ```
+final roomSyncStatusProvider = StreamProvider.family<RoomSyncStatus, String>((
+  ref,
+  roomId,
+) {
+  final manager = ref.watch(roomSyncManagerProvider);
+  return manager.watchRoom(roomId);
+});
+
+/// Provider to get current sync status synchronously (nullable if not tracked)
+final roomSyncStatusSyncProvider = Provider.family<RoomSyncStatus?, String>((
+  ref,
+  roomId,
+) {
+  final manager = ref.watch(roomSyncManagerProvider);
+  return manager.getStatus(roomId);
+});
+
+/// Provider to check if a room can send messages
+///
+/// Returns true if room is in READY state with a valid subscription ID.
+/// Returns false if room is still creating/syncing or status is unknown.
+final roomCanSendMessagesProvider = Provider.family<bool, String>((
+  ref,
+  roomId,
+) {
+  final statusAsync = ref.watch(roomSyncStatusProvider(roomId));
+  return statusAsync.when(
+    data: (status) => status.canSendMessages,
+    loading: () => false,
+    error: (error, stack) => false,
+  );
+});
 
 /// Provider that syncs room members when entering a room
 ///
 /// This ensures that the current user's subscription is available in the local
 /// database before attempting to send messages or perform other operations.
 /// Uses caching to avoid redundant syncs.
+///
+/// Also notifies RoomSyncManager when sync completes, which may transition
+/// the room to READY state if subscription is found.
 @riverpod
 Future<void> syncRoomMembersOnEntry(Ref ref, String roomId) async {
+  final roomSyncManager = ref.watch(roomSyncManagerProvider);
+
   try {
     final service = await ref.watch(roomServiceProvider.future);
     await service.syncRoomMembers(roomId);
+
+    // Notify RoomSyncManager that API sync completed
+    // This will check if current user's subscription is now available
+    await roomSyncManager.onApiSyncComplete(roomId);
+
     AppLogger.debug('Room members synced on entry', data: {'roomId': roomId});
   } catch (e) {
     // Log but don't throw - sync failure shouldn't block room entry
-    // The AuthContextService will retry sync when subscription is needed
+    // Moderation events may still provide subscription IDs
     AppLogger.warning(
       'Room member sync on entry failed',
       data: {'roomId': roomId, 'error': e.toString()},
