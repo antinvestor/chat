@@ -91,6 +91,7 @@ dependencies:
   sim_card_code: ^0.1.0
 
   vodozemac: any
+  sqlite3: any
 dev_dependencies:
   build_runner: ^2.10.4
   drift_dev: ^2.30.0
