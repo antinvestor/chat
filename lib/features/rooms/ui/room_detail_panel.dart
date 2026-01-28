@@ -152,15 +152,13 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
                   height: 24,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                title: Text('Mute Notifications'),
+                title: Text('Loading Mute State...'),
               ),
-              error: (_, _) => ListTile(
-                leading: const Icon(Icons.notifications_off),
-                title: const Text('Mute Notifications'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _showMuteDurationPicker(context);
-                },
+              error: (_, _) => const ListTile(
+                leading: Icon(Icons.error_outline, color: Colors.grey),
+                title: Text('Mute Notifications'),
+                subtitle: Text('Unable to load mute state'),
+                enabled: false,
               ),
             ),
             ListTile(
