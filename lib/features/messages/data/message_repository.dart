@@ -321,12 +321,15 @@ class MessageRepository {
   /// already starred or doesn't exist.
   Future<bool> starMessage(String messageId) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final updated = await (_database.update(_database.roomEvents)
-          ..where((t) => t.id.equals(messageId) & t.starred.equals(false)))
-        .write(RoomEventsCompanion(
-          starred: const Value(true),
-          starredAt: Value(now),
-        ));
+    final updated =
+        await (_database.update(_database.roomEvents)
+              ..where((t) => t.id.equals(messageId) & t.starred.equals(false)))
+            .write(
+              RoomEventsCompanion(
+                starred: const Value(true),
+                starredAt: Value(now),
+              ),
+            );
     return updated > 0;
   }
 
@@ -335,12 +338,15 @@ class MessageRepository {
   /// Returns true if the message was successfully unstarred, false if it was
   /// not starred or doesn't exist.
   Future<bool> unstarMessage(String messageId) async {
-    final updated = await (_database.update(_database.roomEvents)
-          ..where((t) => t.id.equals(messageId) & t.starred.equals(true)))
-        .write(const RoomEventsCompanion(
-          starred: Value(false),
-          starredAt: Value(null),
-        ));
+    final updated =
+        await (_database.update(
+          _database.roomEvents,
+        )..where((t) => t.id.equals(messageId) & t.starred.equals(true))).write(
+          const RoomEventsCompanion(
+            starred: Value(false),
+            starredAt: Value(null),
+          ),
+        );
     return updated > 0;
   }
 
@@ -348,16 +354,18 @@ class MessageRepository {
   ///
   /// Returns the new starred state of the message.
   Future<bool> toggleStar(String messageId) async {
-    final event = await getEventById(messageId);
-    if (event == null) return false;
+    return _database.transaction(() async {
+      final event = await getEventById(messageId);
+      if (event == null) return false;
 
-    if (event.starred) {
-      await unstarMessage(messageId);
-      return false;
-    } else {
-      await starMessage(messageId);
-      return true;
-    }
+      if (event.starred) {
+        await unstarMessage(messageId);
+        return false;
+      } else {
+        await starMessage(messageId);
+        return true;
+      }
+    });
   }
 
   /// Get all starred messages across all rooms
@@ -401,20 +409,22 @@ class MessageRepository {
 
   /// Get the count of starred messages
   Future<int> getStarredMessagesCount() async {
-    final query = _database.select(_database.roomEvents)
-      ..where((t) => t.starred.equals(true));
-    final results = await query.get();
-    return results.length;
+    final count =
+        await (_database.selectOnly(_database.roomEvents)
+              ..addColumns([countAll()])
+              ..where(_database.roomEvents.starred.equals(true)))
+            .map((row) => row.read(countAll()))
+            .getSingle();
+    return count ?? 0;
   }
 
   /// Clear all starred messages
   Future<int> clearAllStarredMessages() async {
-    return await (_database.update(_database.roomEvents)
-          ..where((t) => t.starred.equals(true)))
-        .write(const RoomEventsCompanion(
-          starred: Value(false),
-          starredAt: Value(null),
-        ));
+    return (_database.update(
+      _database.roomEvents,
+    )..where((t) => t.starred.equals(true))).write(
+      const RoomEventsCompanion(starred: Value(false), starredAt: Value(null)),
+    );
   }
 
   domain.RoomEvent _toRoomEvent(RoomEvent row) => domain.RoomEvent(
