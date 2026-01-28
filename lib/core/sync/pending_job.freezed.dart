@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PendingJob {
 
- int get id; JobType get type; Map<String, dynamic> get payload; int get createdAt; int get retryCount; String get status;
+ int get id; JobType get type; Map<String, dynamic> get payload; int get createdAt; int get retryCount; String get status; int? get nextRetryAt;
 /// Create a copy of PendingJob
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $PendingJobCopyWith<PendingJob> get copyWith => _$PendingJobCopyWithImpl<Pending
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PendingJob&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other.payload, payload)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.retryCount, retryCount) || other.retryCount == retryCount)&&(identical(other.status, status) || other.status == status));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PendingJob&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other.payload, payload)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.retryCount, retryCount) || other.retryCount == retryCount)&&(identical(other.status, status) || other.status == status)&&(identical(other.nextRetryAt, nextRetryAt) || other.nextRetryAt == nextRetryAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,const DeepCollectionEquality().hash(payload),createdAt,retryCount,status);
+int get hashCode => Object.hash(runtimeType,id,type,const DeepCollectionEquality().hash(payload),createdAt,retryCount,status,nextRetryAt);
 
 @override
 String toString() {
-  return 'PendingJob(id: $id, type: $type, payload: $payload, createdAt: $createdAt, retryCount: $retryCount, status: $status)';
+  return 'PendingJob(id: $id, type: $type, payload: $payload, createdAt: $createdAt, retryCount: $retryCount, status: $status, nextRetryAt: $nextRetryAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $PendingJobCopyWith<$Res>  {
   factory $PendingJobCopyWith(PendingJob value, $Res Function(PendingJob) _then) = _$PendingJobCopyWithImpl;
 @useResult
 $Res call({
- int id, JobType type, Map<String, dynamic> payload, int createdAt, int retryCount, String status
+ int id, JobType type, Map<String, dynamic> payload, int createdAt, int retryCount, String status, int? nextRetryAt
 });
 
 
@@ -65,7 +65,7 @@ class _$PendingJobCopyWithImpl<$Res>
 
 /// Create a copy of PendingJob
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? payload = null,Object? createdAt = null,Object? retryCount = null,Object? status = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? payload = null,Object? createdAt = null,Object? retryCount = null,Object? status = null,Object? nextRetryAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -73,7 +73,8 @@ as JobType,payload: null == payload ? _self.payload : payload // ignore: cast_nu
 as Map<String, dynamic>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as int,retryCount: null == retryCount ? _self.retryCount : retryCount // ignore: cast_nullable_to_non_nullable
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,
+as String,nextRetryAt: freezed == nextRetryAt ? _self.nextRetryAt : nextRetryAt // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -158,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  JobType type,  Map<String, dynamic> payload,  int createdAt,  int retryCount,  String status)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  JobType type,  Map<String, dynamic> payload,  int createdAt,  int retryCount,  String status,  int? nextRetryAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PendingJob() when $default != null:
-return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCount,_that.status);case _:
+return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCount,_that.status,_that.nextRetryAt);case _:
   return orElse();
 
 }
@@ -179,10 +180,10 @@ return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCou
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  JobType type,  Map<String, dynamic> payload,  int createdAt,  int retryCount,  String status)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  JobType type,  Map<String, dynamic> payload,  int createdAt,  int retryCount,  String status,  int? nextRetryAt)  $default,) {final _that = this;
 switch (_that) {
 case _PendingJob():
-return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCount,_that.status);case _:
+return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCount,_that.status,_that.nextRetryAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +200,10 @@ return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCou
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  JobType type,  Map<String, dynamic> payload,  int createdAt,  int retryCount,  String status)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  JobType type,  Map<String, dynamic> payload,  int createdAt,  int retryCount,  String status,  int? nextRetryAt)?  $default,) {final _that = this;
 switch (_that) {
 case _PendingJob() when $default != null:
-return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCount,_that.status);case _:
+return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCount,_that.status,_that.nextRetryAt);case _:
   return null;
 
 }
@@ -214,7 +215,7 @@ return $default(_that.id,_that.type,_that.payload,_that.createdAt,_that.retryCou
 @JsonSerializable()
 
 class _PendingJob implements PendingJob {
-  const _PendingJob({required this.id, required this.type, required final  Map<String, dynamic> payload, required this.createdAt, this.retryCount = 0, this.status = 'pending'}): _payload = payload;
+  const _PendingJob({required this.id, required this.type, required final  Map<String, dynamic> payload, required this.createdAt, this.retryCount = 0, this.status = 'pending', this.nextRetryAt}): _payload = payload;
   factory _PendingJob.fromJson(Map<String, dynamic> json) => _$PendingJobFromJson(json);
 
 @override final  int id;
@@ -229,6 +230,7 @@ class _PendingJob implements PendingJob {
 @override final  int createdAt;
 @override@JsonKey() final  int retryCount;
 @override@JsonKey() final  String status;
+@override final  int? nextRetryAt;
 
 /// Create a copy of PendingJob
 /// with the given fields replaced by the non-null parameter values.
@@ -243,16 +245,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PendingJob&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other._payload, _payload)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.retryCount, retryCount) || other.retryCount == retryCount)&&(identical(other.status, status) || other.status == status));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PendingJob&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other._payload, _payload)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.retryCount, retryCount) || other.retryCount == retryCount)&&(identical(other.status, status) || other.status == status)&&(identical(other.nextRetryAt, nextRetryAt) || other.nextRetryAt == nextRetryAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,const DeepCollectionEquality().hash(_payload),createdAt,retryCount,status);
+int get hashCode => Object.hash(runtimeType,id,type,const DeepCollectionEquality().hash(_payload),createdAt,retryCount,status,nextRetryAt);
 
 @override
 String toString() {
-  return 'PendingJob(id: $id, type: $type, payload: $payload, createdAt: $createdAt, retryCount: $retryCount, status: $status)';
+  return 'PendingJob(id: $id, type: $type, payload: $payload, createdAt: $createdAt, retryCount: $retryCount, status: $status, nextRetryAt: $nextRetryAt)';
 }
 
 
@@ -263,7 +265,7 @@ abstract mixin class _$PendingJobCopyWith<$Res> implements $PendingJobCopyWith<$
   factory _$PendingJobCopyWith(_PendingJob value, $Res Function(_PendingJob) _then) = __$PendingJobCopyWithImpl;
 @override @useResult
 $Res call({
- int id, JobType type, Map<String, dynamic> payload, int createdAt, int retryCount, String status
+ int id, JobType type, Map<String, dynamic> payload, int createdAt, int retryCount, String status, int? nextRetryAt
 });
 
 
@@ -280,7 +282,7 @@ class __$PendingJobCopyWithImpl<$Res>
 
 /// Create a copy of PendingJob
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? payload = null,Object? createdAt = null,Object? retryCount = null,Object? status = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? payload = null,Object? createdAt = null,Object? retryCount = null,Object? status = null,Object? nextRetryAt = freezed,}) {
   return _then(_PendingJob(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -288,7 +290,8 @@ as JobType,payload: null == payload ? _self._payload : payload // ignore: cast_n
 as Map<String, dynamic>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as int,retryCount: null == retryCount ? _self.retryCount : retryCount // ignore: cast_nullable_to_non_nullable
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,
+as String,nextRetryAt: freezed == nextRetryAt ? _self.nextRetryAt : nextRetryAt // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

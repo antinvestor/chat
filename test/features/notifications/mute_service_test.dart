@@ -1,10 +1,10 @@
-import 'package:chat/core/db/database.dart';
-import 'package:chat/features/notifications/mute_service.dart';
-import 'package:chat/features/rooms/data/room_repository.dart';
-import 'package:chat/features/rooms/domain/room.dart' as domain;
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart' hide isNull, isNotNull;
+import 'package:stawi/core/db/database.dart';
+import 'package:stawi/features/notifications/mute_service.dart';
+import 'package:stawi/features/rooms/data/room_repository.dart';
+import 'package:stawi/features/rooms/domain/room.dart' as domain;
 
 void main() {
   late AppDatabase database;
