@@ -379,9 +379,10 @@ class IsolateManager {
     AppLogger.info('IsolateManager shutdown complete');
   }
 
-  /// Generate a unique task ID
+  /// Generate a unique task ID using isolate hash, microsecond timestamp,
+  /// and monotonic counter for cross-isolate uniqueness
   String _generateTaskId() =>
-      'task_${++_taskIdCounter}_${DateTime.now().millisecondsSinceEpoch}';
+      '${Isolate.current.hashCode}_${DateTime.now().microsecondsSinceEpoch}_${++_taskIdCounter}';
 }
 
 /// Configuration passed to isolate on spawn

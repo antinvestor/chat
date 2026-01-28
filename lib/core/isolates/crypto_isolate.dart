@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -287,14 +288,12 @@ String _encodeBase64(List<dynamic> bytes) {
 /// Decode base64 to bytes
 List<int> _decodeBase64(String encoded) => base64Decode(encoded);
 
-/// Generate random bytes
+/// Generate cryptographically secure random bytes
 List<int> _generateRandomBytes(int length) {
-  // Note: In isolate, we don't have access to dart:math Random.secure()
-  // This is a placeholder - in production, use proper secure random
+  final secureRandom = Random.secure();
   final bytes = Uint8List(length);
-  final now = DateTime.now().microsecondsSinceEpoch;
   for (var i = 0; i < length; i++) {
-    bytes[i] = (now >> (i % 8) + i * 17) & 0xFF;
+    bytes[i] = secureRandom.nextInt(256);
   }
   return bytes;
 }
