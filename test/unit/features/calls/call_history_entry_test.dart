@@ -49,7 +49,10 @@ void main() {
     test('fromValue returns correct direction', () {
       expect(CallDirection.fromValue(0), equals(CallDirection.outgoing));
       expect(CallDirection.fromValue(1), equals(CallDirection.incoming));
-      expect(CallDirection.fromValue(99), equals(CallDirection.outgoing)); // fallback
+      expect(
+        CallDirection.fromValue(99),
+        equals(CallDirection.outgoing),
+      ); // fallback
     });
   });
 
@@ -234,10 +237,7 @@ void main() {
     });
 
     test('copyWith creates copy with updated fields', () {
-      final copy = baseEntry.copyWith(
-        duration: 300,
-        status: CallStatus.missed,
-      );
+      final copy = baseEntry.copyWith(duration: 300, status: CallStatus.missed);
 
       expect(copy.duration, equals(300));
       expect(copy.status, equals(CallStatus.missed));

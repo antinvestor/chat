@@ -120,15 +120,18 @@ class RoomRepository {
     int? memberLimit,
     bool? enabled,
   }) async {
-    await (_database.update(_database.rooms)..where((t) => t.id.equals(roomId)))
-        .write(RoomsCompanion(
-          memberLimit: memberLimit != null
-              ? Value(memberLimit)
-              : const Value.absent(),
-          memberLimitEnabled: enabled != null
-              ? Value(enabled)
-              : const Value.absent(),
-        ));
+    await (_database.update(
+      _database.rooms,
+    )..where((t) => t.id.equals(roomId))).write(
+      RoomsCompanion(
+        memberLimit: memberLimit != null
+            ? Value(memberLimit)
+            : const Value.absent(),
+        memberLimitEnabled: enabled != null
+            ? Value(enabled)
+            : const Value.absent(),
+      ),
+    );
   }
 
   Future<void> updateUnreadCount(String roomId, int count) async {

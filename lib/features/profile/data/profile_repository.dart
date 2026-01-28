@@ -239,7 +239,7 @@ class ProfileRepository {
 
       // Update profile with new avatar URL
       final properties = common.Struct()
-        ..fields['avatar_url'] = (common.Value()..stringValue = avatarUrl!);
+        ..fields['avatar_url'] = (common.Value()..stringValue = avatarUrl);
 
       final request = pb.UpdateRequest(
         id: userInfo!.id,
