@@ -1,24 +1,112 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:chat/core/analytics/analytics_event.dart';
-import 'package:chat/core/analytics/analytics_service.dart';
+import 'package:stawi/core/analytics/analytics_event.dart';
+import 'package:stawi/core/analytics/analytics_repository.dart';
+import 'package:stawi/core/analytics/analytics_service.dart';
+
+/// In-memory fake of [AnalyticsRepository] for testing purposes.
+///
+/// Stores events in a list so tests can run without a real database.
+class FakeAnalyticsRepository extends AnalyticsRepository {
+  FakeAnalyticsRepository() : super(null as dynamic);
+
+  final List<AnalyticsEvent> _events = [];
+
+  @override
+  Future<int> insertEvent(AnalyticsEvent event) async {
+    _events.add(event);
+    return _events.length;
+  }
+
+  @override
+  Future<void> insertEvents(List<AnalyticsEvent> events) async {
+    _events.addAll(events);
+  }
+
+  @override
+  Future<List<AnalyticsEvent>> getUnsyncedEvents({int limit = 100}) async {
+    return _events.where((e) => !e.isSynced).take(limit).toList();
+  }
+
+  @override
+  Future<void> markEventsSynced(List<String> eventIds) async {
+    _events.removeWhere((e) => eventIds.contains(e.id));
+  }
+
+  @override
+  Future<int> deleteSyncedEventsOlderThan(Duration duration) async {
+    return 0;
+  }
+
+  @override
+  Future<int> deleteAllSyncedEvents() async {
+    final before = _events.length;
+    _events.removeWhere((e) => e.isSynced);
+    return before - _events.length;
+  }
+
+  @override
+  Future<int> getUnsyncedEventCount() async {
+    return _events.where((e) => !e.isSynced).length;
+  }
+
+  @override
+  Future<int> getTotalEventCount() async {
+    return _events.length;
+  }
+
+  @override
+  Future<List<AnalyticsEvent>> getEventsBySession(String sessionId) async {
+    return _events.where((e) => e.sessionId == sessionId).toList();
+  }
+
+  @override
+  Future<List<AnalyticsEvent>> getEventsByType(
+    AnalyticsEventType type, {
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    return _events
+        .where((e) => e.type == type)
+        .skip(offset)
+        .take(limit)
+        .toList();
+  }
+
+  @override
+  Future<List<AnalyticsEvent>> getEventsInRange(
+    DateTime start,
+    DateTime end, {
+    int limit = 1000,
+  }) async {
+    return _events
+        .where((e) => e.timestamp.isAfter(start) && e.timestamp.isBefore(end))
+        .take(limit)
+        .toList();
+  }
+
+  @override
+  Future<int> clearAllEvents() async {
+    final count = _events.length;
+    _events.clear();
+    return count;
+  }
+}
 
 void main() {
   group('AnalyticsService', () {
     late AnalyticsService analyticsService;
+    late FakeAnalyticsRepository fakeRepository;
 
     setUp(() {
-      analyticsService = AnalyticsService(
-        config: const AnalyticsConfig(
-          enabled: true,
-          enableDebugLogging: false,
-        ),
-      );
+      fakeRepository = FakeAnalyticsRepository();
+      analyticsService = AnalyticsService(repository: fakeRepository);
     });
 
     group('configuration', () {
       test('can be disabled via config', () {
         final service = AnalyticsService(
+          repository: fakeRepository,
           config: const AnalyticsConfig(enabled: false),
         );
 
@@ -61,7 +149,6 @@ void main() {
         analyticsService.trackMessageSent(
           roomId: 'room-1',
           messageType: 'text',
-          hasAttachment: false,
           isReply: true,
         );
         expect(analyticsService.pendingEventCount, equals(1));
@@ -103,7 +190,10 @@ void main() {
           appVersion: '1.0.0',
         );
         analyticsService.setUserProperties(properties);
-        expect(analyticsService.userProperties?.displayName, equals('Test User'));
+        expect(
+          analyticsService.userProperties?.displayName,
+          equals('Test User'),
+        );
       });
 
       test('updateUserProperty adds custom property', () {
@@ -133,8 +223,14 @@ void main() {
         analyticsService.trackScreenView('EntryScreen');
         analyticsService.trackScreenView('MiddleScreen');
         analyticsService.trackScreenView('ExitScreen');
-        expect(analyticsService.currentSession?.entryScreen, equals('EntryScreen'));
-        expect(analyticsService.currentSession?.exitScreen, equals('ExitScreen'));
+        expect(
+          analyticsService.currentSession?.entryScreen,
+          equals('EntryScreen'),
+        );
+        expect(
+          analyticsService.currentSession?.exitScreen,
+          equals('ExitScreen'),
+        );
       });
 
       test('trackUserLogout resets session', () {
@@ -146,11 +242,7 @@ void main() {
 
     group('setting tracking', () {
       test('trackSettingChanged records old and new values', () {
-        analyticsService.trackSettingChanged(
-          'theme',
-          'light',
-          'dark',
-        );
+        analyticsService.trackSettingChanged('theme', 'light', 'dark');
         expect(analyticsService.pendingEventCount, equals(1));
       });
     });
@@ -177,7 +269,6 @@ void main() {
         roomId: 'room-1',
         messageType: 'text',
         hasAttachment: true,
-        isReply: false,
       );
 
       expect(event.type, equals(AnalyticsEventType.messageSent));
@@ -263,7 +354,7 @@ void main() {
         displayName: 'Test User',
         email: 'test@example.com',
         phoneNumber: '+1234567890',
-        accountCreatedAt: DateTime(2024, 1, 1),
+        accountCreatedAt: DateTime(2024),
         lastLoginAt: DateTime.now(),
         appVersion: '1.0.0',
         platform: 'android',

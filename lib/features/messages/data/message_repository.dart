@@ -321,12 +321,15 @@ class MessageRepository {
   /// already starred or doesn't exist.
   Future<bool> starMessage(String messageId) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final updated = await (_database.update(_database.roomEvents)
-          ..where((t) => t.id.equals(messageId) & t.starred.equals(false)))
-        .write(RoomEventsCompanion(
-          starred: const Value(true),
-          starredAt: Value(now),
-        ));
+    final updated =
+        await (_database.update(_database.roomEvents)
+              ..where((t) => t.id.equals(messageId) & t.starred.equals(false)))
+            .write(
+              RoomEventsCompanion(
+                starred: const Value(true),
+                starredAt: Value(now),
+              ),
+            );
     return updated > 0;
   }
 
@@ -335,12 +338,15 @@ class MessageRepository {
   /// Returns true if the message was successfully unstarred, false if it was
   /// not starred or doesn't exist.
   Future<bool> unstarMessage(String messageId) async {
-    final updated = await (_database.update(_database.roomEvents)
-          ..where((t) => t.id.equals(messageId) & t.starred.equals(true)))
-        .write(const RoomEventsCompanion(
-          starred: Value(false),
-          starredAt: Value(null),
-        ));
+    final updated =
+        await (_database.update(
+          _database.roomEvents,
+        )..where((t) => t.id.equals(messageId) & t.starred.equals(true))).write(
+          const RoomEventsCompanion(
+            starred: Value(false),
+            starredAt: Value(null),
+          ),
+        );
     return updated > 0;
   }
 
@@ -409,12 +415,11 @@ class MessageRepository {
 
   /// Clear all starred messages
   Future<int> clearAllStarredMessages() async {
-    return await (_database.update(_database.roomEvents)
-          ..where((t) => t.starred.equals(true)))
-        .write(const RoomEventsCompanion(
-          starred: Value(false),
-          starredAt: Value(null),
-        ));
+    return (_database.update(
+      _database.roomEvents,
+    )..where((t) => t.starred.equals(true))).write(
+      const RoomEventsCompanion(starred: Value(false), starredAt: Value(null)),
+    );
   }
 
   domain.RoomEvent _toRoomEvent(RoomEvent row) => domain.RoomEvent(

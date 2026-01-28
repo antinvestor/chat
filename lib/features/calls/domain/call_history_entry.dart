@@ -62,14 +62,14 @@ enum CallStatus {
 /// Represents a single entry in the call history
 class CallHistoryEntry {
   const CallHistoryEntry({
-    this.id,
     required this.roomId,
     required this.callerId,
-    this.recipientId,
     required this.callType,
     required this.direction,
     required this.status,
     required this.startedAt,
+    this.id,
+    this.recipientId,
     this.answeredAt,
     this.endedAt,
     this.duration = 0,
@@ -156,13 +156,9 @@ class CallHistoryEntry {
       if (isMissed) {
         return Icons.call_missed;
       }
-      return callType == CallType.video
-          ? Icons.videocam
-          : Icons.call_received;
+      return callType == CallType.video ? Icons.videocam : Icons.call_received;
     } else {
-      return callType == CallType.video
-          ? Icons.videocam
-          : Icons.call_made;
+      return callType == CallType.video ? Icons.videocam : Icons.call_made;
     }
   }
 

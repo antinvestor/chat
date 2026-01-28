@@ -1,14 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../logging/app_logger.dart';
 import 'analytics_event.dart';
+import 'analytics_repository.dart';
 
 /// Configuration for the analytics service
 class AnalyticsConfig {
@@ -42,12 +41,12 @@ class AnalyticsConfig {
 /// - Event tracking (screen views, user actions, errors)
 /// - Session management
 /// - User property tracking
-/// - Local event storage with batch upload
+/// - Database-backed event storage with batch upload
 /// - Privacy-compliant (no PII without consent)
 ///
 /// Example:
 /// ```dart
-/// final analytics = AnalyticsService();
+/// final analytics = AnalyticsService(repository: analyticsRepo);
 /// await analytics.initialize();
 ///
 /// analytics.trackScreenView('HomeScreen');
@@ -55,10 +54,13 @@ class AnalyticsConfig {
 /// ```
 class AnalyticsService {
   AnalyticsService({
+    required AnalyticsRepository repository,
     AnalyticsConfig config = const AnalyticsConfig(),
-  }) : _config = config;
+  }) : _config = config,
+       _repository = repository;
 
   final AnalyticsConfig _config;
+  final AnalyticsRepository _repository;
   static const _uuid = Uuid();
 
   // Session management
@@ -66,31 +68,21 @@ class AnalyticsService {
   String? _currentUserId;
   AnalyticsUserProperties? _userProperties;
 
-  // Event storage
-  final List<AnalyticsEvent> _eventQueue = [];
+  // In-memory event counter for batch flush triggering
+  int _pendingEventCount = 0;
   Timer? _flushTimer;
   bool _initialized = false;
-
-  // Local storage
-  String? _storagePath;
 
   /// Initialize the analytics service
   Future<void> initialize() async {
     if (_initialized) return;
 
     try {
-      // Set up storage path
-      if (!kIsWeb) {
-        final directory = await getApplicationDocumentsDirectory();
-        _storagePath = '${directory.path}/analytics';
-        await Directory(_storagePath!).create(recursive: true);
-      }
-
-      // Load any pending events from storage
-      await _loadPendingEvents();
-
       // Start a new session
       _startNewSession();
+
+      // Check for any unsynced events from previous sessions
+      _pendingEventCount = await _repository.getUnsyncedEventCount();
 
       // Set up periodic flush timer
       _flushTimer = Timer.periodic(
@@ -125,11 +117,12 @@ class AnalyticsService {
   }
 
   /// Update specific user properties
-  void updateUserProperty(String key, dynamic value) {
+  void updateUserProperty(String key, value) {
     final current = _userProperties?.customProperties ?? {};
     final updated = Map<String, dynamic>.from(current);
     updated[key] = value;
-    _userProperties = _userProperties?.copyWith(customProperties: updated) ??
+    _userProperties =
+        _userProperties?.copyWith(customProperties: updated) ??
         AnalyticsUserProperties(customProperties: updated);
   }
 
@@ -231,7 +224,10 @@ class AnalyticsService {
   }
 
   /// Track a feature usage event
-  void trackFeatureUsed(String featureName, {Map<String, dynamic>? properties}) {
+  void trackFeatureUsed(
+    String featureName, {
+    Map<String, dynamic>? properties,
+  }) {
     if (!_config.enabled) return;
 
     final event = AnalyticsEvent.featureUsed(
@@ -292,29 +288,38 @@ class AnalyticsService {
 
   /// Track user login
   void trackUserLogin({String? method}) {
-    trackEvent('user_login', properties: {
-      if (method != null) 'method': method,
-      'timestamp': DateTime.now().toUtc().toIso8601String(),
-    });
+    trackEvent(
+      'user_login',
+      properties: {
+        if (method != null) 'method': method,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+      },
+    );
   }
 
   /// Track user logout
   void trackUserLogout() {
-    trackEvent('user_logout', properties: {
-      'session_duration_seconds': _currentSession?.durationSeconds,
-      'events_in_session': _currentSession?.eventCount,
-    });
+    trackEvent(
+      'user_logout',
+      properties: {
+        'session_duration_seconds': _currentSession?.durationSeconds,
+        'events_in_session': _currentSession?.eventCount,
+      },
+    );
     _endSession();
     _startNewSession();
   }
 
   /// Track setting change
-  void trackSettingChanged(String settingName, dynamic oldValue, dynamic newValue) {
-    trackEvent('setting_changed', properties: {
-      'setting_name': settingName,
-      'old_value': oldValue?.toString(),
-      'new_value': newValue?.toString(),
-    });
+  void trackSettingChanged(String settingName, oldValue, newValue) {
+    trackEvent(
+      'setting_changed',
+      properties: {
+        'setting_name': settingName,
+        'old_value': oldValue?.toString(),
+        'new_value': newValue?.toString(),
+      },
+    );
   }
 
   /// Get current session
@@ -324,7 +329,7 @@ class AnalyticsService {
   AnalyticsUserProperties? get userProperties => _userProperties;
 
   /// Get pending event count
-  int get pendingEventCount => _eventQueue.length;
+  int get pendingEventCount => _pendingEventCount;
 
   /// Manually flush events
   Future<void> flush() async {
@@ -338,7 +343,6 @@ class AnalyticsService {
 
     _endSession();
     await _flushEvents();
-    await _savePendingEvents();
 
     _initialized = false;
     _log('Analytics service closed');
@@ -361,12 +365,27 @@ class AnalyticsService {
       _currentSession = _currentSession!.copyWith(
         endTime: DateTime.now().toUtc(),
       );
-      _log('Session ended: ${_currentSession!.id}, duration: ${_currentSession!.durationSeconds}s');
+      _log(
+        'Session ended: ${_currentSession!.id}, '
+        'duration: ${_currentSession!.durationSeconds}s',
+      );
     }
   }
 
   void _addEvent(AnalyticsEvent event) {
-    _eventQueue.add(event);
+    // Persist the event to the repository (database)
+    _repository.insertEvent(event).catchError((
+      Object e,
+      StackTrace stackTrace,
+    ) {
+      AppLogger.error(
+        'Failed to persist analytics event',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    });
+
+    _pendingEventCount++;
 
     // Update session event count
     if (_currentSession != null) {
@@ -375,32 +394,39 @@ class AnalyticsService {
       );
     }
 
-    // Trim queue if needed
-    while (_eventQueue.length > _config.maxStoredEvents) {
-      _eventQueue.removeAt(0);
-    }
-
     // Flush if batch size reached
-    if (_eventQueue.length >= _config.batchSize) {
+    if (_pendingEventCount >= _config.batchSize) {
       _flushEvents();
     }
   }
 
   Future<void> _flushEvents() async {
-    if (_eventQueue.isEmpty) return;
-
-    final eventsToSend = List<AnalyticsEvent>.from(_eventQueue);
+    if (_pendingEventCount == 0) return;
 
     try {
+      // Retrieve unsynced events from the repository
+      final eventsToSend = await _repository.getUnsyncedEvents(
+        limit: _config.batchSize,
+      );
+
+      if (eventsToSend.isEmpty) {
+        _pendingEventCount = 0;
+        return;
+      }
+
       // TODO: Send events to backend analytics service
-      // For now, we just mark them as synced and clear
       // In production, this would send to your analytics backend:
       // await _sendEventsToBackend(eventsToSend);
 
-      // Clear the sent events
-      _eventQueue.removeWhere(
-        (e) => eventsToSend.any((sent) => sent.id == e.id),
-      );
+      // Mark events as synced in the repository
+      final eventIds = eventsToSend.map((e) => e.id).toList();
+      await _repository.markEventsSynced(eventIds);
+
+      // Clean up old synced events
+      await _repository.deleteSyncedEventsOlderThan(const Duration(days: 7));
+
+      // Refresh the pending count from the repository
+      _pendingEventCount = await _repository.getUnsyncedEventCount();
 
       _log('Flushed ${eventsToSend.length} events');
     } catch (e, stackTrace) {
@@ -409,51 +435,14 @@ class AnalyticsService {
         error: e,
         stackTrace: stackTrace,
       );
-      // Keep events in queue for retry
-    }
-  }
-
-  Future<void> _savePendingEvents() async {
-    if (_storagePath == null || _eventQueue.isEmpty) return;
-
-    try {
-      final file = File('$_storagePath/pending_events.json');
-      final eventsJson = _eventQueue.map((e) => e.toJson()).toList();
-      await file.writeAsString(jsonEncode(eventsJson));
-      _log('Saved ${_eventQueue.length} pending events');
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        'Failed to save pending events',
-        error: e,
-        stackTrace: stackTrace,
-      );
-    }
-  }
-
-  Future<void> _loadPendingEvents() async {
-    if (_storagePath == null) return;
-
-    try {
-      final file = File('$_storagePath/pending_events.json');
-      if (await file.exists()) {
-        final content = await file.readAsString();
-        final List<dynamic> eventsJson = jsonDecode(content) as List<dynamic>;
-        for (final json in eventsJson) {
-          _eventQueue.add(AnalyticsEvent.fromJson(json as Map<String, dynamic>));
-        }
-        await file.delete();
-        _log('Loaded ${_eventQueue.length} pending events');
-      }
-    } catch (e, stackTrace) {
-      AppLogger.error(
-        'Failed to load pending events',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      // Keep events in repository for retry
     }
   }
 
   Map<String, dynamic> _getDeviceInfo() {
+    if (kIsWeb) {
+      return {'platform': 'web', 'is_debug': kDebugMode};
+    }
     return {
       'platform': Platform.operatingSystem,
       'os_version': Platform.operatingSystemVersion,
@@ -471,21 +460,16 @@ class AnalyticsService {
 
 /// Provider for the analytics service
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
+  final repository = ref.watch(analyticsRepositoryProvider);
   final service = AnalyticsService(
-    config: const AnalyticsConfig(
-      enabled: true,
-      batchSize: 50,
-      flushIntervalSeconds: 60,
-      enableDebugLogging: kDebugMode,
-    ),
+    repository: repository,
+    config: const AnalyticsConfig(enableDebugLogging: kDebugMode),
   );
 
   // Initialize on first access
   service.initialize();
 
-  ref.onDispose(() {
-    service.close();
-  });
+  ref.onDispose(service.close);
 
   return service;
 });

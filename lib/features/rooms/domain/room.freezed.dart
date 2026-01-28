@@ -18,11 +18,9 @@ mixin _$Room {
  String get id; String get name; String get type;// 'direct' or 'group'
  String? get lastEventId; int get lastEventIndex; int get unreadCount; Map<String, dynamic>? get metadata;/// Disappearing messages timeout in seconds (null = disabled)
 /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
- int? get disappearingTimeout;/// Mute notifications until this timestamp (milliseconds since epoch)
-/// - null = not muted
-/// - 0 = muted forever
-/// - timestamp = muted until that time
- int? get mutedUntil;
+ int? get disappearingTimeout;/// Maximum number of members allowed (null = default 256)
+ int? get memberLimit;/// Whether member limit is enforced
+ bool get memberLimitEnabled;
 /// Create a copy of Room
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -35,16 +33,16 @@ $RoomCopyWith<Room> get copyWith => _$RoomCopyWithImpl<Room>(this as Room, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Room&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.lastEventId, lastEventId) || other.lastEventId == lastEventId)&&(identical(other.lastEventIndex, lastEventIndex) || other.lastEventIndex == lastEventIndex)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&const DeepCollectionEquality().equals(other.metadata, metadata)&&(identical(other.disappearingTimeout, disappearingTimeout) || other.disappearingTimeout == disappearingTimeout)&&(identical(other.mutedUntil, mutedUntil) || other.mutedUntil == mutedUntil));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Room&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.lastEventId, lastEventId) || other.lastEventId == lastEventId)&&(identical(other.lastEventIndex, lastEventIndex) || other.lastEventIndex == lastEventIndex)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&const DeepCollectionEquality().equals(other.metadata, metadata)&&(identical(other.disappearingTimeout, disappearingTimeout) || other.disappearingTimeout == disappearingTimeout)&&(identical(other.memberLimit, memberLimit) || other.memberLimit == memberLimit)&&(identical(other.memberLimitEnabled, memberLimitEnabled) || other.memberLimitEnabled == memberLimitEnabled));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,type,lastEventId,lastEventIndex,unreadCount,const DeepCollectionEquality().hash(metadata),disappearingTimeout,mutedUntil);
+int get hashCode => Object.hash(runtimeType,id,name,type,lastEventId,lastEventIndex,unreadCount,const DeepCollectionEquality().hash(metadata),disappearingTimeout,memberLimit,memberLimitEnabled);
 
 @override
 String toString() {
-  return 'Room(id: $id, name: $name, type: $type, lastEventId: $lastEventId, lastEventIndex: $lastEventIndex, unreadCount: $unreadCount, metadata: $metadata, disappearingTimeout: $disappearingTimeout, mutedUntil: $mutedUntil)';
+  return 'Room(id: $id, name: $name, type: $type, lastEventId: $lastEventId, lastEventIndex: $lastEventIndex, unreadCount: $unreadCount, metadata: $metadata, disappearingTimeout: $disappearingTimeout, memberLimit: $memberLimit, memberLimitEnabled: $memberLimitEnabled)';
 }
 
 
@@ -55,7 +53,7 @@ abstract mixin class $RoomCopyWith<$Res>  {
   factory $RoomCopyWith(Room value, $Res Function(Room) _then) = _$RoomCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String type, String? lastEventId, int lastEventIndex, int unreadCount, Map<String, dynamic>? metadata, int? disappearingTimeout, int? mutedUntil
+ String id, String name, String type, String? lastEventId, int lastEventIndex, int unreadCount, Map<String, dynamic>? metadata, int? disappearingTimeout, int? memberLimit, bool memberLimitEnabled
 });
 
 
@@ -72,7 +70,7 @@ class _$RoomCopyWithImpl<$Res>
 
 /// Create a copy of Room
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? type = null,Object? lastEventId = freezed,Object? lastEventIndex = null,Object? unreadCount = null,Object? metadata = freezed,Object? disappearingTimeout = freezed,Object? mutedUntil = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? type = null,Object? lastEventId = freezed,Object? lastEventIndex = null,Object? unreadCount = null,Object? metadata = freezed,Object? disappearingTimeout = freezed,Object? memberLimit = freezed,Object? memberLimitEnabled = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -82,8 +80,9 @@ as String?,lastEventIndex: null == lastEventIndex ? _self.lastEventIndex : lastE
 as int,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
 as int,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,disappearingTimeout: freezed == disappearingTimeout ? _self.disappearingTimeout : disappearingTimeout // ignore: cast_nullable_to_non_nullable
-as int?,mutedUntil: freezed == mutedUntil ? _self.mutedUntil : mutedUntil // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,memberLimit: freezed == memberLimit ? _self.memberLimit : memberLimit // ignore: cast_nullable_to_non_nullable
+as int?,memberLimitEnabled: null == memberLimitEnabled ? _self.memberLimitEnabled : memberLimitEnabled // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -168,10 +167,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout,  int? mutedUntil)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout,  int? memberLimit,  bool memberLimitEnabled)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Room() when $default != null:
-return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout,_that.mutedUntil);case _:
+return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout,_that.memberLimit,_that.memberLimitEnabled);case _:
   return orElse();
 
 }
@@ -189,10 +188,10 @@ return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEvent
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout,  int? mutedUntil)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout,  int? memberLimit,  bool memberLimitEnabled)  $default,) {final _that = this;
 switch (_that) {
 case _Room():
-return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout,_that.mutedUntil);case _:
+return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout,_that.memberLimit,_that.memberLimitEnabled);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -209,10 +208,10 @@ return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEvent
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout,  int? mutedUntil)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String type,  String? lastEventId,  int lastEventIndex,  int unreadCount,  Map<String, dynamic>? metadata,  int? disappearingTimeout,  int? memberLimit,  bool memberLimitEnabled)?  $default,) {final _that = this;
 switch (_that) {
 case _Room() when $default != null:
-return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout,_that.mutedUntil);case _:
+return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEventIndex,_that.unreadCount,_that.metadata,_that.disappearingTimeout,_that.memberLimit,_that.memberLimitEnabled);case _:
   return null;
 
 }
@@ -224,7 +223,7 @@ return $default(_that.id,_that.name,_that.type,_that.lastEventId,_that.lastEvent
 @JsonSerializable()
 
 class _Room extends Room {
-  const _Room({required this.id, required this.name, required this.type, this.lastEventId, this.lastEventIndex = 0, this.unreadCount = 0, final  Map<String, dynamic>? metadata, this.disappearingTimeout, this.mutedUntil}): _metadata = metadata,super._();
+  const _Room({required this.id, required this.name, required this.type, this.lastEventId, this.lastEventIndex = 0, this.unreadCount = 0, final  Map<String, dynamic>? metadata, this.disappearingTimeout, this.memberLimit, this.memberLimitEnabled = true}): _metadata = metadata,super._();
   factory _Room.fromJson(Map<String, dynamic> json) => _$RoomFromJson(json);
 
 @override final  String id;
@@ -246,11 +245,10 @@ class _Room extends Room {
 /// Disappearing messages timeout in seconds (null = disabled)
 /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
 @override final  int? disappearingTimeout;
-/// Mute notifications until this timestamp (milliseconds since epoch)
-/// - null = not muted
-/// - 0 = muted forever
-/// - timestamp = muted until that time
-@override final  int? mutedUntil;
+/// Maximum number of members allowed (null = default 256)
+@override final  int? memberLimit;
+/// Whether member limit is enforced
+@override@JsonKey() final  bool memberLimitEnabled;
 
 /// Create a copy of Room
 /// with the given fields replaced by the non-null parameter values.
@@ -265,16 +263,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Room&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.lastEventId, lastEventId) || other.lastEventId == lastEventId)&&(identical(other.lastEventIndex, lastEventIndex) || other.lastEventIndex == lastEventIndex)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&const DeepCollectionEquality().equals(other._metadata, _metadata)&&(identical(other.disappearingTimeout, disappearingTimeout) || other.disappearingTimeout == disappearingTimeout)&&(identical(other.mutedUntil, mutedUntil) || other.mutedUntil == mutedUntil));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Room&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.lastEventId, lastEventId) || other.lastEventId == lastEventId)&&(identical(other.lastEventIndex, lastEventIndex) || other.lastEventIndex == lastEventIndex)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&const DeepCollectionEquality().equals(other._metadata, _metadata)&&(identical(other.disappearingTimeout, disappearingTimeout) || other.disappearingTimeout == disappearingTimeout)&&(identical(other.memberLimit, memberLimit) || other.memberLimit == memberLimit)&&(identical(other.memberLimitEnabled, memberLimitEnabled) || other.memberLimitEnabled == memberLimitEnabled));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,type,lastEventId,lastEventIndex,unreadCount,const DeepCollectionEquality().hash(_metadata),disappearingTimeout,mutedUntil);
+int get hashCode => Object.hash(runtimeType,id,name,type,lastEventId,lastEventIndex,unreadCount,const DeepCollectionEquality().hash(_metadata),disappearingTimeout,memberLimit,memberLimitEnabled);
 
 @override
 String toString() {
-  return 'Room(id: $id, name: $name, type: $type, lastEventId: $lastEventId, lastEventIndex: $lastEventIndex, unreadCount: $unreadCount, metadata: $metadata, disappearingTimeout: $disappearingTimeout, mutedUntil: $mutedUntil)';
+  return 'Room(id: $id, name: $name, type: $type, lastEventId: $lastEventId, lastEventIndex: $lastEventIndex, unreadCount: $unreadCount, metadata: $metadata, disappearingTimeout: $disappearingTimeout, memberLimit: $memberLimit, memberLimitEnabled: $memberLimitEnabled)';
 }
 
 
@@ -285,7 +283,7 @@ abstract mixin class _$RoomCopyWith<$Res> implements $RoomCopyWith<$Res> {
   factory _$RoomCopyWith(_Room value, $Res Function(_Room) _then) = __$RoomCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String type, String? lastEventId, int lastEventIndex, int unreadCount, Map<String, dynamic>? metadata, int? disappearingTimeout, int? mutedUntil
+ String id, String name, String type, String? lastEventId, int lastEventIndex, int unreadCount, Map<String, dynamic>? metadata, int? disappearingTimeout, int? memberLimit, bool memberLimitEnabled
 });
 
 
@@ -302,7 +300,7 @@ class __$RoomCopyWithImpl<$Res>
 
 /// Create a copy of Room
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? type = null,Object? lastEventId = freezed,Object? lastEventIndex = null,Object? unreadCount = null,Object? metadata = freezed,Object? disappearingTimeout = freezed,Object? mutedUntil = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? type = null,Object? lastEventId = freezed,Object? lastEventIndex = null,Object? unreadCount = null,Object? metadata = freezed,Object? disappearingTimeout = freezed,Object? memberLimit = freezed,Object? memberLimitEnabled = null,}) {
   return _then(_Room(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -312,8 +310,9 @@ as String?,lastEventIndex: null == lastEventIndex ? _self.lastEventIndex : lastE
 as int,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
 as int,metadata: freezed == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,disappearingTimeout: freezed == disappearingTimeout ? _self.disappearingTimeout : disappearingTimeout // ignore: cast_nullable_to_non_nullable
-as int?,mutedUntil: freezed == mutedUntil ? _self.mutedUntil : mutedUntil // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,memberLimit: freezed == memberLimit ? _self.memberLimit : memberLimit // ignore: cast_nullable_to_non_nullable
+as int?,memberLimitEnabled: null == memberLimitEnabled ? _self.memberLimitEnabled : memberLimitEnabled // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

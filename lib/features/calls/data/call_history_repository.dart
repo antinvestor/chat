@@ -35,7 +35,7 @@ class CallHistoryRepository {
       isDeleted: const Value(false),
     );
 
-    return await _db.into(_db.callHistory).insert(companion);
+    return _db.into(_db.callHistory).insert(companion);
   }
 
   /// Update an existing call record (e.g., when call ends)
@@ -46,13 +46,18 @@ class CallHistoryRepository {
     int? endedAt,
     int? duration,
   }) async {
-    await (_db.update(_db.callHistory)..where((t) => t.id.equals(callId)))
-        .write(CallHistoryCompanion(
-      status: status != null ? Value(status.value) : const Value.absent(),
-      answeredAt: answeredAt != null ? Value(answeredAt) : const Value.absent(),
-      endedAt: endedAt != null ? Value(endedAt) : const Value.absent(),
-      duration: duration != null ? Value(duration) : const Value.absent(),
-    ));
+    await (_db.update(
+      _db.callHistory,
+    )..where((t) => t.id.equals(callId))).write(
+      CallHistoryCompanion(
+        status: status != null ? Value(status.value) : const Value.absent(),
+        answeredAt: answeredAt != null
+            ? Value(answeredAt)
+            : const Value.absent(),
+        endedAt: endedAt != null ? Value(endedAt) : const Value.absent(),
+        duration: duration != null ? Value(duration) : const Value.absent(),
+      ),
+    );
   }
 
   /// Get all call history entries (excluding deleted)
@@ -145,8 +150,7 @@ class CallHistoryRepository {
 
   /// Mark all calls as read
   Future<int> markAllAsRead() async {
-    return await (_db.update(_db.callHistory)
-          ..where((t) => t.isRead.equals(false)))
+    return (_db.update(_db.callHistory)..where((t) => t.isRead.equals(false)))
         .write(const CallHistoryCompanion(isRead: Value(true)));
   }
 
@@ -158,18 +162,21 @@ class CallHistoryRepository {
 
   /// Clear all call history (soft delete)
   Future<int> clearAllHistory() async {
-    return await (_db.update(_db.callHistory)
+    return (_db.update(_db.callHistory)
           ..where((t) => t.isDeleted.equals(false)))
         .write(const CallHistoryCompanion(isDeleted: Value(true)));
   }
 
   /// Permanently delete old call records (for storage management)
-  Future<int> purgeOldRecords({Duration olderThan = const Duration(days: 90)}) async {
-    final cutoffTime =
-        DateTime.now().subtract(olderThan).millisecondsSinceEpoch;
-    return await (_db.delete(_db.callHistory)
-          ..where((t) => t.startedAt.isSmallerThanValue(cutoffTime)))
-        .go();
+  Future<int> purgeOldRecords({
+    Duration olderThan = const Duration(days: 90),
+  }) async {
+    final cutoffTime = DateTime.now()
+        .subtract(olderThan)
+        .millisecondsSinceEpoch;
+    return (_db.delete(
+      _db.callHistory,
+    )..where((t) => t.startedAt.isSmallerThanValue(cutoffTime))).go();
   }
 
   /// Get a single call by ID

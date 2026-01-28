@@ -51,8 +51,6 @@ enum AnalyticsEventType {
 /// Analytics event model for tracking user behavior and app usage
 @freezed
 abstract class AnalyticsEvent with _$AnalyticsEvent {
-  const AnalyticsEvent._();
-
   const factory AnalyticsEvent({
     required String id,
     required AnalyticsEventType type,
@@ -65,6 +63,7 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     Map<String, dynamic>? userProperties,
     @Default(false) bool isSynced,
   }) = _AnalyticsEvent;
+  const AnalyticsEvent._();
 
   factory AnalyticsEvent.fromJson(Map<String, dynamic> json) =>
       _$AnalyticsEventFromJson(json);
@@ -76,20 +75,16 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     String? userId,
     String? sessionId,
     Map<String, dynamic>? properties,
-  }) =>
-      AnalyticsEvent(
-        id: id,
-        type: AnalyticsEventType.screenView,
-        name: 'screen_view',
-        timestamp: DateTime.now().toUtc(),
-        userId: userId,
-        sessionId: sessionId,
-        screenName: screenName,
-        properties: {
-          'screen_name': screenName,
-          ...?properties,
-        },
-      );
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.screenView,
+    name: 'screen_view',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    screenName: screenName,
+    properties: {'screen_name': screenName, ...?properties},
+  );
 
   /// Create a message sent event
   factory AnalyticsEvent.messageSent({
@@ -100,21 +95,20 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     String? sessionId,
     bool hasAttachment = false,
     bool isReply = false,
-  }) =>
-      AnalyticsEvent(
-        id: id,
-        type: AnalyticsEventType.messageSent,
-        name: 'message_sent',
-        timestamp: DateTime.now().toUtc(),
-        userId: userId,
-        sessionId: sessionId,
-        properties: {
-          'room_id': roomId,
-          'message_type': messageType,
-          'has_attachment': hasAttachment,
-          'is_reply': isReply,
-        },
-      );
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.messageSent,
+    name: 'message_sent',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {
+      'room_id': roomId,
+      'message_type': messageType,
+      'has_attachment': hasAttachment,
+      'is_reply': isReply,
+    },
+  );
 
   /// Create a call event
   factory AnalyticsEvent.call({
@@ -125,20 +119,19 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     String? userId,
     String? sessionId,
     int? durationSeconds,
-  }) =>
-      AnalyticsEvent(
-        id: id,
-        type: callEventType,
-        name: 'call_${callEventType.name}',
-        timestamp: DateTime.now().toUtc(),
-        userId: userId,
-        sessionId: sessionId,
-        properties: {
-          'room_id': roomId,
-          'call_type': callType,
-          if (durationSeconds != null) 'duration_seconds': durationSeconds,
-        },
-      );
+  }) => AnalyticsEvent(
+    id: id,
+    type: callEventType,
+    name: 'call_${callEventType.name}',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {
+      'room_id': roomId,
+      'call_type': callType,
+      if (durationSeconds != null) 'duration_seconds': durationSeconds,
+    },
+  );
 
   /// Create a room event
   factory AnalyticsEvent.room({
@@ -149,20 +142,19 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     String? userId,
     String? sessionId,
     int? memberCount,
-  }) =>
-      AnalyticsEvent(
-        id: id,
-        type: roomEventType,
-        name: 'room_${roomEventType.name}',
-        timestamp: DateTime.now().toUtc(),
-        userId: userId,
-        sessionId: sessionId,
-        properties: {
-          'room_id': roomId,
-          'room_type': roomType,
-          if (memberCount != null) 'member_count': memberCount,
-        },
-      );
+  }) => AnalyticsEvent(
+    id: id,
+    type: roomEventType,
+    name: 'room_${roomEventType.name}',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {
+      'room_id': roomId,
+      'room_type': roomType,
+      if (memberCount != null) 'member_count': memberCount,
+    },
+  );
 
   /// Create a feature usage event
   factory AnalyticsEvent.featureUsed({
@@ -171,19 +163,15 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     String? userId,
     String? sessionId,
     Map<String, dynamic>? properties,
-  }) =>
-      AnalyticsEvent(
-        id: id,
-        type: AnalyticsEventType.featureUsed,
-        name: 'feature_used',
-        timestamp: DateTime.now().toUtc(),
-        userId: userId,
-        sessionId: sessionId,
-        properties: {
-          'feature_name': featureName,
-          ...?properties,
-        },
-      );
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.featureUsed,
+    name: 'feature_used',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {'feature_name': featureName, ...?properties},
+  );
 
   /// Create an error event
   factory AnalyticsEvent.error({
@@ -194,21 +182,20 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     String? sessionId,
     String? screenName,
     String? stackTrace,
-  }) =>
-      AnalyticsEvent(
-        id: id,
-        type: AnalyticsEventType.errorOccurred,
-        name: 'error_occurred',
-        timestamp: DateTime.now().toUtc(),
-        userId: userId,
-        sessionId: sessionId,
-        screenName: screenName,
-        properties: {
-          'error_type': errorType,
-          'error_message': errorMessage,
-          if (stackTrace != null) 'stack_trace': stackTrace,
-        },
-      );
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.errorOccurred,
+    name: 'error_occurred',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    screenName: screenName,
+    properties: {
+      'error_type': errorType,
+      'error_message': errorMessage,
+      if (stackTrace != null) 'stack_trace': stackTrace,
+    },
+  );
 
   /// Create a custom event
   factory AnalyticsEvent.custom({
@@ -218,17 +205,16 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     String? sessionId,
     String? screenName,
     Map<String, dynamic>? properties,
-  }) =>
-      AnalyticsEvent(
-        id: id,
-        type: AnalyticsEventType.custom,
-        name: eventName,
-        timestamp: DateTime.now().toUtc(),
-        userId: userId,
-        sessionId: sessionId,
-        screenName: screenName,
-        properties: properties,
-      );
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.custom,
+    name: eventName,
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    screenName: screenName,
+    properties: properties,
+  );
 }
 
 /// User properties for analytics
@@ -258,8 +244,6 @@ abstract class AnalyticsUserProperties with _$AnalyticsUserProperties {
 /// Session information for analytics
 @freezed
 abstract class AnalyticsSession with _$AnalyticsSession {
-  const AnalyticsSession._();
-
   const factory AnalyticsSession({
     required String id,
     required DateTime startTime,
@@ -271,6 +255,7 @@ abstract class AnalyticsSession with _$AnalyticsSession {
     String? userId,
     Map<String, dynamic>? deviceInfo,
   }) = _AnalyticsSession;
+  const AnalyticsSession._();
 
   factory AnalyticsSession.fromJson(Map<String, dynamic> json) =>
       _$AnalyticsSessionFromJson(json);

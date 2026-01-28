@@ -1538,76 +1538,86 @@ void main() {
         expect(starred.any((e) => e.id == 'event-4'), isTrue);
       });
 
-      test('getStarredMessages returns messages ordered by starredAt desc', () async {
-        await createTestRoom('room-1');
-        final now = DateTime.now().millisecondsSinceEpoch;
+      test(
+        'getStarredMessages returns messages ordered by starredAt desc',
+        () async {
+          await createTestRoom('room-1');
+          final now = DateTime.now().millisecondsSinceEpoch;
 
-        for (var i = 1; i <= 3; i++) {
+          for (var i = 1; i <= 3; i++) {
+            await repository.insertMessage(
+              RoomEvent(
+                id: 'event-$i',
+                roomId: 'room-1',
+                senderId: 'sender-1',
+                type: RoomEventType.text,
+                content: {'text': 'Message $i'},
+                createdAt: now + i,
+              ),
+            );
+          }
+
+          // Star in specific order
+          await repository.starMessage('event-1');
+          await Future.delayed(const Duration(milliseconds: 10));
+          await repository.starMessage('event-3');
+          await Future.delayed(const Duration(milliseconds: 10));
+          await repository.starMessage('event-2');
+
+          final starred = await repository.getStarredMessages();
+          expect(starred.length, equals(3));
+          // Most recently starred first
+          expect(starred[0].id, equals('event-2'));
+          expect(starred[1].id, equals('event-3'));
+          expect(starred[2].id, equals('event-1'));
+        },
+      );
+
+      test(
+        'getStarredMessagesForRoom returns only starred messages from room',
+        () async {
+          await createTestRoom('room-1');
+          await createTestRoom('room-2');
+          final now = DateTime.now().millisecondsSinceEpoch;
+
           await repository.insertMessage(
             RoomEvent(
-              id: 'event-$i',
+              id: 'event-1',
               roomId: 'room-1',
               senderId: 'sender-1',
               type: RoomEventType.text,
-              content: {'text': 'Message $i'},
-              createdAt: now + i,
+              content: {'text': 'Message 1'},
+              createdAt: now,
             ),
           );
-        }
 
-        // Star in specific order
-        await repository.starMessage('event-1');
-        await Future.delayed(const Duration(milliseconds: 10));
-        await repository.starMessage('event-3');
-        await Future.delayed(const Duration(milliseconds: 10));
-        await repository.starMessage('event-2');
+          await repository.insertMessage(
+            RoomEvent(
+              id: 'event-2',
+              roomId: 'room-2',
+              senderId: 'sender-1',
+              type: RoomEventType.text,
+              content: {'text': 'Message 2'},
+              createdAt: now + 1,
+            ),
+          );
 
-        final starred = await repository.getStarredMessages();
-        expect(starred.length, equals(3));
-        // Most recently starred first
-        expect(starred[0].id, equals('event-2'));
-        expect(starred[1].id, equals('event-3'));
-        expect(starred[2].id, equals('event-1'));
-      });
+          await repository.starMessage('event-1');
+          await repository.starMessage('event-2');
 
-      test('getStarredMessagesForRoom returns only starred messages from room', () async {
-        await createTestRoom('room-1');
-        await createTestRoom('room-2');
-        final now = DateTime.now().millisecondsSinceEpoch;
+          final room1Starred = await repository.getStarredMessagesForRoom(
+            'room-1',
+          );
+          expect(room1Starred.length, equals(1));
+          expect(room1Starred[0].id, equals('event-1'));
 
-        await repository.insertMessage(
-          RoomEvent(
-            id: 'event-1',
-            roomId: 'room-1',
-            senderId: 'sender-1',
-            type: RoomEventType.text,
-            content: {'text': 'Message 1'},
-            createdAt: now,
-          ),
-        );
-
-        await repository.insertMessage(
-          RoomEvent(
-            id: 'event-2',
-            roomId: 'room-2',
-            senderId: 'sender-1',
-            type: RoomEventType.text,
-            content: {'text': 'Message 2'},
-            createdAt: now + 1,
-          ),
-        );
-
-        await repository.starMessage('event-1');
-        await repository.starMessage('event-2');
-
-        final room1Starred = await repository.getStarredMessagesForRoom('room-1');
-        expect(room1Starred.length, equals(1));
-        expect(room1Starred[0].id, equals('event-1'));
-
-        final room2Starred = await repository.getStarredMessagesForRoom('room-2');
-        expect(room2Starred.length, equals(1));
-        expect(room2Starred[0].id, equals('event-2'));
-      });
+          final room2Starred = await repository.getStarredMessagesForRoom(
+            'room-2',
+          );
+          expect(room2Starred.length, equals(1));
+          expect(room2Starred[0].id, equals('event-2'));
+        },
+      );
 
       test('getStarredMessagesCount returns correct count', () async {
         await createTestRoom('room-1');

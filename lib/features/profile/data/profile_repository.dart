@@ -163,11 +163,12 @@ class ProfileRepository {
       }
 
       final properties = common.Struct()
-        ..fields['status'] = (common.Value()..numberValue = status.value.toDouble());
+        ..fields['status'] = (common.Value()
+          ..numberValue = status.value.toDouble());
 
       if (statusMessage != null) {
-        properties.fields['status_message'] =
-            (common.Value()..stringValue = statusMessage);
+        properties.fields['status_message'] = (common.Value()
+          ..stringValue = statusMessage);
       }
 
       final request = pb.UpdateRequest(
@@ -178,15 +179,12 @@ class ProfileRepository {
       await profileClient.stub.update(request);
 
       // Update local database
-      await _updateLocalProfile(
-        status: status,
-        statusMessage: statusMessage,
-      );
+      await _updateLocalProfile(status: status, statusMessage: statusMessage);
 
-      AppLogger.info('Profile status updated', data: {
-        'status': status.name,
-        'statusMessage': statusMessage,
-      });
+      AppLogger.info(
+        'Profile status updated',
+        data: {'status': status.name, 'statusMessage': statusMessage},
+      );
       return ProfileUpdateResult.success();
     } catch (e, stackTrace) {
       AppLogger.error(
@@ -241,7 +239,8 @@ class ProfileRepository {
 
       // Update profile with new avatar URL
       final properties = common.Struct()
-        ..fields['avatar_url'] = (common.Value()..stringValue = avatarUrl!);
+        ..fields['avatar_url'] = (common.Value()
+          ..stringValue = avatarUrl ?? '');
 
       final request = pb.UpdateRequest(
         id: userInfo!.id,

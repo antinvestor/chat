@@ -36,9 +36,10 @@ class ScreenshotPreventionService {
       if (_isEnabled) {
         await enableScreenshotPrevention();
       }
-      AppLogger.debug('Screenshot prevention initialized', data: {
-        'enabled': _isEnabled,
-      });
+      AppLogger.debug(
+        'Screenshot prevention initialized',
+        data: {'enabled': _isEnabled},
+      );
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to initialize screenshot prevention',
@@ -107,9 +108,9 @@ class ScreenshotPreventionService {
   /// Toggle screenshot prevention
   Future<bool> toggle() async {
     if (_isEnabled) {
-      return await disableScreenshotPrevention();
+      return disableScreenshotPrevention();
     } else {
-      return await enableScreenshotPrevention();
+      return enableScreenshotPrevention();
     }
   }
 
@@ -150,7 +151,7 @@ ScreenshotPreventionService screenshotPreventionService(Ref ref) {
   final service = ScreenshotPreventionService(keyManager);
 
   // Initialize asynchronously
-  Future.microtask(() => service.initialize());
+  Future.microtask(service.initialize);
 
   return service;
 }

@@ -1,5 +1,5 @@
-import 'package:chat/features/rooms/domain/room.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/rooms/domain/room.dart';
 
 void main() {
   group('Room member limit', () {
@@ -18,30 +18,18 @@ void main() {
     });
 
     test('effectiveMemberLimit returns default when memberLimit is null', () {
-      const room = Room(
-        id: 'test-room',
-        name: 'Test Room',
-        type: 'group',
-      );
+      const room = Room(id: 'test-room', name: 'Test Room', type: 'group');
       expect(room.effectiveMemberLimit, equals(defaultMemberLimit));
     });
 
     test('isGroup returns true for group type', () {
-      const room = Room(
-        id: 'test-room',
-        name: 'Test Room',
-        type: 'group',
-      );
+      const room = Room(id: 'test-room', name: 'Test Room', type: 'group');
       expect(room.isGroup, isTrue);
       expect(room.isDirect, isFalse);
     });
 
     test('isDirect returns true for direct type', () {
-      const room = Room(
-        id: 'test-room',
-        name: 'Test Room',
-        type: 'direct',
-      );
+      const room = Room(id: 'test-room', name: 'Test Room', type: 'direct');
       expect(room.isDirect, isTrue);
       expect(room.isGroup, isFalse);
     });
@@ -53,7 +41,6 @@ void main() {
           name: 'Test Room',
           type: 'group',
           memberLimit: 10,
-          memberLimitEnabled: true,
         );
         expect(room.canAddMembers(5), isTrue);
         expect(room.canAddMembers(9), isTrue);
@@ -65,7 +52,6 @@ void main() {
           name: 'Test Room',
           type: 'group',
           memberLimit: 10,
-          memberLimitEnabled: true,
         );
         expect(room.canAddMembers(10), isFalse);
         expect(room.canAddMembers(15), isFalse);
@@ -90,7 +76,6 @@ void main() {
           name: 'Test Room',
           type: 'group',
           memberLimit: 10,
-          memberLimitEnabled: true,
         );
         expect(room.getRemainingSlots(5), equals(5));
         expect(room.getRemainingSlots(9), equals(1));
@@ -103,7 +88,6 @@ void main() {
           name: 'Test Room',
           type: 'group',
           memberLimit: 10,
-          memberLimitEnabled: true,
         );
         expect(room.getRemainingSlots(10), equals(0));
         expect(room.getRemainingSlots(15), equals(0));
@@ -122,11 +106,7 @@ void main() {
     });
 
     test('memberLimitEnabled defaults to true', () {
-      const room = Room(
-        id: 'test-room',
-        name: 'Test Room',
-        type: 'group',
-      );
+      const room = Room(id: 'test-room', name: 'Test Room', type: 'group');
       expect(room.memberLimitEnabled, isTrue);
     });
   });

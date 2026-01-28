@@ -49,8 +49,7 @@ class AnalyticsNavigatorObserver extends NavigatorObserver {
         screenName,
         properties: {
           'route_type': route.runtimeType.toString(),
-          if (route.settings.arguments != null)
-            'has_arguments': true,
+          if (route.settings.arguments != null) 'has_arguments': true,
         },
       );
     }
@@ -75,7 +74,9 @@ class AnalyticsNavigatorObserver extends NavigatorObserver {
 
   String _formatRouteName(String routeName) {
     // Remove leading slash
-    var formatted = routeName.startsWith('/') ? routeName.substring(1) : routeName;
+    var formatted = routeName.startsWith('/')
+        ? routeName.substring(1)
+        : routeName;
 
     // Remove any query parameters
     final queryIndex = formatted.indexOf('?');
@@ -88,7 +89,7 @@ class AnalyticsNavigatorObserver extends NavigatorObserver {
 
     // Handle parameterized routes (e.g., /room/:roomId -> room_detail)
     if (formatted.contains(':')) {
-      formatted = formatted.replaceAll(RegExp(r':[^_/]+'), 'detail');
+      formatted = formatted.replaceAll(RegExp(':[^_/]+'), 'detail');
     }
 
     return formatted;
@@ -148,6 +149,9 @@ mixin AnalyticsRouteMixin<T extends StatefulWidget> on State<T>, RouteAware {
 
 /// Widget wrapper for tracking time spent on a screen
 ///
+/// Uses [WidgetsBindingObserver] to pause/resume timing when the app goes
+/// to background/foreground, ensuring accurate duration tracking.
+///
 /// Example:
 /// ```dart
 /// AnalyticsScreenTracker(
@@ -174,13 +178,15 @@ class AnalyticsScreenTracker extends StatefulWidget {
   State<AnalyticsScreenTracker> createState() => _AnalyticsScreenTrackerState();
 }
 
-class _AnalyticsScreenTrackerState extends State<AnalyticsScreenTracker> {
-  late DateTime _startTime;
+class _AnalyticsScreenTrackerState extends State<AnalyticsScreenTracker>
+    with WidgetsBindingObserver {
+  final Stopwatch _stopwatch = Stopwatch();
 
   @override
   void initState() {
     super.initState();
-    _startTime = DateTime.now();
+    WidgetsBinding.instance.addObserver(this);
+    _stopwatch.start();
     widget.analyticsService.trackScreenView(
       widget.screenName,
       properties: widget.properties,
@@ -188,14 +194,29 @@ class _AnalyticsScreenTrackerState extends State<AnalyticsScreenTracker> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+        _stopwatch.stop();
+      case AppLifecycleState.resumed:
+        _stopwatch.start();
+      case AppLifecycleState.detached:
+        _stopwatch.stop();
+    }
+  }
+
+  @override
   void dispose() {
-    final duration = DateTime.now().difference(_startTime);
+    _stopwatch.stop();
+    WidgetsBinding.instance.removeObserver(this);
     widget.analyticsService.trackEvent(
       'screen_exit',
       screenName: widget.screenName,
       properties: {
-        'duration_seconds': duration.inSeconds,
-        'duration_ms': duration.inMilliseconds,
+        'duration_seconds': _stopwatch.elapsed.inSeconds,
+        'duration_ms': _stopwatch.elapsedMilliseconds,
         ...?widget.properties,
       },
     );
