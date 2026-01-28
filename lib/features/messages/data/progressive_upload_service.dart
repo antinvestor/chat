@@ -665,25 +665,29 @@ class ProgressiveUploadService {
   }
 
   // Database operations for resumable uploads
-
   /// Get upload ID for a local message (for resuming)
   Future<String?> _getUploadId(String localId) async {
-    final result = await _db
-        .customSelect(
-          'SELECT upload_id FROM upload_chunks WHERE local_id = ? LIMIT 1',
-          variables: [Variable.withString(localId)],
-        )
-        .getSingleOrNull();
-
-    return result?.read<String?>('upload_id');
+    final query = _db.select(_db.uploadChunks)
+      ..where((t) => t.localId.equals(localId))
+      ..limit(1);
+    final result = await query.getSingleOrNull();
+    return result?.uploadId;
   }
 
   /// Save upload ID for resumable upload
   Future<void> _saveUploadId(String localId, String uploadId) async {
-    await _db.customStatement(
-      'INSERT OR REPLACE INTO upload_chunks (local_id, upload_id, chunk_index, chunk_size, created_at) VALUES (?, ?, -1, 0, ?)',
-      [localId, uploadId, DateTime.now().millisecondsSinceEpoch],
-    );
+    await _db
+        .into(_db.uploadChunks)
+        .insert(
+          UploadChunksCompanion.insert(
+            localId: localId,
+            uploadId: Value(uploadId),
+            chunkIndex: const Value(-1),
+            chunkSize: const Value(0),
+            createdAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
   }
 
   /// Save chunk progress
@@ -692,35 +696,41 @@ class ProgressiveUploadService {
     int chunkIndex,
     int chunkSize,
   ) async {
-    await _db.customStatement(
-      'INSERT OR REPLACE INTO upload_chunks (local_id, upload_id, chunk_index, chunk_size, created_at) VALUES (?, (SELECT upload_id FROM upload_chunks WHERE local_id = ? LIMIT 1), ?, ?, ?)',
-      [
-        localId,
-        localId,
-        chunkIndex,
-        chunkSize,
-        DateTime.now().millisecondsSinceEpoch,
-      ],
-    );
+    // First retrieve the upload ID for this local message
+    final existingUploadId = await _getUploadId(localId);
+
+    await _db
+        .into(_db.uploadChunks)
+        .insert(
+          UploadChunksCompanion.insert(
+            localId: localId,
+            uploadId: existingUploadId != null
+                ? Value(existingUploadId)
+                : const Value.absent(),
+            chunkIndex: Value(chunkIndex),
+            chunkSize: Value(chunkSize),
+            createdAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
   }
 
   /// Get completed chunks for resumable upload
   Future<List<int>> _getUploadChunks(String localId) async {
-    final results = await _db
-        .customSelect(
-          'SELECT chunk_index FROM upload_chunks WHERE local_id = ? AND chunk_index >= 0 ORDER BY chunk_index',
-          variables: [Variable.withString(localId)],
-        )
-        .get();
-
-    return results.map((r) => r.read<int>('chunk_index')).toList();
+    final query = _db.select(_db.uploadChunks)
+      ..where(
+        (t) => t.localId.equals(localId) & t.chunkIndex.isBiggerOrEqualValue(0),
+      )
+      ..orderBy([(t) => OrderingTerm.asc(t.chunkIndex)]);
+    final results = await query.get();
+    return results.map((r) => r.chunkIndex).toList();
   }
 
   /// Clear chunk progress after successful upload
   Future<void> _clearUploadChunks(String localId) async {
-    await _db.customStatement('DELETE FROM upload_chunks WHERE local_id = ?', [
-      localId,
-    ]);
+    await (_db.delete(
+      _db.uploadChunks,
+    )..where((t) => t.localId.equals(localId))).go();
   }
 
   /// Dispose resources
