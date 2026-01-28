@@ -104,8 +104,8 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Hello world');
       // Wait for animation to complete
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       // Send button should appear when text is entered
       expect(find.byIcon(Icons.send), findsOneWidget);
@@ -202,8 +202,8 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Test message');
       // Wait for animation to complete
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       // Send button should be visible
       expect(find.byIcon(Icons.send), findsOneWidget);

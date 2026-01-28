@@ -352,9 +352,9 @@ void main() {
       );
 
       // Pump a few frames to verify animation runs
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       // Widget should still be present
       expect(find.byType(SkeletonLoader), findsOneWidget);
