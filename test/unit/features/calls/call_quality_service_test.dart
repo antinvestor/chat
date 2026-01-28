@@ -1,6 +1,6 @@
-import 'package:chat/features/calls/domain/call_stats.dart';
-import 'package:chat/features/calls/services/turn_credentials_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/calls/domain/call_stats.dart';
+import 'package:stawi/features/calls/services/turn_credentials_service.dart';
 
 void main() {
   group('TurnCredentials', () {

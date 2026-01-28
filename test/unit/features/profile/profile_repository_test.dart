@@ -1,5 +1,5 @@
-import 'package:chat/features/profile/data/profile_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/profile/data/profile_repository.dart';
 
 void main() {
   group('ProfileUpdateResult', () {

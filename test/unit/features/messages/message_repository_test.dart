@@ -1,8 +1,8 @@
-import 'package:chat/core/db/database.dart' hide RoomEvent;
-import 'package:chat/features/messages/data/message_repository.dart';
-import 'package:chat/features/messages/domain/room_event.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/db/database.dart' hide RoomEvent;
+import 'package:stawi/features/messages/data/message_repository.dart';
+import 'package:stawi/features/messages/domain/room_event.dart';
 
 import '../../../test_helpers/test_database.dart';
 

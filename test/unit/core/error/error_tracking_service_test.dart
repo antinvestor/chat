@@ -1,5 +1,5 @@
-import 'package:chat/core/error/error_tracking_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/error/error_tracking_service.dart';
 
 void main() {
   group('ErrorTrackingService', () {

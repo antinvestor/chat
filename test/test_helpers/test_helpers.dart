@@ -1,15 +1,15 @@
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     show TokenRefreshResult;
-import 'package:chat/core/db/database.dart' show Draft;
-import 'package:chat/features/auth/data/auth_repository.dart';
-import 'package:chat/features/auth/data/auth_service.dart';
-import 'package:chat/features/messages/data/draft_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openid_client/openid_client.dart' show TokenResponse;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:stawi/core/db/database.dart' show Draft;
+import 'package:stawi/features/auth/data/auth_repository.dart';
+import 'package:stawi/features/auth/data/auth_service.dart';
+import 'package:stawi/features/messages/data/draft_repository.dart';
 
 /// Mock AuthService for testing
 class MockAuthService extends AuthService {

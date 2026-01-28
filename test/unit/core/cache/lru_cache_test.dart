@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:chat/core/cache/lru_cache.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/cache/lru_cache.dart';
 
 void main() {
   group('LRUCache', () {

@@ -1,7 +1,7 @@
-import 'package:chat/core/db/database.dart' hide RoomEvent, Room;
-import 'package:chat/features/rooms/data/room_repository.dart';
-import 'package:chat/features/rooms/domain/room.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/db/database.dart' hide RoomEvent, Room;
+import 'package:stawi/features/rooms/data/room_repository.dart';
+import 'package:stawi/features/rooms/domain/room.dart';
 
 import '../../../test_helpers/test_database.dart';
 
