@@ -811,9 +811,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
     thumbnailService,
     (String roomId) async {
       // Use AuthContextService for atomic auth state and automatic sync
-      return authContextService.requireSubscriptionIdForRoom(
-        roomId,
-      );
+      return authContextService.requireSubscriptionIdForRoom(roomId);
     },
   );
 });

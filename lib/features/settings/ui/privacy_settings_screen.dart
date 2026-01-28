@@ -43,6 +43,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     await _settingsService.initialize();
 
     final screenshotService = ref.read(screenshotPreventionServiceProvider);
+    await screenshotService.initialize();
 
     if (mounted) {
       setState(() {

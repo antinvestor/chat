@@ -37,9 +37,10 @@ class ScreenshotPreventionService {
       if (_isEnabled) {
         await enableScreenshotPrevention();
       }
-      AppLogger.debug('Screenshot prevention initialized', data: {
-        'enabled': _isEnabled,
-      });
+      AppLogger.debug(
+        'Screenshot prevention initialized',
+        data: {'enabled': _isEnabled},
+      );
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to initialize screenshot prevention',
@@ -108,9 +109,9 @@ class ScreenshotPreventionService {
   /// Toggle screenshot prevention
   Future<bool> toggle() async {
     if (_isEnabled) {
-      return await disableScreenshotPrevention();
+      return disableScreenshotPrevention();
     } else {
-      return await enableScreenshotPrevention();
+      return enableScreenshotPrevention();
     }
   }
 
@@ -128,9 +129,11 @@ class ScreenshotPreventionService {
         }
         _isApplied = false;
         AppLogger.debug('Screenshot prevention temporarily disabled');
-      } catch (e) {
+      } catch (e, stackTrace) {
         AppLogger.warning(
           'Failed to temporarily disable screenshot prevention',
+          error: e,
+          stackTrace: stackTrace,
         );
       }
     }
@@ -149,9 +152,6 @@ class ScreenshotPreventionService {
 ScreenshotPreventionService screenshotPreventionService(Ref ref) {
   final keyManager = ref.watch(keyManagerProvider);
   final service = ScreenshotPreventionService(keyManager);
-
-  // Initialize asynchronously
-  Future.microtask(() => service.initialize());
 
   return service;
 }
@@ -174,12 +174,12 @@ class ScreenshotPreventionEnabled extends _$ScreenshotPreventionEnabled {
   Future<void> enable() async {
     final service = ref.read(screenshotPreventionServiceProvider);
     await service.enableScreenshotPrevention();
-    state = true;
+    state = service.isEnabled;
   }
 
   Future<void> disable() async {
     final service = ref.read(screenshotPreventionServiceProvider);
     await service.disableScreenshotPrevention();
-    state = false;
+    state = service.isEnabled;
   }
 }

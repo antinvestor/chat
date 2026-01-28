@@ -247,16 +247,15 @@ class MessageForwardingService {
 }
 
 // Provider
-final messageForwardingServiceProvider =
-    Provider<MessageForwardingService>((ref) {
+final messageForwardingServiceProvider = Provider<MessageForwardingService>((
+  ref,
+) {
   final messageRepo = ref.watch(messageRepositoryProvider);
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
   final authContextService = ref.watch(authContextServiceProvider);
 
   return MessageForwardingService(messageRepo, jobRepo, (String roomId) async {
     // Use AuthContextService for atomic auth state and automatic sync
-    return authContextService.requireSubscriptionIdForRoom(
-      roomId,
-    );
+    return authContextService.requireSubscriptionIdForRoom(roomId);
   });
 });
