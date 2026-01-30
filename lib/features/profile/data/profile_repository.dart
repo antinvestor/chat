@@ -235,7 +235,7 @@ class ProfileRepository {
         );
       }
 
-      final avatarUrl = uploadResult.fileUrl;
+      final avatarUrl = uploadResult.fileUrl!;
 
       // Update profile with new avatar URL
       final properties = common.Struct()

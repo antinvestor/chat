@@ -152,8 +152,7 @@ class CallHistoryRepository {
 
   /// Mark all calls as read
   Future<int> markAllAsRead() async {
-    return (_db.update(_db.callHistory)
-          ..where((t) => t.isRead.equals(false)))
+    return (_db.update(_db.callHistory)..where((t) => t.isRead.equals(false)))
         .write(const CallHistoryCompanion(isRead: Value(true)));
   }
 

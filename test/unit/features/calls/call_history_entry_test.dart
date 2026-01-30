@@ -1,4 +1,4 @@
-import 'package:chat/features/calls/domain/call_history_entry.dart';
+import 'package:stawi/features/calls/domain/call_history_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
