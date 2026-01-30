@@ -10,6 +10,7 @@ import '../data/contact_sync_repository.dart';
 import '../data/roster_repository.dart';
 import '../services/contact_service.dart';
 import '../services/contact_sync_orchestrator.dart';
+import 'contact_permission_view.dart';
 
 class ContactsScreen extends ConsumerStatefulWidget {
   const ContactsScreen({super.key});
@@ -442,27 +443,7 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     return profilesAsync.when(
       data: (profiles) {
         if (profiles.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text('No synced contacts yet'),
-                const SizedBox(height: 8),
-                const Text(
-                  'Tap sync to find contacts on this app',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _isSyncing ? null : _syncContacts,
-                  icon: const Icon(Icons.sync),
-                  label: const Text('Sync Now'),
-                ),
-              ],
-            ),
-          );
+          return ContactPermissionView(onPermissionGranted: _syncContacts);
         }
         return ListView.builder(
           itemCount: profiles.length,
@@ -690,20 +671,11 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     return contactsAsync.when(
       data: (contacts) {
         if (contacts.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.contacts, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('No contacts found'),
-                SizedBox(height: 8),
-                Text(
-                  'Grant permission to access contacts',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
+          return ContactPermissionView(
+            onPermissionGranted: () {
+              // Refresh device contacts after permission granted
+              ref.invalidate(contactsProvider);
+            },
           );
         }
         return ListView.builder(
