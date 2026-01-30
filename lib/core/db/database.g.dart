@@ -1577,10 +1577,7 @@ class Room extends DataClass implements Insertable<Room> {
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   final int? disappearingTimeout;
 
-  /// Mute notifications until this timestamp (milliseconds since epoch)
-  /// - null = not muted
-  /// - 0 = muted forever
-  /// - timestamp = muted until that time
+  /// Mute notifications until this epoch timestamp (null = not muted)
   final int? mutedUntil;
 
   /// Maximum number of members allowed in this room (null = default 256)

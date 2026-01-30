@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -46,7 +48,7 @@ class E2EEncryptionService {
   /// for compatibility with existing stored data. This will be removed in a future
   /// version once migration is complete.
   ///
-  /// TODO: Remove legacy state once all clients have migrated to Vodozemac sessions
+  // TODO(antinvestor): Remove legacy state once all clients have migrated to Vodozemac sessions
   @Deprecated('Legacy state - will be removed in future version')
   final Map<String, GroupSessionState> _groupSessions = {};
 
@@ -73,6 +75,7 @@ class E2EEncryptionService {
           await vod.init();
           AppLogger.debug('Vodozemac Rust library initialized');
         }
+        // ignore: avoid_catching_errors
       } on StateError {
         // Library not initialized yet - this is expected on first run
         AppLogger.debug('Initializing vodozemac Rust library');

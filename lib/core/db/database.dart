@@ -103,10 +103,7 @@ class Rooms extends Table {
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   IntColumn get disappearingTimeout => integer().nullable()();
 
-  /// Mute notifications until this timestamp (milliseconds since epoch)
-  /// - null = not muted
-  /// - 0 = muted forever
-  /// - timestamp = muted until that time
+  /// Mute notifications until this epoch timestamp (null = not muted)
   IntColumn get mutedUntil => integer().nullable()();
 
   /// Maximum number of members allowed in this room (null = default 256)
@@ -116,7 +113,6 @@ class Rooms extends Table {
   BoolColumn get memberLimitEnabled =>
       boolean().withDefault(const Constant(true))();
 
-  @override
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -836,8 +832,69 @@ class AppDatabase extends _$AppDatabase {
         ''');
       }
       if (from <= 9) {
-        // Migration from v9 to v10: Add mute notifications support
+        // Migration from v9 to v10: Add starred messages support
+        // Add mute notifications support
         await m.addColumn(rooms, rooms.mutedUntil);
+        await m.addColumn(roomEvents, roomEvents.starred);
+        await m.addColumn(roomEvents, roomEvents.starredAt);
+        // Create index for efficient starred message querying
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_room_events_starred
+          ON room_events(starred, starred_at)
+          WHERE starred = 1
+        ''');
+      }
+      if (from <= 10) {
+        // Migration from v10 to v11: Add user status and bio fields
+        await m.addColumn(profiles, profiles.status);
+        await m.addColumn(profiles, profiles.statusMessage);
+        await m.addColumn(profiles, profiles.statusUpdatedAt);
+        await m.addColumn(profiles, profiles.bio);
+      }
+      if (from <= 11) {
+        // Migration from v11 to v12: Add call history table
+        await m.createTable(callHistory);
+        // Create index for efficient querying by room
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_room_id
+          ON call_history(room_id)
+        ''');
+        // Create index for efficient querying by time
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_started_at
+          ON call_history(started_at DESC)
+        ''');
+        // Create index for filtering unread/deleted calls
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_status
+          ON call_history(is_read, is_deleted)
+          WHERE is_deleted = 0
+        ''');
+      }
+      if (from <= 12) {
+        // Migration from v12 to v13: Add group member limit columns
+        await m.addColumn(rooms, rooms.memberLimit);
+        await m.addColumn(rooms, rooms.memberLimitEnabled);
+      }
+      if (from <= 13) {
+        // Migration from v13 to v14: Add analytics events table
+        await m.createTable(analyticsEvents);
+        // Create index for querying unsynced events
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_analytics_events_synced
+          ON analytics_events(is_synced)
+          WHERE is_synced = 0
+        ''');
+        // Create index for querying by timestamp
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp
+          ON analytics_events(timestamp DESC)
+        ''');
+        // Create unique index on event_id
+        await customStatement('''
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_events_event_id
+          ON analytics_events(event_id)
+        ''');
       }
       if (from <= 10) {
         // Migration from v10 to v11: Add starred messages support

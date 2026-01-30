@@ -1675,7 +1675,7 @@ class SyncEngine with WidgetsBindingObserver {
       },
     );
 
-    // TODO: Add server API call when backend supports role changes
+    // TODO(antinvestor): Add server API call when backend supports role changes
     // Example: await _chatClient.updateRoomSubscription(request);
   }
 

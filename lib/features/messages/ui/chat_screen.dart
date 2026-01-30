@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:xid/xid.dart';
 
 import '../../../core/logging/app_logger.dart';
@@ -14,8 +15,11 @@ import '../../../core/sync/sync_engine.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../calls/services/call_manager.dart';
 import '../../calls/ui/call_screen.dart';
+import '../../notifications/notification_service.dart';
+import '../../notifications/ui/notification_permission_dialog.dart';
 import '../../rooms/data/room_providers.dart';
 import '../../rooms/data/room_subscription_service.dart';
+import '../../settings/data/settings_providers.dart';
 import '../data/message_providers.dart';
 import '../data/message_sending_service.dart';
 import '../data/typing_provider.dart';
@@ -62,7 +66,42 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         const AssetImage('assets/chat_pattern_black.webp'),
         context,
       );
+      // Check if we need to prompt for notification permission
+      _checkNotificationPermission();
     });
+  }
+
+  /// Check if notification permission dialog should be shown
+  ///
+  /// Shows the dialog only if:
+  /// 1. Notification permission is not already granted
+  /// 2. We haven't prompted the user before (to avoid annoying them)
+  Future<void> _checkNotificationPermission() async {
+    // Check if notification permission is already granted
+    final status = await Permission.notification.status;
+    if (status.isGranted) return;
+
+    // Check if we've already prompted the user
+    final settingsNotifier = ref.read(settingsProvider.notifier);
+    final hasPrompted = await settingsNotifier
+        .hasNotificationPermissionBeenPrompted();
+    if (hasPrompted) return;
+
+    // Show the permission dialog
+    if (!mounted) return;
+    final result = await NotificationPermissionDialog.show(context);
+
+    // Mark as prompted so we don't ask again
+    await settingsNotifier.markNotificationPermissionPrompted();
+
+    // Handle the result
+    if (result == NotificationPermissionResult.granted) {
+      // User granted permission - complete notification service initialization
+      final notificationService = ref.read(notificationServiceProvider);
+      await notificationService.initializeAfterPermissionGranted();
+    } else if (result == NotificationPermissionResult.openSettings) {
+      await openAppSettings();
+    }
   }
 
   void _onScroll() {

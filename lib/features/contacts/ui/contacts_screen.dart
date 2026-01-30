@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -8,7 +10,7 @@ import '../../../widgets/empty_state.dart';
 import '../data/contact_search_provider.dart';
 import '../data/contact_sync_repository.dart';
 import '../services/contact_service.dart';
-import 'contact_sync_sheet.dart';
+import 'contact_permission_view.dart';
 
 class ContactsScreen extends ConsumerStatefulWidget {
   const ContactsScreen({super.key});
@@ -45,18 +47,26 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     setState(() => _isSyncing = true);
 
     try {
-      final repo = await ref.read(rosterRepositoryProvider.future);
+      // Directly sync contacts without showing dialog
+      // (permission was already granted via ContactPermissionView)
+      final rosterRepo = await ref.read(rosterRepositoryProvider.future);
 
       if (!mounted) return;
 
-      await showContactSyncSheet(
-        context: context,
-        repository: repo,
-        onComplete: () {
-          ref.invalidate(syncedContactsProvider);
-          ref.invalidate(rosterEntriesProvider);
-        },
-      );
+      // Phase 1: Read device contacts and store locally
+      await rosterRepo.syncContactsLocal();
+
+      if (!mounted) return;
+
+      // Phase 2: Sync to server (links contacts with platform profiles)
+      await rosterRepo.syncContactsToServer();
+
+      if (mounted) {
+        // Refresh the contacts list
+        ref.invalidate(syncedContactsProvider);
+        ref.invalidate(rosterEntriesProvider);
+        ref.invalidate(profilesWithContactsProvider);
+      }
     } finally {
       if (mounted) setState(() => _isSyncing = false);
     }
@@ -184,23 +194,32 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
             onPressed: _showSortOptions,
             tooltip: 'Sort options',
           ),
-        // Sync button
+        // Sync button - only show when permission is granted
+        // Users without permission see ContactPermissionView in the content area
         if (!_isSearching)
-          if (_isSyncing)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.sync),
-              onPressed: _syncContacts,
-              tooltip: 'Sync contacts with server',
-            ),
+          ref
+                  .watch(contactPermissionGrantedProvider)
+                  .whenOrNull(
+                    data: (hasPermission) => hasPermission
+                        ? (_isSyncing
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: const Icon(Icons.sync),
+                                  onPressed: _syncContacts,
+                                  tooltip: 'Sync contacts with server',
+                                ))
+                        : null,
+                  ) ??
+              const SizedBox.shrink(),
       ],
       bottom: _isSearching
           ? null
@@ -433,39 +452,74 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   Widget _buildSyncedContactsList() {
-    final profilesAsync = ref.watch(profilesWithContactsProvider);
+    final permissionAsync = ref.watch(contactPermissionGrantedProvider);
 
-    return profilesAsync.when(
-      data: (profiles) {
-        if (profiles.isEmpty) {
-          return Center(
+    return permissionAsync.when(
+      data: (hasPermission) {
+        // Show permission view when permission not granted
+        if (!hasPermission) {
+          return ContactPermissionView(
+            onPermissionGranted: () {
+              // Invalidate permission provider to refresh state, then sync
+              ref.invalidate(contactPermissionGrantedProvider);
+              _syncContacts();
+            },
+          );
+        }
+
+        // Permission granted - show contacts
+        final profilesAsync = ref.watch(profilesWithContactsProvider);
+        return profilesAsync.when(
+          data: (profiles) {
+            if (profiles.isEmpty) {
+              // Permission granted but no contacts found
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No contacts found',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'None of your contacts are on the app yet',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return ListView.builder(
+              itemCount: profiles.length,
+              itemBuilder: (context, index) {
+                final profileWithContacts = profiles[index];
+                return _buildProfileCard(profileWithContacts);
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.people_outline, size: 64, color: Colors.grey),
+                Text('Error: $error'),
                 const SizedBox(height: 16),
-                const Text('No synced contacts yet'),
-                const SizedBox(height: 8),
-                const Text(
-                  'Tap sync to find contacts on this app',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _isSyncing ? null : _syncContacts,
-                  icon: const Icon(Icons.sync),
-                  label: const Text('Sync Now'),
+                FilledButton(
+                  onPressed: () => ref.invalidate(profilesWithContactsProvider),
+                  child: const Text('Retry'),
                 ),
               ],
             ),
-          );
-        }
-        return ListView.builder(
-          itemCount: profiles.length,
-          itemBuilder: (context, index) {
-            final profileWithContacts = profiles[index];
-            return _buildProfileCard(profileWithContacts);
-          },
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -473,10 +527,10 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Error: $error'),
+            Text('Error checking permission: $error'),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: () => ref.invalidate(profilesWithContactsProvider),
+              onPressed: () => ref.invalidate(contactPermissionGrantedProvider),
               child: const Text('Retry'),
             ),
           ],
@@ -681,57 +735,104 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   Widget _buildDeviceContactsList() {
-    final contactsAsync = ref.watch(contactsProvider);
+    final permissionAsync = ref.watch(contactPermissionGrantedProvider);
 
-    return contactsAsync.when(
-      data: (contacts) {
-        if (contacts.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.contacts, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('No contacts found'),
-                SizedBox(height: 8),
-                Text(
-                  'Grant permission to access contacts',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
+    return permissionAsync.when(
+      data: (hasPermission) {
+        // Show permission view when permission not granted
+        if (!hasPermission) {
+          return ContactPermissionView(
+            onPermissionGranted: () {
+              // Invalidate permission provider to refresh state, then sync
+              ref.invalidate(contactPermissionGrantedProvider);
+              ref.invalidate(contactsProvider);
+              _syncContacts();
+            },
           );
         }
-        return ListView.builder(
-          itemCount: contacts.length,
-          itemBuilder: (context, index) {
-            final contact = contacts[index];
-            return ListTile(
-              leading: (contact.photo != null)
-                  ? CircleAvatar(backgroundImage: MemoryImage(contact.photo!))
-                  : CircleAvatar(
-                      child: Text(
-                        contact.displayName.isNotEmpty
-                            ? contact.displayName[0]
-                            : '?',
+
+        // Permission granted - show device contacts
+        final contactsAsync = ref.watch(contactsProvider);
+        return contactsAsync.when(
+          data: (contacts) {
+            if (contacts.isEmpty) {
+              // Permission granted but no device contacts
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.contacts_outlined,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No device contacts',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your device has no contacts saved',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
-              title: Text(contact.displayName),
-              subtitle: contact.phones.isNotEmpty
-                  ? Text(contact.phones.first.number)
-                  : contact.emails.isNotEmpty
-                  ? Text(contact.emails.first.address)
-                  : null,
-              onTap: () {
-                // Show options to message, invite or view details
-                _showDeviceContactOptions(contact);
+                  ],
+                ),
+              );
+            }
+            return ListView.builder(
+              itemCount: contacts.length,
+              itemBuilder: (context, index) {
+                final contact = contacts[index];
+                return ListTile(
+                  leading: (contact.photo != null)
+                      ? CircleAvatar(
+                          backgroundImage: MemoryImage(contact.photo!),
+                        )
+                      : CircleAvatar(
+                          child: Text(
+                            contact.displayName.isNotEmpty
+                                ? contact.displayName[0]
+                                : '?',
+                          ),
+                        ),
+                  title: Text(contact.displayName),
+                  subtitle: contact.phones.isNotEmpty
+                      ? Text(contact.phones.first.number)
+                      : contact.emails.isNotEmpty
+                      ? Text(contact.emails.first.address)
+                      : null,
+                  onTap: () {
+                    // Show options to message, invite or view details
+                    _showDeviceContactOptions(contact);
+                  },
+                );
               },
             );
+            // End of inner contactsAsync.when
           },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) =>
+              Center(child: Text('Error loading contacts: $error')),
         );
       },
+      // Outer permissionAsync loading/error handlers
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error checking permission: $error'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => ref.invalidate(contactPermissionGrantedProvider),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

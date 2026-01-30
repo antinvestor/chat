@@ -65,6 +65,9 @@ class NotificationService {
   /// Initialize the notification service
   ///
   /// Should be called after Firebase.initializeApp() and user authentication.
+  /// This method does NOT request permission - it only sets up FCM if permission
+  /// is already granted. Use [initializeAfterPermissionGranted] after the user
+  /// grants permission via the NotificationPermissionDialog.
   Future<void> initialize() async {
     if (_initialized) {
       AppLogger.debug('NotificationService already initialized');
@@ -72,28 +75,22 @@ class NotificationService {
     }
 
     try {
-      // Request notification permissions
-      final settings = await _requestPermissions();
-      if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        AppLogger.warning('Notification permissions denied');
+      // Check current permission status without requesting
+      final settings = await _messaging.getNotificationSettings();
+
+      if (settings.authorizationStatus == AuthorizationStatus.denied ||
+          settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+        AppLogger.info(
+          'Notification permission not granted, deferring FCM setup',
+          data: {'status': settings.authorizationStatus.name},
+        );
+        // Setup message handlers anyway for when permission is granted later
+        _setupMessageHandlers();
         return;
       }
 
-      // Get and register FCM token
-      await _retrieveAndRegisterToken();
-
-      // Listen for token refresh
-      _messaging.onTokenRefresh.listen(_onTokenRefresh);
-
-      // Setup message handlers
-      _setupMessageHandlers();
-
-      // Initialize the grouping service for local notifications
-      _groupingService = _ref.read(notificationGroupingServiceProvider);
-      await _groupingService!.initialize();
-
-      _initialized = true;
-      AppLogger.info('NotificationService initialized successfully');
+      // Permission already granted - complete initialization
+      await _completeInitialization();
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to initialize NotificationService',
@@ -103,16 +100,43 @@ class NotificationService {
     }
   }
 
-  /// Request notification permissions from the user
-  Future<NotificationSettings> _requestPermissions() async {
-    final settings = await _messaging.requestPermission();
+  /// Complete initialization after user grants notification permission
+  ///
+  /// Call this after the user grants notification permission via the dialog.
+  Future<void> initializeAfterPermissionGranted() async {
+    if (_initialized) {
+      AppLogger.debug('NotificationService already initialized');
+      return;
+    }
 
-    AppLogger.info(
-      'Notification permission status',
-      data: {'status': settings.authorizationStatus.name},
-    );
+    try {
+      await _completeInitialization();
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to complete NotificationService initialization',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
-    return settings;
+  /// Internal method to complete FCM initialization
+  Future<void> _completeInitialization() async {
+    // Get and register FCM token
+    await _retrieveAndRegisterToken();
+
+    // Listen for token refresh
+    _messaging.onTokenRefresh.listen(_onTokenRefresh);
+
+    // Setup message handlers (if not already setup)
+    _setupMessageHandlers();
+
+    // Initialize the grouping service for local notifications
+    _groupingService = _ref.read(notificationGroupingServiceProvider);
+    await _groupingService!.initialize();
+
+    _initialized = true;
+    AppLogger.info('NotificationService initialized successfully');
   }
 
   /// Retrieve FCM token and register it with the backend

@@ -115,9 +115,6 @@ class MockProfileRepository implements ProfileRepository {
     return ProfileUpdateResult.success();
   }
 
-  UserStatus _currentStatus = UserStatus.offline;
-  String? _statusMessage;
-
   @override
   Future<ProfileUpdateResult> updateStatus(
     UserStatus status, {
@@ -126,24 +123,21 @@ class MockProfileRepository implements ProfileRepository {
     if (shouldFail) {
       return ProfileUpdateResult.failure(failureMessage ?? 'Failed');
     }
-    _currentStatus = status;
-    _statusMessage = statusMessage;
     return ProfileUpdateResult.success();
   }
 
   @override
   Future<UserStatus> getCurrentStatus() async {
-    return _currentStatus;
+    return UserStatus.offline;
   }
 
   @override
   Future<String?> getCurrentStatusMessage() async {
-    return _statusMessage;
+    return null;
   }
 
   @override
   Future<ProfileUpdateResult> clearStatusMessage() async {
-    _statusMessage = null;
     return ProfileUpdateResult.success();
   }
 }

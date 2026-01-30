@@ -131,7 +131,7 @@ class BadgeService {
 
   /// Handle unread count changes
   Future<void> _onUnreadCountChanged(int totalUnread) async {
-    // TODO: When muted chats feature is implemented, filter based on setting:
+    // TODO(antinvestor): When muted chats feature is implemented, filter based on setting:
     // final includeMutedChats = _settingsService.getBool(
     //   kBadgeIncludeMutedChats,
     //   defaultValue: kBadgeIncludeMutedChatsDefault,

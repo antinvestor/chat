@@ -68,14 +68,15 @@ class ChatApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
 
     return SplashScreen(
-      child: _LockScreenWrapper(
-        child: MaterialApp.router(
-          title: 'AntInvestor Chat',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          routerConfig: router,
-          debugShowCheckedModeBanner: false,
-        ),
+      child: MaterialApp.router(
+        title: 'AntInvestor Chat',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        routerConfig: router,
+        debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          return _LockScreenWrapper(child: child ?? const SizedBox.shrink());
+        },
       ),
     );
   }

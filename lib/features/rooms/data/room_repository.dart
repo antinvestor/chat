@@ -98,9 +98,7 @@ class RoomRepository {
               room.metadata != null ? jsonEncode(room.metadata) : null,
             ),
             disappearingTimeout: Value(room.disappearingTimeout),
-
             mutedUntil: Value(room.mutedUntil),
-
             memberLimit: Value(room.memberLimit),
             memberLimitEnabled: Value(room.memberLimitEnabled),
           ),
@@ -210,9 +208,7 @@ class RoomRepository {
     unreadCount: row.unreadCount,
     metadata: row.metadata != null ? jsonDecode(row.metadata!) : null,
     disappearingTimeout: row.disappearingTimeout,
-
     mutedUntil: row.mutedUntil,
-
     memberLimit: row.memberLimit,
     memberLimitEnabled: row.memberLimitEnabled,
   );

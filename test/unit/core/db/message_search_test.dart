@@ -259,8 +259,7 @@ void main() {
       });
 
       test('schema version is 14', () {
-        // Version 14 includes all features: mute, starred, profile status,
-        // call history, member limits, and analytics
+        // Version 14 is the current schema version
         expect(db.schemaVersion, equals(14));
       });
     });

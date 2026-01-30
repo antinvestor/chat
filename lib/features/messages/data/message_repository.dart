@@ -354,16 +354,18 @@ class MessageRepository {
   ///
   /// Returns the new starred state of the message.
   Future<bool> toggleStar(String messageId) async {
-    final event = await getEventById(messageId);
-    if (event == null) return false;
+    return _database.transaction(() async {
+      final event = await getEventById(messageId);
+      if (event == null) return false;
 
-    if (event.starred) {
-      await unstarMessage(messageId);
-      return false;
-    } else {
-      await starMessage(messageId);
-      return true;
-    }
+      if (event.starred) {
+        await unstarMessage(messageId);
+        return false;
+      } else {
+        await starMessage(messageId);
+        return true;
+      }
+    });
   }
 
   /// Get all starred messages across all rooms
@@ -407,10 +409,13 @@ class MessageRepository {
 
   /// Get the count of starred messages
   Future<int> getStarredMessagesCount() async {
-    final query = _database.select(_database.roomEvents)
-      ..where((t) => t.starred.equals(true));
-    final results = await query.get();
-    return results.length;
+    final count =
+        await (_database.selectOnly(_database.roomEvents)
+              ..addColumns([countAll()])
+              ..where(_database.roomEvents.starred.equals(true)))
+            .map((row) => row.read(countAll()))
+            .getSingle();
+    return count ?? 0;
   }
 
   /// Clear all starred messages

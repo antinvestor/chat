@@ -61,6 +61,10 @@ class SettingsKeys {
   // Media Cache
   static const mediaCacheSizeBytes = 'media_cache_size_bytes';
   static const perRoomCacheEnabled = 'per_room_cache_enabled';
+
+  // Contact Sync
+  static const contactSyncInitialized = 'contact_sync_initialized';
+  static const contactPermissionDenied = 'contact_permission_denied';
 }
 
 /// Default setting values
