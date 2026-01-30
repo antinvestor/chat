@@ -189,8 +189,9 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
             onPressed: _showSortOptions,
             tooltip: 'Sort options',
           ),
-        // Sync button
-        if (!_isSearching)
+        // Sync button - only show after initial sync is complete
+        // First-time users see ContactPermissionView in the content area instead
+        if (!_isSearching && ref.watch(contactSyncInitializedProvider))
           if (_isSyncing)
             const Padding(
               padding: EdgeInsets.all(12),
@@ -438,12 +439,42 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   Widget _buildSyncedContactsList() {
+    final isInitialized = ref.watch(contactSyncInitializedProvider);
     final profilesAsync = ref.watch(profilesWithContactsProvider);
+
+    // Show permission view for first-time users who haven't synced contacts yet
+    if (!isInitialized) {
+      return ContactPermissionView(onPermissionGranted: _syncContacts);
+    }
 
     return profilesAsync.when(
       data: (profiles) {
         if (profiles.isEmpty) {
-          return ContactPermissionView(onPermissionGranted: _syncContacts);
+          // Already synced but no contacts found - show simple empty state
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.people_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No contacts found',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'None of your contacts are on the app yet',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          );
         }
         return ListView.builder(
           itemCount: profiles.length,
@@ -666,16 +697,42 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   Widget _buildDeviceContactsList() {
+    final isInitialized = ref.watch(contactSyncInitializedProvider);
+
+    // Show permission view for first-time users
+    if (!isInitialized) {
+      return ContactPermissionView(onPermissionGranted: _syncContacts);
+    }
+
     final contactsAsync = ref.watch(contactsProvider);
 
     return contactsAsync.when(
       data: (contacts) {
         if (contacts.isEmpty) {
-          return ContactPermissionView(
-            onPermissionGranted: () {
-              // Refresh device contacts after permission granted
-              ref.invalidate(contactsProvider);
-            },
+          // Already synced but no device contacts (rare case)
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.contacts_outlined,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No device contacts',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your device has no contacts saved',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           );
         }
         return ListView.builder(
