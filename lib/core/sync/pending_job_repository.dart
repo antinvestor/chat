@@ -562,6 +562,32 @@ class PendingJobRepository {
     return true;
   }
 
+  /// Safely decode job payload with error handling for data corruption
+  Map<String, dynamic> _decodePayload(String? payload) {
+    if (payload == null || payload.isEmpty) {
+      return {};
+    }
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      AppLogger.warning(
+        'Invalid job payload format: not a map',
+        data: {'payload': payload},
+      );
+      return {};
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to decode job payload',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'payload': payload},
+      );
+      return {};
+    }
+  }
+
   /// Convert database row to domain model
   domain.PendingJob _rowToJob(PendingJob row) => domain.PendingJob(
     id: row.id,
@@ -569,9 +595,7 @@ class PendingJobRepository {
       (e) => e.name == row.type,
       orElse: () => domain.JobType.custom,
     ),
-    payload: row.payload != null
-        ? jsonDecode(row.payload!) as Map<String, dynamic>
-        : {},
+    payload: _decodePayload(row.payload),
     createdAt: row.createdAt ?? 0,
     retryCount: row.retryCount,
     status: row.status,
