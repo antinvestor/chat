@@ -258,9 +258,9 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 14', () {
-        // Version 14 is the current schema version
-        expect(db.schemaVersion, equals(14));
+      test('schema version is 15', () {
+        // Version 15 is the current schema version (added priority and lastError to PendingJobs)
+        expect(db.schemaVersion, equals(15));
       });
     });
 

@@ -327,6 +327,14 @@ class PendingJobs extends Table {
   /// Earliest time this job can be retried (for exponential backoff)
   /// Null means job can be processed immediately
   IntColumn get nextRetryAt => integer().nullable()();
+
+  /// Job priority level (0=critical, 1=high, 2=normal, 3=low)
+  /// Lower values are processed first
+  IntColumn get priority => integer().withDefault(const Constant(2))();
+
+  /// JSON-encoded last error information for debugging
+  /// Contains error message, code, and timestamp
+  TextColumn get lastError => text().nullable()();
 }
 
 /// Financial transactions within group savings (chama) rooms
@@ -733,7 +741,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -894,6 +902,17 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('''
           CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_events_event_id
           ON analytics_events(event_id)
+        ''');
+      }
+      if (from <= 14) {
+        // Migration from v14 to v15: Add job queue priority and error tracking
+        await m.addColumn(pendingJobs, pendingJobs.priority);
+        await m.addColumn(pendingJobs, pendingJobs.lastError);
+        // Create index for efficient priority-based job retrieval
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_pending_jobs_priority
+          ON pending_jobs(priority ASC, created_at ASC)
+          WHERE status = 'pending'
         ''');
       }
     },
