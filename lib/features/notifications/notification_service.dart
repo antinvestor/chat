@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/networking/client.dart';
 import '../../core/storage/key_manager.dart';
+import 'mute_service.dart';
 import 'notification_grouping_service.dart';
 
 /// Background message handler - must be top-level function
@@ -216,6 +217,9 @@ class NotificationService {
   }
 
   /// Show a grouped local notification for the received message
+  ///
+  /// Checks if the room is muted before showing the notification.
+  /// If the room is muted, the notification is silently suppressed.
   Future<void> _showGroupedNotification(RemoteMessage message) async {
     if (_groupingService == null || !_groupingService!.isInitialized) {
       AppLogger.warning(
@@ -237,6 +241,18 @@ class NotificationService {
 
     if (roomId == null) {
       AppLogger.warning('No roomId in message data, cannot group notification');
+      return;
+    }
+
+    // Check if the room is muted
+    final muteService = _ref.read(muteServiceProvider);
+    final isMuted = await muteService.isRoomMuted(roomId);
+
+    if (isMuted) {
+      AppLogger.debug(
+        'Notification suppressed - room is muted',
+        data: {'roomId': roomId, 'roomName': roomName},
+      );
       return;
     }
 

@@ -35,11 +35,12 @@ class RoomRepository {
   Future<List<RoomWithLastMessage>> getRoomsWithLastMessage() async {
     final query = _database.customSelect(
       '''
-      SELECT 
+      SELECT
         r.id,
         r.name,
         r.type,
         r.unread_count,
+        r.muted_until,
         e.content as last_message_content,
         e.created_at as last_message_timestamp,
         e.sender_id as last_message_sender_id
@@ -68,6 +69,7 @@ class RoomRepository {
         lastMessageText: lastMessageText,
         lastMessageTimestamp: row.read<int?>('last_message_timestamp'),
         lastMessageSenderId: row.read<String?>('last_message_sender_id'),
+        mutedUntil: row.read<int?>('muted_until'),
       );
     }).toList();
   }
@@ -96,6 +98,7 @@ class RoomRepository {
               room.metadata != null ? jsonEncode(room.metadata) : null,
             ),
             disappearingTimeout: Value(room.disappearingTimeout),
+            mutedUntil: Value(room.mutedUntil),
           ),
         );
   }
@@ -142,6 +145,35 @@ class RoomRepository {
         .write(RoomsCompanion(metadata: Value(jsonEncode(metadata))));
   }
 
+  /// Update the muted_until timestamp for a room
+  ///
+  /// - null = not muted
+  /// - 0 = muted forever
+  /// - timestamp = muted until that time (milliseconds since epoch)
+  Future<void> updateMutedUntil(String roomId, int? mutedUntil) async {
+    await (_database.update(_database.rooms)..where((t) => t.id.equals(roomId)))
+        .write(RoomsCompanion(mutedUntil: Value(mutedUntil)));
+  }
+
+  /// Check if a room is currently muted
+  ///
+  /// Returns true if:
+  /// - mutedUntil is 0 (muted forever)
+  /// - mutedUntil is a future timestamp
+  Future<bool> isRoomMuted(String roomId) async {
+    final room = await getRoomById(roomId);
+    if (room == null) return false;
+    return room.isMuted;
+  }
+
+  /// Get the muted_until value for a room
+  Future<int?> getMutedUntil(String roomId) async {
+    final query = _database.select(_database.rooms)
+      ..where((t) => t.id.equals(roomId));
+    final result = await query.getSingleOrNull();
+    return result?.mutedUntil;
+  }
+
   domain.Room _toRoom(Room row) => domain.Room(
     id: row.id,
     name: row.name ?? '',
@@ -151,5 +183,6 @@ class RoomRepository {
     unreadCount: row.unreadCount,
     metadata: row.metadata != null ? jsonDecode(row.metadata!) : null,
     disappearingTimeout: row.disappearingTimeout,
+    mutedUntil: row.mutedUntil,
   );
 }

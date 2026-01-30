@@ -91,6 +91,12 @@ class Rooms extends Table {
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   IntColumn get disappearingTimeout => integer().nullable()();
 
+  /// Mute notifications until this timestamp (milliseconds since epoch)
+  /// - null = not muted
+  /// - 0 = muted forever
+  /// - timestamp = muted until that time
+  IntColumn get mutedUntil => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -604,7 +610,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -701,6 +707,10 @@ class AppDatabase extends _$AppDatabase {
           ON room_events(expires_at)
           WHERE expires_at IS NOT NULL
         ''');
+      }
+      if (from <= 9) {
+        // Migration from v9 to v10: Add mute notifications support
+        await m.addColumn(rooms, rooms.mutedUntil);
       }
     },
     beforeOpen: (details) async {
