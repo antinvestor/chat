@@ -239,7 +239,7 @@ class _ContactPermissionViewState extends State<ContactPermissionView> {
                             : Icons.sync_rounded,
                       ),
                 label: Text(
-                  _isPermanentlyDenied ? 'Open Settings' : 'Sync Contacts',
+                  _isPermanentlyDenied ? 'Open Settings' : 'Continue',
                 ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
