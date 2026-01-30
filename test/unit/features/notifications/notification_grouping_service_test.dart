@@ -1,7 +1,7 @@
 import 'dart:io' show Platform;
 
-import 'package:chat/features/notifications/notification_grouping_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/notifications/notification_grouping_service.dart';
 
 void main() {
   late NotificationGroupingService groupingService;

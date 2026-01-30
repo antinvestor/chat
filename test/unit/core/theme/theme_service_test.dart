@@ -1,7 +1,7 @@
-import 'package:chat/core/theme/app_theme.dart';
-import 'package:chat/core/theme/theme_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/theme/app_theme.dart';
+import 'package:stawi/core/theme/theme_service.dart';
 
 void main() {
   group('AppThemeMode', () {

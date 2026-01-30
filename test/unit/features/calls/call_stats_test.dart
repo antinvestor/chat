@@ -1,5 +1,5 @@
-import 'package:chat/features/calls/domain/call_stats.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/calls/domain/call_stats.dart';
 
 void main() {
   group('ConnectionQuality', () {

@@ -1,8 +1,8 @@
-import 'package:chat/features/messages/ui/widgets/voice_message_player.dart';
-import 'package:chat/features/messages/ui/widgets/voice_record_button.dart';
-import 'package:chat/features/messages/ui/widgets/waveform_visualizer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/messages/ui/widgets/voice_message_player.dart';
+import 'package:stawi/features/messages/ui/widgets/voice_record_button.dart';
+import 'package:stawi/features/messages/ui/widgets/waveform_visualizer.dart';
 
 import '../test_helpers/test_helpers.dart';
 

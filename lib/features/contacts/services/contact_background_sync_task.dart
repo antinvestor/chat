@@ -12,7 +12,6 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/api_config.dart';
 import '../../../core/settings/settings_service.dart';
 import '../data/roster_repository.dart';
-import 'contact_sync_orchestrator.dart';
 import 'contact_sync_service.dart';
 
 /// Unique task name for contact sync background task

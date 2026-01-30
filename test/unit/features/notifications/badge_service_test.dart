@@ -1,10 +1,10 @@
 import 'dart:io' show Platform;
 
-import 'package:chat/core/db/database.dart';
-import 'package:chat/core/settings/settings_service.dart';
-import 'package:chat/features/notifications/badge_service.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/db/database.dart';
+import 'package:stawi/core/settings/settings_service.dart';
+import 'package:stawi/features/notifications/badge_service.dart';
 
 import '../../../test_helpers/test_database.dart';
 

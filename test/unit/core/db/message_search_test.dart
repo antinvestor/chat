@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:chat/core/db/database.dart';
 import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/db/database.dart';
 
 void main() {
   group('Message Search (FTS5)', () {
