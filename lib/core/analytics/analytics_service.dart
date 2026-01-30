@@ -383,11 +383,10 @@ class AnalyticsService {
         error: e,
         stackTrace: stackTrace,
       );
+      return -1; // Return error indicator
     });
 
     _pendingEventCount++;
-
-    // Update session event count
     if (_currentSession != null) {
       _currentSession = _currentSession!.copyWith(
         eventCount: _currentSession!.eventCount + 1,

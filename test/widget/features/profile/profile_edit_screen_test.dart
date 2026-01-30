@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stawi/core/db/database.dart';
 import 'package:stawi/features/auth/data/user_info_provider.dart';
 import 'package:stawi/features/profile/data/profile_repository.dart';
+import 'package:stawi/features/profile/domain/user_status.dart';
 import 'package:stawi/features/profile/ui/profile_edit_screen.dart';
 
 /// Mock ProfileRepository for testing
@@ -111,6 +112,38 @@ class MockProfileRepository implements ProfileRepository {
     if (shouldFail) {
       return ProfileUpdateResult.failure(failureMessage ?? 'Failed');
     }
+    return ProfileUpdateResult.success();
+  }
+
+  UserStatus _currentStatus = UserStatus.offline;
+  String? _statusMessage;
+
+  @override
+  Future<ProfileUpdateResult> updateStatus(
+    UserStatus status, {
+    String? statusMessage,
+  }) async {
+    if (shouldFail) {
+      return ProfileUpdateResult.failure(failureMessage ?? 'Failed');
+    }
+    _currentStatus = status;
+    _statusMessage = statusMessage;
+    return ProfileUpdateResult.success();
+  }
+
+  @override
+  Future<UserStatus> getCurrentStatus() async {
+    return _currentStatus;
+  }
+
+  @override
+  Future<String?> getCurrentStatusMessage() async {
+    return _statusMessage;
+  }
+
+  @override
+  Future<ProfileUpdateResult> clearStatusMessage() async {
+    _statusMessage = null;
     return ProfileUpdateResult.success();
   }
 }

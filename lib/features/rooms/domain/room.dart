@@ -72,7 +72,6 @@ const int defaultMemberLimit = 256;
 
 @freezed
 abstract class Room with _$Room {
-  const Room._();
 
   const factory Room({
     required String id,

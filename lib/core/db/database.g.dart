@@ -1344,6 +1344,17 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _mutedUntilMeta = const VerificationMeta(
+    'mutedUntil',
+  );
+  @override
+  late final GeneratedColumn<int> mutedUntil = GeneratedColumn<int>(
+    'muted_until',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _memberLimitMeta = const VerificationMeta(
     'memberLimit',
   );
@@ -1379,6 +1390,7 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     unreadCount,
     metadata,
     disappearingTimeout,
+    mutedUntil,
     memberLimit,
     memberLimitEnabled,
   ];
@@ -1453,6 +1465,12 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         ),
       );
     }
+    if (data.containsKey('muted_until')) {
+      context.handle(
+        _mutedUntilMeta,
+        mutedUntil.isAcceptableOrUnknown(data['muted_until']!, _mutedUntilMeta),
+      );
+    }
     if (data.containsKey('member_limit')) {
       context.handle(
         _memberLimitMeta,
@@ -1512,6 +1530,10 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         DriftSqlType.int,
         data['${effectivePrefix}disappearing_timeout'],
       ),
+      mutedUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}muted_until'],
+      ),
       memberLimit: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}member_limit'],
@@ -1555,6 +1577,12 @@ class Room extends DataClass implements Insertable<Room> {
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   final int? disappearingTimeout;
 
+  /// Mute notifications until this timestamp (milliseconds since epoch)
+  /// - null = not muted
+  /// - 0 = muted forever
+  /// - timestamp = muted until that time
+  final int? mutedUntil;
+
   /// Maximum number of members allowed in this room (null = default 256)
   final int? memberLimit;
 
@@ -1569,6 +1597,7 @@ class Room extends DataClass implements Insertable<Room> {
     required this.unreadCount,
     this.metadata,
     this.disappearingTimeout,
+    this.mutedUntil,
     this.memberLimit,
     required this.memberLimitEnabled,
   });
@@ -1595,6 +1624,9 @@ class Room extends DataClass implements Insertable<Room> {
     if (!nullToAbsent || disappearingTimeout != null) {
       map['disappearing_timeout'] = Variable<int>(disappearingTimeout);
     }
+    if (!nullToAbsent || mutedUntil != null) {
+      map['muted_until'] = Variable<int>(mutedUntil);
+    }
     if (!nullToAbsent || memberLimit != null) {
       map['member_limit'] = Variable<int>(memberLimit);
     }
@@ -1620,6 +1652,9 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: disappearingTimeout == null && nullToAbsent
           ? const Value.absent()
           : Value(disappearingTimeout),
+      mutedUntil: mutedUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mutedUntil),
       memberLimit: memberLimit == null && nullToAbsent
           ? const Value.absent()
           : Value(memberLimit),
@@ -1643,6 +1678,7 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: serializer.fromJson<int?>(
         json['disappearingTimeout'],
       ),
+      mutedUntil: serializer.fromJson<int?>(json['mutedUntil']),
       memberLimit: serializer.fromJson<int?>(json['memberLimit']),
       memberLimitEnabled: serializer.fromJson<bool>(json['memberLimitEnabled']),
     );
@@ -1659,6 +1695,7 @@ class Room extends DataClass implements Insertable<Room> {
       'unreadCount': serializer.toJson<int>(unreadCount),
       'metadata': serializer.toJson<String?>(metadata),
       'disappearingTimeout': serializer.toJson<int?>(disappearingTimeout),
+      'mutedUntil': serializer.toJson<int?>(mutedUntil),
       'memberLimit': serializer.toJson<int?>(memberLimit),
       'memberLimitEnabled': serializer.toJson<bool>(memberLimitEnabled),
     };
@@ -1673,6 +1710,7 @@ class Room extends DataClass implements Insertable<Room> {
     int? unreadCount,
     Value<String?> metadata = const Value.absent(),
     Value<int?> disappearingTimeout = const Value.absent(),
+    Value<int?> mutedUntil = const Value.absent(),
     Value<int?> memberLimit = const Value.absent(),
     bool? memberLimitEnabled,
   }) => Room(
@@ -1688,6 +1726,7 @@ class Room extends DataClass implements Insertable<Room> {
     disappearingTimeout: disappearingTimeout.present
         ? disappearingTimeout.value
         : this.disappearingTimeout,
+    mutedUntil: mutedUntil.present ? mutedUntil.value : this.mutedUntil,
     memberLimit: memberLimit.present ? memberLimit.value : this.memberLimit,
     memberLimitEnabled: memberLimitEnabled ?? this.memberLimitEnabled,
   );
@@ -1709,6 +1748,9 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: data.disappearingTimeout.present
           ? data.disappearingTimeout.value
           : this.disappearingTimeout,
+      mutedUntil: data.mutedUntil.present
+          ? data.mutedUntil.value
+          : this.mutedUntil,
       memberLimit: data.memberLimit.present
           ? data.memberLimit.value
           : this.memberLimit,
@@ -1729,6 +1771,7 @@ class Room extends DataClass implements Insertable<Room> {
           ..write('unreadCount: $unreadCount, ')
           ..write('metadata: $metadata, ')
           ..write('disappearingTimeout: $disappearingTimeout, ')
+          ..write('mutedUntil: $mutedUntil, ')
           ..write('memberLimit: $memberLimit, ')
           ..write('memberLimitEnabled: $memberLimitEnabled')
           ..write(')'))
@@ -1745,6 +1788,7 @@ class Room extends DataClass implements Insertable<Room> {
     unreadCount,
     metadata,
     disappearingTimeout,
+    mutedUntil,
     memberLimit,
     memberLimitEnabled,
   );
@@ -1760,6 +1804,7 @@ class Room extends DataClass implements Insertable<Room> {
           other.unreadCount == this.unreadCount &&
           other.metadata == this.metadata &&
           other.disappearingTimeout == this.disappearingTimeout &&
+          other.mutedUntil == this.mutedUntil &&
           other.memberLimit == this.memberLimit &&
           other.memberLimitEnabled == this.memberLimitEnabled);
 }
@@ -1773,6 +1818,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
   final Value<int> unreadCount;
   final Value<String?> metadata;
   final Value<int?> disappearingTimeout;
+  final Value<int?> mutedUntil;
   final Value<int?> memberLimit;
   final Value<bool> memberLimitEnabled;
   final Value<int> rowid;
@@ -1785,6 +1831,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.unreadCount = const Value.absent(),
     this.metadata = const Value.absent(),
     this.disappearingTimeout = const Value.absent(),
+    this.mutedUntil = const Value.absent(),
     this.memberLimit = const Value.absent(),
     this.memberLimitEnabled = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1798,6 +1845,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.unreadCount = const Value.absent(),
     this.metadata = const Value.absent(),
     this.disappearingTimeout = const Value.absent(),
+    this.mutedUntil = const Value.absent(),
     this.memberLimit = const Value.absent(),
     this.memberLimitEnabled = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1811,6 +1859,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Expression<int>? unreadCount,
     Expression<String>? metadata,
     Expression<int>? disappearingTimeout,
+    Expression<int>? mutedUntil,
     Expression<int>? memberLimit,
     Expression<bool>? memberLimitEnabled,
     Expression<int>? rowid,
@@ -1825,6 +1874,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       if (metadata != null) 'metadata': metadata,
       if (disappearingTimeout != null)
         'disappearing_timeout': disappearingTimeout,
+      if (mutedUntil != null) 'muted_until': mutedUntil,
       if (memberLimit != null) 'member_limit': memberLimit,
       if (memberLimitEnabled != null)
         'member_limit_enabled': memberLimitEnabled,
@@ -1841,6 +1891,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Value<int>? unreadCount,
     Value<String?>? metadata,
     Value<int?>? disappearingTimeout,
+    Value<int?>? mutedUntil,
     Value<int?>? memberLimit,
     Value<bool>? memberLimitEnabled,
     Value<int>? rowid,
@@ -1854,6 +1905,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       unreadCount: unreadCount ?? this.unreadCount,
       metadata: metadata ?? this.metadata,
       disappearingTimeout: disappearingTimeout ?? this.disappearingTimeout,
+      mutedUntil: mutedUntil ?? this.mutedUntil,
       memberLimit: memberLimit ?? this.memberLimit,
       memberLimitEnabled: memberLimitEnabled ?? this.memberLimitEnabled,
       rowid: rowid ?? this.rowid,
@@ -1887,6 +1939,9 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     if (disappearingTimeout.present) {
       map['disappearing_timeout'] = Variable<int>(disappearingTimeout.value);
     }
+    if (mutedUntil.present) {
+      map['muted_until'] = Variable<int>(mutedUntil.value);
+    }
     if (memberLimit.present) {
       map['member_limit'] = Variable<int>(memberLimit.value);
     }
@@ -1910,6 +1965,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
           ..write('unreadCount: $unreadCount, ')
           ..write('metadata: $metadata, ')
           ..write('disappearingTimeout: $disappearingTimeout, ')
+          ..write('mutedUntil: $mutedUntil, ')
           ..write('memberLimit: $memberLimit, ')
           ..write('memberLimitEnabled: $memberLimitEnabled, ')
           ..write('rowid: $rowid')
@@ -10217,6 +10273,7 @@ typedef $$RoomsTableCreateCompanionBuilder =
       Value<int> unreadCount,
       Value<String?> metadata,
       Value<int?> disappearingTimeout,
+      Value<int?> mutedUntil,
       Value<int?> memberLimit,
       Value<bool> memberLimitEnabled,
       Value<int> rowid,
@@ -10231,6 +10288,7 @@ typedef $$RoomsTableUpdateCompanionBuilder =
       Value<int> unreadCount,
       Value<String?> metadata,
       Value<int?> disappearingTimeout,
+      Value<int?> mutedUntil,
       Value<int?> memberLimit,
       Value<bool> memberLimitEnabled,
       Value<int> rowid,
@@ -10358,6 +10416,11 @@ class $$RoomsTableFilterComposer extends Composer<_$AppDatabase, $RoomsTable> {
 
   ColumnFilters<int> get disappearingTimeout => $composableBuilder(
     column: $table.disappearingTimeout,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10521,6 +10584,11 @@ class $$RoomsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get memberLimit => $composableBuilder(
     column: $table.memberLimit,
     builder: (column) => ColumnOrderings(column),
@@ -10570,6 +10638,11 @@ class $$RoomsTableAnnotationComposer
 
   GeneratedColumn<int> get disappearingTimeout => $composableBuilder(
     column: $table.disappearingTimeout,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
     builder: (column) => column,
   );
 
@@ -10725,6 +10798,7 @@ class $$RoomsTableTableManager
                 Value<int> unreadCount = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
                 Value<int?> disappearingTimeout = const Value.absent(),
+                Value<int?> mutedUntil = const Value.absent(),
                 Value<int?> memberLimit = const Value.absent(),
                 Value<bool> memberLimitEnabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -10737,6 +10811,7 @@ class $$RoomsTableTableManager
                 unreadCount: unreadCount,
                 metadata: metadata,
                 disappearingTimeout: disappearingTimeout,
+                mutedUntil: mutedUntil,
                 memberLimit: memberLimit,
                 memberLimitEnabled: memberLimitEnabled,
                 rowid: rowid,
@@ -10751,6 +10826,7 @@ class $$RoomsTableTableManager
                 Value<int> unreadCount = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
                 Value<int?> disappearingTimeout = const Value.absent(),
+                Value<int?> mutedUntil = const Value.absent(),
                 Value<int?> memberLimit = const Value.absent(),
                 Value<bool> memberLimitEnabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -10763,6 +10839,7 @@ class $$RoomsTableTableManager
                 unreadCount: unreadCount,
                 metadata: metadata,
                 disappearingTimeout: disappearingTimeout,
+                mutedUntil: mutedUntil,
                 memberLimit: memberLimit,
                 memberLimitEnabled: memberLimitEnabled,
                 rowid: rowid,

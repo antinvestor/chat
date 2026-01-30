@@ -110,6 +110,11 @@ class MockSettingsService implements SettingsService {
   bool get fingerprintLockEnabled =>
       getBool(SettingsKeys.fingerprintLockEnabled);
 
+  @override
+  bool get analyticsEnabled => getBool(
+    SettingsKeys.analyticsEnabled,
+    defaultValue: SettingsDefaults.analyticsEnabled,
+  );
   // Implement any remaining methods as no-ops
   @override
   dynamic noSuchMethod(Invocation invocation) {

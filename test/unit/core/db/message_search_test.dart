@@ -258,12 +258,10 @@ void main() {
         expect(db, isNotNull);
       });
 
-
       test('schema version is 14', () {
         // Version 14 includes all features: mute, starred, profile status,
         // call history, member limits, and analytics
         expect(db.schemaVersion, equals(14));
-      });
       });
     });
 

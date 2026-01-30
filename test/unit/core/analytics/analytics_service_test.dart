@@ -1,14 +1,16 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:stawi/core/analytics/analytics_event.dart';
 import 'package:stawi/core/analytics/analytics_repository.dart';
 import 'package:stawi/core/analytics/analytics_service.dart';
+import 'package:stawi/core/db/database.dart' hide AnalyticsEvent;
 
 /// In-memory fake of [AnalyticsRepository] for testing purposes.
 ///
 /// Stores events in a list so tests can run without a real database.
 class FakeAnalyticsRepository extends AnalyticsRepository {
-  FakeAnalyticsRepository() : super(null as dynamic);
+  FakeAnalyticsRepository()
+    : super(AppDatabase.forTesting(NativeDatabase.memory()));
 
   final List<AnalyticsEvent> _events = [];
 
@@ -98,9 +100,10 @@ void main() {
     late AnalyticsService analyticsService;
     late FakeAnalyticsRepository fakeRepository;
 
-    setUp(() {
+    setUp(() async {
       fakeRepository = FakeAnalyticsRepository();
       analyticsService = AnalyticsService(repository: fakeRepository);
+      await analyticsService.initialize();
     });
 
     group('configuration', () {
