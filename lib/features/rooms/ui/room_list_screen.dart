@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/error/app_error.dart';
 import '../../../core/responsive/breakpoints.dart';
@@ -15,9 +14,6 @@ import '../../../widgets/error_banner.dart';
 import '../../../widgets/skeleton_loader.dart';
 import '../../calls/ui/incoming_call_banner.dart';
 import '../../messages/ui/chat_screen.dart';
-import '../../notifications/notification_service.dart';
-import '../../notifications/ui/notification_permission_dialog.dart';
-import '../../settings/data/settings_providers.dart';
 import '../data/room_providers.dart';
 import '../data/room_search_providers.dart';
 import '../data/room_service.dart';
@@ -42,48 +38,6 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   bool _isSearchExpanded = false;
   bool _isMultiSelectMode = false;
   final Set<String> _selectedRoomIds = <String>{};
-
-  @override
-  void initState() {
-    super.initState();
-    // Check notification permission after the first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkNotificationPermission();
-    });
-  }
-
-  /// Check if notification permission dialog should be shown
-  ///
-  /// Shows the dialog only if:
-  /// 1. Notification permission is not already granted
-  /// 2. We haven't prompted the user before (to avoid annoying them)
-  Future<void> _checkNotificationPermission() async {
-    // Check if notification permission is already granted
-    final status = await Permission.notification.status;
-    if (status.isGranted) return;
-
-    // Check if we've already prompted the user
-    final settingsNotifier = ref.read(settingsProvider.notifier);
-    final hasPrompted = await settingsNotifier
-        .hasNotificationPermissionBeenPrompted();
-    if (hasPrompted) return;
-
-    // Show the permission dialog
-    if (!mounted) return;
-    final result = await NotificationPermissionDialog.show(context);
-
-    // Mark as prompted so we don't ask again
-    await settingsNotifier.markNotificationPermissionPrompted();
-
-    // Handle the result
-    if (result == NotificationPermissionResult.granted) {
-      // User granted permission - complete notification service initialization
-      final notificationService = ref.read(notificationServiceProvider);
-      await notificationService.initializeAfterPermissionGranted();
-    } else if (result == NotificationPermissionResult.openSettings) {
-      await openAppSettings();
-    }
-  }
 
   void _handleMenuAction(String action) {
     switch (action) {
