@@ -177,18 +177,32 @@ class AnalyticsService {
     _log('Message sent tracked');
   }
 
-  /// Track a call event
-  void trackCall({
-    required AnalyticsEventType callEventType,
+  /// Track a call started event
+  void trackCallStarted({required String roomId, required String callType}) {
+    if (!_config.enabled) return;
+
+    final event = AnalyticsEvent.callStarted(
+      id: _uuid.v4(),
+      roomId: roomId,
+      callType: callType,
+      userId: _currentUserId,
+      sessionId: _currentSession?.id,
+    );
+
+    _addEvent(event);
+    _log('Call started tracked');
+  }
+
+  /// Track a call ended event
+  void trackCallEnded({
     required String roomId,
     required String callType,
     int? durationSeconds,
   }) {
     if (!_config.enabled) return;
 
-    final event = AnalyticsEvent.call(
+    final event = AnalyticsEvent.callEnded(
       id: _uuid.v4(),
-      callEventType: callEventType,
       roomId: roomId,
       callType: callType,
       userId: _currentUserId,
@@ -197,21 +211,67 @@ class AnalyticsService {
     );
 
     _addEvent(event);
-    _log('Call event tracked: ${callEventType.name}');
+    _log('Call ended tracked');
   }
 
-  /// Track a room event
-  void trackRoomEvent({
-    required AnalyticsEventType roomEventType,
+  /// Track a call answered event
+  void trackCallAnswered({required String roomId, required String callType}) {
+    if (!_config.enabled) return;
+
+    final event = AnalyticsEvent.callAnswered(
+      id: _uuid.v4(),
+      roomId: roomId,
+      callType: callType,
+      userId: _currentUserId,
+      sessionId: _currentSession?.id,
+    );
+
+    _addEvent(event);
+    _log('Call answered tracked');
+  }
+
+  /// Track a call declined event
+  void trackCallDeclined({required String roomId, required String callType}) {
+    if (!_config.enabled) return;
+
+    final event = AnalyticsEvent.callDeclined(
+      id: _uuid.v4(),
+      roomId: roomId,
+      callType: callType,
+      userId: _currentUserId,
+      sessionId: _currentSession?.id,
+    );
+
+    _addEvent(event);
+    _log('Call declined tracked');
+  }
+
+  /// Track a call missed event
+  void trackCallMissed({required String roomId, required String callType}) {
+    if (!_config.enabled) return;
+
+    final event = AnalyticsEvent.callMissed(
+      id: _uuid.v4(),
+      roomId: roomId,
+      callType: callType,
+      userId: _currentUserId,
+      sessionId: _currentSession?.id,
+    );
+
+    _addEvent(event);
+    _log('Call missed tracked');
+  }
+
+  /// Track a room created event
+  void trackRoomCreated({
     required String roomId,
     required String roomType,
     int? memberCount,
   }) {
     if (!_config.enabled) return;
 
-    final event = AnalyticsEvent.room(
+    final event = AnalyticsEvent.roomCreated(
       id: _uuid.v4(),
-      roomEventType: roomEventType,
       roomId: roomId,
       roomType: roomType,
       userId: _currentUserId,
@@ -220,7 +280,60 @@ class AnalyticsService {
     );
 
     _addEvent(event);
-    _log('Room event tracked: ${roomEventType.name}');
+    _log('Room created tracked');
+  }
+
+  /// Track a room joined event
+  void trackRoomJoined({
+    required String roomId,
+    required String roomType,
+    int? memberCount,
+  }) {
+    if (!_config.enabled) return;
+
+    final event = AnalyticsEvent.roomJoined(
+      id: _uuid.v4(),
+      roomId: roomId,
+      roomType: roomType,
+      userId: _currentUserId,
+      sessionId: _currentSession?.id,
+      memberCount: memberCount,
+    );
+
+    _addEvent(event);
+    _log('Room joined tracked');
+  }
+
+  /// Track a room left event
+  void trackRoomLeft({required String roomId, required String roomType}) {
+    if (!_config.enabled) return;
+
+    final event = AnalyticsEvent.roomLeft(
+      id: _uuid.v4(),
+      roomId: roomId,
+      roomType: roomType,
+      userId: _currentUserId,
+      sessionId: _currentSession?.id,
+    );
+
+    _addEvent(event);
+    _log('Room left tracked');
+  }
+
+  /// Track a room deleted event
+  void trackRoomDeleted({required String roomId, required String roomType}) {
+    if (!_config.enabled) return;
+
+    final event = AnalyticsEvent.roomDeleted(
+      id: _uuid.v4(),
+      roomId: roomId,
+      roomType: roomType,
+      userId: _currentUserId,
+      sessionId: _currentSession?.id,
+    );
+
+    _addEvent(event);
+    _log('Room deleted tracked');
   }
 
   /// Track a feature usage event

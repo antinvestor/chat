@@ -316,6 +316,81 @@ void main() {
       expect(event.type, equals(AnalyticsEventType.custom));
       expect(event.name, equals('custom_action'));
     });
+
+    test('callStarted factory creates correct event', () {
+      final event = AnalyticsEvent.callStarted(
+        id: 'event-6',
+        roomId: 'room-1',
+        callType: 'video',
+        userId: 'user-1',
+      );
+
+      expect(event.type, equals(AnalyticsEventType.callStarted));
+      expect(event.name, equals('call_started'));
+      expect(event.properties?['room_id'], equals('room-1'));
+      expect(event.properties?['call_type'], equals('video'));
+    });
+
+    test('callEnded factory creates correct event with duration', () {
+      final event = AnalyticsEvent.callEnded(
+        id: 'event-7',
+        roomId: 'room-1',
+        callType: 'audio',
+        durationSeconds: 120,
+      );
+
+      expect(event.type, equals(AnalyticsEventType.callEnded));
+      expect(event.name, equals('call_ended'));
+      expect(event.properties?['duration_seconds'], equals(120));
+    });
+
+    test('callMissed factory creates correct event', () {
+      final event = AnalyticsEvent.callMissed(
+        id: 'event-8',
+        roomId: 'room-1',
+        callType: 'video',
+      );
+
+      expect(event.type, equals(AnalyticsEventType.callMissed));
+      expect(event.name, equals('call_missed'));
+    });
+
+    test('roomCreated factory creates correct event', () {
+      final event = AnalyticsEvent.roomCreated(
+        id: 'event-9',
+        roomId: 'room-1',
+        roomType: 'group',
+        memberCount: 5,
+      );
+
+      expect(event.type, equals(AnalyticsEventType.roomCreated));
+      expect(event.name, equals('room_created'));
+      expect(event.properties?['room_id'], equals('room-1'));
+      expect(event.properties?['room_type'], equals('group'));
+      expect(event.properties?['member_count'], equals(5));
+    });
+
+    test('roomJoined factory creates correct event', () {
+      final event = AnalyticsEvent.roomJoined(
+        id: 'event-10',
+        roomId: 'room-1',
+        roomType: 'direct',
+      );
+
+      expect(event.type, equals(AnalyticsEventType.roomJoined));
+      expect(event.name, equals('room_joined'));
+    });
+
+    test('roomLeft factory creates correct event', () {
+      final event = AnalyticsEvent.roomLeft(
+        id: 'event-11',
+        roomId: 'room-1',
+        roomType: 'group',
+      );
+
+      expect(event.type, equals(AnalyticsEventType.roomLeft));
+      expect(event.name, equals('room_left'));
+    });
   });
 
   group('AnalyticsSession', () {
