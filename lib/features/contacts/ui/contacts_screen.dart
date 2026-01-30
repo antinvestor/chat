@@ -10,7 +10,6 @@ import '../../../widgets/empty_state.dart';
 import '../data/contact_search_provider.dart';
 import '../data/contact_sync_repository.dart';
 import '../services/contact_service.dart';
-import '../services/contact_sync_orchestrator.dart';
 import 'contact_permission_view.dart';
 
 class ContactsScreen extends ConsumerStatefulWidget {
@@ -48,16 +47,21 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     setState(() => _isSyncing = true);
 
     try {
-      // Use ContactSyncOrchestrator for permission handling and sync
-      final orchestrator = await ref.read(
-        contactSyncOrchestratorProvider.future,
-      );
+      // Directly sync contacts without showing dialog
+      // (permission was already granted via ContactPermissionView)
+      final rosterRepo = await ref.read(rosterRepositoryProvider.future);
 
       if (!mounted) return;
 
-      final success = await orchestrator.ensureContactsSynced(context: context);
+      // Phase 1: Read device contacts and store locally
+      await rosterRepo.syncContactsLocal();
 
-      if (success && mounted) {
+      if (!mounted) return;
+
+      // Phase 2: Sync to server (links contacts with platform profiles)
+      await rosterRepo.syncContactsToServer();
+
+      if (mounted) {
         // Refresh the contacts list
         ref.invalidate(syncedContactsProvider);
         ref.invalidate(rosterEntriesProvider);
