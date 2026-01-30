@@ -116,7 +116,7 @@ class _ContactPermissionViewState extends State<ContactPermissionView> {
 
             // Title
             Text(
-              'Find Friends on the App',
+              'Allow Access to Contacts',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -126,7 +126,7 @@ class _ContactPermissionViewState extends State<ContactPermissionView> {
 
             // Explanation text
             Text(
-              'Sync your contacts to discover friends who are already using the app and start chatting.',
+              'We need access to your contacts to help you connect with friends and manage your groups more easily.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -144,20 +144,20 @@ class _ContactPermissionViewState extends State<ContactPermissionView> {
               child: Column(
                 children: [
                   _BenefitRow(
-                    icon: Icons.person_search_rounded,
-                    text: 'Find friends already on the app',
+                    icon: Icons.search_rounded,
+                    text: 'Easily search contacts',
                     theme: theme,
                   ),
                   const SizedBox(height: 14),
                   _BenefitRow(
                     icon: Icons.group_add_rounded,
-                    text: 'Quickly add members to groups',
+                    text: 'Add members to groups',
                     theme: theme,
                   ),
                   const SizedBox(height: 14),
                   _BenefitRow(
-                    icon: Icons.sync_rounded,
-                    text: 'Get notified when contacts join',
+                    icon: Icons.auto_awesome_rounded,
+                    text: 'Enhance contacts with app profiles',
                     theme: theme,
                   ),
                 ],
