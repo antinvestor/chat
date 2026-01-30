@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
+import '../../../core/security/screenshot_prevention_service.dart';
 import '../../../core/settings/settings_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../contacts/data/roster_repository.dart';
@@ -29,6 +30,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   bool _liveLocationSharingEnabled =
       SettingsDefaults.liveLocationSharingEnabled;
   bool _fingerprintLockEnabled = SettingsDefaults.fingerprintLockEnabled;
+  bool _screenshotPreventionEnabled = false;
+  bool _analyticsEnabled = true;
 
   @override
   void initState() {
@@ -40,6 +43,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     _settingsService = ref.read(settingsServiceProvider);
     await _settingsService.initialize();
 
+    final screenshotService = ref.read(screenshotPreventionServiceProvider);
+
     if (mounted) {
       setState(() {
         _lastSeenVisible = _settingsService.lastSeenVisible;
@@ -50,6 +55,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
         _liveLocationSharingEnabled =
             _settingsService.liveLocationSharingEnabled;
         _fingerprintLockEnabled = _settingsService.fingerprintLockEnabled;
+        _screenshotPreventionEnabled = screenshotService.isEnabled;
+        _analyticsEnabled = _settingsService.analyticsEnabled;
         _isInitialized = true;
       });
     }
@@ -192,6 +199,32 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                       value: _fingerprintLockEnabled,
                       onChanged: _toggleFingerprintLock,
                     ),
+                    _buildSwitchItem(
+                      context,
+                      title: 'Screenshot prevention',
+                      subtitle:
+                          'Prevent screenshots and screen recording in the app. '
+                          'This helps protect your conversations from being captured.',
+                      value: _screenshotPreventionEnabled,
+                      onChanged: _toggleScreenshotPrevention,
+                    ),
+                  ],
+                ),
+
+                // Data & Analytics section
+                _buildSettingsSection(
+                  context,
+                  title: 'Data & Analytics',
+                  items: [
+                    _buildSwitchItem(
+                      context,
+                      title: 'Usage analytics',
+                      subtitle:
+                          'Help improve Chat by sharing anonymous usage data. '
+                          'This includes app crashes and feature usage, never message content.',
+                      value: _analyticsEnabled,
+                      onChanged: _toggleAnalytics,
+                    ),
                   ],
                 ),
 
@@ -256,6 +289,26 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     setState(() => _fingerprintLockEnabled = value);
     _settingsService.setFingerprintLockEnabled(value);
     _showSettingsSavedSnackBar('Fingerprint lock');
+  }
+
+  Future<void> _toggleScreenshotPrevention(bool value) async {
+    final screenshotService = ref.read(screenshotPreventionServiceProvider);
+    bool success;
+    if (value) {
+      success = await screenshotService.enableScreenshotPrevention();
+    } else {
+      success = await screenshotService.disableScreenshotPrevention();
+    }
+    if (success) {
+      setState(() => _screenshotPreventionEnabled = value);
+      _showSettingsSavedSnackBar('Screenshot prevention');
+    }
+  }
+
+  void _toggleAnalytics(bool value) {
+    setState(() => _analyticsEnabled = value);
+    _settingsService.setAnalyticsEnabled(value);
+    _showSettingsSavedSnackBar('Usage analytics');
   }
 
   void _showSettingsSavedSnackBar(String settingName) {

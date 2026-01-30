@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../contacts/data/contact_sync_repository.dart';
+import '../../contacts/data/roster_repository.dart';
 import '../../contacts/services/contact_sync_orchestrator.dart';
 import '../data/room_service.dart';
 

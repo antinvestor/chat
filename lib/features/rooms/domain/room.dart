@@ -72,6 +72,8 @@ const int defaultMemberLimit = 256;
 
 @freezed
 abstract class Room with _$Room {
+  const Room._();
+
   const factory Room({
     required String id,
     required String name,
@@ -97,7 +99,6 @@ abstract class Room with _$Room {
     /// Whether member limit is enforced
     @Default(true) bool memberLimitEnabled,
   }) = _Room;
-  const Room._();
 
   factory Room.fromJson(Map<String, dynamic> json) => _$RoomFromJson(json);
 

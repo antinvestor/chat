@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../widgets/empty_state.dart';
 import '../data/contact_search_provider.dart';
 import '../data/contact_sync_repository.dart';
+import '../data/roster_repository.dart';
 import '../services/contact_service.dart';
 import 'contact_sync_sheet.dart';
 

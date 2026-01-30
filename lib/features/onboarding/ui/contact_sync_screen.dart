@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/logging/app_logger.dart';
-import '../../contacts/data/contact_sync_repository.dart';
+import '../../contacts/data/roster_repository.dart';
 import '../data/onboarding_repository.dart';
 
 /// Screen shown after login to sync contacts
@@ -149,7 +149,7 @@ class _ContactSyncScreenState extends ConsumerState<ContactSyncScreen> {
       });
 
       // Sync contacts
-      final repo = await ref.read(contactSyncRepositoryProvider.future);
+      final repo = await ref.read(rosterRepositoryProvider.future);
       final syncedContacts = await repo.syncContacts();
 
       if (!mounted) return;

@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../features/contacts/data/contact_sync_repository.dart';
+import '../../../features/contacts/data/roster_repository.dart';
 import '../../../features/rooms/data/room_subscription_service.dart';
 import '../domain/room_event.dart';
 import 'read_receipt_indicator.dart';

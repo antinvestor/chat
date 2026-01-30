@@ -14,7 +14,7 @@ import '../../../widgets/empty_state.dart';
 import '../../../widgets/error_banner.dart';
 import '../../../widgets/skeleton_loader.dart';
 import '../../calls/ui/incoming_call_banner.dart';
-import '../../contacts/data/contact_sync_repository.dart';
+import '../../contacts/data/roster_repository.dart';
 import '../../contacts/ui/contact_sync_sheet.dart';
 import '../../messages/ui/chat_screen.dart';
 import '../../onboarding/data/onboarding_repository.dart';
