@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:chat/core/isolates/crypto_isolate.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/isolates/crypto_isolate.dart';
 
 void main() {
   group('HashResult', () {

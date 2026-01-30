@@ -1,5 +1,5 @@
-import 'package:chat/core/isolates/isolate_metrics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/isolates/isolate_metrics.dart';
 
 void main() {
   group('IsolateMetrics', () {

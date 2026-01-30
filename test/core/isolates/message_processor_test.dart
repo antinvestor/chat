@@ -1,5 +1,5 @@
-import 'package:chat/core/isolates/message_processor.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/isolates/message_processor.dart';
 
 void main() {
   group('MessageBatchInput', () {
@@ -230,7 +230,7 @@ void main() {
       final results = <Map<String, dynamic>>[];
       for (final jsonStr in jsonStrings) {
         try {
-          final parsed = Map<String, dynamic>.from(
+          final _ = Map<String, dynamic>.from(
             Uri.splitQueryString(jsonStr.replaceAll(RegExp('[{}":]'), '&')),
           );
           // This is a simplified test - actual parsing uses jsonDecode

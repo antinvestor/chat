@@ -96,3 +96,92 @@ final class CurrentProfileIdOrThrowProvider
 
 String _$currentProfileIdOrThrowHash() =>
     r'0725a0d41e7cae441b04332a5f466173d9969f66';
+
+/// Provider for the current user's CONTACT ID (from JWT 'contact_id' claim)
+/// This represents the contact method (phone/email) used for authentication
+/// A single profile can have multiple contact IDs
+/// Returns null if the user is not authenticated or no contact ID is available
+
+@ProviderFor(currentContactId)
+final currentContactIdProvider = CurrentContactIdProvider._();
+
+/// Provider for the current user's CONTACT ID (from JWT 'contact_id' claim)
+/// This represents the contact method (phone/email) used for authentication
+/// A single profile can have multiple contact IDs
+/// Returns null if the user is not authenticated or no contact ID is available
+
+final class CurrentContactIdProvider
+    extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
+    with $FutureModifier<String?>, $FutureProvider<String?> {
+  /// Provider for the current user's CONTACT ID (from JWT 'contact_id' claim)
+  /// This represents the contact method (phone/email) used for authentication
+  /// A single profile can have multiple contact IDs
+  /// Returns null if the user is not authenticated or no contact ID is available
+  CurrentContactIdProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentContactIdProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentContactIdHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<String?> create(Ref ref) {
+    return currentContactId(ref);
+  }
+}
+
+String _$currentContactIdHash() => r'aa35526936044625011f016456584cac4cfbd044';
+
+/// Non-null version that throws if contact ID is not available
+/// Use this in contexts where contact ID is required
+
+@ProviderFor(currentContactIdOrThrow)
+final currentContactIdOrThrowProvider = CurrentContactIdOrThrowProvider._();
+
+/// Non-null version that throws if contact ID is not available
+/// Use this in contexts where contact ID is required
+
+final class CurrentContactIdOrThrowProvider
+    extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
+    with $FutureModifier<String>, $FutureProvider<String> {
+  /// Non-null version that throws if contact ID is not available
+  /// Use this in contexts where contact ID is required
+  CurrentContactIdOrThrowProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentContactIdOrThrowProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentContactIdOrThrowHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<String> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<String> create(Ref ref) {
+    return currentContactIdOrThrow(ref);
+  }
+}
+
+String _$currentContactIdOrThrowHash() =>
+    r'50b55795da3c79535983402587334a2cb92849ce';

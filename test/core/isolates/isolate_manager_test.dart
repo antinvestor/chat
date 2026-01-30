@@ -1,5 +1,5 @@
-import 'package:chat/core/isolates/isolate_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/isolates/isolate_manager.dart';
 
 void main() {
   group('IsolateManager', () {

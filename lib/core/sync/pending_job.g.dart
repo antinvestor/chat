@@ -13,6 +13,7 @@ _PendingJob _$PendingJobFromJson(Map<String, dynamic> json) => _PendingJob(
   createdAt: (json['createdAt'] as num).toInt(),
   retryCount: (json['retryCount'] as num?)?.toInt() ?? 0,
   status: json['status'] as String? ?? 'pending',
+  nextRetryAt: (json['nextRetryAt'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$PendingJobToJson(_PendingJob instance) =>
@@ -23,6 +24,7 @@ Map<String, dynamic> _$PendingJobToJson(_PendingJob instance) =>
       'createdAt': instance.createdAt,
       'retryCount': instance.retryCount,
       'status': instance.status,
+      'nextRetryAt': instance.nextRetryAt,
     };
 
 const _$JobTypeEnumMap = {

@@ -1,5 +1,5 @@
-import 'package:chat/core/isolates/db_batch_processor.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/isolates/db_batch_processor.dart';
 
 void main() {
   group('InsertBatchInput', () {
