@@ -591,6 +591,38 @@ class InviteLinkJoins extends Table {
   TextColumn get status => text().withDefault(const Constant('approved'))();
 }
 
+/// Tracks chunk progress for resumable uploads
+///
+/// Stores upload state to allow resuming interrupted uploads.
+/// Each chunk is recorded separately for precise resume points.
+///
+/// Example:
+/// ```dart
+/// final chunks = await (db.uploadChunks.select()
+///   ..where((c) => c.localId.equals(messageLocalId))
+///   ..orderBy([(c) => OrderingTerm.asc(c.chunkIndex)])
+/// ).get();
+/// ```
+class UploadChunks extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Local message ID this upload is associated with
+  TextColumn get localId => text()();
+
+  /// Server-assigned upload ID for resumable uploads
+  TextColumn get uploadId => text().nullable()();
+
+  /// Index of this chunk (0-based, -1 for metadata row)
+  IntColumn get chunkIndex => integer().withDefault(const Constant(-1))();
+
+  /// Size of this chunk in bytes
+  IntColumn get chunkSize => integer().withDefault(const Constant(0))();
+
+  /// Timestamp when this chunk was uploaded (milliseconds since epoch)
+  IntColumn get createdAt => integer()();
+}
+
 /// Analytics events table for local event storage
 ///
 /// Stores analytics events locally before batch upload to backend.
@@ -719,6 +751,7 @@ class CallHistory extends Table {
     Reports,
     InviteLinks,
     InviteLinkJoins,
+    UploadChunks,
     CallHistory,
     AnalyticsEvents,
   ],
@@ -733,7 +766,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -896,67 +929,13 @@ class AppDatabase extends _$AppDatabase {
           ON analytics_events(event_id)
         ''');
       }
-      if (from <= 10) {
-        // Migration from v10 to v11: Add starred messages support
-        await m.addColumn(roomEvents, roomEvents.starred);
-        await m.addColumn(roomEvents, roomEvents.starredAt);
-        // Create index for efficient starred message querying
+      if (from <= 14) {
+        // Migration from v14 to v15: Add upload chunks table for resumable uploads
+        await m.createTable(uploadChunks);
+        // Create index for efficient querying by localId
         await customStatement('''
-          CREATE INDEX IF NOT EXISTS idx_room_events_starred
-          ON room_events(starred, starred_at)
-          WHERE starred = 1
-        ''');
-      }
-      if (from <= 10) {
-        // Migration from v10 to v11: Add user status and bio fields
-        await m.addColumn(profiles, profiles.status);
-        await m.addColumn(profiles, profiles.statusMessage);
-        await m.addColumn(profiles, profiles.statusUpdatedAt);
-        await m.addColumn(profiles, profiles.bio);
-      }
-      if (from <= 11) {
-        // Migration from v11 to v12: Add call history table
-        await m.createTable(callHistory);
-        // Create index for efficient querying by room
-        await customStatement('''
-          CREATE INDEX IF NOT EXISTS idx_call_history_room_id
-          ON call_history(room_id)
-        ''');
-        // Create index for efficient querying by time
-        await customStatement('''
-          CREATE INDEX IF NOT EXISTS idx_call_history_started_at
-          ON call_history(started_at DESC)
-        ''');
-        // Create index for filtering unread/deleted calls
-        await customStatement('''
-          CREATE INDEX IF NOT EXISTS idx_call_history_status
-          ON call_history(is_read, is_deleted)
-          WHERE is_deleted = 0
-        ''');
-      }
-      if (from <= 12) {
-        // Migration from v12 to v13: Add group member limit columns
-        await m.addColumn(rooms, rooms.memberLimit);
-        await m.addColumn(rooms, rooms.memberLimitEnabled);
-      }
-      if (from <= 13) {
-        // Migration from v13 to v14: Add analytics events table
-        await m.createTable(analyticsEvents);
-        // Create index for querying unsynced events
-        await customStatement('''
-          CREATE INDEX IF NOT EXISTS idx_analytics_events_synced
-          ON analytics_events(is_synced)
-          WHERE is_synced = 0
-        ''');
-        // Create index for querying by timestamp
-        await customStatement('''
-          CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp
-          ON analytics_events(timestamp DESC)
-        ''');
-        // Create unique index on event_id
-        await customStatement('''
-          CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_events_event_id
-          ON analytics_events(event_id)
+          CREATE INDEX IF NOT EXISTS idx_upload_chunks_local_id
+          ON upload_chunks(local_id)
         ''');
       }
     },
