@@ -21,8 +21,8 @@ class ContactSelectionScreen extends ConsumerStatefulWidget {
       _ContactSelectionScreenState();
 }
 
-class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
-    with TickerProviderStateMixin {
+class _ContactSelectionScreenState
+    extends ConsumerState<ContactSelectionScreen> {
   late ScrollController _scrollController;
   late TextEditingController _searchController;
   Timer? _searchDebounceTimer;
@@ -58,31 +58,11 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
     });
   }
 
-  void _startNewChat() {
-    // Navigate to group creation screen
-    context.go('/contacts/select');
-  }
-
-  void _addNewContact() {
-    // Navigate to contacts screen for adding new contact
-    context.go('/contacts');
-  }
-
   @override
   Widget build(BuildContext context) => Scaffold(
     body: CustomScrollView(
       controller: _scrollController,
-      slivers: [
-        _buildSliverAppBar(),
-        _buildActionButtons(),
-        _buildContactsList(),
-      ],
-    ),
-    floatingActionButton: FloatingActionButton(
-      tooltip: 'Select Contact',
-      onPressed: () => context.go('/contacts/select'),
-      backgroundColor: AppTheme.primaryGreen,
-      child: const Icon(Icons.person_add, color: Colors.white),
+      slivers: [_buildSliverAppBar(), _buildContactsList()],
     ),
   );
 
@@ -130,72 +110,6 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
             ),
           ),
         ),
-      ),
-    ),
-  );
-
-  Widget _buildActionButtons() => SliverToBoxAdapter(
-    child: Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildActionButton(
-              icon: Icons.group_add,
-              label: 'New Group',
-              onTap: _startNewChat,
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          ),
-          Expanded(
-            child: _buildActionButton(
-              icon: Icons.person_add,
-              label: 'New Contact',
-              onTap: _addNewContact,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(12),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 24, color: AppTheme.primaryGreen),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
       ),
     ),
   );
@@ -444,6 +358,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
     final initials = displayName.isNotEmpty
         ? displayName
               .split(' ')
+              .where((word) => word.isNotEmpty)
               .map((word) => word[0])
               .take(2)
               .join()
@@ -454,7 +369,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
       return CircleAvatar(
         radius: 28,
         backgroundImage: NetworkImage(avatarUrl),
-        onBackgroundImageError: (_, _) {},
+        onBackgroundImageError: (exception, stackTrace) {},
         backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
         child: Text(
           initials,
