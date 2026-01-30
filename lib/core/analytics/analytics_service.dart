@@ -54,9 +54,8 @@ class AnalyticsConfig {
 /// analytics.trackEvent('button_tap', properties: {'button_id': 'send_message'});
 /// ```
 class AnalyticsService {
-  AnalyticsService({
-    AnalyticsConfig config = const AnalyticsConfig(),
-  }) : _config = config;
+  AnalyticsService({AnalyticsConfig config = const AnalyticsConfig()})
+    : _config = config;
 
   final AnalyticsConfig _config;
   static const _uuid = Uuid();
@@ -129,7 +128,8 @@ class AnalyticsService {
     final current = _userProperties?.customProperties ?? {};
     final updated = Map<String, dynamic>.from(current);
     updated[key] = value;
-    _userProperties = _userProperties?.copyWith(customProperties: updated) ??
+    _userProperties =
+        _userProperties?.copyWith(customProperties: updated) ??
         AnalyticsUserProperties(customProperties: updated);
   }
 
@@ -231,7 +231,10 @@ class AnalyticsService {
   }
 
   /// Track a feature usage event
-  void trackFeatureUsed(String featureName, {Map<String, dynamic>? properties}) {
+  void trackFeatureUsed(
+    String featureName, {
+    Map<String, dynamic>? properties,
+  }) {
     if (!_config.enabled) return;
 
     final event = AnalyticsEvent.featureUsed(
@@ -292,29 +295,42 @@ class AnalyticsService {
 
   /// Track user login
   void trackUserLogin({String? method}) {
-    trackEvent('user_login', properties: {
-      if (method != null) 'method': method,
-      'timestamp': DateTime.now().toUtc().toIso8601String(),
-    });
+    trackEvent(
+      'user_login',
+      properties: {
+        if (method != null) 'method': method,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+      },
+    );
   }
 
   /// Track user logout
   void trackUserLogout() {
-    trackEvent('user_logout', properties: {
-      'session_duration_seconds': _currentSession?.durationSeconds,
-      'events_in_session': _currentSession?.eventCount,
-    });
+    trackEvent(
+      'user_logout',
+      properties: {
+        'session_duration_seconds': _currentSession?.durationSeconds,
+        'events_in_session': _currentSession?.eventCount,
+      },
+    );
     _endSession();
     _startNewSession();
   }
 
   /// Track setting change
-  void trackSettingChanged(String settingName, dynamic oldValue, dynamic newValue) {
-    trackEvent('setting_changed', properties: {
-      'setting_name': settingName,
-      'old_value': oldValue?.toString(),
-      'new_value': newValue?.toString(),
-    });
+  void trackSettingChanged(
+    String settingName,
+    dynamic oldValue,
+    dynamic newValue,
+  ) {
+    trackEvent(
+      'setting_changed',
+      properties: {
+        'setting_name': settingName,
+        'old_value': oldValue?.toString(),
+        'new_value': newValue?.toString(),
+      },
+    );
   }
 
   /// Get current session
@@ -361,7 +377,9 @@ class AnalyticsService {
       _currentSession = _currentSession!.copyWith(
         endTime: DateTime.now().toUtc(),
       );
-      _log('Session ended: ${_currentSession!.id}, duration: ${_currentSession!.durationSeconds}s');
+      _log(
+        'Session ended: ${_currentSession!.id}, duration: ${_currentSession!.durationSeconds}s',
+      );
     }
   }
 
@@ -439,7 +457,9 @@ class AnalyticsService {
         final content = await file.readAsString();
         final List<dynamic> eventsJson = jsonDecode(content) as List<dynamic>;
         for (final json in eventsJson) {
-          _eventQueue.add(AnalyticsEvent.fromJson(json as Map<String, dynamic>));
+          _eventQueue.add(
+            AnalyticsEvent.fromJson(json as Map<String, dynamic>),
+          );
         }
         await file.delete();
         _log('Loaded ${_eventQueue.length} pending events');

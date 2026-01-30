@@ -167,9 +167,7 @@ class NotificationActionHandler {
 
     // Send call decline signal to backend
     try {
-      final signalingService = await _ref.read(
-        signalingServiceProvider.future,
-      );
+      final signalingService = await _ref.read(signalingServiceProvider.future);
       await signalingService.sendHangup(roomId);
       AppLogger.info('Call decline signal sent', data: {'roomId': roomId});
     } catch (e, stackTrace) {

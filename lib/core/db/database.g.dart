@@ -8944,6 +8944,681 @@ class CallHistoryCompanion extends UpdateCompanion<CallHistoryData> {
   }
 }
 
+class $AnalyticsEventsTable extends AnalyticsEvents
+    with TableInfo<$AnalyticsEventsTable, AnalyticsEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AnalyticsEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _eventIdMeta = const VerificationMeta(
+    'eventId',
+  );
+  @override
+  late final GeneratedColumn<String> eventId = GeneratedColumn<String>(
+    'event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _eventTypeMeta = const VerificationMeta(
+    'eventType',
+  );
+  @override
+  late final GeneratedColumn<String> eventType = GeneratedColumn<String>(
+    'event_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _eventNameMeta = const VerificationMeta(
+    'eventName',
+  );
+  @override
+  late final GeneratedColumn<String> eventName = GeneratedColumn<String>(
+    'event_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<String> sessionId = GeneratedColumn<String>(
+    'session_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _screenNameMeta = const VerificationMeta(
+    'screenName',
+  );
+  @override
+  late final GeneratedColumn<String> screenName = GeneratedColumn<String>(
+    'screen_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _propertiesMeta = const VerificationMeta(
+    'properties',
+  );
+  @override
+  late final GeneratedColumn<String> properties = GeneratedColumn<String>(
+    'properties',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timestampMeta = const VerificationMeta(
+    'timestamp',
+  );
+  @override
+  late final GeneratedColumn<int> timestamp = GeneratedColumn<int>(
+    'timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    eventId,
+    eventType,
+    eventName,
+    userId,
+    sessionId,
+    screenName,
+    properties,
+    timestamp,
+    isSynced,
+    syncedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'analytics_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AnalyticsEvent> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('event_id')) {
+      context.handle(
+        _eventIdMeta,
+        eventId.isAcceptableOrUnknown(data['event_id']!, _eventIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventIdMeta);
+    }
+    if (data.containsKey('event_type')) {
+      context.handle(
+        _eventTypeMeta,
+        eventType.isAcceptableOrUnknown(data['event_type']!, _eventTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventTypeMeta);
+    }
+    if (data.containsKey('event_name')) {
+      context.handle(
+        _eventNameMeta,
+        eventName.isAcceptableOrUnknown(data['event_name']!, _eventNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventNameMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    }
+    if (data.containsKey('screen_name')) {
+      context.handle(
+        _screenNameMeta,
+        screenName.isAcceptableOrUnknown(data['screen_name']!, _screenNameMeta),
+      );
+    }
+    if (data.containsKey('properties')) {
+      context.handle(
+        _propertiesMeta,
+        properties.isAcceptableOrUnknown(data['properties']!, _propertiesMeta),
+      );
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(
+        _timestampMeta,
+        timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timestampMeta);
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AnalyticsEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AnalyticsEvent(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      eventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_id'],
+      )!,
+      eventType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_type'],
+      )!,
+      eventName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_name'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      ),
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_id'],
+      ),
+      screenName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}screen_name'],
+      ),
+      properties: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}properties'],
+      ),
+      timestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}timestamp'],
+      )!,
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+    );
+  }
+
+  @override
+  $AnalyticsEventsTable createAlias(String alias) {
+    return $AnalyticsEventsTable(attachedDatabase, alias);
+  }
+}
+
+class AnalyticsEvent extends DataClass implements Insertable<AnalyticsEvent> {
+  /// Auto-incrementing primary key
+  final int id;
+
+  /// Unique event identifier (UUID)
+  final String eventId;
+
+  /// Event type (e.g., 'screen_view', 'message_sent')
+  final String eventType;
+
+  /// Event name for custom events
+  final String eventName;
+
+  /// User ID associated with the event (nullable for anonymous)
+  final String? userId;
+
+  /// Session ID for grouping events
+  final String? sessionId;
+
+  /// Screen name where event occurred
+  final String? screenName;
+
+  /// JSON-encoded event properties
+  final String? properties;
+
+  /// Timestamp when event occurred (milliseconds since epoch)
+  final int timestamp;
+
+  /// Whether the event has been synced to backend
+  final bool isSynced;
+
+  /// Timestamp when event was synced
+  final int? syncedAt;
+  const AnalyticsEvent({
+    required this.id,
+    required this.eventId,
+    required this.eventType,
+    required this.eventName,
+    this.userId,
+    this.sessionId,
+    this.screenName,
+    this.properties,
+    required this.timestamp,
+    required this.isSynced,
+    this.syncedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['event_id'] = Variable<String>(eventId);
+    map['event_type'] = Variable<String>(eventType);
+    map['event_name'] = Variable<String>(eventName);
+    if (!nullToAbsent || userId != null) {
+      map['user_id'] = Variable<String>(userId);
+    }
+    if (!nullToAbsent || sessionId != null) {
+      map['session_id'] = Variable<String>(sessionId);
+    }
+    if (!nullToAbsent || screenName != null) {
+      map['screen_name'] = Variable<String>(screenName);
+    }
+    if (!nullToAbsent || properties != null) {
+      map['properties'] = Variable<String>(properties);
+    }
+    map['timestamp'] = Variable<int>(timestamp);
+    map['is_synced'] = Variable<bool>(isSynced);
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    return map;
+  }
+
+  AnalyticsEventsCompanion toCompanion(bool nullToAbsent) {
+    return AnalyticsEventsCompanion(
+      id: Value(id),
+      eventId: Value(eventId),
+      eventType: Value(eventType),
+      eventName: Value(eventName),
+      userId: userId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userId),
+      sessionId: sessionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sessionId),
+      screenName: screenName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(screenName),
+      properties: properties == null && nullToAbsent
+          ? const Value.absent()
+          : Value(properties),
+      timestamp: Value(timestamp),
+      isSynced: Value(isSynced),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+    );
+  }
+
+  factory AnalyticsEvent.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AnalyticsEvent(
+      id: serializer.fromJson<int>(json['id']),
+      eventId: serializer.fromJson<String>(json['eventId']),
+      eventType: serializer.fromJson<String>(json['eventType']),
+      eventName: serializer.fromJson<String>(json['eventName']),
+      userId: serializer.fromJson<String?>(json['userId']),
+      sessionId: serializer.fromJson<String?>(json['sessionId']),
+      screenName: serializer.fromJson<String?>(json['screenName']),
+      properties: serializer.fromJson<String?>(json['properties']),
+      timestamp: serializer.fromJson<int>(json['timestamp']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'eventId': serializer.toJson<String>(eventId),
+      'eventType': serializer.toJson<String>(eventType),
+      'eventName': serializer.toJson<String>(eventName),
+      'userId': serializer.toJson<String?>(userId),
+      'sessionId': serializer.toJson<String?>(sessionId),
+      'screenName': serializer.toJson<String?>(screenName),
+      'properties': serializer.toJson<String?>(properties),
+      'timestamp': serializer.toJson<int>(timestamp),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+    };
+  }
+
+  AnalyticsEvent copyWith({
+    int? id,
+    String? eventId,
+    String? eventType,
+    String? eventName,
+    Value<String?> userId = const Value.absent(),
+    Value<String?> sessionId = const Value.absent(),
+    Value<String?> screenName = const Value.absent(),
+    Value<String?> properties = const Value.absent(),
+    int? timestamp,
+    bool? isSynced,
+    Value<int?> syncedAt = const Value.absent(),
+  }) => AnalyticsEvent(
+    id: id ?? this.id,
+    eventId: eventId ?? this.eventId,
+    eventType: eventType ?? this.eventType,
+    eventName: eventName ?? this.eventName,
+    userId: userId.present ? userId.value : this.userId,
+    sessionId: sessionId.present ? sessionId.value : this.sessionId,
+    screenName: screenName.present ? screenName.value : this.screenName,
+    properties: properties.present ? properties.value : this.properties,
+    timestamp: timestamp ?? this.timestamp,
+    isSynced: isSynced ?? this.isSynced,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+  );
+  AnalyticsEvent copyWithCompanion(AnalyticsEventsCompanion data) {
+    return AnalyticsEvent(
+      id: data.id.present ? data.id.value : this.id,
+      eventId: data.eventId.present ? data.eventId.value : this.eventId,
+      eventType: data.eventType.present ? data.eventType.value : this.eventType,
+      eventName: data.eventName.present ? data.eventName.value : this.eventName,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      screenName: data.screenName.present
+          ? data.screenName.value
+          : this.screenName,
+      properties: data.properties.present
+          ? data.properties.value
+          : this.properties,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AnalyticsEvent(')
+          ..write('id: $id, ')
+          ..write('eventId: $eventId, ')
+          ..write('eventType: $eventType, ')
+          ..write('eventName: $eventName, ')
+          ..write('userId: $userId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('screenName: $screenName, ')
+          ..write('properties: $properties, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('syncedAt: $syncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    eventId,
+    eventType,
+    eventName,
+    userId,
+    sessionId,
+    screenName,
+    properties,
+    timestamp,
+    isSynced,
+    syncedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AnalyticsEvent &&
+          other.id == this.id &&
+          other.eventId == this.eventId &&
+          other.eventType == this.eventType &&
+          other.eventName == this.eventName &&
+          other.userId == this.userId &&
+          other.sessionId == this.sessionId &&
+          other.screenName == this.screenName &&
+          other.properties == this.properties &&
+          other.timestamp == this.timestamp &&
+          other.isSynced == this.isSynced &&
+          other.syncedAt == this.syncedAt);
+}
+
+class AnalyticsEventsCompanion extends UpdateCompanion<AnalyticsEvent> {
+  final Value<int> id;
+  final Value<String> eventId;
+  final Value<String> eventType;
+  final Value<String> eventName;
+  final Value<String?> userId;
+  final Value<String?> sessionId;
+  final Value<String?> screenName;
+  final Value<String?> properties;
+  final Value<int> timestamp;
+  final Value<bool> isSynced;
+  final Value<int?> syncedAt;
+  const AnalyticsEventsCompanion({
+    this.id = const Value.absent(),
+    this.eventId = const Value.absent(),
+    this.eventType = const Value.absent(),
+    this.eventName = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.screenName = const Value.absent(),
+    this.properties = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+  });
+  AnalyticsEventsCompanion.insert({
+    this.id = const Value.absent(),
+    required String eventId,
+    required String eventType,
+    required String eventName,
+    this.userId = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.screenName = const Value.absent(),
+    this.properties = const Value.absent(),
+    required int timestamp,
+    this.isSynced = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+  }) : eventId = Value(eventId),
+       eventType = Value(eventType),
+       eventName = Value(eventName),
+       timestamp = Value(timestamp);
+  static Insertable<AnalyticsEvent> custom({
+    Expression<int>? id,
+    Expression<String>? eventId,
+    Expression<String>? eventType,
+    Expression<String>? eventName,
+    Expression<String>? userId,
+    Expression<String>? sessionId,
+    Expression<String>? screenName,
+    Expression<String>? properties,
+    Expression<int>? timestamp,
+    Expression<bool>? isSynced,
+    Expression<int>? syncedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (eventId != null) 'event_id': eventId,
+      if (eventType != null) 'event_type': eventType,
+      if (eventName != null) 'event_name': eventName,
+      if (userId != null) 'user_id': userId,
+      if (sessionId != null) 'session_id': sessionId,
+      if (screenName != null) 'screen_name': screenName,
+      if (properties != null) 'properties': properties,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (syncedAt != null) 'synced_at': syncedAt,
+    });
+  }
+
+  AnalyticsEventsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? eventId,
+    Value<String>? eventType,
+    Value<String>? eventName,
+    Value<String?>? userId,
+    Value<String?>? sessionId,
+    Value<String?>? screenName,
+    Value<String?>? properties,
+    Value<int>? timestamp,
+    Value<bool>? isSynced,
+    Value<int?>? syncedAt,
+  }) {
+    return AnalyticsEventsCompanion(
+      id: id ?? this.id,
+      eventId: eventId ?? this.eventId,
+      eventType: eventType ?? this.eventType,
+      eventName: eventName ?? this.eventName,
+      userId: userId ?? this.userId,
+      sessionId: sessionId ?? this.sessionId,
+      screenName: screenName ?? this.screenName,
+      properties: properties ?? this.properties,
+      timestamp: timestamp ?? this.timestamp,
+      isSynced: isSynced ?? this.isSynced,
+      syncedAt: syncedAt ?? this.syncedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (eventId.present) {
+      map['event_id'] = Variable<String>(eventId.value);
+    }
+    if (eventType.present) {
+      map['event_type'] = Variable<String>(eventType.value);
+    }
+    if (eventName.present) {
+      map['event_name'] = Variable<String>(eventName.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<String>(sessionId.value);
+    }
+    if (screenName.present) {
+      map['screen_name'] = Variable<String>(screenName.value);
+    }
+    if (properties.present) {
+      map['properties'] = Variable<String>(properties.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<int>(timestamp.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AnalyticsEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('eventId: $eventId, ')
+          ..write('eventType: $eventType, ')
+          ..write('eventName: $eventName, ')
+          ..write('userId: $userId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('screenName: $screenName, ')
+          ..write('properties: $properties, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('syncedAt: $syncedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8966,6 +9641,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $CallHistoryTable callHistory = $CallHistoryTable(this);
+  late final $AnalyticsEventsTable analyticsEvents = $AnalyticsEventsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8988,6 +9666,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inviteLinks,
     inviteLinkJoins,
     callHistory,
+    analyticsEvents,
   ];
 }
 
@@ -14432,6 +15111,324 @@ typedef $$CallHistoryTableProcessedTableManager =
       CallHistoryData,
       PrefetchHooks Function()
     >;
+typedef $$AnalyticsEventsTableCreateCompanionBuilder =
+    AnalyticsEventsCompanion Function({
+      Value<int> id,
+      required String eventId,
+      required String eventType,
+      required String eventName,
+      Value<String?> userId,
+      Value<String?> sessionId,
+      Value<String?> screenName,
+      Value<String?> properties,
+      required int timestamp,
+      Value<bool> isSynced,
+      Value<int?> syncedAt,
+    });
+typedef $$AnalyticsEventsTableUpdateCompanionBuilder =
+    AnalyticsEventsCompanion Function({
+      Value<int> id,
+      Value<String> eventId,
+      Value<String> eventType,
+      Value<String> eventName,
+      Value<String?> userId,
+      Value<String?> sessionId,
+      Value<String?> screenName,
+      Value<String?> properties,
+      Value<int> timestamp,
+      Value<bool> isSynced,
+      Value<int?> syncedAt,
+    });
+
+class $$AnalyticsEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $AnalyticsEventsTable> {
+  $$AnalyticsEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventType => $composableBuilder(
+    column: $table.eventType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventName => $composableBuilder(
+    column: $table.eventName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sessionId => $composableBuilder(
+    column: $table.sessionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get screenName => $composableBuilder(
+    column: $table.screenName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get properties => $composableBuilder(
+    column: $table.properties,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AnalyticsEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AnalyticsEventsTable> {
+  $$AnalyticsEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventType => $composableBuilder(
+    column: $table.eventType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventName => $composableBuilder(
+    column: $table.eventName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sessionId => $composableBuilder(
+    column: $table.sessionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get screenName => $composableBuilder(
+    column: $table.screenName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get properties => $composableBuilder(
+    column: $table.properties,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AnalyticsEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AnalyticsEventsTable> {
+  $$AnalyticsEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get eventId =>
+      $composableBuilder(column: $table.eventId, builder: (column) => column);
+
+  GeneratedColumn<String> get eventType =>
+      $composableBuilder(column: $table.eventType, builder: (column) => column);
+
+  GeneratedColumn<String> get eventName =>
+      $composableBuilder(column: $table.eventName, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get sessionId =>
+      $composableBuilder(column: $table.sessionId, builder: (column) => column);
+
+  GeneratedColumn<String> get screenName => $composableBuilder(
+    column: $table.screenName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get properties => $composableBuilder(
+    column: $table.properties,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+}
+
+class $$AnalyticsEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AnalyticsEventsTable,
+          AnalyticsEvent,
+          $$AnalyticsEventsTableFilterComposer,
+          $$AnalyticsEventsTableOrderingComposer,
+          $$AnalyticsEventsTableAnnotationComposer,
+          $$AnalyticsEventsTableCreateCompanionBuilder,
+          $$AnalyticsEventsTableUpdateCompanionBuilder,
+          (
+            AnalyticsEvent,
+            BaseReferences<
+              _$AppDatabase,
+              $AnalyticsEventsTable,
+              AnalyticsEvent
+            >,
+          ),
+          AnalyticsEvent,
+          PrefetchHooks Function()
+        > {
+  $$AnalyticsEventsTableTableManager(
+    _$AppDatabase db,
+    $AnalyticsEventsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AnalyticsEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AnalyticsEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AnalyticsEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> eventId = const Value.absent(),
+                Value<String> eventType = const Value.absent(),
+                Value<String> eventName = const Value.absent(),
+                Value<String?> userId = const Value.absent(),
+                Value<String?> sessionId = const Value.absent(),
+                Value<String?> screenName = const Value.absent(),
+                Value<String?> properties = const Value.absent(),
+                Value<int> timestamp = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+              }) => AnalyticsEventsCompanion(
+                id: id,
+                eventId: eventId,
+                eventType: eventType,
+                eventName: eventName,
+                userId: userId,
+                sessionId: sessionId,
+                screenName: screenName,
+                properties: properties,
+                timestamp: timestamp,
+                isSynced: isSynced,
+                syncedAt: syncedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String eventId,
+                required String eventType,
+                required String eventName,
+                Value<String?> userId = const Value.absent(),
+                Value<String?> sessionId = const Value.absent(),
+                Value<String?> screenName = const Value.absent(),
+                Value<String?> properties = const Value.absent(),
+                required int timestamp,
+                Value<bool> isSynced = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+              }) => AnalyticsEventsCompanion.insert(
+                id: id,
+                eventId: eventId,
+                eventType: eventType,
+                eventName: eventName,
+                userId: userId,
+                sessionId: sessionId,
+                screenName: screenName,
+                properties: properties,
+                timestamp: timestamp,
+                isSynced: isSynced,
+                syncedAt: syncedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AnalyticsEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AnalyticsEventsTable,
+      AnalyticsEvent,
+      $$AnalyticsEventsTableFilterComposer,
+      $$AnalyticsEventsTableOrderingComposer,
+      $$AnalyticsEventsTableAnnotationComposer,
+      $$AnalyticsEventsTableCreateCompanionBuilder,
+      $$AnalyticsEventsTableUpdateCompanionBuilder,
+      (
+        AnalyticsEvent,
+        BaseReferences<_$AppDatabase, $AnalyticsEventsTable, AnalyticsEvent>,
+      ),
+      AnalyticsEvent,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -14470,4 +15467,6 @@ class $AppDatabaseManager {
       $$InviteLinkJoinsTableTableManager(_db, _db.inviteLinkJoins);
   $$CallHistoryTableTableManager get callHistory =>
       $$CallHistoryTableTableManager(_db, _db.callHistory);
+  $$AnalyticsEventsTableTableManager get analyticsEvents =>
+      $$AnalyticsEventsTableTableManager(_db, _db.analyticsEvents);
 }

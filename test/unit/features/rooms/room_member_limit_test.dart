@@ -1,4 +1,4 @@
-import 'package:chat/features/rooms/domain/room.dart';
+import 'package:stawi/features/rooms/domain/room.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -18,30 +18,18 @@ void main() {
     });
 
     test('effectiveMemberLimit returns default when memberLimit is null', () {
-      const room = Room(
-        id: 'test-room',
-        name: 'Test Room',
-        type: 'group',
-      );
+      const room = Room(id: 'test-room', name: 'Test Room', type: 'group');
       expect(room.effectiveMemberLimit, equals(defaultMemberLimit));
     });
 
     test('isGroup returns true for group type', () {
-      const room = Room(
-        id: 'test-room',
-        name: 'Test Room',
-        type: 'group',
-      );
+      const room = Room(id: 'test-room', name: 'Test Room', type: 'group');
       expect(room.isGroup, isTrue);
       expect(room.isDirect, isFalse);
     });
 
     test('isDirect returns true for direct type', () {
-      const room = Room(
-        id: 'test-room',
-        name: 'Test Room',
-        type: 'direct',
-      );
+      const room = Room(id: 'test-room', name: 'Test Room', type: 'direct');
       expect(room.isDirect, isTrue);
       expect(room.isGroup, isFalse);
     });
@@ -122,11 +110,7 @@ void main() {
     });
 
     test('memberLimitEnabled defaults to true', () {
-      const room = Room(
-        id: 'test-room',
-        name: 'Test Room',
-        type: 'group',
-      );
+      const room = Room(id: 'test-room', name: 'Test Room', type: 'group');
       expect(room.memberLimitEnabled, isTrue);
     });
   });

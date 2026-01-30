@@ -461,9 +461,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'Verification code sent to ${contact.value}',
-              ),
+              content: Text('Verification code sent to ${contact.value}'),
             ),
           );
           _showVerificationCodeDialog(contact);
@@ -500,9 +498,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               const SizedBox(height: 8),
               Text(
                 contact.value,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -528,7 +526,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: isVerifying ? null : () => Navigator.pop(dialogContext),
+              onPressed: isVerifying
+                  ? null
+                  : () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             TextButton(

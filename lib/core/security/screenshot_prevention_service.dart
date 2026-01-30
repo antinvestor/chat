@@ -36,9 +36,10 @@ class ScreenshotPreventionService {
       if (_isEnabled) {
         await enableScreenshotPrevention();
       }
-      AppLogger.debug('Screenshot prevention initialized', data: {
-        'enabled': _isEnabled,
-      });
+      AppLogger.debug(
+        'Screenshot prevention initialized',
+        data: {'enabled': _isEnabled},
+      );
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to initialize screenshot prevention',
@@ -127,7 +128,9 @@ class ScreenshotPreventionService {
         _isApplied = false;
         AppLogger.debug('Screenshot prevention temporarily disabled');
       } catch (e) {
-        AppLogger.warning('Failed to temporarily disable screenshot prevention');
+        AppLogger.warning(
+          'Failed to temporarily disable screenshot prevention',
+        );
       }
     }
   }

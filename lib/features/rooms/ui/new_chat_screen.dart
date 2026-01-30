@@ -7,7 +7,6 @@ import '../../../core/logging/app_logger.dart';
 import '../../contacts/data/contact_sync_repository.dart';
 import '../../contacts/data/roster_repository.dart';
 import '../../contacts/services/contact_sync_orchestrator.dart';
-import '../../contacts/ui/contact_sync_sheet.dart';
 import '../data/room_service.dart';
 
 class NewChatScreen extends ConsumerStatefulWidget {

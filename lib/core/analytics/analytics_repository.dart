@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../db/database.dart';
+import '../db/database.dart' as db;
 import 'analytics_event.dart';
 
 /// Repository for storing and retrieving analytics events from local database
@@ -12,25 +12,27 @@ import 'analytics_event.dart';
 class AnalyticsRepository {
   AnalyticsRepository(this._database);
 
-  final AppDatabase _database;
+  final db.AppDatabase _database;
 
   /// Insert a new analytics event
   Future<int> insertEvent(AnalyticsEvent event) async {
-    return _database.into(_database.analyticsEvents).insert(
-      AnalyticsEventsCompanion.insert(
-        eventId: event.id,
-        eventType: event.type.name,
-        eventName: event.name,
-        userId: Value(event.userId),
-        sessionId: Value(event.sessionId),
-        screenName: Value(event.screenName),
-        properties: Value(event.properties != null
-            ? jsonEncode(event.properties)
-            : null),
-        timestamp: event.timestamp.millisecondsSinceEpoch,
-        isSynced: const Value(false),
-      ),
-    );
+    return _database
+        .into(_database.analyticsEvents)
+        .insert(
+          db.AnalyticsEventsCompanion.insert(
+            eventId: event.id,
+            eventType: event.type.name,
+            eventName: event.name,
+            userId: Value(event.userId),
+            sessionId: Value(event.sessionId),
+            screenName: Value(event.screenName),
+            properties: Value(
+              event.properties != null ? jsonEncode(event.properties) : null,
+            ),
+            timestamp: event.timestamp.millisecondsSinceEpoch,
+            isSynced: const Value(false),
+          ),
+        );
   }
 
   /// Insert multiple analytics events in a batch
@@ -39,16 +41,16 @@ class AnalyticsRepository {
       for (final event in events) {
         batch.insert(
           _database.analyticsEvents,
-          AnalyticsEventsCompanion.insert(
+          db.AnalyticsEventsCompanion.insert(
             eventId: event.id,
             eventType: event.type.name,
             eventName: event.name,
             userId: Value(event.userId),
             sessionId: Value(event.sessionId),
             screenName: Value(event.screenName),
-            properties: Value(event.properties != null
-                ? jsonEncode(event.properties)
-                : null),
+            properties: Value(
+              event.properties != null ? jsonEncode(event.properties) : null,
+            ),
             timestamp: event.timestamp.millisecondsSinceEpoch,
             isSynced: const Value(false),
           ),
@@ -70,27 +72,31 @@ class AnalyticsRepository {
 
   /// Mark events as synced
   Future<void> markEventsSynced(List<String> eventIds) async {
-    await (_database.update(_database.analyticsEvents)
-      ..where((t) => t.eventId.isIn(eventIds)))
-      .write(AnalyticsEventsCompanion(
+    await (_database.update(
+      _database.analyticsEvents,
+    )..where((t) => t.eventId.isIn(eventIds))).write(
+      db.AnalyticsEventsCompanion(
         isSynced: const Value(true),
         syncedAt: Value(DateTime.now().millisecondsSinceEpoch),
-      ));
+      ),
+    );
   }
 
   /// Delete synced events older than the specified duration
   Future<int> deleteSyncedEventsOlderThan(Duration duration) async {
     final cutoff = DateTime.now().subtract(duration).millisecondsSinceEpoch;
-    return (_database.delete(_database.analyticsEvents)
-      ..where((t) => t.isSynced.equals(true) & t.timestamp.isSmallerThanValue(cutoff)))
-      .go();
+    return (_database.delete(_database.analyticsEvents)..where(
+          (t) =>
+              t.isSynced.equals(true) & t.timestamp.isSmallerThanValue(cutoff),
+        ))
+        .go();
   }
 
   /// Delete all synced events
   Future<int> deleteAllSyncedEvents() async {
-    return (_database.delete(_database.analyticsEvents)
-      ..where((t) => t.isSynced.equals(true)))
-      .go();
+    return (_database.delete(
+      _database.analyticsEvents,
+    )..where((t) => t.isSynced.equals(true))).go();
   }
 
   /// Get count of unsynced events
@@ -147,9 +153,11 @@ class AnalyticsRepository {
     final endMs = end.millisecondsSinceEpoch;
 
     final query = _database.select(_database.analyticsEvents)
-      ..where((t) =>
-          t.timestamp.isBiggerOrEqualValue(startMs) &
-          t.timestamp.isSmallerOrEqualValue(endMs))
+      ..where(
+        (t) =>
+            t.timestamp.isBiggerOrEqualValue(startMs) &
+            t.timestamp.isSmallerOrEqualValue(endMs),
+      )
       ..orderBy([(t) => OrderingTerm.asc(t.timestamp)])
       ..limit(limit);
 
@@ -163,7 +171,7 @@ class AnalyticsRepository {
   }
 
   /// Convert database row to AnalyticsEvent
-  AnalyticsEvent _rowToEvent(AnalyticsEvent$ row) {
+  AnalyticsEvent _rowToEvent(db.AnalyticsEvent row) {
     Map<String, dynamic>? properties;
     if (row.properties != null) {
       properties = jsonDecode(row.properties!) as Map<String, dynamic>;
@@ -176,7 +184,10 @@ class AnalyticsRepository {
         orElse: () => AnalyticsEventType.custom,
       ),
       name: row.eventName,
-      timestamp: DateTime.fromMillisecondsSinceEpoch(row.timestamp, isUtc: true),
+      timestamp: DateTime.fromMillisecondsSinceEpoch(
+        row.timestamp,
+        isUtc: true,
+      ),
       userId: row.userId,
       sessionId: row.sessionId,
       screenName: row.screenName,
@@ -188,5 +199,5 @@ class AnalyticsRepository {
 
 /// Provider for the analytics repository
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
-  return AnalyticsRepository(AppDatabase.instance);
+  return AnalyticsRepository(db.AppDatabase.instance);
 });

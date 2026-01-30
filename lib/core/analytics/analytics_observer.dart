@@ -49,8 +49,7 @@ class AnalyticsNavigatorObserver extends NavigatorObserver {
         screenName,
         properties: {
           'route_type': route.runtimeType.toString(),
-          if (route.settings.arguments != null)
-            'has_arguments': true,
+          if (route.settings.arguments != null) 'has_arguments': true,
         },
       );
     }
@@ -75,7 +74,9 @@ class AnalyticsNavigatorObserver extends NavigatorObserver {
 
   String _formatRouteName(String routeName) {
     // Remove leading slash
-    var formatted = routeName.startsWith('/') ? routeName.substring(1) : routeName;
+    var formatted = routeName.startsWith('/')
+        ? routeName.substring(1)
+        : routeName;
 
     // Remove any query parameters
     final queryIndex = formatted.indexOf('?');

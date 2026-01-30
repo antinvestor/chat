@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:chat/core/analytics/analytics_event.dart';
-import 'package:chat/core/analytics/analytics_service.dart';
+import 'package:stawi/core/analytics/analytics_event.dart';
+import 'package:stawi/core/analytics/analytics_service.dart';
 
 void main() {
   group('AnalyticsService', () {
@@ -9,10 +9,7 @@ void main() {
 
     setUp(() {
       analyticsService = AnalyticsService(
-        config: const AnalyticsConfig(
-          enabled: true,
-          enableDebugLogging: false,
-        ),
+        config: const AnalyticsConfig(enabled: true, enableDebugLogging: false),
       );
     });
 
@@ -103,7 +100,10 @@ void main() {
           appVersion: '1.0.0',
         );
         analyticsService.setUserProperties(properties);
-        expect(analyticsService.userProperties?.displayName, equals('Test User'));
+        expect(
+          analyticsService.userProperties?.displayName,
+          equals('Test User'),
+        );
       });
 
       test('updateUserProperty adds custom property', () {
@@ -133,8 +133,14 @@ void main() {
         analyticsService.trackScreenView('EntryScreen');
         analyticsService.trackScreenView('MiddleScreen');
         analyticsService.trackScreenView('ExitScreen');
-        expect(analyticsService.currentSession?.entryScreen, equals('EntryScreen'));
-        expect(analyticsService.currentSession?.exitScreen, equals('ExitScreen'));
+        expect(
+          analyticsService.currentSession?.entryScreen,
+          equals('EntryScreen'),
+        );
+        expect(
+          analyticsService.currentSession?.exitScreen,
+          equals('ExitScreen'),
+        );
       });
 
       test('trackUserLogout resets session', () {
@@ -146,11 +152,7 @@ void main() {
 
     group('setting tracking', () {
       test('trackSettingChanged records old and new values', () {
-        analyticsService.trackSettingChanged(
-          'theme',
-          'light',
-          'dark',
-        );
+        analyticsService.trackSettingChanged('theme', 'light', 'dark');
         expect(analyticsService.pendingEventCount, equals(1));
       });
     });
