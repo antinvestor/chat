@@ -8,7 +8,8 @@ import '../../domain/user_status.dart';
 /// a user's current availability status (online, away, busy, etc.)
 class StatusIndicator extends StatelessWidget {
   const StatusIndicator({
-    required this.status, super.key,
+    required this.status,
+    super.key,
     this.size = 12,
     this.showBorder = true,
     this.borderColor,
@@ -55,7 +56,8 @@ class StatusIndicator extends StatelessWidget {
 /// corner showing their current availability.
 class AvatarWithStatus extends StatelessWidget {
   const AvatarWithStatus({
-    required this.status, super.key,
+    required this.status,
+    super.key,
     this.avatarUrl,
     this.displayName,
     this.radius = 24,
@@ -132,7 +134,8 @@ class AvatarWithStatus extends StatelessWidget {
 /// Shows the status icon, label, and optional custom status message
 class StatusDisplay extends StatelessWidget {
   const StatusDisplay({
-    required this.status, super.key,
+    required this.status,
+    super.key,
     this.statusMessage,
     this.showIcon = true,
     this.showLabel = true,
