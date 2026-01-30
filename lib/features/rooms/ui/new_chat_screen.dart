@@ -1,14 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../contacts/data/contact_sync_repository.dart';
-import '../../contacts/ui/contact_sync_sheet.dart';
+import '../../contacts/services/contact_sync_orchestrator.dart';
 import '../data/room_service.dart';
 
 class NewChatScreen extends ConsumerStatefulWidget {
@@ -24,8 +21,6 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   String _searchQuery = '';
   bool _isCreatingRoom = false;
   bool _hasCheckedPermission = false;
-
-  bool get _isMobile => Platform.isAndroid || Platform.isIOS;
 
   @override
   void initState() {
@@ -46,153 +41,14 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     if (_hasCheckedPermission) return;
     _hasCheckedPermission = true;
 
-    if (!_isMobile) {
-      // On desktop/web, just trigger sync directly
-      await _triggerSync();
-      return;
-    }
+    // Use the ContactSyncOrchestrator for lazy contact sync
+    final orchestrator = await ref.read(contactSyncOrchestratorProvider.future);
 
-    // Check current permission status
-    final status = await Permission.contacts.status;
+    final success = await orchestrator.ensureContactsSynced(context: context);
 
-    if (status.isGranted) {
-      // Already have permission, trigger sync
-      await _triggerSync();
-    } else if (status.isPermanentlyDenied) {
-      // Show explanation dialog with settings option
-      if (mounted) {
-        await _showPermissionExplanationDialog(isPermanentlyDenied: true);
-      }
-    } else {
-      // Need to request permission - show explanation first
-      if (mounted) {
-        await _showPermissionExplanationDialog(isPermanentlyDenied: false);
-      }
-    }
-  }
-
-  Future<void> _showPermissionExplanationDialog({
-    required bool isPermanentlyDenied,
-  }) async {
-    final theme = Theme.of(context);
-
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        icon: Icon(
-          Icons.contacts_outlined,
-          size: 48,
-          color: theme.colorScheme.primary,
-        ),
-        title: const Text('Access Your Contacts'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'To help you find friends and create group chats, we need access to your contacts.',
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  _buildBenefitRow(
-                    theme,
-                    Icons.group_add,
-                    'Find friends already on the app',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildBenefitRow(
-                    theme,
-                    Icons.chat_bubble_outline,
-                    'Start chats with your contacts',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildBenefitRow(
-                    theme,
-                    Icons.lock_outline,
-                    'Your contacts stay private on your device',
-                  ),
-                ],
-              ),
-            ),
-            if (isPermanentlyDenied) ...[
-              const SizedBox(height: 16),
-              Text(
-                'You previously denied this permission. Please enable it in Settings.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not Now'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(isPermanentlyDenied ? 'Open Settings' : 'Continue'),
-          ),
-        ],
-      ),
-    );
-
-    if ((result ?? false) && mounted) {
-      if (isPermanentlyDenied) {
-        // Open app settings
-        await openAppSettings();
-        // Check again after returning from settings
-        if (mounted) {
-          final newStatus = await Permission.contacts.status;
-          if (newStatus.isGranted) {
-            await _triggerSync();
-          }
-        }
-      } else {
-        // Request permission from system
-        final status = await Permission.contacts.request();
-        if (status.isGranted && mounted) {
-          await _triggerSync();
-        } else if (status.isPermanentlyDenied && mounted) {
-          // User denied again, show settings option
-          await _showPermissionExplanationDialog(isPermanentlyDenied: true);
-        }
-      }
-    }
-  }
-
-  Widget _buildBenefitRow(ThemeData theme, IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: theme.colorScheme.primary),
-        const SizedBox(width: 12),
-        Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
-      ],
-    );
-  }
-
-  Future<void> _triggerSync() async {
-    final repo = await ref.read(rosterRepositoryProvider.future);
-    if (mounted) {
-      await showContactSyncSheet(
-        context: context,
-        repository: repo,
-        onComplete: () {
-          // Refresh the contacts list
-          ref.invalidate(rosterEntriesProvider);
-        },
-      );
+    if (success && mounted) {
+      // Refresh the contacts list
+      ref.invalidate(rosterEntriesProvider);
     }
   }
 
@@ -508,9 +364,15 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   }
 
   Future<void> _syncContacts() async {
-    // Reset flag so we go through permission check again
-    _hasCheckedPermission = false;
-    await _checkPermissionAndSync();
+    // Use the ContactSyncOrchestrator for lazy contact sync
+    final orchestrator = await ref.read(contactSyncOrchestratorProvider.future);
+
+    final success = await orchestrator.ensureContactsSynced(context: context);
+
+    if (success && mounted) {
+      // Refresh the contacts list
+      ref.invalidate(rosterEntriesProvider);
+    }
   }
 
   /// Get the correct contact identifier based on priority:

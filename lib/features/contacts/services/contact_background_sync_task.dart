@@ -12,6 +12,7 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/api_config.dart';
 import '../../../core/settings/settings_service.dart';
 import '../data/roster_repository.dart';
+import 'contact_sync_orchestrator.dart';
 import 'contact_sync_service.dart';
 
 /// Unique task name for contact sync background task
@@ -41,6 +42,18 @@ class ContactBackgroundSyncTask {
       }
 
       final (syncService, settingsService) = services;
+
+      // Check if contacts have been initialized via lazy sync
+      // Background sync should only run after user has granted permission
+      final hasInitialized = settingsService.getBool(
+        ContactSyncOrchestratorKeys.contactSyncInitialized,
+      );
+      if (!hasInitialized) {
+        AppLogger.debug(
+          '[ContactBackgroundSync] Contacts not initialized yet, skipping',
+        );
+        return true; // Not a failure, just waiting for user to initialize
+      }
 
       // Check Wi-Fi only setting before delegating to service
       final syncOnlyOnWifi = settingsService.getBool(
