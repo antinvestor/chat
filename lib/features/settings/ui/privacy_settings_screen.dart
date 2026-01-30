@@ -142,7 +142,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                         data: (blocked) =>
                             '${blocked.length} contact${blocked.length == 1 ? '' : 's'}',
                         loading: () => 'Loading...',
-                        error: (_, __) => 'Error loading',
+                        error: (error, stackTrace) => 'Error loading',
                       ),
                       onTap: () => Navigator.of(
                         context,

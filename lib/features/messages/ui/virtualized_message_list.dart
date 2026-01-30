@@ -144,7 +144,7 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
     assert(() {
       SchedulerBinding.instance.addPostFrameCallback(_trackFrame);
       return true;
-    }());
+    }(), 'Frame tracking should be enabled in debug mode');
   }
 
   void _initScrollController() {

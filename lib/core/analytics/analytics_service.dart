@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_slow_async_io
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -124,7 +126,7 @@ class AnalyticsService {
   }
 
   /// Update specific user properties
-  void updateUserProperty(String key, dynamic value) {
+  void updateUserProperty(String key, value) {
     final current = _userProperties?.customProperties ?? {};
     final updated = Map<String, dynamic>.from(current);
     updated[key] = value;
@@ -318,11 +320,7 @@ class AnalyticsService {
   }
 
   /// Track setting change
-  void trackSettingChanged(
-    String settingName,
-    dynamic oldValue,
-    dynamic newValue,
-  ) {
+  void trackSettingChanged(String settingName, oldValue, newValue) {
     trackEvent(
       'setting_changed',
       properties: {
@@ -410,7 +408,7 @@ class AnalyticsService {
     final eventsToSend = List<AnalyticsEvent>.from(_eventQueue);
 
     try {
-      // TODO: Send events to backend analytics service
+      // TODO(antinvestor): Send events to backend analytics service
       // For now, we just mark them as synced and clear
       // In production, this would send to your analytics backend:
       // await _sendEventsToBackend(eventsToSend);
@@ -455,7 +453,7 @@ class AnalyticsService {
       final file = File('$_storagePath/pending_events.json');
       if (await file.exists()) {
         final content = await file.readAsString();
-        final List<dynamic> eventsJson = jsonDecode(content) as List<dynamic>;
+        final eventsJson = jsonDecode(content) as List<dynamic>;
         for (final json in eventsJson) {
           _eventQueue.add(
             AnalyticsEvent.fromJson(json as Map<String, dynamic>),
@@ -492,20 +490,13 @@ class AnalyticsService {
 /// Provider for the analytics service
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   final service = AnalyticsService(
-    config: const AnalyticsConfig(
-      enabled: true,
-      batchSize: 50,
-      flushIntervalSeconds: 60,
-      enableDebugLogging: kDebugMode,
-    ),
+    config: const AnalyticsConfig(enableDebugLogging: kDebugMode),
   );
 
   // Initialize on first access
   service.initialize();
 
-  ref.onDispose(() {
-    service.close();
-  });
+  ref.onDispose(service.close);
 
   return service;
 });

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_dynamic_calls
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -593,11 +595,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     }
   }
 
-  /// Resend verification code
-  Future<void> _resendVerificationCode(ContactInfo contact) async {
-    await _startVerification(contact);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -854,7 +851,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               ? IconButton(
                   icon: const Icon(Icons.clear),
                   onPressed: () {
-                    setState(() => _statusMessageController.clear());
+                    setState(_statusMessageController.clear);
                   },
                 )
               : null,

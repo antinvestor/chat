@@ -10,8 +10,6 @@ void main() {
           id: 'contact-1',
           type: ContactType.email,
           value: 'test@example.com',
-          isVerified: false,
-          isPrimary: false,
         );
 
         expect(contact.id, equals('contact-1'));
@@ -72,8 +70,6 @@ void main() {
           id: 'contact-1',
           type: ContactType.email,
           value: 'test@example.com',
-          isVerified: false,
-          isPrimary: false,
         );
 
         // Unverified contact should show verify button
@@ -86,7 +82,6 @@ void main() {
           type: ContactType.email,
           value: 'test@example.com',
           isVerified: true,
-          isPrimary: false,
         );
 
         // Verified contact should not show verify button

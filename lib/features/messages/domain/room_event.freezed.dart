@@ -31,10 +31,10 @@ mixin _$RoomEvent {
  int get forwardCount;// Times this message has been forwarded
  bool get forwardRestricted;// Cannot be forwarded
 // Disappearing messages
- int? get expiresAt;
+ int? get expiresAt;// Timestamp when message expires (for disappearing messages)
 // Starred messages
  bool get starred;// Whether message is starred/bookmarked
- int? get starredAt;// Timestamp when message was starred
+ int? get starredAt;
 /// Create a copy of RoomEvent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -298,11 +298,11 @@ class _RoomEvent extends RoomEvent {
 // Cannot be forwarded
 // Disappearing messages
 @override final  int? expiresAt;
+// Timestamp when message expires (for disappearing messages)
 // Starred messages
 @override@JsonKey() final  bool starred;
 // Whether message is starred/bookmarked
 @override final  int? starredAt;
-// Timestamp when message was starred
 
 /// Create a copy of RoomEvent
 /// with the given fields replaced by the non-null parameter values.
@@ -354,7 +354,7 @@ class __$RoomEventCopyWithImpl<$Res>
 
 /// Create a copy of RoomEvent
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? roomId = null,Object? senderId = null,Object? type = null,Object? content = null,Object? createdAt = null,Object? senderContactId = freezed,Object? parentId = freezed,Object? status = null,Object? serverTs = freezed,Object? localId = freezed,Object? editedAt = freezed,Object? redacted = null,Object? redactedAt = freezed,Object? redactedBy = freezed,Object? retryCount = null,Object? errorMessage = freezed,Object? forwardedFromRoom = freezed,Object? forwardedFromEvent = freezed,Object? forwardCount = null,Object? forwardRestricted = null,Object? expiresAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? roomId = null,Object? senderId = null,Object? type = null,Object? content = null,Object? createdAt = null,Object? senderContactId = freezed,Object? parentId = freezed,Object? status = null,Object? serverTs = freezed,Object? localId = freezed,Object? editedAt = freezed,Object? redacted = null,Object? redactedAt = freezed,Object? redactedBy = freezed,Object? retryCount = null,Object? errorMessage = freezed,Object? forwardedFromRoom = freezed,Object? forwardedFromEvent = freezed,Object? forwardCount = null,Object? forwardRestricted = null,Object? expiresAt = freezed,Object? starred = null,Object? starredAt = freezed,}) {
   return _then(_RoomEvent(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,roomId: null == roomId ? _self.roomId : roomId // ignore: cast_nullable_to_non_nullable
