@@ -1,5 +1,5 @@
-import 'package:chat/core/startup/startup_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/startup/startup_service.dart';
 
 void main() {
   group('StartupPhase', () {

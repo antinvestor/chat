@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:chat/core/db/database.dart';
-import 'package:chat/features/auth/data/user_info_provider.dart';
-import 'package:chat/features/profile/data/profile_repository.dart';
-import 'package:chat/features/profile/ui/profile_edit_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/db/database.dart';
+import 'package:stawi/features/auth/data/user_info_provider.dart';
+import 'package:stawi/features/profile/data/profile_repository.dart';
+import 'package:stawi/features/profile/ui/profile_edit_screen.dart';
 
 /// Mock ProfileRepository for testing
 class MockProfileRepository implements ProfileRepository {

@@ -1,5 +1,5 @@
-import 'package:chat/core/db/database.dart';
 import 'package:drift/native.dart';
+import 'package:stawi/core/db/database.dart';
 
 /// Creates an in-memory database for testing
 ///

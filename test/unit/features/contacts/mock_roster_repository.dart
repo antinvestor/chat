@@ -1,5 +1,5 @@
-import 'package:chat/features/contacts/data/roster_repository.dart';
-import 'package:chat/features/contacts/services/contact_sync_service.dart';
+import 'package:stawi/features/contacts/data/roster_repository.dart';
+import 'package:stawi/features/contacts/services/contact_sync_service.dart';
 
 /// Mock implementation of ContactSyncRepository for testing
 class MockRosterRepository implements ContactSyncRepository {

@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:chat/core/media/thumbnail_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
+import 'package:stawi/core/media/thumbnail_service.dart';
 
 void main() {
   group('ThumbnailConfig', () {

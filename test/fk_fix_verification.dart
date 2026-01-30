@@ -2,8 +2,8 @@
 
 import 'dart:io';
 
-import 'package:chat/core/db/database.dart';
-import 'package:chat/core/logging/app_logger.dart';
+import 'package:stawi/core/db/database.dart';
+import 'package:stawi/core/logging/app_logger.dart';
 
 void main() async {
   AppLogger.info('🧪 Testing Roster Foreign Key Constraint Fix...\n');

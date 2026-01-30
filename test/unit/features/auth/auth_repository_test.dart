@@ -1,7 +1,7 @@
 import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     show TokenRefreshResult;
-import 'package:chat/features/auth/data/auth_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/auth/data/auth_repository.dart';
 
 import '../../../test_helpers/test_helpers.dart';
 

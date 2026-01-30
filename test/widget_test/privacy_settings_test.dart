@@ -1,10 +1,10 @@
-import 'package:chat/core/settings/settings_service.dart';
-import 'package:chat/features/contacts/data/roster_repository.dart';
-import 'package:chat/features/settings/ui/privacy_settings_screen.dart';
-import 'package:chat/features/settings/ui/visibility_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/settings/settings_service.dart';
+import 'package:stawi/features/contacts/data/roster_repository.dart';
+import 'package:stawi/features/settings/ui/privacy_settings_screen.dart';
+import 'package:stawi/features/settings/ui/visibility_picker.dart';
 
 import '../test_helpers/test_helpers.dart';
 

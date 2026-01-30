@@ -1,6 +1,6 @@
-import 'package:chat/features/rooms/ui/group_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/rooms/ui/group_settings_screen.dart';
 
 import '../test_helpers/test_helpers.dart';
 
