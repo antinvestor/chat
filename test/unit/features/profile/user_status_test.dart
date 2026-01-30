@@ -1,6 +1,6 @@
-import 'package:chat/features/profile/domain/user_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/profile/domain/user_status.dart';
 
 void main() {
   group('UserStatus', () {
@@ -128,7 +128,10 @@ void main() {
 
   group('UserStatusProfile extension', () {
     test('offline has correct short description', () {
-      expect(UserStatus.offline.shortDescription, equals('Not visible to others'));
+      expect(
+        UserStatus.offline.shortDescription,
+        equals('Not visible to others'),
+      );
     });
 
     test('online has correct short description', () {
@@ -136,7 +139,10 @@ void main() {
     });
 
     test('away has correct short description', () {
-      expect(UserStatus.away.shortDescription, equals('May be slow to respond'));
+      expect(
+        UserStatus.away.shortDescription,
+        equals('May be slow to respond'),
+      );
     });
 
     test('busy has correct short description', () {
@@ -144,7 +150,10 @@ void main() {
     });
 
     test('doNotDisturb has correct short description', () {
-      expect(UserStatus.doNotDisturb.shortDescription, equals('Notifications muted'));
+      expect(
+        UserStatus.doNotDisturb.shortDescription,
+        equals('Notifications muted'),
+      );
     });
   });
 }

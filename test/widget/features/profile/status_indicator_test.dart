@@ -1,21 +1,19 @@
-import 'package:chat/features/profile/domain/user_status.dart';
-import 'package:chat/features/profile/ui/widgets/status_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/profile/domain/user_status.dart';
+import 'package:stawi/features/profile/ui/widgets/status_indicator.dart';
 
 void main() {
   group('StatusIndicator', () {
     testWidgets('renders with correct color for online status', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: StatusIndicator(status: UserStatus.online),
-          ),
+          home: Scaffold(body: StatusIndicator(status: UserStatus.online)),
         ),
       );
 
       final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
+      final decoration = container.decoration! as BoxDecoration;
       expect(decoration.color, equals(Colors.green));
     });
 
@@ -24,10 +22,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: StatusIndicator(
-              status: UserStatus.online,
-              size: testSize,
-            ),
+            body: StatusIndicator(status: UserStatus.online, size: testSize),
           ),
         ),
       );
@@ -40,31 +35,28 @@ void main() {
     testWidgets('renders with border by default', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: StatusIndicator(status: UserStatus.online),
-          ),
+          home: Scaffold(body: StatusIndicator(status: UserStatus.online)),
         ),
       );
 
       final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
+      final decoration = container.decoration! as BoxDecoration;
       expect(decoration.border, isNotNull);
     });
 
-    testWidgets('renders without border when showBorder is false', (tester) async {
+    testWidgets('renders without border when showBorder is false', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: StatusIndicator(
-              status: UserStatus.online,
-              showBorder: false,
-            ),
+            body: StatusIndicator(status: UserStatus.online, showBorder: false),
           ),
         ),
       );
 
       final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
+      final decoration = container.decoration! as BoxDecoration;
       expect(decoration.border, isNull);
     });
   });
@@ -73,9 +65,7 @@ void main() {
     testWidgets('shows icon and label by default', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: StatusDisplay(status: UserStatus.online),
-          ),
+          home: Scaffold(body: StatusDisplay(status: UserStatus.online)),
         ),
       );
 
@@ -104,10 +94,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: StatusDisplay(
-              status: UserStatus.online,
-              showIcon: false,
-            ),
+            body: StatusDisplay(status: UserStatus.online, showIcon: false),
           ),
         ),
       );
@@ -119,10 +106,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: StatusDisplay(
-              status: UserStatus.online,
-              showLabel: false,
-            ),
+            body: StatusDisplay(status: UserStatus.online, showLabel: false),
           ),
         ),
       );
@@ -135,9 +119,7 @@ void main() {
     testWidgets('shows icon and label', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: StatusBadge(status: UserStatus.away),
-          ),
+          home: Scaffold(body: StatusBadge(status: UserStatus.away)),
         ),
       );
 
@@ -148,14 +130,12 @@ void main() {
     testWidgets('has rounded container', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: StatusBadge(status: UserStatus.online),
-          ),
+          home: Scaffold(body: StatusBadge(status: UserStatus.online)),
         ),
       );
 
       final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration as BoxDecoration;
+      final decoration = container.decoration! as BoxDecoration;
       expect(decoration.borderRadius, isNotNull);
     });
   });
@@ -211,10 +191,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: AvatarWithStatus(
-              status: UserStatus.online,
-              displayName: '',
-            ),
+            body: AvatarWithStatus(status: UserStatus.online, displayName: ''),
           ),
         ),
       );

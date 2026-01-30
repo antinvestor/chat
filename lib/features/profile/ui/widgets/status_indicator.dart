@@ -8,8 +8,7 @@ import '../../domain/user_status.dart';
 /// a user's current availability status (online, away, busy, etc.)
 class StatusIndicator extends StatelessWidget {
   const StatusIndicator({
-    super.key,
-    required this.status,
+    required this.status, super.key,
     this.size = 12,
     this.showBorder = true,
     this.borderColor,
@@ -43,10 +42,7 @@ class StatusIndicator extends StatelessWidget {
         shape: BoxShape.circle,
         color: status.color,
         border: showBorder
-            ? Border.all(
-                color: effectiveBorderColor,
-                width: borderWidth,
-              )
+            ? Border.all(color: effectiveBorderColor, width: borderWidth)
             : null,
       ),
     );
@@ -59,8 +55,7 @@ class StatusIndicator extends StatelessWidget {
 /// corner showing their current availability.
 class AvatarWithStatus extends StatelessWidget {
   const AvatarWithStatus({
-    super.key,
-    required this.status,
+    required this.status, super.key,
     this.avatarUrl,
     this.displayName,
     this.radius = 24,
@@ -137,8 +132,7 @@ class AvatarWithStatus extends StatelessWidget {
 /// Shows the status icon, label, and optional custom status message
 class StatusDisplay extends StatelessWidget {
   const StatusDisplay({
-    super.key,
-    required this.status,
+    required this.status, super.key,
     this.statusMessage,
     this.showIcon = true,
     this.showLabel = true,
@@ -169,19 +163,13 @@ class StatusDisplay extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (showIcon) ...[
-          Icon(
-            status.icon,
-            size: 14,
-            color: status.color,
-          ),
+          Icon(status.icon, size: 14, color: status.color),
           const SizedBox(width: 4),
         ],
         if (showLabel)
           Text(
-            statusMessage?.isNotEmpty == true ? statusMessage! : status.label,
-            style: textStyle?.copyWith(
-              color: status.color,
-            ),
+            statusMessage?.isNotEmpty ?? false ? statusMessage! : status.label,
+            style: textStyle?.copyWith(color: status.color),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -192,10 +180,7 @@ class StatusDisplay extends StatelessWidget {
 
 /// A compact badge showing status (for use in lists)
 class StatusBadge extends StatelessWidget {
-  const StatusBadge({
-    super.key,
-    required this.status,
-  });
+  const StatusBadge({required this.status, super.key});
 
   final UserStatus status;
 
@@ -212,11 +197,7 @@ class StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            status.icon,
-            size: 12,
-            color: status.color,
-          ),
+          Icon(status.icon, size: 12, color: status.color),
           const SizedBox(width: 4),
           Text(
             status.label,

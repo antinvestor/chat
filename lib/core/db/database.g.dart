@@ -59,6 +59,47 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<int> status = GeneratedColumn<int>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _statusMessageMeta = const VerificationMeta(
+    'statusMessage',
+  );
+  @override
+  late final GeneratedColumn<String> statusMessage = GeneratedColumn<String>(
+    'status_message',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusUpdatedAtMeta = const VerificationMeta(
+    'statusUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> statusUpdatedAt = GeneratedColumn<int>(
+    'status_updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bioMeta = const VerificationMeta('bio');
+  @override
+  late final GeneratedColumn<String> bio = GeneratedColumn<String>(
+    'bio',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -66,6 +107,10 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     avatarUrl,
     updatedAt,
     metadata,
+    status,
+    statusMessage,
+    statusUpdatedAt,
+    bio,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -108,6 +153,36 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         metadata.isAcceptableOrUnknown(data['metadata']!, _metadataMeta),
       );
     }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('status_message')) {
+      context.handle(
+        _statusMessageMeta,
+        statusMessage.isAcceptableOrUnknown(
+          data['status_message']!,
+          _statusMessageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status_updated_at')) {
+      context.handle(
+        _statusUpdatedAtMeta,
+        statusUpdatedAt.isAcceptableOrUnknown(
+          data['status_updated_at']!,
+          _statusUpdatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('bio')) {
+      context.handle(
+        _bioMeta,
+        bio.isAcceptableOrUnknown(data['bio']!, _bioMeta),
+      );
+    }
     return context;
   }
 
@@ -137,6 +212,22 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         DriftSqlType.string,
         data['${effectivePrefix}metadata'],
       ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status'],
+      )!,
+      statusMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status_message'],
+      ),
+      statusUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status_updated_at'],
+      ),
+      bio: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bio'],
+      ),
     );
   }
 
@@ -152,12 +243,28 @@ class Profile extends DataClass implements Insertable<Profile> {
   final String? avatarUrl;
   final int? updatedAt;
   final String? metadata;
+
+  /// User's presence status (0=offline, 1=online, 2=away, 3=busy, 4=doNotDisturb)
+  final int status;
+
+  /// Custom status message (e.g., "In a meeting", "On vacation")
+  final String? statusMessage;
+
+  /// Timestamp when status was last updated
+  final int? statusUpdatedAt;
+
+  /// User's bio/about text
+  final String? bio;
   const Profile({
     required this.id,
     this.name,
     this.avatarUrl,
     this.updatedAt,
     this.metadata,
+    required this.status,
+    this.statusMessage,
+    this.statusUpdatedAt,
+    this.bio,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -175,6 +282,16 @@ class Profile extends DataClass implements Insertable<Profile> {
     if (!nullToAbsent || metadata != null) {
       map['metadata'] = Variable<String>(metadata);
     }
+    map['status'] = Variable<int>(status);
+    if (!nullToAbsent || statusMessage != null) {
+      map['status_message'] = Variable<String>(statusMessage);
+    }
+    if (!nullToAbsent || statusUpdatedAt != null) {
+      map['status_updated_at'] = Variable<int>(statusUpdatedAt);
+    }
+    if (!nullToAbsent || bio != null) {
+      map['bio'] = Variable<String>(bio);
+    }
     return map;
   }
 
@@ -191,6 +308,14 @@ class Profile extends DataClass implements Insertable<Profile> {
       metadata: metadata == null && nullToAbsent
           ? const Value.absent()
           : Value(metadata),
+      status: Value(status),
+      statusMessage: statusMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(statusMessage),
+      statusUpdatedAt: statusUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(statusUpdatedAt),
+      bio: bio == null && nullToAbsent ? const Value.absent() : Value(bio),
     );
   }
 
@@ -205,6 +330,10 @@ class Profile extends DataClass implements Insertable<Profile> {
       avatarUrl: serializer.fromJson<String?>(json['avatarUrl']),
       updatedAt: serializer.fromJson<int?>(json['updatedAt']),
       metadata: serializer.fromJson<String?>(json['metadata']),
+      status: serializer.fromJson<int>(json['status']),
+      statusMessage: serializer.fromJson<String?>(json['statusMessage']),
+      statusUpdatedAt: serializer.fromJson<int?>(json['statusUpdatedAt']),
+      bio: serializer.fromJson<String?>(json['bio']),
     );
   }
   @override
@@ -216,6 +345,10 @@ class Profile extends DataClass implements Insertable<Profile> {
       'avatarUrl': serializer.toJson<String?>(avatarUrl),
       'updatedAt': serializer.toJson<int?>(updatedAt),
       'metadata': serializer.toJson<String?>(metadata),
+      'status': serializer.toJson<int>(status),
+      'statusMessage': serializer.toJson<String?>(statusMessage),
+      'statusUpdatedAt': serializer.toJson<int?>(statusUpdatedAt),
+      'bio': serializer.toJson<String?>(bio),
     };
   }
 
@@ -225,12 +358,24 @@ class Profile extends DataClass implements Insertable<Profile> {
     Value<String?> avatarUrl = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<String?> metadata = const Value.absent(),
+    int? status,
+    Value<String?> statusMessage = const Value.absent(),
+    Value<int?> statusUpdatedAt = const Value.absent(),
+    Value<String?> bio = const Value.absent(),
   }) => Profile(
     id: id ?? this.id,
     name: name.present ? name.value : this.name,
     avatarUrl: avatarUrl.present ? avatarUrl.value : this.avatarUrl,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     metadata: metadata.present ? metadata.value : this.metadata,
+    status: status ?? this.status,
+    statusMessage: statusMessage.present
+        ? statusMessage.value
+        : this.statusMessage,
+    statusUpdatedAt: statusUpdatedAt.present
+        ? statusUpdatedAt.value
+        : this.statusUpdatedAt,
+    bio: bio.present ? bio.value : this.bio,
   );
   Profile copyWithCompanion(ProfilesCompanion data) {
     return Profile(
@@ -239,6 +384,14 @@ class Profile extends DataClass implements Insertable<Profile> {
       avatarUrl: data.avatarUrl.present ? data.avatarUrl.value : this.avatarUrl,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       metadata: data.metadata.present ? data.metadata.value : this.metadata,
+      status: data.status.present ? data.status.value : this.status,
+      statusMessage: data.statusMessage.present
+          ? data.statusMessage.value
+          : this.statusMessage,
+      statusUpdatedAt: data.statusUpdatedAt.present
+          ? data.statusUpdatedAt.value
+          : this.statusUpdatedAt,
+      bio: data.bio.present ? data.bio.value : this.bio,
     );
   }
 
@@ -249,13 +402,27 @@ class Profile extends DataClass implements Insertable<Profile> {
           ..write('name: $name, ')
           ..write('avatarUrl: $avatarUrl, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('metadata: $metadata')
+          ..write('metadata: $metadata, ')
+          ..write('status: $status, ')
+          ..write('statusMessage: $statusMessage, ')
+          ..write('statusUpdatedAt: $statusUpdatedAt, ')
+          ..write('bio: $bio')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, avatarUrl, updatedAt, metadata);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    avatarUrl,
+    updatedAt,
+    metadata,
+    status,
+    statusMessage,
+    statusUpdatedAt,
+    bio,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -264,7 +431,11 @@ class Profile extends DataClass implements Insertable<Profile> {
           other.name == this.name &&
           other.avatarUrl == this.avatarUrl &&
           other.updatedAt == this.updatedAt &&
-          other.metadata == this.metadata);
+          other.metadata == this.metadata &&
+          other.status == this.status &&
+          other.statusMessage == this.statusMessage &&
+          other.statusUpdatedAt == this.statusUpdatedAt &&
+          other.bio == this.bio);
 }
 
 class ProfilesCompanion extends UpdateCompanion<Profile> {
@@ -273,6 +444,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<String?> avatarUrl;
   final Value<int?> updatedAt;
   final Value<String?> metadata;
+  final Value<int> status;
+  final Value<String?> statusMessage;
+  final Value<int?> statusUpdatedAt;
+  final Value<String?> bio;
   final Value<int> rowid;
   const ProfilesCompanion({
     this.id = const Value.absent(),
@@ -280,6 +455,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     this.avatarUrl = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.metadata = const Value.absent(),
+    this.status = const Value.absent(),
+    this.statusMessage = const Value.absent(),
+    this.statusUpdatedAt = const Value.absent(),
+    this.bio = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProfilesCompanion.insert({
@@ -288,6 +467,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     this.avatarUrl = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.metadata = const Value.absent(),
+    this.status = const Value.absent(),
+    this.statusMessage = const Value.absent(),
+    this.statusUpdatedAt = const Value.absent(),
+    this.bio = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Profile> custom({
@@ -296,6 +479,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     Expression<String>? avatarUrl,
     Expression<int>? updatedAt,
     Expression<String>? metadata,
+    Expression<int>? status,
+    Expression<String>? statusMessage,
+    Expression<int>? statusUpdatedAt,
+    Expression<String>? bio,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -304,6 +491,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       if (avatarUrl != null) 'avatar_url': avatarUrl,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (metadata != null) 'metadata': metadata,
+      if (status != null) 'status': status,
+      if (statusMessage != null) 'status_message': statusMessage,
+      if (statusUpdatedAt != null) 'status_updated_at': statusUpdatedAt,
+      if (bio != null) 'bio': bio,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -314,6 +505,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     Value<String?>? avatarUrl,
     Value<int?>? updatedAt,
     Value<String?>? metadata,
+    Value<int>? status,
+    Value<String?>? statusMessage,
+    Value<int?>? statusUpdatedAt,
+    Value<String?>? bio,
     Value<int>? rowid,
   }) {
     return ProfilesCompanion(
@@ -322,6 +517,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       updatedAt: updatedAt ?? this.updatedAt,
       metadata: metadata ?? this.metadata,
+      status: status ?? this.status,
+      statusMessage: statusMessage ?? this.statusMessage,
+      statusUpdatedAt: statusUpdatedAt ?? this.statusUpdatedAt,
+      bio: bio ?? this.bio,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -344,6 +543,18 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     if (metadata.present) {
       map['metadata'] = Variable<String>(metadata.value);
     }
+    if (status.present) {
+      map['status'] = Variable<int>(status.value);
+    }
+    if (statusMessage.present) {
+      map['status_message'] = Variable<String>(statusMessage.value);
+    }
+    if (statusUpdatedAt.present) {
+      map['status_updated_at'] = Variable<int>(statusUpdatedAt.value);
+    }
+    if (bio.present) {
+      map['bio'] = Variable<String>(bio.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -358,6 +569,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
           ..write('avatarUrl: $avatarUrl, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('metadata: $metadata, ')
+          ..write('status: $status, ')
+          ..write('statusMessage: $statusMessage, ')
+          ..write('statusUpdatedAt: $statusUpdatedAt, ')
+          ..write('bio: $bio, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7904,6 +8119,10 @@ typedef $$ProfilesTableCreateCompanionBuilder =
       Value<String?> avatarUrl,
       Value<int?> updatedAt,
       Value<String?> metadata,
+      Value<int> status,
+      Value<String?> statusMessage,
+      Value<int?> statusUpdatedAt,
+      Value<String?> bio,
       Value<int> rowid,
     });
 typedef $$ProfilesTableUpdateCompanionBuilder =
@@ -7913,6 +8132,10 @@ typedef $$ProfilesTableUpdateCompanionBuilder =
       Value<String?> avatarUrl,
       Value<int?> updatedAt,
       Value<String?> metadata,
+      Value<int> status,
+      Value<String?> statusMessage,
+      Value<int?> statusUpdatedAt,
+      Value<String?> bio,
       Value<int> rowid,
     });
 
@@ -7947,6 +8170,26 @@ class $$ProfilesTableFilterComposer
 
   ColumnFilters<String> get metadata => $composableBuilder(
     column: $table.metadata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bio => $composableBuilder(
+    column: $table.bio,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7984,6 +8227,26 @@ class $$ProfilesTableOrderingComposer
     column: $table.metadata,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bio => $composableBuilder(
+    column: $table.bio,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfilesTableAnnotationComposer
@@ -8009,6 +8272,22 @@ class $$ProfilesTableAnnotationComposer
 
   GeneratedColumn<String> get metadata =>
       $composableBuilder(column: $table.metadata, builder: (column) => column);
+
+  GeneratedColumn<int> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bio =>
+      $composableBuilder(column: $table.bio, builder: (column) => column);
 }
 
 class $$ProfilesTableTableManager
@@ -8044,6 +8323,10 @@ class $$ProfilesTableTableManager
                 Value<String?> avatarUrl = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<String?> statusMessage = const Value.absent(),
+                Value<int?> statusUpdatedAt = const Value.absent(),
+                Value<String?> bio = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProfilesCompanion(
                 id: id,
@@ -8051,6 +8334,10 @@ class $$ProfilesTableTableManager
                 avatarUrl: avatarUrl,
                 updatedAt: updatedAt,
                 metadata: metadata,
+                status: status,
+                statusMessage: statusMessage,
+                statusUpdatedAt: statusUpdatedAt,
+                bio: bio,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8060,6 +8347,10 @@ class $$ProfilesTableTableManager
                 Value<String?> avatarUrl = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<String?> statusMessage = const Value.absent(),
+                Value<int?> statusUpdatedAt = const Value.absent(),
+                Value<String?> bio = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProfilesCompanion.insert(
                 id: id,
@@ -8067,6 +8358,10 @@ class $$ProfilesTableTableManager
                 avatarUrl: avatarUrl,
                 updatedAt: updatedAt,
                 metadata: metadata,
+                status: status,
+                statusMessage: statusMessage,
+                statusUpdatedAt: statusUpdatedAt,
+                bio: bio,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
