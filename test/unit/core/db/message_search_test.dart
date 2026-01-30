@@ -258,9 +258,9 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 14', () {
-        // Version 14 is the current schema version
-        expect(db.schemaVersion, equals(14));
+      test('schema version is 15', () {
+        // Version 15 includes upload chunks for resumable uploads
+        expect(db.schemaVersion, equals(15));
       });
     });
 

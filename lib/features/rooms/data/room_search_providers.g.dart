@@ -110,4 +110,4 @@ final class FilteredRoomsProvider
   }
 }
 
-String _$filteredRoomsHash() => r'aa903e32764c556948eb36d22aced6beada2084f';
+String _$filteredRoomsHash() => r'8ea1db93f74581eff20d3619863a22d4b9c01e77';

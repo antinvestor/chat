@@ -60,7 +60,7 @@ final class ScreenshotPreventionServiceProvider
 }
 
 String _$screenshotPreventionServiceHash() =>
-    r'3ae04827a82270b53f3a5adeffaa670d62e45cce';
+    r'f71407ea88aec05ef1b6367f23aa94cec2856d86';
 
 /// Provider for screenshot prevention enabled state
 
