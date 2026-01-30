@@ -46,7 +46,7 @@ class ContactBackgroundSyncTask {
       // Check if contacts have been initialized via lazy sync
       // Background sync should only run after user has granted permission
       final hasInitialized = settingsService.getBool(
-        ContactSyncOrchestratorKeys.contactSyncInitialized,
+        SettingsKeys.contactSyncInitialized,
       );
       if (!hasInitialized) {
         AppLogger.debug(
