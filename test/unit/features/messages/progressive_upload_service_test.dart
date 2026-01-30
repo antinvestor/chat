@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:chat/core/db/database.dart';
-import 'package:chat/features/messages/data/progressive_upload_service.dart';
-import 'package:chat/features/messages/domain/upload_progress.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/db/database.dart';
+import 'package:stawi/features/messages/data/progressive_upload_service.dart';
+import 'package:stawi/features/messages/domain/upload_progress.dart';
 
 import '../../../test_helpers/test_database.dart';
 

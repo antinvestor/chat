@@ -437,7 +437,7 @@ final class TotalUploadProgressProvider
 }
 
 String _$totalUploadProgressHash() =>
-    r'6fda41c8de0dbf6e0b2517fadabfc3e5213631fa';
+    r'80a99e838fda0c1a0e2f96d97cd8e8352c624d80';
 
 /// Stream provider for real-time progress updates
 ///

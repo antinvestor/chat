@@ -13141,7 +13141,6 @@ typedef $$InviteLinkJoinsTableProcessedTableManager =
       InviteLinkJoin,
       PrefetchHooks Function({bool inviteLinkId})
     >;
-
 typedef $$UploadChunksTableCreateCompanionBuilder =
     UploadChunksCompanion Function({
       Value<int> id,
