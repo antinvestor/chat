@@ -16,6 +16,8 @@ _Room _$RoomFromJson(Map<String, dynamic> json) => _Room(
   metadata: json['metadata'] as Map<String, dynamic>?,
   disappearingTimeout: (json['disappearingTimeout'] as num?)?.toInt(),
   mutedUntil: (json['mutedUntil'] as num?)?.toInt(),
+  memberLimit: (json['memberLimit'] as num?)?.toInt(),
+  memberLimitEnabled: json['memberLimitEnabled'] as bool? ?? true,
 );
 
 Map<String, dynamic> _$RoomToJson(_Room instance) => <String, dynamic>{
@@ -28,4 +30,6 @@ Map<String, dynamic> _$RoomToJson(_Room instance) => <String, dynamic>{
   'metadata': instance.metadata,
   'disappearingTimeout': instance.disappearingTimeout,
   'mutedUntil': instance.mutedUntil,
+  'memberLimit': instance.memberLimit,
+  'memberLimitEnabled': instance.memberLimitEnabled,
 };

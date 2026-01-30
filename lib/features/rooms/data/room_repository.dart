@@ -98,10 +98,10 @@ class RoomRepository {
               room.metadata != null ? jsonEncode(room.metadata) : null,
             ),
             disappearingTimeout: Value(room.disappearingTimeout),
-            disappearingTimeout: Value(room.disappearingTimeout),
             mutedUntil: Value(room.mutedUntil),
             memberLimit: Value(room.memberLimit),
             memberLimitEnabled: Value(room.memberLimitEnabled),
+          ),
         );
   }
 
