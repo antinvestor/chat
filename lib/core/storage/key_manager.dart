@@ -39,7 +39,7 @@ class KeyManager {
 
   /// Read a string value from secure storage
   Future<String?> getString(String key) async {
-    return await _storage.read(key: key);
+    return _storage.read(key: key);
   }
 
   /// Write a string value to secure storage

@@ -51,8 +51,6 @@ enum AnalyticsEventType {
 /// Analytics event model for tracking user behavior and app usage
 @freezed
 abstract class AnalyticsEvent with _$AnalyticsEvent {
-  const AnalyticsEvent._();
-
   const factory AnalyticsEvent({
     required String id,
     required AnalyticsEventType type,
@@ -65,6 +63,7 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     Map<String, dynamic>? userProperties,
     @Default(false) bool isSynced,
   }) = _AnalyticsEvent;
+  const AnalyticsEvent._();
 
   factory AnalyticsEvent.fromJson(Map<String, dynamic> json) =>
       _$AnalyticsEventFromJson(json);
@@ -245,8 +244,6 @@ abstract class AnalyticsUserProperties with _$AnalyticsUserProperties {
 /// Session information for analytics
 @freezed
 abstract class AnalyticsSession with _$AnalyticsSession {
-  const AnalyticsSession._();
-
   const factory AnalyticsSession({
     required String id,
     required DateTime startTime,
@@ -258,6 +255,7 @@ abstract class AnalyticsSession with _$AnalyticsSession {
     String? userId,
     Map<String, dynamic>? deviceInfo,
   }) = _AnalyticsSession;
+  const AnalyticsSession._();
 
   factory AnalyticsSession.fromJson(Map<String, dynamic> json) =>
       _$AnalyticsSessionFromJson(json);

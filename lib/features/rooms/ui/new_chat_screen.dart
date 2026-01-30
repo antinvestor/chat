@@ -45,6 +45,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     // Use the ContactSyncOrchestrator for lazy contact sync
     final orchestrator = await ref.read(contactSyncOrchestratorProvider.future);
 
+    if (!mounted) return;
     final success = await orchestrator.ensureContactsSynced(context: context);
 
     if (success && mounted) {
@@ -368,6 +369,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     // Use the ContactSyncOrchestrator for lazy contact sync
     final orchestrator = await ref.read(contactSyncOrchestratorProvider.future);
 
+    if (!mounted) return;
     final success = await orchestrator.ensureContactsSynced(context: context);
 
     if (success && mounted) {

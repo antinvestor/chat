@@ -309,7 +309,7 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    // TODO: Fix async initialization timing in tests
+    // TODO(developer): Fix async initialization timing in tests
     // The PrivacySettingsScreen uses async initialization in initState which
     // doesn't complete reliably in widget tests. Consider refactoring to use
     // FutureBuilder or adding a testability hook.
@@ -406,7 +406,7 @@ void main() {
       expect(find.text('0 contacts'), findsOneWidget);
     });
 
-    // TODO: Fix async initialization timing (see 'displays all privacy sections')
+    // TODO(developer): Fix async initialization timing (see 'displays all privacy sections')
     testWidgets('displays switch items for toggles', skip: true, (
       tester,
     ) async {
@@ -442,7 +442,7 @@ void main() {
       expect(find.byType(Switch), findsNWidgets(3));
     });
 
-    // TODO: Fix async initialization timing (see 'displays all privacy sections')
+    // TODO(developer): Fix async initialization timing (see 'displays all privacy sections')
     testWidgets('displays info section at bottom', skip: true, (tester) async {
       final overrides = [
         ...TestHelpers.overrides,

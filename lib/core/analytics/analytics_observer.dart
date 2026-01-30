@@ -89,7 +89,7 @@ class AnalyticsNavigatorObserver extends NavigatorObserver {
 
     // Handle parameterized routes (e.g., /room/:roomId -> room_detail)
     if (formatted.contains(':')) {
-      formatted = formatted.replaceAll(RegExp(r':[^_/]+'), 'detail');
+      formatted = formatted.replaceAll(RegExp(':[^_/]+'), 'detail');
     }
 
     return formatted;

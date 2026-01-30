@@ -506,7 +506,7 @@ void main() {
         var evictCount = 0;
         final cache = LRUCache<String, int>(
           maxSize: 5,
-          onEvict: (_, __) => evictCount++,
+          onEvict: (key, value) => evictCount++,
         );
 
         // Insert 100 items
@@ -578,7 +578,7 @@ void main() {
         var evictCount = 0;
         final cache = LRUCache<String, int>(
           maxSize: 2,
-          onEvict: (_, __) => evictCount++,
+          onEvict: (key, value) => evictCount++,
         );
 
         cache.put('a', 1);

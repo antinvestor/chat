@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -7,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import '../../../widgets/empty_state.dart';
 import '../data/contact_search_provider.dart';
 import '../data/contact_sync_repository.dart';
-import '../data/roster_repository.dart';
 import '../services/contact_service.dart';
 import '../services/contact_sync_orchestrator.dart';
 import 'contact_permission_view.dart';

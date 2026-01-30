@@ -394,7 +394,7 @@ class _CallHistoryTile extends StatelessWidget {
       onDismissed: (_) => onDelete(),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: call.color.withOpacity(0.15),
+          backgroundColor: call.color.withValues(alpha: 0.15),
           child: Icon(call.icon, color: call.color, size: 20),
         ),
         title: Text(

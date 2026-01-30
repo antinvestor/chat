@@ -8,9 +8,7 @@ void main() {
     late AnalyticsService analyticsService;
 
     setUp(() {
-      analyticsService = AnalyticsService(
-        config: const AnalyticsConfig(enabled: true, enableDebugLogging: false),
-      );
+      analyticsService = AnalyticsService();
     });
 
     group('configuration', () {
@@ -58,7 +56,6 @@ void main() {
         analyticsService.trackMessageSent(
           roomId: 'room-1',
           messageType: 'text',
-          hasAttachment: false,
           isReply: true,
         );
         expect(analyticsService.pendingEventCount, equals(1));
@@ -179,7 +176,6 @@ void main() {
         roomId: 'room-1',
         messageType: 'text',
         hasAttachment: true,
-        isReply: false,
       );
 
       expect(event.type, equals(AnalyticsEventType.messageSent));
@@ -265,7 +261,7 @@ void main() {
         displayName: 'Test User',
         email: 'test@example.com',
         phoneNumber: '+1234567890',
-        accountCreatedAt: DateTime(2024, 1, 1),
+        accountCreatedAt: DateTime(2024),
         lastLoginAt: DateTime.now(),
         appVersion: '1.0.0',
         platform: 'android',

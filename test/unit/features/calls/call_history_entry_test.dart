@@ -1,6 +1,6 @@
-import 'package:stawi/features/calls/domain/call_history_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/calls/domain/call_history_entry.dart';
 
 void main() {
   group('CallType', () {
@@ -86,7 +86,7 @@ void main() {
   });
 
   group('CallHistoryEntry', () {
-    final baseEntry = CallHistoryEntry(
+    const baseEntry = CallHistoryEntry(
       id: 1,
       roomId: 'room-123',
       callerId: 'caller-123',

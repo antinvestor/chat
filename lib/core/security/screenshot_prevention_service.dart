@@ -108,9 +108,9 @@ class ScreenshotPreventionService {
   /// Toggle screenshot prevention
   Future<bool> toggle() async {
     if (_isEnabled) {
-      return await disableScreenshotPrevention();
+      return disableScreenshotPrevention();
     } else {
-      return await enableScreenshotPrevention();
+      return enableScreenshotPrevention();
     }
   }
 
@@ -150,7 +150,7 @@ ScreenshotPreventionService screenshotPreventionService(Ref ref) {
   final service = ScreenshotPreventionService(keyManager);
 
   // Initialize asynchronously
-  Future.microtask(() => service.initialize());
+  Future.microtask(service.initialize);
 
   return service;
 }
