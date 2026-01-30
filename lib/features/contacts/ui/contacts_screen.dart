@@ -9,7 +9,7 @@ import '../data/contact_search_provider.dart';
 import '../data/contact_sync_repository.dart';
 import '../data/roster_repository.dart';
 import '../services/contact_service.dart';
-import 'contact_sync_sheet.dart';
+import '../services/contact_sync_orchestrator.dart';
 
 class ContactsScreen extends ConsumerStatefulWidget {
   const ContactsScreen({super.key});
@@ -46,18 +46,21 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     setState(() => _isSyncing = true);
 
     try {
-      final repo = await ref.read(rosterRepositoryProvider.future);
+      // Use ContactSyncOrchestrator for permission handling and sync
+      final orchestrator = await ref.read(
+        contactSyncOrchestratorProvider.future,
+      );
 
       if (!mounted) return;
 
-      await showContactSyncSheet(
-        context: context,
-        repository: repo,
-        onComplete: () {
-          ref.invalidate(syncedContactsProvider);
-          ref.invalidate(rosterEntriesProvider);
-        },
-      );
+      final success = await orchestrator.ensureContactsSynced(context: context);
+
+      if (success && mounted) {
+        // Refresh the contacts list
+        ref.invalidate(syncedContactsProvider);
+        ref.invalidate(rosterEntriesProvider);
+        ref.invalidate(profilesWithContactsProvider);
+      }
     } finally {
       if (mounted) setState(() => _isSyncing = false);
     }

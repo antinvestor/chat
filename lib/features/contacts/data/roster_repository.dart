@@ -1885,7 +1885,7 @@ class RosterRepository implements ContactSyncRepository {
 
   /// Simple background sync without progress callbacks
   /// Runs silently in background without disturbing user
-  /// Enhanced for offline-first operation
+  /// Only syncs unsynced local DB contacts to server - does NOT read device contacts
   Future<void> syncContactsInBackground() async {
     try {
       AppLogger.info('[BackgroundSync] Starting silent contact sync');
@@ -1897,20 +1897,9 @@ class RosterRepository implements ContactSyncRepository {
         return;
       }
 
-      // Check if we need to sync (hash-based change detection)
-      final syncNeeded = await needsSync();
-      if (!syncNeeded) {
-        AppLogger.debug('[BackgroundSync] No sync needed');
-        return;
-      }
-
-      // Phase 1: Local sync (immediate, no UI) - always works
-      await syncContactsLocal();
-
-      // Phase 2: Server sync (background, best effort) - only if online
-      if (connectivity) {
-        await syncContactsToServer();
-      }
+      // Only sync existing local DB contacts to server
+      // Does NOT read device contacts
+      await syncContactsToServer();
 
       AppLogger.info('[BackgroundSync] Background sync completed successfully');
     } catch (e, stackTrace) {
@@ -1944,18 +1933,16 @@ class RosterRepository implements ContactSyncRepository {
   }
 
   /// Initialize contacts on app startup
-  /// Fast local-first approach, syncs in background
+  /// Only syncs existing local DB contacts to server - does NOT read device contacts
   Future<void> initializeContacts() async {
     try {
       AppLogger.info('[ContactInit] Initializing contacts');
 
-      // Always do local sync first (fast, makes contacts available immediately)
-      await syncContactsLocal();
-
-      // Then start background server sync without blocking
+      // Only sync existing local DB contacts to server in background
+      // Does NOT read device contacts
       syncContactsInBackground();
 
-      AppLogger.info('[ContactInit] Contacts initialized');
+      AppLogger.info('[ContactInit] Contacts initialization triggered');
     } catch (e, stackTrace) {
       AppLogger.error(
         '[ContactInit] Failed to initialize contacts',
@@ -2440,24 +2427,18 @@ final rosterRepositoryProvider = FutureProvider<RosterRepository>((ref) async {
   return RosterRepository(profileClient, AppDatabase.instance);
 });
 
-/// Provider for roster entries - uses two-phase sync
-/// Phase 1: Returns local roster immediately (or syncs from device if empty)
-/// Phase 2: Triggers background server sync for contacts without profileId
+/// Provider for roster entries - returns local roster and syncs to server
+/// Does NOT automatically read device contacts - that only happens when user
+/// explicitly accesses contact selection functionality
 final rosterEntriesProvider = FutureProvider<List<RosterEntry>>((ref) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
 
-  // First get local roster
+  // Get local roster
   final local = await repo.getLocalRoster();
-  if (local.isEmpty) {
-    // No local roster, run Phase 1: sync from device to local DB
-    final localSynced = await repo.syncContactsLocal();
-    // Trigger Phase 2: server sync in background (don't await)
-    repo.syncContactsToServer();
-    return localSynced;
-  }
 
-  // Trigger Phase 2: background server sync for unsynced contacts
+  // Trigger background server sync for unsynced contacts (don't await)
   repo.syncContactsToServer();
+
   return local;
 });
 
@@ -2503,21 +2484,18 @@ final rosterCountProvider = FutureProvider<int>((ref) async {
 
 /// Provider for profiles with their associated contacts
 /// This is the primary provider for displaying contacts - profile-centric view
+/// Does NOT automatically read device contacts - only returns what's in local DB
 final profilesWithContactsProvider = FutureProvider<List<ProfileWithContacts>>((
   ref,
 ) async {
   final repo = await ref.watch(rosterRepositoryProvider.future);
 
-  // First get local data
+  // Get local data only - does NOT read device contacts
   final local = await repo.getProfilesWithContacts();
-  if (local.isEmpty) {
-    // No local data, must sync first
-    await repo.syncContacts();
-    return repo.getProfilesWithContacts();
-  }
 
-  // Trigger background sync only if contacts have changed
-  repo.syncIfNeeded();
+  // Trigger background sync of existing local contacts to server (don't await)
+  repo.syncContactsToServer();
+
   return local;
 });
 

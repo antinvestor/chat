@@ -111,38 +111,22 @@ class ContactSyncOrchestrator {
 
   /// Handle sync when already initialized
   ///
-  /// Checks if contacts have changed and triggers silent background sync if needed.
+  /// Syncs any unsynced local DB contacts to server silently in background.
+  /// Does NOT read device contacts.
   Future<bool> _handleInitializedSync() async {
     try {
-      // Check if permission is still granted
-      final status = await Permission.contacts.status;
-      if (!status.isGranted) {
-        AppLogger.debug(
-          '[ContactSyncOrchestrator] Permission revoked since initialization',
-        );
-        // Permission was revoked - don't reset initialized state,
-        // just return true and let the UI show cached contacts
-        return true;
-      }
+      AppLogger.debug(
+        '[ContactSyncOrchestrator] Already initialized, triggering background sync of unsynced contacts',
+      );
 
-      // Check if sync is needed using hash-based change detection
-      final needsSync = await _rosterRepository.needsSync();
-      if (needsSync) {
-        AppLogger.info(
-          '[ContactSyncOrchestrator] Changes detected, triggering background sync',
-        );
-        // Fire-and-forget background sync - don't block the UI
-        unawaited(_triggerBackgroundSync());
-      } else {
-        AppLogger.debug(
-          '[ContactSyncOrchestrator] No changes detected, using cached contacts',
-        );
-      }
+      // Fire-and-forget background sync of existing local DB contacts
+      // This does NOT read device contacts
+      unawaited(_triggerBackgroundSync());
 
       return true;
     } catch (e, stackTrace) {
       AppLogger.error(
-        '[ContactSyncOrchestrator] Error checking sync state',
+        '[ContactSyncOrchestrator] Error triggering background sync',
         error: e,
         stackTrace: stackTrace,
       );
@@ -201,17 +185,20 @@ class ContactSyncOrchestrator {
     }
   }
 
-  /// Perform the initial contact sync
+  /// Perform initial contact sync when user grants permission
   ///
-  /// Phase 1: Local sync (immediate, for UI display)
-  /// Phase 2: Server sync (background, silent)
+  /// Phase 1: Read device contacts and store locally (immediate)
+  /// Phase 2: Sync to server (background, silent)
+  ///
+  /// This is only called when user explicitly grants permission via dialog.
   Future<void> _performInitialSync() async {
     try {
       AppLogger.info(
-        '[ContactSyncOrchestrator] Starting initial two-phase sync',
+        '[ContactSyncOrchestrator] Starting initial sync after permission granted',
       );
 
       // Phase 1: Local sync (immediate) - reads device contacts and stores locally
+      // This is user-initiated, so we read device contacts
       final localContacts = await _rosterRepository.syncContactsLocal();
       AppLogger.info(
         '[ContactSyncOrchestrator] Phase 1 complete: ${localContacts.length} contacts loaded locally',
