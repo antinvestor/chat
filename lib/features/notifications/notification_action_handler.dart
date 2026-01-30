@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/logging/app_logger.dart';
+import '../calls/services/signaling_service.dart';
 import '../messages/data/message_sending_service.dart';
 import '../messages/data/read_receipt_repository.dart';
 import 'rich_notification_service.dart';
@@ -164,6 +165,18 @@ class NotificationActionHandler {
     final richNotificationService = _ref.read(richNotificationServiceProvider);
     await richNotificationService.cancelNotification(roomId);
 
-    // TODO: Send call decline signal to backend
+    // Send call decline signal to backend
+    try {
+      final signalingService = await _ref.read(signalingServiceProvider.future);
+      await signalingService.sendHangup(roomId);
+      AppLogger.info('Call decline signal sent', data: {'roomId': roomId});
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to send call decline signal',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'roomId': roomId},
+      );
+    }
   }
 }

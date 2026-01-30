@@ -18,8 +18,8 @@ import '../networking/client.dart';
 /// 1. Fetch all rooms the user is a member of from the server
 /// 2. Store rooms locally for immediate display
 ///
-/// Note: Contact synchronization is handled lazily via ContactSyncOrchestrator
-/// when the user first tries to create a group chat.
+/// Note: Contact synchronization is handled lazily when the user visits the
+/// Contacts screen and grants permission.
 ///
 /// Design goals:
 /// - Show local data immediately, server data appears as downloaded
@@ -50,8 +50,8 @@ class PostLoginSyncService {
   /// Main entry point - runs all post-login syncs
   ///
   /// This method is safe to call multiple times; it will skip if already running.
-  /// Currently only syncs rooms. Contact sync is handled lazily via
-  /// ContactSyncOrchestrator when the user first tries to create a group chat.
+  /// Currently only syncs rooms. Contact sync is handled lazily when the user
+  /// visits the Contacts screen and grants permission.
   ///
   /// Returns true if sync completed successfully, false otherwise.
   Future<bool> runPostLoginSync() async {

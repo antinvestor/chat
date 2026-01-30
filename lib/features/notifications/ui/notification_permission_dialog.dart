@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 
-/// Result of the contact permission dialog
-enum ContactPermissionResult {
+/// Result of the notification permission dialog
+enum NotificationPermissionResult {
   /// User tapped "Not Now" - declined to grant permission
   declined,
 
@@ -14,47 +14,52 @@ enum ContactPermissionResult {
   openSettings,
 }
 
-/// A beautiful dialog explaining why contact access is needed for group creation.
+/// A dialog explaining why notification access is needed for the chat app.
 ///
 /// Shows:
-/// - Groups icon in a circular container
-/// - Clear title: "Create Group Chats"
-/// - Explanation text
+/// - Notification bell icon in a circular container
+/// - Clear title: "Enable Notifications"
+/// - Explanation text about why notifications matter for messaging
 /// - Three benefits with icons
 /// - Privacy reassurance note
 /// - Warning for permanently denied state
 /// - "Not Now" and "Continue"/"Open Settings" buttons
-class ContactPermissionDialog extends StatelessWidget {
-  const ContactPermissionDialog({required this.isPermanentlyDenied, super.key});
+class NotificationPermissionDialog extends StatelessWidget {
+  const NotificationPermissionDialog({
+    required this.isPermanentlyDenied,
+    super.key,
+  });
 
   /// Whether the permission was permanently denied by the user
   final bool isPermanentlyDenied;
 
-  /// Show the contact permission dialog
+  /// Show the notification permission dialog
   ///
-  /// Returns [ContactPermissionResult] indicating the user's choice.
-  static Future<ContactPermissionResult> show(BuildContext context) async {
+  /// Returns [NotificationPermissionResult] indicating the user's choice.
+  /// Only shows the dialog if permission is not already granted.
+  static Future<NotificationPermissionResult> show(BuildContext context) async {
     // Check current permission status
-    final status = await Permission.contacts.status;
+    final status = await Permission.notification.status;
 
     // Already granted - no need to show dialog
     if (status.isGranted) {
-      return ContactPermissionResult.granted;
+      return NotificationPermissionResult.granted;
     }
 
     // Check if permanently denied
     final isPermanentlyDenied = status.isPermanentlyDenied;
 
-    if (!context.mounted) return ContactPermissionResult.declined;
+    if (!context.mounted) return NotificationPermissionResult.declined;
 
-    final result = await showDialog<ContactPermissionResult>(
+    final result = await showDialog<NotificationPermissionResult>(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          ContactPermissionDialog(isPermanentlyDenied: isPermanentlyDenied),
+      builder: (context) => NotificationPermissionDialog(
+        isPermanentlyDenied: isPermanentlyDenied,
+      ),
     );
 
-    return result ?? ContactPermissionResult.declined;
+    return result ?? NotificationPermissionResult.declined;
   }
 
   @override
@@ -67,7 +72,7 @@ class ContactPermissionDialog extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Groups icon in circular container
+          // Notification bell icon in circular container
           Container(
             width: 72,
             height: 72,
@@ -76,7 +81,7 @@ class ContactPermissionDialog extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.groups_rounded,
+              Icons.notifications_rounded,
               size: 40,
               color: theme.colorScheme.onPrimaryContainer,
             ),
@@ -85,7 +90,7 @@ class ContactPermissionDialog extends StatelessWidget {
 
           // Title
           Text(
-            'Create Group Chats',
+            'Enable Notifications',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -95,7 +100,7 @@ class ContactPermissionDialog extends StatelessWidget {
 
           // Explanation text
           Text(
-            'To create group chats with your friends, we need access to your contacts.',
+            'To make sure you never miss important messages, we need your permission to send notifications.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -113,20 +118,20 @@ class ContactPermissionDialog extends StatelessWidget {
             child: Column(
               children: [
                 _BenefitRow(
-                  icon: Icons.person_search_rounded,
-                  text: 'Find friends already on the app',
+                  icon: Icons.message_rounded,
+                  text: 'Know when new messages arrive',
                   theme: theme,
                 ),
                 const SizedBox(height: 12),
                 _BenefitRow(
-                  icon: Icons.group_add_rounded,
-                  text: 'Quickly add members to groups',
+                  icon: Icons.call_rounded,
+                  text: 'Get alerted for incoming calls',
                   theme: theme,
                 ),
                 const SizedBox(height: 12),
                 _BenefitRow(
-                  icon: Icons.sync_rounded,
-                  text: 'Stay connected as contacts join',
+                  icon: Icons.groups_rounded,
+                  text: 'Stay updated on group activities',
                   theme: theme,
                 ),
               ],
@@ -139,13 +144,13 @@ class ContactPermissionDialog extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.lock_outline_rounded,
+                Icons.tune_rounded,
                 size: 16,
                 color: theme.colorScheme.outline,
               ),
               const SizedBox(width: 6),
               Text(
-                'Your contacts stay private on your device',
+                'You can customize notifications anytime',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.outline,
                 ),
@@ -188,7 +193,7 @@ class ContactPermissionDialog extends StatelessWidget {
         // Not Now button
         TextButton(
           onPressed: () {
-            Navigator.of(context).pop(ContactPermissionResult.declined);
+            Navigator.of(context).pop(NotificationPermissionResult.declined);
           },
           child: Text(
             'Not Now',
@@ -201,19 +206,25 @@ class ContactPermissionDialog extends StatelessWidget {
           onPressed: () async {
             if (isPermanentlyDenied) {
               // Open settings and return result
-              Navigator.of(context).pop(ContactPermissionResult.openSettings);
+              Navigator.of(
+                context,
+              ).pop(NotificationPermissionResult.openSettings);
             } else {
               // Request permission
-              final status = await Permission.contacts.request();
+              final status = await Permission.notification.request();
               if (!context.mounted) return;
 
               if (status.isGranted) {
-                Navigator.of(context).pop(ContactPermissionResult.granted);
+                Navigator.of(context).pop(NotificationPermissionResult.granted);
               } else if (status.isPermanentlyDenied) {
-                Navigator.of(context).pop(ContactPermissionResult.openSettings);
+                Navigator.of(
+                  context,
+                ).pop(NotificationPermissionResult.openSettings);
               } else {
                 // User denied - close dialog
-                Navigator.of(context).pop(ContactPermissionResult.declined);
+                Navigator.of(
+                  context,
+                ).pop(NotificationPermissionResult.declined);
               }
             }
           },

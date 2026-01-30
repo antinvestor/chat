@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_error.dart';
-import '../../../core/logging/app_logger.dart';
 import '../../../core/responsive/breakpoints.dart';
 import '../../../core/responsive/responsive_layout.dart';
 import '../../../core/responsive/three_panel_layout.dart';
@@ -14,10 +13,7 @@ import '../../../widgets/empty_state.dart';
 import '../../../widgets/error_banner.dart';
 import '../../../widgets/skeleton_loader.dart';
 import '../../calls/ui/incoming_call_banner.dart';
-import '../../contacts/data/contact_sync_repository.dart';
-import '../../contacts/ui/contact_sync_sheet.dart';
 import '../../messages/ui/chat_screen.dart';
-import '../../onboarding/data/onboarding_repository.dart';
 import '../data/room_providers.dart';
 import '../data/room_search_providers.dart';
 import '../data/room_service.dart';
@@ -39,69 +35,9 @@ class RoomListScreen extends ConsumerStatefulWidget {
 class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   String? _selectedRoomId;
   String? _selectedRoomName;
-  bool _hasCheckedContactSync = false;
   bool _isSearchExpanded = false;
   bool _isMultiSelectMode = false;
   final Set<String> _selectedRoomIds = <String>{};
-
-  @override
-  void initState() {
-    super.initState();
-    // Check if contact sync is needed after frame is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAndShowContactSync();
-    });
-  }
-
-  Future<void> _checkAndShowContactSync() async {
-    if (_hasCheckedContactSync) return;
-    _hasCheckedContactSync = true;
-
-    final onboardingRepo = ref.read(onboardingRepositoryProvider);
-    final hasContactsSynced = await onboardingRepo.hasContactsSynced();
-
-    // Also check if there are any profiles in the database
-    final repo = await ref.read(rosterRepositoryProvider.future);
-    final existingProfiles = await repo.getProfilesWithContacts();
-    final hasProfiles = existingProfiles.isNotEmpty;
-
-    AppLogger.debug(
-      '[RoomList] Contact sync check',
-      data: {
-        'hasContactsSynced': hasContactsSynced,
-        'existingProfileCount': existingProfiles.length,
-      },
-    );
-
-    // Show sync sheet if never synced OR if there are no profiles to use
-    if ((!hasContactsSynced || !hasProfiles) && mounted) {
-      AppLogger.info(
-        '[RoomList] Showing contact sync sheet',
-        data: {
-          'reason': !hasContactsSynced ? 'never synced' : 'no profiles found',
-        },
-      );
-
-      await showContactSyncSheet(
-        context: context,
-        repository: repo,
-        onComplete: () {
-          AppLogger.info('[RoomList] Contact sync completed via sheet');
-          onboardingRepo.markContactsSynced();
-          // Refresh the profiles provider to show new contacts
-          ref.invalidate(profilesWithContactsProvider);
-        },
-        onDismiss: () {
-          AppLogger.info('[RoomList] Contact sync skipped by user');
-          onboardingRepo.markContactsSynced();
-        },
-      );
-    } else {
-      AppLogger.debug(
-        '[RoomList] Contacts already synced with profiles available',
-      );
-    }
-  }
 
   void _handleMenuAction(String action) {
     switch (action) {

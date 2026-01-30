@@ -65,7 +65,7 @@ Future<List<RoomWithLastMessage>> filteredRooms(Ref ref) async {
   return roomsAsync.when(
     data: (rooms) => _filterRooms(rooms, searchState),
     loading: () => [],
-    error: (_, __) => [],
+    error: (error, stackTrace) => [],
   );
 }
 

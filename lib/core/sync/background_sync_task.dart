@@ -86,6 +86,24 @@ class BackgroundSyncTask {
         currentProfileId,
       );
 
+      // Clean up expired (disappearing) messages
+      try {
+        final deletedCount = await messageRepo.deleteExpiredMessages();
+        if (deletedCount > 0) {
+          AppLogger.info(
+            'Deleted expired messages in background sync',
+            data: {'deletedCount': deletedCount},
+          );
+        }
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Failed to delete expired messages in background sync',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        // Don't fail the sync task for cleanup errors
+      }
+
       // Refresh badge count after sync
       if (BadgeService.isSupported) {
         try {

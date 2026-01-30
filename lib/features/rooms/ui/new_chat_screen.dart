@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../contacts/data/contact_sync_repository.dart';
-import '../../contacts/services/contact_sync_orchestrator.dart';
+import '../../contacts/data/roster_repository.dart';
+import '../../contacts/services/contact_service.dart';
+import '../../contacts/ui/contact_permission_view.dart';
 import '../data/room_service.dart';
 
 class NewChatScreen extends ConsumerStatefulWidget {
@@ -20,16 +22,6 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   final _selectedContacts = <RosterEntry>{};
   String _searchQuery = '';
   bool _isCreatingRoom = false;
-  bool _hasCheckedPermission = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Check permission and sync contacts when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPermissionAndSync();
-    });
-  }
 
   @override
   void dispose() {
@@ -37,31 +29,16 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     super.dispose();
   }
 
-  Future<void> _checkPermissionAndSync() async {
-    if (_hasCheckedPermission) return;
-    _hasCheckedPermission = true;
-
-    // Use the ContactSyncOrchestrator for lazy contact sync
-    final orchestrator = await ref.read(contactSyncOrchestratorProvider.future);
-
-    final success = await orchestrator.ensureContactsSynced(context: context);
-
-    if (success && mounted) {
-      // Refresh the contacts list
-      ref.invalidate(rosterEntriesProvider);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rosterAsync = ref.watch(rosterEntriesProvider);
+    final permissionAsync = ref.watch(contactPermissionGrantedProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('New Chat'),
         actions: [
-          // Create room button
+          // Create room button - only show when permission granted and contacts selected
           if (_selectedContacts.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -81,227 +58,265 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search contacts...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              onChanged: (value) {
-                setState(() => _searchQuery = value.toLowerCase());
+      body: permissionAsync.when(
+        data: (hasPermission) {
+          if (!hasPermission) {
+            return ContactPermissionView(
+              onPermissionGranted: () async {
+                ref.invalidate(contactPermissionGrantedProvider);
+                // Directly sync contacts
+                final rosterRepo = await ref.read(
+                  rosterRepositoryProvider.future,
+                );
+                await rosterRepo.syncContactsLocal();
+                await rosterRepo.syncContactsToServer();
+                ref.invalidate(rosterEntriesProvider);
               },
-            ),
+            );
+          }
+          return _buildContactSelectionBody(theme);
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error checking permission: $error'),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () =>
+                    ref.invalidate(contactPermissionGrantedProvider),
+                child: const Text('Retry'),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
 
-          // Selected contacts chips
-          if (_selectedContacts.isNotEmpty) ...[
-            SizedBox(
-              height: 50,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _selectedContacts.length,
-                itemBuilder: (context, index) {
-                  final contact = _selectedContacts.elementAt(index);
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Chip(
-                      avatar: CircleAvatar(
-                        backgroundColor: theme.colorScheme.primary,
-                        child: Text(
-                          _getInitials(
-                            contact.displayName ?? contact.contactDetail,
-                          ),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
-                      label: Text(contact.displayName ?? contact.contactDetail),
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        setState(() => _selectedContacts.remove(contact));
+  Widget _buildContactSelectionBody(ThemeData theme) {
+    final rosterAsync = ref.watch(rosterEntriesProvider);
+
+    return Column(
+      children: [
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search contacts...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
                       },
-                    ),
-                  );
-                },
+                    )
+                  : null,
+              filled: true,
+              fillColor: theme.colorScheme.surfaceContainerHighest,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
               ),
             ),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-          ],
+            onChanged: (value) {
+              setState(() => _searchQuery = value.toLowerCase());
+            },
+          ),
+        ),
 
-          // Contact list
-          Expanded(
-            child: rosterAsync.when(
-              data: (contacts) {
-                final filteredContacts = _filterContacts(contacts);
-
-                if (contacts.isEmpty) {
-                  return _buildEmptyState(theme);
-                }
-
-                if (filteredContacts.isEmpty && _searchQuery.isNotEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          size: 64,
-                          color: theme.colorScheme.outline,
+        // Selected contacts chips
+        if (_selectedContacts.isNotEmpty) ...[
+          SizedBox(
+            height: 50,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _selectedContacts.length,
+              itemBuilder: (context, index) {
+                final contact = _selectedContacts.elementAt(index);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Chip(
+                    avatar: CircleAvatar(
+                      backgroundColor: theme.colorScheme.primary,
+                      child: Text(
+                        _getInitials(
+                          contact.displayName ?? contact.contactDetail,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No contacts match "$_searchQuery"',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.outline,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  itemCount: filteredContacts.length,
-                  itemBuilder: (context, index) {
-                    final contact = filteredContacts[index];
-                    final isSelected = _selectedContacts.contains(contact);
-
-                    return ListTile(
-                      leading: Stack(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.primaryContainer,
-                            child: isSelected
-                                ? Icon(
-                                    Icons.check,
-                                    color: theme.colorScheme.onPrimary,
-                                  )
-                                : Text(
-                                    _getInitials(
-                                      contact.displayName ??
-                                          contact.contactDetail,
-                                    ),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color:
-                                          theme.colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                          ),
-                          if (contact.isVerified)
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surface,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.verified,
-                                  size: 14,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      title: Text(
-                        contact.displayName ?? contact.contactDetail,
                         style: TextStyle(
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
+                          fontSize: 12,
+                          color: theme.colorScheme.onPrimary,
                         ),
                       ),
-                      subtitle: contact.displayName != null
-                          ? Text(
-                              contact.contactDetail,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.outline,
-                              ),
-                            )
-                          : null,
-                      trailing: isSelected
-                          ? Icon(
-                              Icons.check_circle,
-                              color: theme.colorScheme.primary,
-                            )
-                          : null,
-                      selected: isSelected,
-                      selectedTileColor: theme.colorScheme.primaryContainer
-                          .withValues(alpha: 0.3),
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedContacts.remove(contact);
-                          } else {
-                            _selectedContacts.add(contact);
-                          }
-                        });
-                      },
-                    );
-                  },
+                    ),
+                    label: Text(contact.displayName ?? contact.contactDetail),
+                    deleteIcon: const Icon(Icons.close, size: 18),
+                    onDeleted: () {
+                      setState(() => _selectedContacts.remove(contact));
+                    },
+                  ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: theme.colorScheme.error,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+        ],
+
+        // Contact list
+        Expanded(
+          child: rosterAsync.when(
+            data: (contacts) {
+              final filteredContacts = _filterContacts(contacts);
+
+              if (contacts.isEmpty) {
+                return _buildEmptyState(theme);
+              }
+
+              if (filteredContacts.isEmpty && _searchQuery.isNotEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 64,
+                        color: theme.colorScheme.outline,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No contacts match "$_searchQuery"',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                itemCount: filteredContacts.length,
+                itemBuilder: (context, index) {
+                  final contact = filteredContacts[index];
+                  final isSelected = _selectedContacts.contains(contact);
+
+                  return ListTile(
+                    leading: Stack(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.primaryContainer,
+                          child: isSelected
+                              ? Icon(
+                                  Icons.check,
+                                  color: theme.colorScheme.onPrimary,
+                                )
+                              : Text(
+                                  _getInitials(
+                                    contact.displayName ??
+                                        contact.contactDetail,
+                                  ),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onPrimaryContainer,
+                                  ),
+                                ),
+                        ),
+                        if (contact.isVerified)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.verified,
+                                size: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Failed to load contacts',
-                      style: theme.textTheme.bodyLarge,
+                    title: Text(
+                      contact.displayName ?? contact.contactDetail,
+                      style: TextStyle(
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    FilledButton(
-                      onPressed: () => ref.invalidate(rosterEntriesProvider),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+                    subtitle: contact.displayName != null
+                        ? Text(
+                            contact.contactDetail,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
+                          )
+                        : null,
+                    trailing: isSelected
+                        ? Icon(
+                            Icons.check_circle,
+                            color: theme.colorScheme.primary,
+                          )
+                        : null,
+                    selected: isSelected,
+                    selectedTileColor: theme.colorScheme.primaryContainer
+                        .withValues(alpha: 0.3),
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          _selectedContacts.remove(contact);
+                        } else {
+                          _selectedContacts.add(contact);
+                        }
+                      });
+                    },
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load contacts',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: () => ref.invalidate(rosterEntriesProvider),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -364,12 +379,15 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   }
 
   Future<void> _syncContacts() async {
-    // Use the ContactSyncOrchestrator for lazy contact sync
-    final orchestrator = await ref.read(contactSyncOrchestratorProvider.future);
+    // Directly sync contacts
+    final rosterRepo = await ref.read(rosterRepositoryProvider.future);
 
-    final success = await orchestrator.ensureContactsSynced(context: context);
+    if (!mounted) return;
 
-    if (success && mounted) {
+    await rosterRepo.syncContactsLocal();
+    await rosterRepo.syncContactsToServer();
+
+    if (mounted) {
       // Refresh the contacts list
       ref.invalidate(rosterEntriesProvider);
     }
