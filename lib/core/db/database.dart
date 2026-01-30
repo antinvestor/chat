@@ -91,10 +91,7 @@ class Rooms extends Table {
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   IntColumn get disappearingTimeout => integer().nullable()();
 
-  /// Mute notifications until this timestamp (milliseconds since epoch)
-  /// - null = not muted
-  /// - 0 = muted forever
-  /// - timestamp = muted until that time
+  /// Mute notifications until this epoch timestamp (null = not muted)
   IntColumn get mutedUntil => integer().nullable()();
 
   @override
@@ -210,6 +207,12 @@ class RoomEvents extends Table {
   /// Timestamp when this message should be deleted (for disappearing messages)
   /// Null means the message does not expire
   IntColumn get expiresAt => integer().nullable()();
+
+  /// Whether this message is starred/bookmarked by the user
+  BoolColumn get starred => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when the message was starred (for sorting starred messages)
+  IntColumn get starredAt => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -709,8 +712,17 @@ class AppDatabase extends _$AppDatabase {
         ''');
       }
       if (from <= 9) {
-        // Migration from v9 to v10: Add mute notifications support
+        // Migration from v9 to v10: Add starred messages support
+        // Add mute notifications support
         await m.addColumn(rooms, rooms.mutedUntil);
+        await m.addColumn(roomEvents, roomEvents.starred);
+        await m.addColumn(roomEvents, roomEvents.starredAt);
+        // Create index for efficient starred message querying
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_room_events_starred
+          ON room_events(starred, starred_at)
+          WHERE starred = 1
+        ''');
       }
     },
     beforeOpen: (details) async {
@@ -831,6 +843,8 @@ class AppDatabase extends _$AppDatabase {
     forwardedFromEvent: row.readNullable<String>('forwarded_from_event'),
     forwardCount: row.readNullable<int>('forward_count') ?? 0,
     forwardRestricted: row.readNullable<bool>('forward_restricted') ?? false,
+    starred: row.readNullable<bool>('starred') ?? false,
+    starredAt: row.readNullable<int>('starred_at'),
   );
 
   /// Search messages by text content across all rooms

@@ -37,6 +37,7 @@ class MessageSendingService {
     this._thumbnailService,
     this._getSubscriptionIdForRoom,
   );
+
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
   final FileUploadService _fileUploadService;
@@ -648,7 +649,8 @@ class MessageSendingService {
     return _messageRepo.canEditMessage(messageId, currentUserId);
   }
 
-  /// Check if a message can be edited (sync - for UI when message data is available)
+  /// Check if a message can be edited (sync - for UI when message data is
+  /// available)
   ///
   /// Use this method when you already have the message data to avoid
   /// unnecessary database lookups. This is the single source of truth
@@ -747,7 +749,8 @@ class MessageSendingService {
     );
   }
 
-  /// Check if a message can be deleted (sync - for UI when message data is available)
+  /// Check if a message can be deleted (sync - for UI when message data is
+  /// available)
   ///
   /// Use this method when you already have the message data to avoid
   /// unnecessary database lookups. This is the single source of truth
