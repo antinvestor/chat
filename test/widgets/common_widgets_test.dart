@@ -1,9 +1,10 @@
-import 'package:chat/core/error/app_error.dart';
-import 'package:chat/widgets/empty_state.dart';
-import 'package:chat/widgets/error_banner.dart';
-import 'package:chat/widgets/skeleton_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:stawi/core/error/app_error.dart';
+import 'package:stawi/widgets/empty_state.dart';
+import 'package:stawi/widgets/error_banner.dart';
+import 'package:stawi/widgets/skeleton_loader.dart';
 
 void main() {
   group('EmptyState Widget', () {
@@ -352,9 +353,9 @@ void main() {
       );
 
       // Pump a few frames to verify animation runs
-      await tester.pumpAndSettle();
-      await tester.pumpAndSettle();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Widget should still be present
       expect(find.byType(SkeletonLoader), findsOneWidget);

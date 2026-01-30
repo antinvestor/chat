@@ -1,7 +1,8 @@
-import 'package:chat/widgets/cached_profile_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:stawi/widgets/cached_profile_avatar.dart';
 
 void main() {
   group('CachedProfileAvatar Widget', () {

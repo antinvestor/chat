@@ -1,8 +1,9 @@
-import 'package:chat/features/rooms/domain/room_with_last_message.dart';
-import 'package:chat/features/rooms/ui/room_list_tile.dart';
-import 'package:chat/widgets/skeleton_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:stawi/features/rooms/domain/room_with_last_message.dart';
+import 'package:stawi/features/rooms/ui/room_list_tile.dart';
+import 'package:stawi/widgets/skeleton_loader.dart';
 
 void main() {
   group('RoomListTile Widget', () {
@@ -28,6 +29,7 @@ void main() {
 
     testWidgets('renders room name correctly', (WidgetTester tester) async {
       final room = createRoom(name: 'Family Group');
+      // ignore: unused_local_variable
       var tapped = false;
 
       await tester.pumpWidget(
@@ -251,6 +253,7 @@ void main() {
     testWidgets('onTap callback is invoked when tapped', (
       WidgetTester tester,
     ) async {
+      // ignore: unused_local_variable
       var tapped = false;
       final room = createRoom();
 

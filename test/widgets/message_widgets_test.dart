@@ -1,8 +1,9 @@
-import 'package:chat/features/messages/domain/room_event.dart';
-import 'package:chat/features/messages/ui/date_header.dart';
-import 'package:chat/features/messages/ui/message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:stawi/features/messages/domain/room_event.dart';
+import 'package:stawi/features/messages/ui/date_header.dart';
+import 'package:stawi/features/messages/ui/message_bubble.dart';
 
 import '../test_helpers/test_helpers.dart';
 
@@ -151,7 +152,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Test message'), findsOneWidget);
     });
@@ -171,7 +172,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Received message'), findsOneWidget);
     });
@@ -188,7 +189,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       final align = tester.widget<Align>(find.byType(Align).first);
       expect(align.alignment, Alignment.centerRight);
@@ -206,7 +207,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       final align = tester.widget<Align>(find.byType(Align).first);
       expect(align.alignment, Alignment.centerLeft);
@@ -230,7 +231,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Timestamp should be visible (format: HH:mm)
       final expectedTime =
@@ -250,7 +251,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('edited'), findsOneWidget);
     });
@@ -267,7 +268,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Forwarded'), findsOneWidget);
       expect(find.byIcon(Icons.shortcut), findsOneWidget);
@@ -285,7 +286,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('You deleted this message'), findsOneWidget);
       expect(find.byIcon(Icons.block), findsOneWidget);
@@ -306,7 +307,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('This message was deleted'), findsOneWidget);
     });
@@ -330,7 +331,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Pending message bubble should render
       expect(find.text('Pending message'), findsOneWidget);
@@ -354,7 +355,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Sent message bubble should render
       expect(find.text('Sent message'), findsOneWidget);
@@ -380,7 +381,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Delivered message bubble should render
       expect(find.text('Delivered message'), findsOneWidget);
@@ -404,7 +405,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Read message bubble should render
       expect(find.text('Read message'), findsOneWidget);
@@ -432,7 +433,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Failed status shows error icon and retry info
       expect(find.byIcon(Icons.error_outline), findsAtLeast(1));
@@ -460,7 +461,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Should render the bubble
       expect(find.byType(MessageBubble), findsOneWidget);
@@ -489,7 +490,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('document.pdf'), findsOneWidget);
       expect(find.text('1.0 MB'), findsOneWidget);
@@ -515,7 +516,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('👍'), findsOneWidget);
     });
@@ -545,12 +546,12 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Find and long press on the gesture detector
       await tester.longPress(find.text('Test message'));
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Bottom sheet should appear with options
       expect(find.text('Reply'), findsOneWidget);
@@ -581,11 +582,11 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       await tester.longPress(find.text('Copyable text'));
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Copy'), findsOneWidget);
     });
@@ -617,11 +618,11 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       await tester.longPress(find.text('Forward me'));
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Forward'), findsOneWidget);
     });
@@ -654,11 +655,11 @@ void main() {
 
       // Use pump with duration instead of pumpAndSettle to avoid animation timeout
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       await tester.longPress(find.text('Edit me'));
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Edit'), findsOneWidget);
     });
@@ -691,11 +692,11 @@ void main() {
 
       // Use pump with duration instead of pumpAndSettle to avoid animation timeout
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       await tester.longPress(find.text('Delete me'));
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Delete for me'), findsOneWidget);
       expect(find.text('Delete for everyone'), findsOneWidget);
@@ -722,7 +723,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Should show CircleAvatar for received messages
       expect(find.byType(CircleAvatar), findsOneWidget);
@@ -753,7 +754,7 @@ void main() {
       );
 
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Avatar should not be directly visible when grouped
       // (replaced with SizedBox placeholder)
@@ -784,7 +785,7 @@ void main() {
 
       // Use pump with duration instead of pumpAndSettle to avoid animation timeout
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Light theme message'), findsOneWidget);
     });
@@ -810,7 +811,7 @@ void main() {
 
       // Use pump with duration instead of pumpAndSettle to avoid animation timeout
       await tester.pump();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Dark theme message'), findsOneWidget);
     });

@@ -1,8 +1,9 @@
-import 'package:chat/features/messages/ui/date_header.dart';
-import 'package:chat/features/messages/ui/input_bar.dart';
-import 'package:chat/features/messages/ui/typing_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:stawi/features/messages/ui/date_header.dart';
+import 'package:stawi/features/messages/ui/input_bar.dart';
+import 'package:stawi/features/messages/ui/typing_indicator.dart';
 
 import '../test_helpers/test_helpers.dart';
 
@@ -25,6 +26,8 @@ void main() {
         ),
       );
 
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byType(TextField), findsOneWidget);
     });
 
@@ -42,6 +45,8 @@ void main() {
           ),
         ),
       );
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(find.byIcon(Icons.attach_file), findsOneWidget);
     });
@@ -63,6 +68,8 @@ void main() {
         ),
       );
 
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byIcon(Icons.camera_alt), findsOneWidget);
     });
 
@@ -80,6 +87,8 @@ void main() {
           ),
         ),
       );
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(find.byIcon(Icons.mic), findsOneWidget);
     });
@@ -108,6 +117,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Send button should appear when text is entered
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byIcon(Icons.send), findsOneWidget);
     });
 
@@ -130,6 +141,8 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'Hello');
       await tester.pump();
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(find.byIcon(Icons.camera_alt), findsNothing);
     });
@@ -156,6 +169,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.attach_file));
       await tester.pump();
 
+      await tester.pump(const Duration(seconds: 4));
+
       expect(attachmentPressed, isTrue);
     });
 
@@ -178,6 +193,8 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.camera_alt));
       await tester.pump();
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(cameraPressed, isTrue);
     });
@@ -206,6 +223,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Send button should be visible
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byIcon(Icons.send), findsOneWidget);
     });
 
@@ -227,6 +246,8 @@ void main() {
           ),
         ),
       );
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(find.text('Reply'), findsOneWidget);
       expect(find.text('Original message text'), findsOneWidget);
@@ -256,6 +277,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.close));
       await tester.pump();
 
+      await tester.pump(const Duration(seconds: 4));
+
       expect(cancelPressed, isTrue);
     });
 
@@ -276,6 +299,8 @@ void main() {
           ),
         ),
       );
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(find.byIcon(Icons.lock), findsOneWidget);
     });
@@ -298,6 +323,8 @@ void main() {
         ),
       );
 
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.text('Encrypted message'), findsOneWidget);
     });
 
@@ -318,6 +345,8 @@ void main() {
         ),
       );
 
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.text('Message'), findsOneWidget);
     });
   });
@@ -337,6 +366,8 @@ void main() {
           ),
         ),
       );
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(find.byIcon(Icons.mic), findsOneWidget);
     });
@@ -471,6 +502,8 @@ void main() {
         ),
       );
 
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byType(InputBar), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
     });
@@ -490,6 +523,8 @@ void main() {
           ),
         ),
       );
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(find.byType(InputBar), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
@@ -528,6 +563,7 @@ void main() {
 
   group('InputBar Edge Cases', () {
     testWidgets('handles whitespace-only input', (WidgetTester tester) async {
+      // ignore: unused_local_variable
       String? sentMessage;
 
       await tester.pumpWidgetWithMocks(
@@ -548,6 +584,8 @@ void main() {
       await tester.pump();
 
       // Send button should not appear for whitespace-only input
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byIcon(Icons.mic), findsOneWidget);
       expect(find.byIcon(Icons.send), findsNothing);
     });
@@ -569,6 +607,8 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'Line 1\nLine 2\nLine 3');
       await tester.pump();
+
+      await tester.pump(const Duration(seconds: 4));
 
       expect(find.byIcon(Icons.send), findsOneWidget);
     });
@@ -592,6 +632,8 @@ void main() {
       await tester.enterText(find.byType(TextField), longText);
       await tester.pump();
 
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byIcon(Icons.send), findsOneWidget);
     });
 
@@ -614,6 +656,8 @@ void main() {
       await tester.pump();
 
       // Verify send button appears for special characters
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byIcon(Icons.send), findsOneWidget);
     });
 
@@ -636,6 +680,8 @@ void main() {
       await tester.pump();
 
       // Verify send button appears for emoji input
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byIcon(Icons.send), findsOneWidget);
     });
   });
@@ -660,6 +706,8 @@ void main() {
 
       // Text field should be present and accessible
       final textField = find.byType(TextField);
+      await tester.pump(const Duration(seconds: 4));
+
       expect(textField, findsOneWidget);
 
       // Should have a hint text
@@ -683,6 +731,8 @@ void main() {
       );
 
       // All buttons should be tappable
+      await tester.pump(const Duration(seconds: 4));
+
       expect(find.byIcon(Icons.attach_file), findsOneWidget);
       expect(find.byIcon(Icons.camera_alt), findsOneWidget);
       expect(find.byIcon(Icons.mic), findsOneWidget);
