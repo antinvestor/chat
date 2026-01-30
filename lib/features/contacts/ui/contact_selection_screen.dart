@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../data/roster_repository.dart';
+import '../services/contact_service.dart';
+import '../services/contact_sync_orchestrator.dart';
+import 'contact_permission_view.dart';
 
 /// Contact selection screen for starting new chats
 /// Features: search, fast scroller, alphabetical list
@@ -199,51 +202,115 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
 
   Widget _buildContactsList() => Consumer(
     builder: (context, ref, child) {
-      final contactsAsync = ref.watch(profilesWithContactsProvider);
+      final permissionAsync = ref.watch(contactPermissionGrantedProvider);
 
-      return contactsAsync.when(
-        data: (contacts) {
-          if (contacts.isEmpty) {
-            return SliverFillRemaining(child: _buildEmptyState());
+      return permissionAsync.when(
+        data: (hasPermission) {
+          // Show permission view when permission not granted
+          if (!hasPermission) {
+            return SliverFillRemaining(
+              child: ContactPermissionView(
+                onPermissionGranted: () async {
+                  // Invalidate permission provider to refresh state
+                  ref.invalidate(contactPermissionGrantedProvider);
+                  // Trigger sync via orchestrator
+                  final orchestrator = await ref.read(
+                    contactSyncOrchestratorProvider.future,
+                  );
+                  if (context.mounted) {
+                    await orchestrator.ensureContactsSynced(context: context);
+                  }
+                  ref.invalidate(profilesWithContactsProvider);
+                },
+              ),
+            );
           }
 
-          final filteredContacts = _filterContacts(contacts);
-          final groupedContacts = _groupContactsAlphabetically(
-            filteredContacts,
-          );
+          // Permission granted - show contacts
+          final contactsAsync = ref.watch(profilesWithContactsProvider);
 
-          return SliverList(
-            delegate: SliverChildBuilderDelegate((context, index) {
-              if (index >= groupedContacts.length) return null;
+          return contactsAsync.when(
+            data: (contacts) {
+              if (contacts.isEmpty) {
+                return SliverFillRemaining(child: _buildEmptyState());
+              }
 
-              final entry = groupedContacts.entries.elementAt(index);
-              final letter = entry.key;
-              final sectionContacts = entry.value;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section header
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    color: Theme.of(context).colorScheme.surfaceContainer,
-                    child: Text(
-                      letter,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryGreen,
-                      ),
-                    ),
-                  ),
-                  // Contacts in this section
-                  ...sectionContacts.map(_buildContactTile),
-                ],
+              final filteredContacts = _filterContacts(contacts);
+              final groupedContacts = _groupContactsAlphabetically(
+                filteredContacts,
               );
-            }, childCount: groupedContacts.length),
+
+              return SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  if (index >= groupedContacts.length) return null;
+
+                  final entry = groupedContacts.entries.elementAt(index);
+                  final letter = entry.key;
+                  final sectionContacts = entry.value;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Section header
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        color: Theme.of(context).colorScheme.surfaceContainer,
+                        child: Text(
+                          letter,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryGreen,
+                              ),
+                        ),
+                      ),
+                      // Contacts in this section
+                      ...sectionContacts.map(_buildContactTile),
+                    ],
+                  );
+                }, childCount: groupedContacts.length),
+              );
+            },
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, stack) => SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading contacts',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () =>
+                          ref.invalidate(profilesWithContactsProvider),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         },
         loading: () => const SliverFillRemaining(
@@ -254,27 +321,11 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading contacts',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  error.toString(),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                Text('Error checking permission: $error'),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: () => ref.invalidate(profilesWithContactsProvider),
+                  onPressed: () =>
+                      ref.invalidate(contactPermissionGrantedProvider),
                   child: const Text('Retry'),
                 ),
               ],
@@ -290,7 +341,7 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
-          Icons.contacts_outlined,
+          Icons.people_outline,
           size: 64,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
@@ -301,19 +352,10 @@ class _ContactSelectionScreenState extends ConsumerState<ContactSelectionScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          'Sync your contacts to get started',
+          'None of your contacts are on the app yet',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-        ),
-        const SizedBox(height: 24),
-        FilledButton.icon(
-          onPressed: () {
-            // Navigate to contacts sync screen
-            context.go('/contacts');
-          },
-          icon: const Icon(Icons.sync),
-          label: const Text('Sync Contacts'),
         ),
       ],
     ),
