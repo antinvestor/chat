@@ -23,6 +23,18 @@ class Profiles extends Table {
   IntColumn get updatedAt => integer().nullable()();
   TextColumn get metadata => text().nullable()();
 
+  /// User's presence status (0=offline, 1=online, 2=away, 3=busy, 4=doNotDisturb)
+  IntColumn get status => integer().withDefault(const Constant(0))();
+
+  /// Custom status message (e.g., "In a meeting", "On vacation")
+  TextColumn get statusMessage => text().nullable()();
+
+  /// Timestamp when status was last updated
+  IntColumn get statusUpdatedAt => integer().nullable()();
+
+  /// User's bio/about text
+  TextColumn get bio => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -91,11 +103,15 @@ class Rooms extends Table {
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   IntColumn get disappearingTimeout => integer().nullable()();
 
-  /// Mute notifications until this timestamp (milliseconds since epoch)
-  /// - null = not muted
-  /// - 0 = muted forever
-  /// - timestamp = muted until that time
+  /// Mute notifications until this epoch timestamp (null = not muted)
   IntColumn get mutedUntil => integer().nullable()();
+
+  /// Maximum number of members allowed in this room (null = default 256)
+  IntColumn get memberLimit => integer().nullable()();
+
+  /// Whether member limit is enforced (only applicable for groups)
+  BoolColumn get memberLimitEnabled =>
+      boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -210,6 +226,12 @@ class RoomEvents extends Table {
   /// Timestamp when this message should be deleted (for disappearing messages)
   /// Null means the message does not expire
   IntColumn get expiresAt => integer().nullable()();
+
+  /// Whether this message is starred/bookmarked by the user
+  BoolColumn get starred => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when the message was starred (for sorting starred messages)
+  IntColumn get starredAt => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -601,6 +623,105 @@ class UploadChunks extends Table {
   IntColumn get createdAt => integer()();
 }
 
+/// Analytics events table for local event storage
+///
+/// Stores analytics events locally before batch upload to backend.
+/// Events are marked as synced after successful upload.
+///
+/// Example:
+/// ```dart
+/// final pendingEvents = await (db.analyticsEvents.select()
+///   ..where((t) => t.isSynced.equals(false))
+/// ).get();
+/// ```
+class AnalyticsEvents extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Unique event identifier (UUID)
+  TextColumn get eventId => text()();
+
+  /// Event type (e.g., 'screen_view', 'message_sent')
+  TextColumn get eventType => text()();
+
+  /// Event name for custom events
+  TextColumn get eventName => text()();
+
+  /// User ID associated with the event (nullable for anonymous)
+  TextColumn get userId => text().nullable()();
+
+  /// Session ID for grouping events
+  TextColumn get sessionId => text().nullable()();
+
+  /// Screen name where event occurred
+  TextColumn get screenName => text().nullable()();
+
+  /// JSON-encoded event properties
+  TextColumn get properties => text().nullable()();
+
+  /// Timestamp when event occurred (milliseconds since epoch)
+  IntColumn get timestamp => integer()();
+
+  /// Whether the event has been synced to backend
+  BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when event was synced
+  IntColumn get syncedAt => integer().nullable()();
+}
+
+/// Call history table storing records of voice and video calls
+///
+/// Tracks all calls made or received, including duration, type,
+/// and outcome (answered, missed, declined).
+///
+/// Example:
+/// ```dart
+/// final history = await db.callHistory.select()
+///   ..orderBy([(t) => OrderingTerm.desc(t.startedAt)])
+///   ..limit(50)
+/// ).get();
+/// ```
+class CallHistory extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Room ID where the call occurred
+  TextColumn get roomId => text()();
+
+  /// Profile ID of the caller (who initiated the call)
+  TextColumn get callerId => text()();
+
+  /// Profile ID of the recipient (who received the call)
+  TextColumn get recipientId => text().nullable()();
+
+  /// Call type: 0=audio, 1=video
+  IntColumn get callType => integer().withDefault(const Constant(0))();
+
+  /// Call direction: 0=outgoing, 1=incoming
+  IntColumn get direction => integer().withDefault(const Constant(0))();
+
+  /// Call status: 0=missed, 1=answered, 2=declined, 3=busy, 4=failed
+  IntColumn get status => integer().withDefault(const Constant(0))();
+
+  /// Timestamp when call started (milliseconds since epoch)
+  IntColumn get startedAt => integer()();
+
+  /// Timestamp when call was answered (milliseconds since epoch)
+  IntColumn get answeredAt => integer().nullable()();
+
+  /// Timestamp when call ended (milliseconds since epoch)
+  IntColumn get endedAt => integer().nullable()();
+
+  /// Duration of the call in seconds (0 if not answered)
+  IntColumn get duration => integer().withDefault(const Constant(0))();
+
+  /// Whether this entry has been read/seen by the user
+  BoolColumn get isRead => boolean().withDefault(const Constant(false))();
+
+  /// Whether the call has been deleted by the user
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -631,6 +752,8 @@ class UploadChunks extends Table {
     InviteLinks,
     InviteLinkJoins,
     UploadChunks,
+    CallHistory,
+    AnalyticsEvents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -643,7 +766,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -742,11 +865,72 @@ class AppDatabase extends _$AppDatabase {
         ''');
       }
       if (from <= 9) {
-        // Migration from v9 to v10: Add mute notifications support
+        // Migration from v9 to v10: Add starred messages support
+        // Add mute notifications support
         await m.addColumn(rooms, rooms.mutedUntil);
+        await m.addColumn(roomEvents, roomEvents.starred);
+        await m.addColumn(roomEvents, roomEvents.starredAt);
+        // Create index for efficient starred message querying
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_room_events_starred
+          ON room_events(starred, starred_at)
+          WHERE starred = 1
+        ''');
       }
       if (from <= 10) {
-        // Migration from v10 to v11: Add upload chunks table for resumable uploads
+        // Migration from v10 to v11: Add user status and bio fields
+        await m.addColumn(profiles, profiles.status);
+        await m.addColumn(profiles, profiles.statusMessage);
+        await m.addColumn(profiles, profiles.statusUpdatedAt);
+        await m.addColumn(profiles, profiles.bio);
+      }
+      if (from <= 11) {
+        // Migration from v11 to v12: Add call history table
+        await m.createTable(callHistory);
+        // Create index for efficient querying by room
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_room_id
+          ON call_history(room_id)
+        ''');
+        // Create index for efficient querying by time
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_started_at
+          ON call_history(started_at DESC)
+        ''');
+        // Create index for filtering unread/deleted calls
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_status
+          ON call_history(is_read, is_deleted)
+          WHERE is_deleted = 0
+        ''');
+      }
+      if (from <= 12) {
+        // Migration from v12 to v13: Add group member limit columns
+        await m.addColumn(rooms, rooms.memberLimit);
+        await m.addColumn(rooms, rooms.memberLimitEnabled);
+      }
+      if (from <= 13) {
+        // Migration from v13 to v14: Add analytics events table
+        await m.createTable(analyticsEvents);
+        // Create index for querying unsynced events
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_analytics_events_synced
+          ON analytics_events(is_synced)
+          WHERE is_synced = 0
+        ''');
+        // Create index for querying by timestamp
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp
+          ON analytics_events(timestamp DESC)
+        ''');
+        // Create unique index on event_id
+        await customStatement('''
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_events_event_id
+          ON analytics_events(event_id)
+        ''');
+      }
+      if (from <= 14) {
+        // Migration from v14 to v15: Add upload chunks table for resumable uploads
         await m.createTable(uploadChunks);
         // Create index for efficient querying by localId
         await customStatement('''
@@ -873,6 +1057,8 @@ class AppDatabase extends _$AppDatabase {
     forwardedFromEvent: row.readNullable<String>('forwarded_from_event'),
     forwardCount: row.readNullable<int>('forward_count') ?? 0,
     forwardRestricted: row.readNullable<bool>('forward_restricted') ?? false,
+    starred: row.readNullable<bool>('starred') ?? false,
+    starredAt: row.readNullable<int>('starred_at'),
   );
 
   /// Search messages by text content across all rooms

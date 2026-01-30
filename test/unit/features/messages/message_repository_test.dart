@@ -1298,6 +1298,241 @@ void main() {
       });
     });
 
+    group('expired messages (disappearing messages)', () {
+      test('getExpiredMessages returns messages past expiry time', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final pastExpiry = now - 1000; // 1 second ago
+        final futureExpiry = now + 60000; // 1 minute in future
+
+        // Expired message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Expired message'},
+            createdAt: now - 10000,
+            expiresAt: pastExpiry,
+          ),
+        );
+
+        // Not expired message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-not-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Not expired message'},
+            createdAt: now - 5000,
+            expiresAt: futureExpiry,
+          ),
+        );
+
+        // No expiry (permanent) message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-permanent',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Permanent message'},
+            createdAt: now,
+          ),
+        );
+
+        final expiredMessages = await repository.getExpiredMessages();
+
+        expect(expiredMessages.length, equals(1));
+        expect(expiredMessages[0].id, equals('event-expired'));
+      });
+
+      test(
+        'getExpiredMessages returns empty list when no expired messages',
+        () async {
+          await createTestRoom('room-1');
+          final now = DateTime.now().millisecondsSinceEpoch;
+          final futureExpiry = now + 60000;
+
+          await repository.insertMessage(
+            RoomEvent(
+              id: 'event-1',
+              roomId: 'room-1',
+              senderId: 'sender-1',
+              type: RoomEventType.text,
+              content: {'text': 'Not expired'},
+              createdAt: now,
+              expiresAt: futureExpiry,
+            ),
+          );
+
+          final expiredMessages = await repository.getExpiredMessages();
+          expect(expiredMessages, isEmpty);
+        },
+      );
+
+      test('deleteExpiredMessages removes expired messages', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final pastExpiry = now - 1000;
+        final futureExpiry = now + 60000;
+
+        // Expired messages
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-expired-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Expired 1'},
+            createdAt: now - 10000,
+            expiresAt: pastExpiry,
+          ),
+        );
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-expired-2',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Expired 2'},
+            createdAt: now - 9000,
+            expiresAt: pastExpiry - 500,
+          ),
+        );
+
+        // Not expired message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-not-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Not expired'},
+            createdAt: now,
+            expiresAt: futureExpiry,
+          ),
+        );
+
+        // Permanent message
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-permanent',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Permanent'},
+            createdAt: now,
+          ),
+        );
+
+        final deletedCount = await repository.deleteExpiredMessages();
+
+        expect(deletedCount, equals(2));
+
+        // Verify expired messages are gone
+        expect(await repository.getEventById('event-expired-1'), isNull);
+        expect(await repository.getEventById('event-expired-2'), isNull);
+
+        // Verify non-expired and permanent messages remain
+        expect(await repository.getEventById('event-not-expired'), isNotNull);
+        expect(await repository.getEventById('event-permanent'), isNotNull);
+      });
+
+      test(
+        'deleteExpiredMessages returns 0 when no expired messages',
+        () async {
+          await createTestRoom('room-1');
+          final now = DateTime.now().millisecondsSinceEpoch;
+
+          await repository.insertMessage(
+            RoomEvent(
+              id: 'event-1',
+              roomId: 'room-1',
+              senderId: 'sender-1',
+              type: RoomEventType.text,
+              content: {'text': 'Permanent'},
+              createdAt: now,
+            ),
+          );
+
+          final deletedCount = await repository.deleteExpiredMessages();
+          expect(deletedCount, equals(0));
+        },
+      );
+
+      test('setMessageExpiry sets expiration time for message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final expiresAt = now + 60000;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            createdAt: now,
+          ),
+        );
+
+        // Initially no expiry
+        var event = await repository.getEventById('event-1');
+        expect(event!.expiresAt, isNull);
+        expect(event.isDisappearing, isFalse);
+
+        // Set expiry
+        await repository.setMessageExpiry('event-1', expiresAt);
+
+        event = await repository.getEventById('event-1');
+        expect(event!.expiresAt, equals(expiresAt));
+        expect(event.isDisappearing, isTrue);
+      });
+
+      test('message isExpired returns correct value', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        // Create message with past expiry
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Expired'},
+            createdAt: now - 10000,
+            expiresAt: now - 1000,
+          ),
+        );
+
+        // Create message with future expiry
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-not-expired',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Not expired'},
+            createdAt: now,
+            expiresAt: now + 60000,
+          ),
+        );
+
+        final expiredEvent = await repository.getEventById('event-expired');
+        final notExpiredEvent = await repository.getEventById(
+          'event-not-expired',
+        );
+
+        expect(expiredEvent!.hasExpired, isTrue);
+        expect(notExpiredEvent!.hasExpired, isFalse);
+      });
+    });
+
     group('message deletion with isDeleted flag', () {
       test('new messages have isDeleted as false', () async {
         await createTestRoom('room-1');
@@ -1370,6 +1605,337 @@ void main() {
         expect(event.redacted, isTrue);
         expect(event.redactedAt, equals(redactedAt));
         expect(event.redactedBy, equals('admin-user'));
+      });
+    });
+
+    group('starred messages', () {
+      test('new messages are not starred by default', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            createdAt: now,
+          ),
+        );
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.starred, isFalse);
+        expect(event.starredAt, isNull);
+        expect(event.isStarred, isFalse);
+      });
+
+      test('starMessage stars a message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            createdAt: now,
+          ),
+        );
+
+        final result = await repository.starMessage('event-1');
+        expect(result, isTrue);
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.starred, isTrue);
+        expect(event.starredAt, isNotNull);
+        expect(event.isStarred, isTrue);
+      });
+
+      test('starMessage returns false if already starred', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            createdAt: now,
+          ),
+        );
+
+        await repository.starMessage('event-1');
+        final secondResult = await repository.starMessage('event-1');
+        expect(secondResult, isFalse);
+      });
+
+      test('unstarMessage unstars a message', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            createdAt: now,
+          ),
+        );
+
+        await repository.starMessage('event-1');
+        final result = await repository.unstarMessage('event-1');
+        expect(result, isTrue);
+
+        final event = await repository.getEventById('event-1');
+        expect(event!.starred, isFalse);
+        expect(event.starredAt, isNull);
+      });
+
+      test('unstarMessage returns false if not starred', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            createdAt: now,
+          ),
+        );
+
+        final result = await repository.unstarMessage('event-1');
+        expect(result, isFalse);
+      });
+
+      test('toggleStar toggles starred state', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            createdAt: now,
+          ),
+        );
+
+        // Toggle on
+        var result = await repository.toggleStar('event-1');
+        expect(result, isTrue);
+        var event = await repository.getEventById('event-1');
+        expect(event!.isStarred, isTrue);
+
+        // Toggle off
+        result = await repository.toggleStar('event-1');
+        expect(result, isFalse);
+        event = await repository.getEventById('event-1');
+        expect(event!.isStarred, isFalse);
+      });
+
+      test('getStarredMessages returns only starred messages', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        // Create multiple messages
+        for (var i = 1; i <= 5; i++) {
+          await repository.insertMessage(
+            RoomEvent(
+              id: 'event-$i',
+              roomId: 'room-1',
+              senderId: 'sender-1',
+              type: RoomEventType.text,
+              content: {'text': 'Message $i'},
+              createdAt: now + i,
+            ),
+          );
+        }
+
+        // Star some messages
+        await repository.starMessage('event-2');
+        await repository.starMessage('event-4');
+
+        final starred = await repository.getStarredMessages();
+        expect(starred.length, equals(2));
+        expect(starred.any((e) => e.id == 'event-2'), isTrue);
+        expect(starred.any((e) => e.id == 'event-4'), isTrue);
+      });
+
+      test(
+        'getStarredMessages returns messages ordered by starredAt desc',
+        () async {
+          await createTestRoom('room-1');
+          final now = DateTime.now().millisecondsSinceEpoch;
+
+          for (var i = 1; i <= 3; i++) {
+            await repository.insertMessage(
+              RoomEvent(
+                id: 'event-$i',
+                roomId: 'room-1',
+                senderId: 'sender-1',
+                type: RoomEventType.text,
+                content: {'text': 'Message $i'},
+                createdAt: now + i,
+              ),
+            );
+          }
+
+          // Star in specific order
+          await repository.starMessage('event-1');
+          await Future.delayed(const Duration(milliseconds: 10));
+          await repository.starMessage('event-3');
+          await Future.delayed(const Duration(milliseconds: 10));
+          await repository.starMessage('event-2');
+
+          final starred = await repository.getStarredMessages();
+          expect(starred.length, equals(3));
+          // Most recently starred first
+          expect(starred[0].id, equals('event-2'));
+          expect(starred[1].id, equals('event-3'));
+          expect(starred[2].id, equals('event-1'));
+        },
+      );
+
+      test(
+        'getStarredMessagesForRoom returns only starred messages from room',
+        () async {
+          await createTestRoom('room-1');
+          await createTestRoom('room-2');
+          final now = DateTime.now().millisecondsSinceEpoch;
+
+          await repository.insertMessage(
+            RoomEvent(
+              id: 'event-1',
+              roomId: 'room-1',
+              senderId: 'sender-1',
+              type: RoomEventType.text,
+              content: {'text': 'Message 1'},
+              createdAt: now,
+            ),
+          );
+
+          await repository.insertMessage(
+            RoomEvent(
+              id: 'event-2',
+              roomId: 'room-2',
+              senderId: 'sender-1',
+              type: RoomEventType.text,
+              content: {'text': 'Message 2'},
+              createdAt: now + 1,
+            ),
+          );
+
+          await repository.starMessage('event-1');
+          await repository.starMessage('event-2');
+
+          final room1Starred = await repository.getStarredMessagesForRoom(
+            'room-1',
+          );
+          expect(room1Starred.length, equals(1));
+          expect(room1Starred[0].id, equals('event-1'));
+
+          final room2Starred = await repository.getStarredMessagesForRoom(
+            'room-2',
+          );
+          expect(room2Starred.length, equals(1));
+          expect(room2Starred[0].id, equals('event-2'));
+        },
+      );
+
+      test('getStarredMessagesCount returns correct count', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        for (var i = 1; i <= 5; i++) {
+          await repository.insertMessage(
+            RoomEvent(
+              id: 'event-$i',
+              roomId: 'room-1',
+              senderId: 'sender-1',
+              type: RoomEventType.text,
+              content: {'text': 'Message $i'},
+              createdAt: now + i,
+            ),
+          );
+        }
+
+        expect(await repository.getStarredMessagesCount(), equals(0));
+
+        await repository.starMessage('event-1');
+        await repository.starMessage('event-3');
+        expect(await repository.getStarredMessagesCount(), equals(2));
+
+        await repository.unstarMessage('event-1');
+        expect(await repository.getStarredMessagesCount(), equals(1));
+      });
+
+      test('clearAllStarredMessages removes all stars', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        for (var i = 1; i <= 3; i++) {
+          await repository.insertMessage(
+            RoomEvent(
+              id: 'event-$i',
+              roomId: 'room-1',
+              senderId: 'sender-1',
+              type: RoomEventType.text,
+              content: {'text': 'Message $i'},
+              createdAt: now + i,
+            ),
+          );
+          await repository.starMessage('event-$i');
+        }
+
+        expect(await repository.getStarredMessagesCount(), equals(3));
+
+        final cleared = await repository.clearAllStarredMessages();
+        expect(cleared, equals(3));
+        expect(await repository.getStarredMessagesCount(), equals(0));
+
+        // Messages still exist, just not starred
+        for (var i = 1; i <= 3; i++) {
+          final event = await repository.getEventById('event-$i');
+          expect(event, isNotNull);
+          expect(event!.starred, isFalse);
+        }
+      });
+
+      test('canBeStarred returns false for deleted messages', () async {
+        await createTestRoom('room-1');
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await repository.insertMessage(
+          RoomEvent(
+            id: 'event-1',
+            roomId: 'room-1',
+            senderId: 'sender-1',
+            type: RoomEventType.text,
+            content: {'text': 'Message'},
+            status: EventStatus.sent,
+            createdAt: now,
+          ),
+        );
+
+        var event = await repository.getEventById('event-1');
+        expect(event!.canBeStarred, isTrue);
+
+        await repository.deleteMessage('event-1');
+
+        event = await repository.getEventById('event-1');
+        expect(event!.canBeStarred, isFalse);
       });
     });
   });

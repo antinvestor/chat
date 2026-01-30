@@ -1,13 +1,17 @@
+// ignore_for_file: avoid_dynamic_calls
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/logging/app_logger.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/user_info_provider.dart';
 import '../data/profile_repository.dart';
+import '../domain/user_status.dart';
 
 /// Screen for editing user profile information
 class ProfileEditScreen extends ConsumerStatefulWidget {
@@ -20,6 +24,7 @@ class ProfileEditScreen extends ConsumerStatefulWidget {
 class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _displayNameController = TextEditingController();
   final _bioController = TextEditingController();
+  final _statusMessageController = TextEditingController();
   final _imagePicker = ImagePicker();
 
   bool _isLoading = false;
@@ -27,6 +32,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   File? _selectedImage;
   String? _currentAvatarUrl;
   List<ContactInfo> _contacts = [];
+  UserStatus _currentStatus = UserStatus.offline;
+  String? _originalStatusMessage;
 
   @override
   void initState() {
@@ -38,6 +45,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   void dispose() {
     _displayNameController.dispose();
     _bioController.dispose();
+    _statusMessageController.dispose();
     super.dispose();
   }
 
@@ -59,10 +67,22 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         _bioController.text = bio;
       }
 
+      // Load status
+      _currentStatus = await profileRepo.getCurrentStatus();
+      final statusMessage = await profileRepo.getCurrentStatusMessage();
+      if (statusMessage != null) {
+        _statusMessageController.text = statusMessage;
+        _originalStatusMessage = statusMessage;
+      }
+
       // Load contacts
       _contacts = await profileRepo.getContacts();
-    } catch (e) {
-      debugPrint('Failed to load profile: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to load profile',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (mounted) {
         _showError('Failed to load profile. Please try again.');
       }
@@ -171,6 +191,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       final bioUpdated = await _updateBio(profileRepo);
       if (!bioUpdated) return;
 
+      final statusUpdated = await _updateStatus(profileRepo);
+      if (!statusUpdated) return;
+
       final photoUpdated = await _updateProfilePhoto(profileRepo);
       if (!photoUpdated) return;
 
@@ -183,8 +206,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         );
         context.navigateBack();
       }
-    } catch (e) {
-      debugPrint('Failed to save profile: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to save profile',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _showError('Failed to save profile. Please try again.');
     } finally {
       if (mounted) {
@@ -217,6 +244,28 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       final result = await profileRepo.updateBio(_bioController.text);
       if (!result.success) {
         _showError('Failed to update bio. Please try again.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Updates status if changed. Returns false if update failed.
+  Future<bool> _updateStatus(ProfileRepository profileRepo) async {
+    final currentStatusMessage = _statusMessageController.text.trim();
+    final hasStatusChanged =
+        _currentStatus != UserStatus.offline ||
+        currentStatusMessage != (_originalStatusMessage ?? '');
+
+    if (hasStatusChanged) {
+      final result = await profileRepo.updateStatus(
+        _currentStatus,
+        statusMessage: currentStatusMessage.isNotEmpty
+            ? currentStatusMessage
+            : null,
+      );
+      if (!result.success) {
+        _showError('Failed to update status. Please try again.');
         return false;
       }
     }
@@ -403,6 +452,149 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     }
   }
 
+  /// Start verification process for a contact
+  Future<void> _startVerification(ContactInfo contact) async {
+    setState(() => _isSaving = true);
+    try {
+      final profileRepo = ref.read(profileRepositoryProvider);
+      final result = await profileRepo.startContactVerification(contact.id);
+
+      if (result.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Verification code sent to ${contact.value}'),
+            ),
+          );
+          _showVerificationCodeDialog(contact);
+        }
+      } else {
+        _showError(result.errorMessage ?? 'Failed to send verification code');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  /// Show dialog to enter verification code
+  void _showVerificationCodeDialog(ContactInfo contact) {
+    final codeController = TextEditingController();
+    var isVerifying = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Enter Verification Code'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'A verification code has been sent to:',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                contact.value,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: codeController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  letterSpacing: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Verification Code',
+                  hintText: '000000',
+                  counterText: '',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+                enabled: !isVerifying,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isVerifying
+                  ? null
+                  : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: isVerifying
+                  ? null
+                  : () async {
+                      final code = codeController.text.trim();
+                      if (code.isEmpty || code.length != 6) {
+                        return;
+                      }
+
+                      setDialogState(() => isVerifying = true);
+
+                      final result = await _verifyContact(contact, code);
+
+                      if (result) {
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
+                      } else {
+                        setDialogState(() => isVerifying = false);
+                      }
+                    },
+              child: isVerifying
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Verify'),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(codeController.dispose);
+  }
+
+  /// Submit verification code
+  Future<bool> _verifyContact(ContactInfo contact, String code) async {
+    try {
+      final profileRepo = ref.read(profileRepositoryProvider);
+      final result = await profileRepo.verifyContact(contact.id, code);
+
+      if (result.success) {
+        await _loadProfile();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${contact.value} verified successfully'),
+              backgroundColor: AppTheme.brightGreen,
+            ),
+          );
+        }
+        return true;
+      } else {
+        _showError(result.errorMessage ?? 'Invalid verification code');
+        return false;
+      }
+    } catch (e) {
+      _showError('Verification failed: $e');
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -482,6 +674,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       maxLength: 200,
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // Status Section
+                  _buildStatusSection(theme),
                   const SizedBox(height: 24),
 
                   // Email Section
@@ -589,6 +785,80 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       ),
       const SizedBox(height: 8),
       child,
+    ],
+  );
+
+  Widget _buildStatusSection(ThemeData theme) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Status',
+        style: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppTheme.primaryGreen,
+        ),
+      ),
+      const SizedBox(height: 12),
+      // Status selection chips
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: UserStatus.values.map((status) {
+          final isSelected = _currentStatus == status;
+          return ChoiceChip(
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  status.icon,
+                  size: 16,
+                  color: isSelected ? Colors.white : status.color,
+                ),
+                const SizedBox(width: 6),
+                Text(status.label),
+              ],
+            ),
+            selected: isSelected,
+            onSelected: (selected) {
+              if (selected) {
+                setState(() => _currentStatus = status);
+              }
+            },
+            selectedColor: status.color,
+            labelStyle: TextStyle(
+              color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+            ),
+          );
+        }).toList(),
+      ),
+      const SizedBox(height: 16),
+      // Status description
+      Text(
+        _currentStatus.shortDescription,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+      const SizedBox(height: 16),
+      // Custom status message
+      TextField(
+        controller: _statusMessageController,
+        decoration: InputDecoration(
+          hintText: 'Set a custom status message',
+          prefixIcon: const Icon(Icons.edit_note),
+          suffixIcon: _statusMessageController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    setState(_statusMessageController.clear);
+                  },
+                )
+              : null,
+        ),
+        maxLength: 100,
+        onChanged: (_) => setState(() {}),
+      ),
     ],
   );
 
@@ -722,10 +992,27 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           ],
         ],
       ),
-      trailing: IconButton(
-        icon: const Icon(Icons.delete_outline),
-        color: Colors.red.shade400,
-        onPressed: () => _removeContact(contact),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Verify button for unverified contacts
+          if (!contact.isVerified)
+            TextButton.icon(
+              onPressed: _isSaving ? null : () => _startVerification(contact),
+              icon: const Icon(Icons.verified_user_outlined, size: 16),
+              label: const Text('Verify'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.primaryGreen,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+          // Delete button
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            color: Colors.red.shade400,
+            onPressed: _isSaving ? null : () => _removeContact(contact),
+          ),
+        ],
       ),
     ),
   );

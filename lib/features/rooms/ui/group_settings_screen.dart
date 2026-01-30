@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/logging/app_logger.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/room_providers.dart';
 import 'group_avatar_picker.dart';
@@ -79,9 +80,13 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
               metadata['addMembersPermission'] as String? ?? 'admins';
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Log error but don't crash - fields will have default values
-      debugPrint('Failed to load room data: $e');
+      AppLogger.error(
+        'Failed to load room data',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 

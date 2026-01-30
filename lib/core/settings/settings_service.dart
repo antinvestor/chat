@@ -55,9 +55,16 @@ class SettingsKeys {
   static const backupEnabled = 'backup_enabled';
   static const backupFrequency = 'backup_frequency';
 
+  // Analytics
+  static const analyticsEnabled = 'analytics_enabled';
+
   // Media Cache
   static const mediaCacheSizeBytes = 'media_cache_size_bytes';
   static const perRoomCacheEnabled = 'per_room_cache_enabled';
+
+  // Contact Sync
+  static const contactSyncInitialized = 'contact_sync_initialized';
+  static const contactPermissionDenied = 'contact_permission_denied';
 }
 
 /// Default setting values
@@ -82,6 +89,7 @@ class SettingsDefaults {
   static const liveLocationSharingEnabled = false;
   static const backupEnabled = false;
   static const backupFrequency = 'weekly';
+  static const analyticsEnabled = true;
   // Media Cache (500MB default)
   static const mediaCacheSizeBytes = 500 * 1024 * 1024;
   static const perRoomCacheEnabled = false;
@@ -398,4 +406,12 @@ class SettingsService {
   bool get perRoomCacheEnabled => getBool(SettingsKeys.perRoomCacheEnabled);
   Future<void> setPerRoomCacheEnabled(bool value) =>
       setBool(SettingsKeys.perRoomCacheEnabled, value);
+
+  // Analytics
+  bool get analyticsEnabled => getBool(
+    SettingsKeys.analyticsEnabled,
+    defaultValue: SettingsDefaults.analyticsEnabled,
+  );
+  Future<void> setAnalyticsEnabled(bool value) =>
+      setBool(SettingsKeys.analyticsEnabled, value);
 }

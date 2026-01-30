@@ -159,12 +159,7 @@ class AuthService {
 
   /// Get current access token
   Future<String?> getAccessToken() async {
-    final token = await _storage.read(key: 'access_token');
-    // DEBUG: Print access token for inspection
-    print('=== ACCESS TOKEN ===');
-    print(token ?? 'NO TOKEN');
-    print('=== END TOKEN ===');
-    return token;
+    return _storage.read(key: 'access_token');
   }
 
   /// Get current refresh token

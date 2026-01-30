@@ -104,6 +104,9 @@ abstract class RoomEvent with _$RoomEvent {
     // Disappearing messages
     int?
     expiresAt, // Timestamp when message expires (for disappearing messages)
+    // Starred messages
+    @Default(false) bool starred, // Whether message is starred/bookmarked
+    int? starredAt, // Timestamp when message was starred
   }) = _RoomEvent;
 
   factory RoomEvent.fromJson(Map<String, dynamic> json) =>
@@ -136,4 +139,10 @@ abstract class RoomEvent with _$RoomEvent {
   /// Returns true if this message has expired and should be deleted
   bool get hasExpired =>
       expiresAt != null && DateTime.now().millisecondsSinceEpoch > expiresAt!;
+
+  /// Returns true if this message is starred/bookmarked
+  bool get isStarred => starred;
+
+  /// Returns true if this message can be starred (not deleted)
+  bool get canBeStarred => !isDeleted;
 }

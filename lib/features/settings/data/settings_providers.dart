@@ -14,6 +14,8 @@ class SettingsNotifier extends _$SettingsNotifier {
   static const String _keyWallpaper = 'wallpaper';
   static const String _keyMediaAutoDownload = 'media_auto_download';
   static const String _keyCallDataUsage = 'call_data_usage';
+  static const String _keyNotificationPermissionPrompted =
+      'notification_permission_prompted';
 
   final _storage = const FlutterSecureStorage();
 
@@ -31,6 +33,10 @@ class SettingsNotifier extends _$SettingsNotifier {
       'Wi-Fi only',
     ),
     _keyCallDataUsage: await _getString(_keyCallDataUsage, 'Low data usage'),
+    _keyNotificationPermissionPrompted: await _getBool(
+      _keyNotificationPermissionPrompted,
+      false,
+    ),
   };
 
   Future<bool> _getBool(String key, bool defaultValue) async {
@@ -79,6 +85,13 @@ class SettingsNotifier extends _$SettingsNotifier {
 
   Future<void> updateCallDataUsage(String value) =>
       updateSetting(_keyCallDataUsage, value);
+
+  Future<void> markNotificationPermissionPrompted() =>
+      updateSetting(_keyNotificationPermissionPrompted, true);
+
+  /// Check if the notification permission dialog has been shown before
+  Future<bool> hasNotificationPermissionBeenPrompted() async =>
+      _getBool(_keyNotificationPermissionPrompted, false);
 }
 
 @riverpod

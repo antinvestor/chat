@@ -337,6 +337,49 @@ class RoomMemberRepository {
     }
   }
 
+  /// Watch member count for a room (reactive)
+  ///
+  /// @param roomId The room ID
+  /// @return Stream of member count
+  Stream<int> watchMemberCount(String roomId) {
+    final query = _database.select(_database.roomMembers)
+      ..where((t) => t.roomId.equals(roomId));
+
+    return query.watch().map((members) => members.length);
+  }
+
+  /// Check if more members can be added to a room
+  ///
+  /// @param roomId The room ID
+  /// @param memberLimit The maximum allowed members
+  /// @param memberLimitEnabled Whether the limit is enforced
+  /// @return true if more members can be added
+  Future<bool> canAddMoreMembers(
+    String roomId, {
+    required int memberLimit,
+    required bool memberLimitEnabled,
+  }) async {
+    if (!memberLimitEnabled) return true;
+    final currentCount = await getMemberCount(roomId);
+    return currentCount < memberLimit;
+  }
+
+  /// Get remaining member slots for a room
+  ///
+  /// @param roomId The room ID
+  /// @param memberLimit The maximum allowed members
+  /// @param memberLimitEnabled Whether the limit is enforced
+  /// @return Number of remaining slots
+  Future<int> getRemainingSlots(
+    String roomId, {
+    required int memberLimit,
+    required bool memberLimitEnabled,
+  }) async {
+    if (!memberLimitEnabled) return memberLimit;
+    final currentCount = await getMemberCount(roomId);
+    return (memberLimit - currentCount).clamp(0, memberLimit);
+  }
+
   /// Check if a subscription ID belongs to the current profile's contact
   ///
   /// @param roomId The room context

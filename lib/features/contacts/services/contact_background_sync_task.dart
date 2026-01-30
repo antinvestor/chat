@@ -42,6 +42,18 @@ class ContactBackgroundSyncTask {
 
       final (syncService, settingsService) = services;
 
+      // Check if contacts have been initialized via lazy sync
+      // Background sync should only run after user has granted permission
+      final hasInitialized = settingsService.getBool(
+        SettingsKeys.contactSyncInitialized,
+      );
+      if (!hasInitialized) {
+        AppLogger.debug(
+          '[ContactBackgroundSync] Contacts not initialized yet, skipping',
+        );
+        return true; // Not a failure, just waiting for user to initialize
+      }
+
       // Check Wi-Fi only setting before delegating to service
       final syncOnlyOnWifi = settingsService.getBool(
         ContactSyncSettings.syncOnlyOnWifi,
