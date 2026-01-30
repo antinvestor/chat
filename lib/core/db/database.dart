@@ -23,6 +23,18 @@ class Profiles extends Table {
   IntColumn get updatedAt => integer().nullable()();
   TextColumn get metadata => text().nullable()();
 
+  /// User's presence status (0=offline, 1=online, 2=away, 3=busy, 4=doNotDisturb)
+  IntColumn get status => integer().withDefault(const Constant(0))();
+
+  /// Custom status message (e.g., "In a meeting", "On vacation")
+  TextColumn get statusMessage => text().nullable()();
+
+  /// Timestamp when status was last updated
+  IntColumn get statusUpdatedAt => integer().nullable()();
+
+  /// User's bio/about text
+  TextColumn get bio => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -613,7 +625,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -723,6 +735,13 @@ class AppDatabase extends _$AppDatabase {
           ON room_events(starred, starred_at)
           WHERE starred = 1
         ''');
+      }
+      if (from <= 10) {
+        // Migration from v10 to v11: Add user status and bio fields
+        await m.addColumn(profiles, profiles.status);
+        await m.addColumn(profiles, profiles.statusMessage);
+        await m.addColumn(profiles, profiles.statusUpdatedAt);
+        await m.addColumn(profiles, profiles.bio);
       }
     },
     beforeOpen: (details) async {

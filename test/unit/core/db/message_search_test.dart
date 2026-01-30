@@ -258,9 +258,9 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 10', () {
-        // Version 10 includes mute and starred messages functionality
-        expect(db.schemaVersion, equals(10));
+      test('schema version is 11', () {
+        // Version 11 includes user status and bio fields
+        expect(db.schemaVersion, equals(11));
       });
     });
 
