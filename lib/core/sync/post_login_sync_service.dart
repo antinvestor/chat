@@ -5,7 +5,6 @@ import 'package:antinvestor_api_common/antinvestor_api_common.dart'
     as pb_common;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/contacts/data/roster_repository.dart';
 import '../../features/rooms/data/room_repository.dart';
 import '../../features/rooms/data/room_service.dart';
 import '../../features/rooms/data/room_sync_manager.dart';
@@ -18,7 +17,9 @@ import '../networking/client.dart';
 /// This service runs after successful authentication to:
 /// 1. Fetch all rooms the user is a member of from the server
 /// 2. Store rooms locally for immediate display
-/// 3. Trigger contact synchronization (local first, then server)
+///
+/// Note: Contact synchronization is handled lazily via ContactSyncOrchestrator
+/// when the user first tries to create a group chat.
 ///
 /// Design goals:
 /// - Show local data immediately, server data appears as downloaded
@@ -29,14 +30,12 @@ class PostLoginSyncService {
     this._chatClient,
     this._roomRepository,
     this._roomService,
-    this._rosterRepository,
     this._roomSyncManager,
   );
 
   final pb_chat.ChatServiceClient _chatClient;
   final RoomRepository _roomRepository;
   final RoomService _roomService;
-  final RosterRepository _rosterRepository;
   final RoomSyncManager _roomSyncManager;
 
   /// Configuration
@@ -51,9 +50,8 @@ class PostLoginSyncService {
   /// Main entry point - runs all post-login syncs
   ///
   /// This method is safe to call multiple times; it will skip if already running.
-  /// The sync order is:
-  /// 1. Rooms sync (fetch all rooms + mark as ready)
-  /// 2. Contact sync (local first for immediate display, then server in background)
+  /// Currently only syncs rooms. Contact sync is handled lazily via
+  /// ContactSyncOrchestrator when the user first tries to create a group chat.
   ///
   /// Returns true if sync completed successfully, false otherwise.
   Future<bool> runPostLoginSync() async {
@@ -68,11 +66,8 @@ class PostLoginSyncService {
     try {
       AppLogger.info('PostLoginSync: Starting post-login synchronization');
 
-      // Phase 1: Room sync (fetch all rooms from server)
+      // Room sync (fetch all rooms from server)
       final roomsSynced = await _syncRoomsWithRetry();
-
-      // Phase 2: Contact sync (immediate local, background server)
-      await _triggerContactSync();
 
       stopwatch.stop();
       AppLogger.info(
@@ -223,78 +218,6 @@ class PostLoginSyncService {
     }
   }
 
-  /// Minimum interval between contact syncs (3 days)
-  static const Duration _contactSyncInterval = Duration(days: 3);
-
-  /// Trigger contact synchronization if needed
-  ///
-  /// Behavior:
-  /// - First login (never synced): Full sync (local + server)
-  /// - Subsequent logins: Only sync if more than 3 days have passed
-  ///
-  /// Server sync gracefully handles constraint errors by skipping
-  /// problematic contacts and continuing with the rest.
-  Future<void> _triggerContactSync() async {
-    try {
-      final lastSyncTime = await _rosterRepository.getLastSyncTime();
-      final now = DateTime.now();
-      final isFirstSync = lastSyncTime == null;
-
-      if (!isFirstSync) {
-        final timeSinceLastSync = now.difference(lastSyncTime);
-        if (timeSinceLastSync < _contactSyncInterval) {
-          AppLogger.debug(
-            'PostLoginSync: Skipping contact sync - synced recently',
-            data: {
-              'lastSync': lastSyncTime.toIso8601String(),
-              'daysSinceSync': timeSinceLastSync.inDays,
-              'nextSyncIn': (_contactSyncInterval - timeSinceLastSync).inHours,
-            },
-          );
-          return;
-        }
-      }
-
-      AppLogger.info(
-        'PostLoginSync: Triggering contact sync',
-        data: {
-          'reason': isFirstSync ? 'first login' : 'interval exceeded',
-          'isFirstSync': isFirstSync,
-        },
-      );
-
-      // Phase 1: Local sync (immediate) - for UI display
-      final localContacts = await _rosterRepository.syncContactsLocal();
-
-      AppLogger.info(
-        'PostLoginSync: Local contacts synced',
-        data: {'count': localContacts.length},
-      );
-
-      // Phase 2: Server sync (fire-and-forget)
-      // The sync handles constraint errors gracefully by skipping bad contacts
-      unawaited(
-        _rosterRepository
-            .syncContactsToServer()
-            .then((_) {
-              AppLogger.debug('PostLoginSync: Server contact sync completed');
-            })
-            .catchError((e) {
-              AppLogger.debug(
-                'PostLoginSync: Server contact sync had errors (will retry later)',
-                data: {'error': e.toString()},
-              );
-            }),
-      );
-    } catch (e) {
-      AppLogger.warning(
-        'PostLoginSync: Contact sync failed',
-        data: {'error': e.toString()},
-      );
-      // Don't rethrow - contact sync failure shouldn't block login
-    }
-  }
-
   /// Check if there are any local rooms
   ///
   /// Used by StartupService to decide sync order.
@@ -315,21 +238,18 @@ Future<PostLoginSyncService> createPostLoginSyncService(Ref ref) async {
   final chatClientFuture = ref.read(chatServiceClientProvider.future);
   final roomRepository = ref.read(roomRepositoryProvider);
   final roomServiceFuture = ref.read(roomServiceProvider.future);
-  final rosterRepositoryFuture = ref.read(rosterRepositoryProvider.future);
   final roomSyncManager = ref.read(roomSyncManagerProvider);
 
   // Now await all futures - ref is not used after this point
-  final (chatClient, roomService, rosterRepository) = await (
+  final (chatClient, roomService) = await (
     chatClientFuture,
     roomServiceFuture,
-    rosterRepositoryFuture,
   ).wait;
 
   return PostLoginSyncService(
     chatClient,
     roomRepository,
     roomService,
-    rosterRepository,
     roomSyncManager,
   );
 }
