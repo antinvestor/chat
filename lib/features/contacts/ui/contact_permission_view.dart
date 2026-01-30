@@ -126,7 +126,7 @@ class _ContactPermissionViewState extends State<ContactPermissionView> {
 
             // Explanation text
             Text(
-              'We need access to your contacts to help you connect with friends and manage your groups more easily.',
+              'Access to your contacts lets you quickly find people you know and invite them to your groups.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
