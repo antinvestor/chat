@@ -59,6 +59,47 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<int> status = GeneratedColumn<int>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _statusMessageMeta = const VerificationMeta(
+    'statusMessage',
+  );
+  @override
+  late final GeneratedColumn<String> statusMessage = GeneratedColumn<String>(
+    'status_message',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusUpdatedAtMeta = const VerificationMeta(
+    'statusUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> statusUpdatedAt = GeneratedColumn<int>(
+    'status_updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bioMeta = const VerificationMeta('bio');
+  @override
+  late final GeneratedColumn<String> bio = GeneratedColumn<String>(
+    'bio',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -66,6 +107,10 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     avatarUrl,
     updatedAt,
     metadata,
+    status,
+    statusMessage,
+    statusUpdatedAt,
+    bio,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -108,6 +153,36 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         metadata.isAcceptableOrUnknown(data['metadata']!, _metadataMeta),
       );
     }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('status_message')) {
+      context.handle(
+        _statusMessageMeta,
+        statusMessage.isAcceptableOrUnknown(
+          data['status_message']!,
+          _statusMessageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status_updated_at')) {
+      context.handle(
+        _statusUpdatedAtMeta,
+        statusUpdatedAt.isAcceptableOrUnknown(
+          data['status_updated_at']!,
+          _statusUpdatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('bio')) {
+      context.handle(
+        _bioMeta,
+        bio.isAcceptableOrUnknown(data['bio']!, _bioMeta),
+      );
+    }
     return context;
   }
 
@@ -137,6 +212,22 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         DriftSqlType.string,
         data['${effectivePrefix}metadata'],
       ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status'],
+      )!,
+      statusMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status_message'],
+      ),
+      statusUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status_updated_at'],
+      ),
+      bio: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bio'],
+      ),
     );
   }
 
@@ -152,12 +243,28 @@ class Profile extends DataClass implements Insertable<Profile> {
   final String? avatarUrl;
   final int? updatedAt;
   final String? metadata;
+
+  /// User's presence status (0=offline, 1=online, 2=away, 3=busy, 4=doNotDisturb)
+  final int status;
+
+  /// Custom status message (e.g., "In a meeting", "On vacation")
+  final String? statusMessage;
+
+  /// Timestamp when status was last updated
+  final int? statusUpdatedAt;
+
+  /// User's bio/about text
+  final String? bio;
   const Profile({
     required this.id,
     this.name,
     this.avatarUrl,
     this.updatedAt,
     this.metadata,
+    required this.status,
+    this.statusMessage,
+    this.statusUpdatedAt,
+    this.bio,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -175,6 +282,16 @@ class Profile extends DataClass implements Insertable<Profile> {
     if (!nullToAbsent || metadata != null) {
       map['metadata'] = Variable<String>(metadata);
     }
+    map['status'] = Variable<int>(status);
+    if (!nullToAbsent || statusMessage != null) {
+      map['status_message'] = Variable<String>(statusMessage);
+    }
+    if (!nullToAbsent || statusUpdatedAt != null) {
+      map['status_updated_at'] = Variable<int>(statusUpdatedAt);
+    }
+    if (!nullToAbsent || bio != null) {
+      map['bio'] = Variable<String>(bio);
+    }
     return map;
   }
 
@@ -191,6 +308,14 @@ class Profile extends DataClass implements Insertable<Profile> {
       metadata: metadata == null && nullToAbsent
           ? const Value.absent()
           : Value(metadata),
+      status: Value(status),
+      statusMessage: statusMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(statusMessage),
+      statusUpdatedAt: statusUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(statusUpdatedAt),
+      bio: bio == null && nullToAbsent ? const Value.absent() : Value(bio),
     );
   }
 
@@ -205,6 +330,10 @@ class Profile extends DataClass implements Insertable<Profile> {
       avatarUrl: serializer.fromJson<String?>(json['avatarUrl']),
       updatedAt: serializer.fromJson<int?>(json['updatedAt']),
       metadata: serializer.fromJson<String?>(json['metadata']),
+      status: serializer.fromJson<int>(json['status']),
+      statusMessage: serializer.fromJson<String?>(json['statusMessage']),
+      statusUpdatedAt: serializer.fromJson<int?>(json['statusUpdatedAt']),
+      bio: serializer.fromJson<String?>(json['bio']),
     );
   }
   @override
@@ -216,6 +345,10 @@ class Profile extends DataClass implements Insertable<Profile> {
       'avatarUrl': serializer.toJson<String?>(avatarUrl),
       'updatedAt': serializer.toJson<int?>(updatedAt),
       'metadata': serializer.toJson<String?>(metadata),
+      'status': serializer.toJson<int>(status),
+      'statusMessage': serializer.toJson<String?>(statusMessage),
+      'statusUpdatedAt': serializer.toJson<int?>(statusUpdatedAt),
+      'bio': serializer.toJson<String?>(bio),
     };
   }
 
@@ -225,12 +358,24 @@ class Profile extends DataClass implements Insertable<Profile> {
     Value<String?> avatarUrl = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<String?> metadata = const Value.absent(),
+    int? status,
+    Value<String?> statusMessage = const Value.absent(),
+    Value<int?> statusUpdatedAt = const Value.absent(),
+    Value<String?> bio = const Value.absent(),
   }) => Profile(
     id: id ?? this.id,
     name: name.present ? name.value : this.name,
     avatarUrl: avatarUrl.present ? avatarUrl.value : this.avatarUrl,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     metadata: metadata.present ? metadata.value : this.metadata,
+    status: status ?? this.status,
+    statusMessage: statusMessage.present
+        ? statusMessage.value
+        : this.statusMessage,
+    statusUpdatedAt: statusUpdatedAt.present
+        ? statusUpdatedAt.value
+        : this.statusUpdatedAt,
+    bio: bio.present ? bio.value : this.bio,
   );
   Profile copyWithCompanion(ProfilesCompanion data) {
     return Profile(
@@ -239,6 +384,14 @@ class Profile extends DataClass implements Insertable<Profile> {
       avatarUrl: data.avatarUrl.present ? data.avatarUrl.value : this.avatarUrl,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       metadata: data.metadata.present ? data.metadata.value : this.metadata,
+      status: data.status.present ? data.status.value : this.status,
+      statusMessage: data.statusMessage.present
+          ? data.statusMessage.value
+          : this.statusMessage,
+      statusUpdatedAt: data.statusUpdatedAt.present
+          ? data.statusUpdatedAt.value
+          : this.statusUpdatedAt,
+      bio: data.bio.present ? data.bio.value : this.bio,
     );
   }
 
@@ -249,13 +402,27 @@ class Profile extends DataClass implements Insertable<Profile> {
           ..write('name: $name, ')
           ..write('avatarUrl: $avatarUrl, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('metadata: $metadata')
+          ..write('metadata: $metadata, ')
+          ..write('status: $status, ')
+          ..write('statusMessage: $statusMessage, ')
+          ..write('statusUpdatedAt: $statusUpdatedAt, ')
+          ..write('bio: $bio')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, avatarUrl, updatedAt, metadata);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    avatarUrl,
+    updatedAt,
+    metadata,
+    status,
+    statusMessage,
+    statusUpdatedAt,
+    bio,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -264,7 +431,11 @@ class Profile extends DataClass implements Insertable<Profile> {
           other.name == this.name &&
           other.avatarUrl == this.avatarUrl &&
           other.updatedAt == this.updatedAt &&
-          other.metadata == this.metadata);
+          other.metadata == this.metadata &&
+          other.status == this.status &&
+          other.statusMessage == this.statusMessage &&
+          other.statusUpdatedAt == this.statusUpdatedAt &&
+          other.bio == this.bio);
 }
 
 class ProfilesCompanion extends UpdateCompanion<Profile> {
@@ -273,6 +444,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<String?> avatarUrl;
   final Value<int?> updatedAt;
   final Value<String?> metadata;
+  final Value<int> status;
+  final Value<String?> statusMessage;
+  final Value<int?> statusUpdatedAt;
+  final Value<String?> bio;
   final Value<int> rowid;
   const ProfilesCompanion({
     this.id = const Value.absent(),
@@ -280,6 +455,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     this.avatarUrl = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.metadata = const Value.absent(),
+    this.status = const Value.absent(),
+    this.statusMessage = const Value.absent(),
+    this.statusUpdatedAt = const Value.absent(),
+    this.bio = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProfilesCompanion.insert({
@@ -288,6 +467,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     this.avatarUrl = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.metadata = const Value.absent(),
+    this.status = const Value.absent(),
+    this.statusMessage = const Value.absent(),
+    this.statusUpdatedAt = const Value.absent(),
+    this.bio = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Profile> custom({
@@ -296,6 +479,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     Expression<String>? avatarUrl,
     Expression<int>? updatedAt,
     Expression<String>? metadata,
+    Expression<int>? status,
+    Expression<String>? statusMessage,
+    Expression<int>? statusUpdatedAt,
+    Expression<String>? bio,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -304,6 +491,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       if (avatarUrl != null) 'avatar_url': avatarUrl,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (metadata != null) 'metadata': metadata,
+      if (status != null) 'status': status,
+      if (statusMessage != null) 'status_message': statusMessage,
+      if (statusUpdatedAt != null) 'status_updated_at': statusUpdatedAt,
+      if (bio != null) 'bio': bio,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -314,6 +505,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     Value<String?>? avatarUrl,
     Value<int?>? updatedAt,
     Value<String?>? metadata,
+    Value<int>? status,
+    Value<String?>? statusMessage,
+    Value<int?>? statusUpdatedAt,
+    Value<String?>? bio,
     Value<int>? rowid,
   }) {
     return ProfilesCompanion(
@@ -322,6 +517,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       updatedAt: updatedAt ?? this.updatedAt,
       metadata: metadata ?? this.metadata,
+      status: status ?? this.status,
+      statusMessage: statusMessage ?? this.statusMessage,
+      statusUpdatedAt: statusUpdatedAt ?? this.statusUpdatedAt,
+      bio: bio ?? this.bio,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -344,6 +543,18 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     if (metadata.present) {
       map['metadata'] = Variable<String>(metadata.value);
     }
+    if (status.present) {
+      map['status'] = Variable<int>(status.value);
+    }
+    if (statusMessage.present) {
+      map['status_message'] = Variable<String>(statusMessage.value);
+    }
+    if (statusUpdatedAt.present) {
+      map['status_updated_at'] = Variable<int>(statusUpdatedAt.value);
+    }
+    if (bio.present) {
+      map['bio'] = Variable<String>(bio.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -358,6 +569,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
           ..write('avatarUrl: $avatarUrl, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('metadata: $metadata, ')
+          ..write('status: $status, ')
+          ..write('statusMessage: $statusMessage, ')
+          ..write('statusUpdatedAt: $statusUpdatedAt, ')
+          ..write('bio: $bio, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1129,6 +1344,17 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _mutedUntilMeta = const VerificationMeta(
+    'mutedUntil',
+  );
+  @override
+  late final GeneratedColumn<int> mutedUntil = GeneratedColumn<int>(
+    'muted_until',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1139,6 +1365,7 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     unreadCount,
     metadata,
     disappearingTimeout,
+    mutedUntil,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1211,6 +1438,12 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         ),
       );
     }
+    if (data.containsKey('muted_until')) {
+      context.handle(
+        _mutedUntilMeta,
+        mutedUntil.isAcceptableOrUnknown(data['muted_until']!, _mutedUntilMeta),
+      );
+    }
     return context;
   }
 
@@ -1252,6 +1485,10 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         DriftSqlType.int,
         data['${effectivePrefix}disappearing_timeout'],
       ),
+      mutedUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}muted_until'],
+      ),
     );
   }
 
@@ -1286,6 +1523,9 @@ class Room extends DataClass implements Insertable<Room> {
   /// Disappearing messages timeout in seconds (null = disabled)
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   final int? disappearingTimeout;
+
+  /// Mute notifications until this epoch timestamp (null = not muted)
+  final int? mutedUntil;
   const Room({
     required this.id,
     this.name,
@@ -1295,6 +1535,7 @@ class Room extends DataClass implements Insertable<Room> {
     required this.unreadCount,
     this.metadata,
     this.disappearingTimeout,
+    this.mutedUntil,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1319,6 +1560,9 @@ class Room extends DataClass implements Insertable<Room> {
     if (!nullToAbsent || disappearingTimeout != null) {
       map['disappearing_timeout'] = Variable<int>(disappearingTimeout);
     }
+    if (!nullToAbsent || mutedUntil != null) {
+      map['muted_until'] = Variable<int>(mutedUntil);
+    }
     return map;
   }
 
@@ -1340,6 +1584,9 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: disappearingTimeout == null && nullToAbsent
           ? const Value.absent()
           : Value(disappearingTimeout),
+      mutedUntil: mutedUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mutedUntil),
     );
   }
 
@@ -1359,6 +1606,7 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: serializer.fromJson<int?>(
         json['disappearingTimeout'],
       ),
+      mutedUntil: serializer.fromJson<int?>(json['mutedUntil']),
     );
   }
   @override
@@ -1373,6 +1621,7 @@ class Room extends DataClass implements Insertable<Room> {
       'unreadCount': serializer.toJson<int>(unreadCount),
       'metadata': serializer.toJson<String?>(metadata),
       'disappearingTimeout': serializer.toJson<int?>(disappearingTimeout),
+      'mutedUntil': serializer.toJson<int?>(mutedUntil),
     };
   }
 
@@ -1385,6 +1634,7 @@ class Room extends DataClass implements Insertable<Room> {
     int? unreadCount,
     Value<String?> metadata = const Value.absent(),
     Value<int?> disappearingTimeout = const Value.absent(),
+    Value<int?> mutedUntil = const Value.absent(),
   }) => Room(
     id: id ?? this.id,
     name: name.present ? name.value : this.name,
@@ -1398,6 +1648,7 @@ class Room extends DataClass implements Insertable<Room> {
     disappearingTimeout: disappearingTimeout.present
         ? disappearingTimeout.value
         : this.disappearingTimeout,
+    mutedUntil: mutedUntil.present ? mutedUntil.value : this.mutedUntil,
   );
   Room copyWithCompanion(RoomsCompanion data) {
     return Room(
@@ -1417,6 +1668,9 @@ class Room extends DataClass implements Insertable<Room> {
       disappearingTimeout: data.disappearingTimeout.present
           ? data.disappearingTimeout.value
           : this.disappearingTimeout,
+      mutedUntil: data.mutedUntil.present
+          ? data.mutedUntil.value
+          : this.mutedUntil,
     );
   }
 
@@ -1430,7 +1684,8 @@ class Room extends DataClass implements Insertable<Room> {
           ..write('lastEventIndex: $lastEventIndex, ')
           ..write('unreadCount: $unreadCount, ')
           ..write('metadata: $metadata, ')
-          ..write('disappearingTimeout: $disappearingTimeout')
+          ..write('disappearingTimeout: $disappearingTimeout, ')
+          ..write('mutedUntil: $mutedUntil')
           ..write(')'))
         .toString();
   }
@@ -1445,6 +1700,7 @@ class Room extends DataClass implements Insertable<Room> {
     unreadCount,
     metadata,
     disappearingTimeout,
+    mutedUntil,
   );
   @override
   bool operator ==(Object other) =>
@@ -1457,7 +1713,8 @@ class Room extends DataClass implements Insertable<Room> {
           other.lastEventIndex == this.lastEventIndex &&
           other.unreadCount == this.unreadCount &&
           other.metadata == this.metadata &&
-          other.disappearingTimeout == this.disappearingTimeout);
+          other.disappearingTimeout == this.disappearingTimeout &&
+          other.mutedUntil == this.mutedUntil);
 }
 
 class RoomsCompanion extends UpdateCompanion<Room> {
@@ -1469,6 +1726,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
   final Value<int> unreadCount;
   final Value<String?> metadata;
   final Value<int?> disappearingTimeout;
+  final Value<int?> mutedUntil;
   final Value<int> rowid;
   const RoomsCompanion({
     this.id = const Value.absent(),
@@ -1479,6 +1737,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.unreadCount = const Value.absent(),
     this.metadata = const Value.absent(),
     this.disappearingTimeout = const Value.absent(),
+    this.mutedUntil = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomsCompanion.insert({
@@ -1490,6 +1749,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.unreadCount = const Value.absent(),
     this.metadata = const Value.absent(),
     this.disappearingTimeout = const Value.absent(),
+    this.mutedUntil = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Room> custom({
@@ -1501,6 +1761,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Expression<int>? unreadCount,
     Expression<String>? metadata,
     Expression<int>? disappearingTimeout,
+    Expression<int>? mutedUntil,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1513,6 +1774,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       if (metadata != null) 'metadata': metadata,
       if (disappearingTimeout != null)
         'disappearing_timeout': disappearingTimeout,
+      if (mutedUntil != null) 'muted_until': mutedUntil,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1526,6 +1788,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Value<int>? unreadCount,
     Value<String?>? metadata,
     Value<int?>? disappearingTimeout,
+    Value<int?>? mutedUntil,
     Value<int>? rowid,
   }) {
     return RoomsCompanion(
@@ -1537,6 +1800,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       unreadCount: unreadCount ?? this.unreadCount,
       metadata: metadata ?? this.metadata,
       disappearingTimeout: disappearingTimeout ?? this.disappearingTimeout,
+      mutedUntil: mutedUntil ?? this.mutedUntil,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1568,6 +1832,9 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     if (disappearingTimeout.present) {
       map['disappearing_timeout'] = Variable<int>(disappearingTimeout.value);
     }
+    if (mutedUntil.present) {
+      map['muted_until'] = Variable<int>(mutedUntil.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1585,6 +1852,7 @@ class RoomsCompanion extends UpdateCompanion<Room> {
           ..write('unreadCount: $unreadCount, ')
           ..write('metadata: $metadata, ')
           ..write('disappearingTimeout: $disappearingTimeout, ')
+          ..write('mutedUntil: $mutedUntil, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2278,6 +2546,32 @@ class $RoomEventsTable extends RoomEvents
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _starredMeta = const VerificationMeta(
+    'starred',
+  );
+  @override
+  late final GeneratedColumn<bool> starred = GeneratedColumn<bool>(
+    'starred',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("starred" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _starredAtMeta = const VerificationMeta(
+    'starredAt',
+  );
+  @override
+  late final GeneratedColumn<int> starredAt = GeneratedColumn<int>(
+    'starred_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2303,6 +2597,8 @@ class $RoomEventsTable extends RoomEvents
     forwardCount,
     forwardRestricted,
     expiresAt,
+    starred,
+    starredAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2480,6 +2776,18 @@ class $RoomEventsTable extends RoomEvents
         expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
       );
     }
+    if (data.containsKey('starred')) {
+      context.handle(
+        _starredMeta,
+        starred.isAcceptableOrUnknown(data['starred']!, _starredMeta),
+      );
+    }
+    if (data.containsKey('starred_at')) {
+      context.handle(
+        _starredAtMeta,
+        starredAt.isAcceptableOrUnknown(data['starred_at']!, _starredAtMeta),
+      );
+    }
     return context;
   }
 
@@ -2581,6 +2889,14 @@ class $RoomEventsTable extends RoomEvents
         DriftSqlType.int,
         data['${effectivePrefix}expires_at'],
       ),
+      starred: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}starred'],
+      )!,
+      starredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}starred_at'],
+      ),
     );
   }
 
@@ -2661,6 +2977,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
   /// Timestamp when this message should be deleted (for disappearing messages)
   /// Null means the message does not expire
   final int? expiresAt;
+
+  /// Whether this message is starred/bookmarked by the user
+  final bool starred;
+
+  /// Timestamp when the message was starred (for sorting starred messages)
+  final int? starredAt;
   const RoomEvent({
     required this.id,
     required this.roomId,
@@ -2685,6 +3007,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     required this.forwardCount,
     required this.forwardRestricted,
     this.expiresAt,
+    required this.starred,
+    this.starredAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2739,6 +3063,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     map['forward_restricted'] = Variable<bool>(forwardRestricted);
     if (!nullToAbsent || expiresAt != null) {
       map['expires_at'] = Variable<int>(expiresAt);
+    }
+    map['starred'] = Variable<bool>(starred);
+    if (!nullToAbsent || starredAt != null) {
+      map['starred_at'] = Variable<int>(starredAt);
     }
     return map;
   }
@@ -2796,6 +3124,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       expiresAt: expiresAt == null && nullToAbsent
           ? const Value.absent()
           : Value(expiresAt),
+      starred: Value(starred),
+      starredAt: starredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(starredAt),
     );
   }
 
@@ -2832,6 +3164,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       forwardCount: serializer.fromJson<int>(json['forwardCount']),
       forwardRestricted: serializer.fromJson<bool>(json['forwardRestricted']),
       expiresAt: serializer.fromJson<int?>(json['expiresAt']),
+      starred: serializer.fromJson<bool>(json['starred']),
+      starredAt: serializer.fromJson<int?>(json['starredAt']),
     );
   }
   @override
@@ -2861,6 +3195,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       'forwardCount': serializer.toJson<int>(forwardCount),
       'forwardRestricted': serializer.toJson<bool>(forwardRestricted),
       'expiresAt': serializer.toJson<int?>(expiresAt),
+      'starred': serializer.toJson<bool>(starred),
+      'starredAt': serializer.toJson<int?>(starredAt),
     };
   }
 
@@ -2888,6 +3224,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     int? forwardCount,
     bool? forwardRestricted,
     Value<int?> expiresAt = const Value.absent(),
+    bool? starred,
+    Value<int?> starredAt = const Value.absent(),
   }) => RoomEvent(
     id: id ?? this.id,
     roomId: roomId ?? this.roomId,
@@ -2920,6 +3258,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     forwardCount: forwardCount ?? this.forwardCount,
     forwardRestricted: forwardRestricted ?? this.forwardRestricted,
     expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
+    starred: starred ?? this.starred,
+    starredAt: starredAt.present ? starredAt.value : this.starredAt,
   );
   RoomEvent copyWithCompanion(RoomEventsCompanion data) {
     return RoomEvent(
@@ -2966,6 +3306,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ? data.forwardRestricted.value
           : this.forwardRestricted,
       expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      starred: data.starred.present ? data.starred.value : this.starred,
+      starredAt: data.starredAt.present ? data.starredAt.value : this.starredAt,
     );
   }
 
@@ -2994,7 +3336,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ..write('forwardedFromEvent: $forwardedFromEvent, ')
           ..write('forwardCount: $forwardCount, ')
           ..write('forwardRestricted: $forwardRestricted, ')
-          ..write('expiresAt: $expiresAt')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('starred: $starred, ')
+          ..write('starredAt: $starredAt')
           ..write(')'))
         .toString();
   }
@@ -3024,6 +3368,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     forwardCount,
     forwardRestricted,
     expiresAt,
+    starred,
+    starredAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -3051,7 +3397,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           other.forwardedFromEvent == this.forwardedFromEvent &&
           other.forwardCount == this.forwardCount &&
           other.forwardRestricted == this.forwardRestricted &&
-          other.expiresAt == this.expiresAt);
+          other.expiresAt == this.expiresAt &&
+          other.starred == this.starred &&
+          other.starredAt == this.starredAt);
 }
 
 class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
@@ -3078,6 +3426,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
   final Value<int> forwardCount;
   final Value<bool> forwardRestricted;
   final Value<int?> expiresAt;
+  final Value<bool> starred;
+  final Value<int?> starredAt;
   final Value<int> rowid;
   const RoomEventsCompanion({
     this.id = const Value.absent(),
@@ -3103,6 +3453,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.forwardCount = const Value.absent(),
     this.forwardRestricted = const Value.absent(),
     this.expiresAt = const Value.absent(),
+    this.starred = const Value.absent(),
+    this.starredAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomEventsCompanion.insert({
@@ -3129,6 +3481,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.forwardCount = const Value.absent(),
     this.forwardRestricted = const Value.absent(),
     this.expiresAt = const Value.absent(),
+    this.starred = const Value.absent(),
+    this.starredAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        roomId = Value(roomId),
@@ -3158,6 +3512,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Expression<int>? forwardCount,
     Expression<bool>? forwardRestricted,
     Expression<int>? expiresAt,
+    Expression<bool>? starred,
+    Expression<int>? starredAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3185,6 +3541,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       if (forwardCount != null) 'forward_count': forwardCount,
       if (forwardRestricted != null) 'forward_restricted': forwardRestricted,
       if (expiresAt != null) 'expires_at': expiresAt,
+      if (starred != null) 'starred': starred,
+      if (starredAt != null) 'starred_at': starredAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3213,6 +3571,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Value<int>? forwardCount,
     Value<bool>? forwardRestricted,
     Value<int?>? expiresAt,
+    Value<bool>? starred,
+    Value<int?>? starredAt,
     Value<int>? rowid,
   }) {
     return RoomEventsCompanion(
@@ -3239,6 +3599,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       forwardCount: forwardCount ?? this.forwardCount,
       forwardRestricted: forwardRestricted ?? this.forwardRestricted,
       expiresAt: expiresAt ?? this.expiresAt,
+      starred: starred ?? this.starred,
+      starredAt: starredAt ?? this.starredAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3315,6 +3677,12 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     if (expiresAt.present) {
       map['expires_at'] = Variable<int>(expiresAt.value);
     }
+    if (starred.present) {
+      map['starred'] = Variable<bool>(starred.value);
+    }
+    if (starredAt.present) {
+      map['starred_at'] = Variable<int>(starredAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3347,6 +3715,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
           ..write('forwardCount: $forwardCount, ')
           ..write('forwardRestricted: $forwardRestricted, ')
           ..write('expiresAt: $expiresAt, ')
+          ..write('starred: $starred, ')
+          ..write('starredAt: $starredAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7749,6 +8119,10 @@ typedef $$ProfilesTableCreateCompanionBuilder =
       Value<String?> avatarUrl,
       Value<int?> updatedAt,
       Value<String?> metadata,
+      Value<int> status,
+      Value<String?> statusMessage,
+      Value<int?> statusUpdatedAt,
+      Value<String?> bio,
       Value<int> rowid,
     });
 typedef $$ProfilesTableUpdateCompanionBuilder =
@@ -7758,6 +8132,10 @@ typedef $$ProfilesTableUpdateCompanionBuilder =
       Value<String?> avatarUrl,
       Value<int?> updatedAt,
       Value<String?> metadata,
+      Value<int> status,
+      Value<String?> statusMessage,
+      Value<int?> statusUpdatedAt,
+      Value<String?> bio,
       Value<int> rowid,
     });
 
@@ -7792,6 +8170,26 @@ class $$ProfilesTableFilterComposer
 
   ColumnFilters<String> get metadata => $composableBuilder(
     column: $table.metadata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bio => $composableBuilder(
+    column: $table.bio,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7829,6 +8227,26 @@ class $$ProfilesTableOrderingComposer
     column: $table.metadata,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bio => $composableBuilder(
+    column: $table.bio,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfilesTableAnnotationComposer
@@ -7854,6 +8272,22 @@ class $$ProfilesTableAnnotationComposer
 
   GeneratedColumn<String> get metadata =>
       $composableBuilder(column: $table.metadata, builder: (column) => column);
+
+  GeneratedColumn<int> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bio =>
+      $composableBuilder(column: $table.bio, builder: (column) => column);
 }
 
 class $$ProfilesTableTableManager
@@ -7889,6 +8323,10 @@ class $$ProfilesTableTableManager
                 Value<String?> avatarUrl = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<String?> statusMessage = const Value.absent(),
+                Value<int?> statusUpdatedAt = const Value.absent(),
+                Value<String?> bio = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProfilesCompanion(
                 id: id,
@@ -7896,6 +8334,10 @@ class $$ProfilesTableTableManager
                 avatarUrl: avatarUrl,
                 updatedAt: updatedAt,
                 metadata: metadata,
+                status: status,
+                statusMessage: statusMessage,
+                statusUpdatedAt: statusUpdatedAt,
+                bio: bio,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7905,6 +8347,10 @@ class $$ProfilesTableTableManager
                 Value<String?> avatarUrl = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<String?> statusMessage = const Value.absent(),
+                Value<int?> statusUpdatedAt = const Value.absent(),
+                Value<String?> bio = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProfilesCompanion.insert(
                 id: id,
@@ -7912,6 +8358,10 @@ class $$ProfilesTableTableManager
                 avatarUrl: avatarUrl,
                 updatedAt: updatedAt,
                 metadata: metadata,
+                status: status,
+                statusMessage: statusMessage,
+                statusUpdatedAt: statusUpdatedAt,
+                bio: bio,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -8262,6 +8712,7 @@ typedef $$RoomsTableCreateCompanionBuilder =
       Value<int> unreadCount,
       Value<String?> metadata,
       Value<int?> disappearingTimeout,
+      Value<int?> mutedUntil,
       Value<int> rowid,
     });
 typedef $$RoomsTableUpdateCompanionBuilder =
@@ -8274,6 +8725,7 @@ typedef $$RoomsTableUpdateCompanionBuilder =
       Value<int> unreadCount,
       Value<String?> metadata,
       Value<int?> disappearingTimeout,
+      Value<int?> mutedUntil,
       Value<int> rowid,
     });
 
@@ -8399,6 +8851,11 @@ class $$RoomsTableFilterComposer extends Composer<_$AppDatabase, $RoomsTable> {
 
   ColumnFilters<int> get disappearingTimeout => $composableBuilder(
     column: $table.disappearingTimeout,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8551,6 +9008,11 @@ class $$RoomsTableOrderingComposer
     column: $table.disappearingTimeout,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RoomsTableAnnotationComposer
@@ -8591,6 +9053,11 @@ class $$RoomsTableAnnotationComposer
 
   GeneratedColumn<int> get disappearingTimeout => $composableBuilder(
     column: $table.disappearingTimeout,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get mutedUntil => $composableBuilder(
+    column: $table.mutedUntil,
     builder: (column) => column,
   );
 
@@ -8736,6 +9203,7 @@ class $$RoomsTableTableManager
                 Value<int> unreadCount = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
                 Value<int?> disappearingTimeout = const Value.absent(),
+                Value<int?> mutedUntil = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomsCompanion(
                 id: id,
@@ -8746,6 +9214,7 @@ class $$RoomsTableTableManager
                 unreadCount: unreadCount,
                 metadata: metadata,
                 disappearingTimeout: disappearingTimeout,
+                mutedUntil: mutedUntil,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8758,6 +9227,7 @@ class $$RoomsTableTableManager
                 Value<int> unreadCount = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
                 Value<int?> disappearingTimeout = const Value.absent(),
+                Value<int?> mutedUntil = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomsCompanion.insert(
                 id: id,
@@ -8768,6 +9238,7 @@ class $$RoomsTableTableManager
                 unreadCount: unreadCount,
                 metadata: metadata,
                 disappearingTimeout: disappearingTimeout,
+                mutedUntil: mutedUntil,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -9265,6 +9736,8 @@ typedef $$RoomEventsTableCreateCompanionBuilder =
       Value<int> forwardCount,
       Value<bool> forwardRestricted,
       Value<int?> expiresAt,
+      Value<bool> starred,
+      Value<int?> starredAt,
       Value<int> rowid,
     });
 typedef $$RoomEventsTableUpdateCompanionBuilder =
@@ -9292,6 +9765,8 @@ typedef $$RoomEventsTableUpdateCompanionBuilder =
       Value<int> forwardCount,
       Value<bool> forwardRestricted,
       Value<int?> expiresAt,
+      Value<bool> starred,
+      Value<int?> starredAt,
       Value<int> rowid,
     });
 
@@ -9434,6 +9909,16 @@ class $$RoomEventsTableFilterComposer
 
   ColumnFilters<int> get expiresAt => $composableBuilder(
     column: $table.expiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get starred => $composableBuilder(
+    column: $table.starred,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get starredAt => $composableBuilder(
+    column: $table.starredAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9580,6 +10065,16 @@ class $$RoomEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get starred => $composableBuilder(
+    column: $table.starred,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get starredAt => $composableBuilder(
+    column: $table.starredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RoomsTableOrderingComposer get roomId {
     final $$RoomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9699,6 +10194,12 @@ class $$RoomEventsTableAnnotationComposer
   GeneratedColumn<int> get expiresAt =>
       $composableBuilder(column: $table.expiresAt, builder: (column) => column);
 
+  GeneratedColumn<bool> get starred =>
+      $composableBuilder(column: $table.starred, builder: (column) => column);
+
+  GeneratedColumn<int> get starredAt =>
+      $composableBuilder(column: $table.starredAt, builder: (column) => column);
+
   $$RoomsTableAnnotationComposer get roomId {
     final $$RoomsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -9774,6 +10275,8 @@ class $$RoomEventsTableTableManager
                 Value<int> forwardCount = const Value.absent(),
                 Value<bool> forwardRestricted = const Value.absent(),
                 Value<int?> expiresAt = const Value.absent(),
+                Value<bool> starred = const Value.absent(),
+                Value<int?> starredAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion(
                 id: id,
@@ -9799,6 +10302,8 @@ class $$RoomEventsTableTableManager
                 forwardCount: forwardCount,
                 forwardRestricted: forwardRestricted,
                 expiresAt: expiresAt,
+                starred: starred,
+                starredAt: starredAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9826,6 +10331,8 @@ class $$RoomEventsTableTableManager
                 Value<int> forwardCount = const Value.absent(),
                 Value<bool> forwardRestricted = const Value.absent(),
                 Value<int?> expiresAt = const Value.absent(),
+                Value<bool> starred = const Value.absent(),
+                Value<int?> starredAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion.insert(
                 id: id,
@@ -9851,6 +10358,8 @@ class $$RoomEventsTableTableManager
                 forwardCount: forwardCount,
                 forwardRestricted: forwardRestricted,
                 expiresAt: expiresAt,
+                starred: starred,
+                starredAt: starredAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

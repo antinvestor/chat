@@ -15,7 +15,11 @@ T _$identity<T>(T value) => value;
 mixin _$RoomWithLastMessage {
 
  String get id; String get name; String get type; int get unreadCount; String? get lastMessageText; int? get lastMessageTimestamp; String? get lastMessageSenderId; bool? get isTyping;/// Draft message text if the user has an unsent message
- String? get draftText;
+ String? get draftText;/// Mute notifications until this timestamp (milliseconds since epoch)
+/// - null = not muted
+/// - 0 = muted forever
+/// - timestamp = muted until that time
+ int? get mutedUntil;
 /// Create a copy of RoomWithLastMessage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +30,16 @@ $RoomWithLastMessageCopyWith<RoomWithLastMessage> get copyWith => _$RoomWithLast
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomWithLastMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.lastMessageText, lastMessageText) || other.lastMessageText == lastMessageText)&&(identical(other.lastMessageTimestamp, lastMessageTimestamp) || other.lastMessageTimestamp == lastMessageTimestamp)&&(identical(other.lastMessageSenderId, lastMessageSenderId) || other.lastMessageSenderId == lastMessageSenderId)&&(identical(other.isTyping, isTyping) || other.isTyping == isTyping)&&(identical(other.draftText, draftText) || other.draftText == draftText));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoomWithLastMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.lastMessageText, lastMessageText) || other.lastMessageText == lastMessageText)&&(identical(other.lastMessageTimestamp, lastMessageTimestamp) || other.lastMessageTimestamp == lastMessageTimestamp)&&(identical(other.lastMessageSenderId, lastMessageSenderId) || other.lastMessageSenderId == lastMessageSenderId)&&(identical(other.isTyping, isTyping) || other.isTyping == isTyping)&&(identical(other.draftText, draftText) || other.draftText == draftText)&&(identical(other.mutedUntil, mutedUntil) || other.mutedUntil == mutedUntil));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,type,unreadCount,lastMessageText,lastMessageTimestamp,lastMessageSenderId,isTyping,draftText);
+int get hashCode => Object.hash(runtimeType,id,name,type,unreadCount,lastMessageText,lastMessageTimestamp,lastMessageSenderId,isTyping,draftText,mutedUntil);
 
 @override
 String toString() {
-  return 'RoomWithLastMessage(id: $id, name: $name, type: $type, unreadCount: $unreadCount, lastMessageText: $lastMessageText, lastMessageTimestamp: $lastMessageTimestamp, lastMessageSenderId: $lastMessageSenderId, isTyping: $isTyping, draftText: $draftText)';
+  return 'RoomWithLastMessage(id: $id, name: $name, type: $type, unreadCount: $unreadCount, lastMessageText: $lastMessageText, lastMessageTimestamp: $lastMessageTimestamp, lastMessageSenderId: $lastMessageSenderId, isTyping: $isTyping, draftText: $draftText, mutedUntil: $mutedUntil)';
 }
 
 
@@ -46,7 +50,7 @@ abstract mixin class $RoomWithLastMessageCopyWith<$Res>  {
   factory $RoomWithLastMessageCopyWith(RoomWithLastMessage value, $Res Function(RoomWithLastMessage) _then) = _$RoomWithLastMessageCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String type, int unreadCount, String? lastMessageText, int? lastMessageTimestamp, String? lastMessageSenderId, bool? isTyping, String? draftText
+ String id, String name, String type, int unreadCount, String? lastMessageText, int? lastMessageTimestamp, String? lastMessageSenderId, bool? isTyping, String? draftText, int? mutedUntil
 });
 
 
@@ -63,7 +67,7 @@ class _$RoomWithLastMessageCopyWithImpl<$Res>
 
 /// Create a copy of RoomWithLastMessage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? type = null,Object? unreadCount = null,Object? lastMessageText = freezed,Object? lastMessageTimestamp = freezed,Object? lastMessageSenderId = freezed,Object? isTyping = freezed,Object? draftText = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? type = null,Object? unreadCount = null,Object? lastMessageText = freezed,Object? lastMessageTimestamp = freezed,Object? lastMessageSenderId = freezed,Object? isTyping = freezed,Object? draftText = freezed,Object? mutedUntil = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -74,7 +78,8 @@ as String?,lastMessageTimestamp: freezed == lastMessageTimestamp ? _self.lastMes
 as int?,lastMessageSenderId: freezed == lastMessageSenderId ? _self.lastMessageSenderId : lastMessageSenderId // ignore: cast_nullable_to_non_nullable
 as String?,isTyping: freezed == isTyping ? _self.isTyping : isTyping // ignore: cast_nullable_to_non_nullable
 as bool?,draftText: freezed == draftText ? _self.draftText : draftText // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,mutedUntil: freezed == mutedUntil ? _self.mutedUntil : mutedUntil // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -159,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String type,  int unreadCount,  String? lastMessageText,  int? lastMessageTimestamp,  String? lastMessageSenderId,  bool? isTyping,  String? draftText)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String type,  int unreadCount,  String? lastMessageText,  int? lastMessageTimestamp,  String? lastMessageSenderId,  bool? isTyping,  String? draftText,  int? mutedUntil)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RoomWithLastMessage() when $default != null:
-return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessageText,_that.lastMessageTimestamp,_that.lastMessageSenderId,_that.isTyping,_that.draftText);case _:
+return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessageText,_that.lastMessageTimestamp,_that.lastMessageSenderId,_that.isTyping,_that.draftText,_that.mutedUntil);case _:
   return orElse();
 
 }
@@ -180,10 +185,10 @@ return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessa
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String type,  int unreadCount,  String? lastMessageText,  int? lastMessageTimestamp,  String? lastMessageSenderId,  bool? isTyping,  String? draftText)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String type,  int unreadCount,  String? lastMessageText,  int? lastMessageTimestamp,  String? lastMessageSenderId,  bool? isTyping,  String? draftText,  int? mutedUntil)  $default,) {final _that = this;
 switch (_that) {
 case _RoomWithLastMessage():
-return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessageText,_that.lastMessageTimestamp,_that.lastMessageSenderId,_that.isTyping,_that.draftText);case _:
+return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessageText,_that.lastMessageTimestamp,_that.lastMessageSenderId,_that.isTyping,_that.draftText,_that.mutedUntil);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +205,10 @@ return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessa
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String type,  int unreadCount,  String? lastMessageText,  int? lastMessageTimestamp,  String? lastMessageSenderId,  bool? isTyping,  String? draftText)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String type,  int unreadCount,  String? lastMessageText,  int? lastMessageTimestamp,  String? lastMessageSenderId,  bool? isTyping,  String? draftText,  int? mutedUntil)?  $default,) {final _that = this;
 switch (_that) {
 case _RoomWithLastMessage() when $default != null:
-return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessageText,_that.lastMessageTimestamp,_that.lastMessageSenderId,_that.isTyping,_that.draftText);case _:
+return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessageText,_that.lastMessageTimestamp,_that.lastMessageSenderId,_that.isTyping,_that.draftText,_that.mutedUntil);case _:
   return null;
 
 }
@@ -215,7 +220,7 @@ return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessa
 
 
 class _RoomWithLastMessage extends RoomWithLastMessage {
-  const _RoomWithLastMessage({required this.id, required this.name, required this.type, required this.unreadCount, this.lastMessageText, this.lastMessageTimestamp, this.lastMessageSenderId, this.isTyping, this.draftText}): super._();
+  const _RoomWithLastMessage({required this.id, required this.name, required this.type, required this.unreadCount, this.lastMessageText, this.lastMessageTimestamp, this.lastMessageSenderId, this.isTyping, this.draftText, this.mutedUntil}): super._();
   
 
 @override final  String id;
@@ -228,6 +233,11 @@ class _RoomWithLastMessage extends RoomWithLastMessage {
 @override final  bool? isTyping;
 /// Draft message text if the user has an unsent message
 @override final  String? draftText;
+/// Mute notifications until this timestamp (milliseconds since epoch)
+/// - null = not muted
+/// - 0 = muted forever
+/// - timestamp = muted until that time
+@override final  int? mutedUntil;
 
 /// Create a copy of RoomWithLastMessage
 /// with the given fields replaced by the non-null parameter values.
@@ -239,16 +249,16 @@ _$RoomWithLastMessageCopyWith<_RoomWithLastMessage> get copyWith => __$RoomWithL
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomWithLastMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.lastMessageText, lastMessageText) || other.lastMessageText == lastMessageText)&&(identical(other.lastMessageTimestamp, lastMessageTimestamp) || other.lastMessageTimestamp == lastMessageTimestamp)&&(identical(other.lastMessageSenderId, lastMessageSenderId) || other.lastMessageSenderId == lastMessageSenderId)&&(identical(other.isTyping, isTyping) || other.isTyping == isTyping)&&(identical(other.draftText, draftText) || other.draftText == draftText));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoomWithLastMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.lastMessageText, lastMessageText) || other.lastMessageText == lastMessageText)&&(identical(other.lastMessageTimestamp, lastMessageTimestamp) || other.lastMessageTimestamp == lastMessageTimestamp)&&(identical(other.lastMessageSenderId, lastMessageSenderId) || other.lastMessageSenderId == lastMessageSenderId)&&(identical(other.isTyping, isTyping) || other.isTyping == isTyping)&&(identical(other.draftText, draftText) || other.draftText == draftText)&&(identical(other.mutedUntil, mutedUntil) || other.mutedUntil == mutedUntil));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,type,unreadCount,lastMessageText,lastMessageTimestamp,lastMessageSenderId,isTyping,draftText);
+int get hashCode => Object.hash(runtimeType,id,name,type,unreadCount,lastMessageText,lastMessageTimestamp,lastMessageSenderId,isTyping,draftText,mutedUntil);
 
 @override
 String toString() {
-  return 'RoomWithLastMessage(id: $id, name: $name, type: $type, unreadCount: $unreadCount, lastMessageText: $lastMessageText, lastMessageTimestamp: $lastMessageTimestamp, lastMessageSenderId: $lastMessageSenderId, isTyping: $isTyping, draftText: $draftText)';
+  return 'RoomWithLastMessage(id: $id, name: $name, type: $type, unreadCount: $unreadCount, lastMessageText: $lastMessageText, lastMessageTimestamp: $lastMessageTimestamp, lastMessageSenderId: $lastMessageSenderId, isTyping: $isTyping, draftText: $draftText, mutedUntil: $mutedUntil)';
 }
 
 
@@ -259,7 +269,7 @@ abstract mixin class _$RoomWithLastMessageCopyWith<$Res> implements $RoomWithLas
   factory _$RoomWithLastMessageCopyWith(_RoomWithLastMessage value, $Res Function(_RoomWithLastMessage) _then) = __$RoomWithLastMessageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String type, int unreadCount, String? lastMessageText, int? lastMessageTimestamp, String? lastMessageSenderId, bool? isTyping, String? draftText
+ String id, String name, String type, int unreadCount, String? lastMessageText, int? lastMessageTimestamp, String? lastMessageSenderId, bool? isTyping, String? draftText, int? mutedUntil
 });
 
 
@@ -276,7 +286,7 @@ class __$RoomWithLastMessageCopyWithImpl<$Res>
 
 /// Create a copy of RoomWithLastMessage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? type = null,Object? unreadCount = null,Object? lastMessageText = freezed,Object? lastMessageTimestamp = freezed,Object? lastMessageSenderId = freezed,Object? isTyping = freezed,Object? draftText = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? type = null,Object? unreadCount = null,Object? lastMessageText = freezed,Object? lastMessageTimestamp = freezed,Object? lastMessageSenderId = freezed,Object? isTyping = freezed,Object? draftText = freezed,Object? mutedUntil = freezed,}) {
   return _then(_RoomWithLastMessage(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -287,7 +297,8 @@ as String?,lastMessageTimestamp: freezed == lastMessageTimestamp ? _self.lastMes
 as int?,lastMessageSenderId: freezed == lastMessageSenderId ? _self.lastMessageSenderId : lastMessageSenderId // ignore: cast_nullable_to_non_nullable
 as String?,isTyping: freezed == isTyping ? _self.isTyping : isTyping // ignore: cast_nullable_to_non_nullable
 as bool?,draftText: freezed == draftText ? _self.draftText : draftText // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,mutedUntil: freezed == mutedUntil ? _self.mutedUntil : mutedUntil // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

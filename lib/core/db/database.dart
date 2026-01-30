@@ -23,6 +23,18 @@ class Profiles extends Table {
   IntColumn get updatedAt => integer().nullable()();
   TextColumn get metadata => text().nullable()();
 
+  /// User's presence status (0=offline, 1=online, 2=away, 3=busy, 4=doNotDisturb)
+  IntColumn get status => integer().withDefault(const Constant(0))();
+
+  /// Custom status message (e.g., "In a meeting", "On vacation")
+  TextColumn get statusMessage => text().nullable()();
+
+  /// Timestamp when status was last updated
+  IntColumn get statusUpdatedAt => integer().nullable()();
+
+  /// User's bio/about text
+  TextColumn get bio => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -90,6 +102,9 @@ class Rooms extends Table {
   /// Disappearing messages timeout in seconds (null = disabled)
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   IntColumn get disappearingTimeout => integer().nullable()();
+
+  /// Mute notifications until this epoch timestamp (null = not muted)
+  IntColumn get mutedUntil => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -204,6 +219,12 @@ class RoomEvents extends Table {
   /// Timestamp when this message should be deleted (for disappearing messages)
   /// Null means the message does not expire
   IntColumn get expiresAt => integer().nullable()();
+
+  /// Whether this message is starred/bookmarked by the user
+  BoolColumn get starred => boolean().withDefault(const Constant(false))();
+
+  /// Timestamp when the message was starred (for sorting starred messages)
+  IntColumn get starredAt => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -604,7 +625,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -701,6 +722,26 @@ class AppDatabase extends _$AppDatabase {
           ON room_events(expires_at)
           WHERE expires_at IS NOT NULL
         ''');
+      }
+      if (from <= 9) {
+        // Migration from v9 to v10: Add starred messages support
+        // Add mute notifications support
+        await m.addColumn(rooms, rooms.mutedUntil);
+        await m.addColumn(roomEvents, roomEvents.starred);
+        await m.addColumn(roomEvents, roomEvents.starredAt);
+        // Create index for efficient starred message querying
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_room_events_starred
+          ON room_events(starred, starred_at)
+          WHERE starred = 1
+        ''');
+      }
+      if (from <= 10) {
+        // Migration from v10 to v11: Add user status and bio fields
+        await m.addColumn(profiles, profiles.status);
+        await m.addColumn(profiles, profiles.statusMessage);
+        await m.addColumn(profiles, profiles.statusUpdatedAt);
+        await m.addColumn(profiles, profiles.bio);
       }
     },
     beforeOpen: (details) async {
@@ -821,6 +862,8 @@ class AppDatabase extends _$AppDatabase {
     forwardedFromEvent: row.readNullable<String>('forwarded_from_event'),
     forwardCount: row.readNullable<int>('forward_count') ?? 0,
     forwardRestricted: row.readNullable<bool>('forward_restricted') ?? false,
+    starred: row.readNullable<bool>('starred') ?? false,
+    starredAt: row.readNullable<int>('starred_at'),
   );
 
   /// Search messages by text content across all rooms

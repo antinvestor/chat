@@ -258,8 +258,9 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 9', () {
-        expect(db.schemaVersion, equals(9));
+      test('schema version is 11', () {
+        // Version 11 includes user status and bio fields
+        expect(db.schemaVersion, equals(11));
       });
     });
 
