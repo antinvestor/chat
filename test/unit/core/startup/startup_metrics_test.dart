@@ -1,5 +1,5 @@
-import 'package:chat/core/startup/startup_metrics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/startup/startup_metrics.dart';
 
 void main() {
   group('StartupMetrics', () {

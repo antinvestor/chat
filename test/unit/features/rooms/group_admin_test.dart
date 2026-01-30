@@ -1,10 +1,10 @@
-import 'package:chat/core/db/database.dart';
-import 'package:chat/core/sync/pending_job.dart';
-import 'package:chat/features/rooms/data/room_member_repository.dart';
-import 'package:chat/features/rooms/ui/member_action_sheet.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/core/db/database.dart';
+import 'package:stawi/core/sync/pending_job.dart';
+import 'package:stawi/features/rooms/data/room_member_repository.dart';
+import 'package:stawi/features/rooms/ui/member_action_sheet.dart';
 
 void main() {
   group('GROUP-ADMIN-001: Group Admin Controls', () {

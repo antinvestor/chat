@@ -1,6 +1,6 @@
-import 'package:chat/features/messages/domain/room_event.dart';
-import 'package:chat/features/notifications/notification_content_formatter.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/messages/domain/room_event.dart';
+import 'package:stawi/features/notifications/notification_content_formatter.dart';
 
 void main() {
   late NotificationContentFormatter formatter;

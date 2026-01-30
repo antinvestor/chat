@@ -1,6 +1,6 @@
-import 'package:chat/features/contacts/data/contact_search_provider.dart';
-import 'package:chat/features/contacts/data/roster_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stawi/features/contacts/data/contact_search_provider.dart';
+import 'package:stawi/features/contacts/data/roster_repository.dart';
 
 import 'mock_roster_repository.dart';
 
