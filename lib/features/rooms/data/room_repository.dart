@@ -99,6 +99,8 @@ class RoomRepository {
             ),
             disappearingTimeout: Value(room.disappearingTimeout),
             mutedUntil: Value(room.mutedUntil),
+            memberLimit: Value(room.memberLimit),
+            memberLimitEnabled: Value(room.memberLimitEnabled),
           ),
         );
   }
@@ -107,6 +109,29 @@ class RoomRepository {
   Future<void> updateDisappearingTimeout(String roomId, int? timeout) async {
     await (_database.update(_database.rooms)..where((t) => t.id.equals(roomId)))
         .write(RoomsCompanion(disappearingTimeout: Value(timeout)));
+  }
+
+  /// Update member limit for a room
+  ///
+  /// [memberLimit] The new member limit (null = default 256)
+  /// [enabled] Whether the limit is enforced
+  Future<void> updateMemberLimit(
+    String roomId, {
+    int? memberLimit,
+    bool? enabled,
+  }) async {
+    await (_database.update(
+      _database.rooms,
+    )..where((t) => t.id.equals(roomId))).write(
+      RoomsCompanion(
+        memberLimit: memberLimit != null
+            ? Value(memberLimit)
+            : const Value.absent(),
+        memberLimitEnabled: enabled != null
+            ? Value(enabled)
+            : const Value.absent(),
+      ),
+    );
   }
 
   Future<void> updateUnreadCount(String roomId, int count) async {
@@ -184,5 +209,7 @@ class RoomRepository {
     metadata: row.metadata != null ? jsonDecode(row.metadata!) : null,
     disappearingTimeout: row.disappearingTimeout,
     mutedUntil: row.mutedUntil,
+    memberLimit: row.memberLimit,
+    memberLimitEnabled: row.memberLimitEnabled,
   );
 }

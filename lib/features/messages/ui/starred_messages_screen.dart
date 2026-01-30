@@ -6,6 +6,12 @@ import '../../rooms/data/room_providers.dart';
 import '../data/message_providers.dart';
 import '../domain/room_event.dart';
 
+/// Provider for starred messages
+final starredMessagesProvider = FutureProvider<List<RoomEvent>>((ref) async {
+  final db = ref.watch(messageRepositoryProvider);
+  return db.getStarredMessages();
+});
+
 /// Provider for starred messages stream (reactive)
 final starredMessagesStreamProvider = StreamProvider<List<RoomEvent>>((ref) {
   final db = ref.watch(messageRepositoryProvider);
@@ -122,7 +128,7 @@ class StarredMessagesScreen extends ConsumerWidget {
   void _navigateToMessage(BuildContext context, RoomEvent message) {
     // Navigate to the room containing this message
     context.push(
-      '/room/${message.roomId}',
+      '/chat/${message.roomId}',
       extra: {'highlightEventId': message.id},
     );
   }
@@ -233,7 +239,7 @@ class _StarredMessageTile extends ConsumerWidget {
                           color: theme.colorScheme.outline,
                         ),
                       ),
-                      error: (_, _) => Text(
+                      error: (_, __) => Text(
                         'Unknown Room',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.outline,

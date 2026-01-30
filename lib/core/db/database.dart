@@ -106,6 +106,13 @@ class Rooms extends Table {
   /// Mute notifications until this epoch timestamp (null = not muted)
   IntColumn get mutedUntil => integer().nullable()();
 
+  /// Maximum number of members allowed in this room (null = default 256)
+  IntColumn get memberLimit => integer().nullable()();
+
+  /// Whether member limit is enforced (only applicable for groups)
+  BoolColumn get memberLimitEnabled =>
+      boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -584,6 +591,59 @@ class InviteLinkJoins extends Table {
   TextColumn get status => text().withDefault(const Constant('approved'))();
 }
 
+/// Call history table storing records of voice and video calls
+///
+/// Tracks all calls made or received, including duration, type,
+/// and outcome (answered, missed, declined).
+///
+/// Example:
+/// ```dart
+/// final history = await db.callHistory.select()
+///   ..orderBy([(t) => OrderingTerm.desc(t.startedAt)])
+///   ..limit(50)
+/// ).get();
+/// ```
+class CallHistory extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Room ID where the call occurred
+  TextColumn get roomId => text()();
+
+  /// Profile ID of the caller (who initiated the call)
+  TextColumn get callerId => text()();
+
+  /// Profile ID of the recipient (who received the call)
+  TextColumn get recipientId => text().nullable()();
+
+  /// Call type: 0=audio, 1=video
+  IntColumn get callType => integer().withDefault(const Constant(0))();
+
+  /// Call direction: 0=outgoing, 1=incoming
+  IntColumn get direction => integer().withDefault(const Constant(0))();
+
+  /// Call status: 0=missed, 1=answered, 2=declined, 3=busy, 4=failed
+  IntColumn get status => integer().withDefault(const Constant(0))();
+
+  /// Timestamp when call started (milliseconds since epoch)
+  IntColumn get startedAt => integer()();
+
+  /// Timestamp when call was answered (milliseconds since epoch)
+  IntColumn get answeredAt => integer().nullable()();
+
+  /// Timestamp when call ended (milliseconds since epoch)
+  IntColumn get endedAt => integer().nullable()();
+
+  /// Duration of the call in seconds (0 if not answered)
+  IntColumn get duration => integer().withDefault(const Constant(0))();
+
+  /// Whether this entry has been read/seen by the user
+  BoolColumn get isRead => boolean().withDefault(const Constant(false))();
+
+  /// Whether the call has been deleted by the user
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+}
+
 /// Main application database using Drift (SQLite)
 ///
 /// Provides type-safe access to all local data including profiles,
@@ -613,6 +673,7 @@ class InviteLinkJoins extends Table {
     Reports,
     InviteLinks,
     InviteLinkJoins,
+    CallHistory,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -625,7 +686,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -742,6 +803,31 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(profiles, profiles.statusMessage);
         await m.addColumn(profiles, profiles.statusUpdatedAt);
         await m.addColumn(profiles, profiles.bio);
+      }
+      if (from <= 11) {
+        // Migration from v11 to v12: Add call history table
+        await m.createTable(callHistory);
+        // Create index for efficient querying by room
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_room_id
+          ON call_history(room_id)
+        ''');
+        // Create index for efficient querying by time
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_started_at
+          ON call_history(started_at DESC)
+        ''');
+        // Create index for filtering unread/deleted calls
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_call_history_status
+          ON call_history(is_read, is_deleted)
+          WHERE is_deleted = 0
+        ''');
+      }
+      if (from <= 12) {
+        // Migration from v12 to v13: Add group member limit columns
+        await m.addColumn(rooms, rooms.memberLimit);
+        await m.addColumn(rooms, rooms.memberLimitEnabled);
       }
     },
     beforeOpen: (details) async {
