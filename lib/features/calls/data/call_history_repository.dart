@@ -105,15 +105,17 @@ class CallHistoryRepository {
 
   /// Get count of unread missed calls
   Future<int> getUnreadMissedCallCount() async {
+    final count = countAll();
     final query = _db.selectOnly(_db.callHistory)
+      ..addColumns([count])
       ..where(
         _db.callHistory.status.equals(CallStatus.missed.value) &
             _db.callHistory.isRead.equals(false) &
             _db.callHistory.isDeleted.equals(false),
-      )
-      ..addColumns([_db.callHistory.id.count()]);
+      );
+
     final result = await query.getSingle();
-    return result.read(_db.callHistory.id.count()) ?? 0;
+    return result.read(count) ?? 0;
   }
 
   /// Watch call history for reactive updates
@@ -130,16 +132,16 @@ class CallHistoryRepository {
 
   /// Watch missed calls count for badge updates
   Stream<int> watchUnreadMissedCallCount() {
+    final count = countAll();
     final query = _db.selectOnly(_db.callHistory)
+      ..addColumns([count])
       ..where(
         _db.callHistory.status.equals(CallStatus.missed.value) &
             _db.callHistory.isRead.equals(false) &
             _db.callHistory.isDeleted.equals(false),
-      )
-      ..addColumns([_db.callHistory.id.count()]);
-    return query.watchSingle().map(
-      (result) => result.read(_db.callHistory.id.count()) ?? 0,
-    );
+      );
+
+    return query.watchSingle().map((row) => row.read(count) ?? 0);
   }
 
   /// Mark a call as read
@@ -218,3 +220,5 @@ class CallHistoryRepository {
     );
   }
 }
+
+// CI trigger
