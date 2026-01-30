@@ -31,6 +31,8 @@ _RoomEvent _$RoomEventFromJson(Map<String, dynamic> json) => _RoomEvent(
   forwardCount: (json['forwardCount'] as num?)?.toInt() ?? 0,
   forwardRestricted: json['forwardRestricted'] as bool? ?? false,
   expiresAt: (json['expiresAt'] as num?)?.toInt(),
+  starred: json['starred'] as bool? ?? false,
+  starredAt: (json['starredAt'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$RoomEventToJson(_RoomEvent instance) =>
@@ -57,6 +59,8 @@ Map<String, dynamic> _$RoomEventToJson(_RoomEvent instance) =>
       'forwardCount': instance.forwardCount,
       'forwardRestricted': instance.forwardRestricted,
       'expiresAt': instance.expiresAt,
+      'starred': instance.starred,
+      'starredAt': instance.starredAt,
     };
 
 const _$RoomEventTypeEnumMap = {

@@ -59,6 +59,47 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<int> status = GeneratedColumn<int>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _statusMessageMeta = const VerificationMeta(
+    'statusMessage',
+  );
+  @override
+  late final GeneratedColumn<String> statusMessage = GeneratedColumn<String>(
+    'status_message',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusUpdatedAtMeta = const VerificationMeta(
+    'statusUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> statusUpdatedAt = GeneratedColumn<int>(
+    'status_updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bioMeta = const VerificationMeta('bio');
+  @override
+  late final GeneratedColumn<String> bio = GeneratedColumn<String>(
+    'bio',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -66,6 +107,10 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     avatarUrl,
     updatedAt,
     metadata,
+    status,
+    statusMessage,
+    statusUpdatedAt,
+    bio,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -108,6 +153,36 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         metadata.isAcceptableOrUnknown(data['metadata']!, _metadataMeta),
       );
     }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('status_message')) {
+      context.handle(
+        _statusMessageMeta,
+        statusMessage.isAcceptableOrUnknown(
+          data['status_message']!,
+          _statusMessageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status_updated_at')) {
+      context.handle(
+        _statusUpdatedAtMeta,
+        statusUpdatedAt.isAcceptableOrUnknown(
+          data['status_updated_at']!,
+          _statusUpdatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('bio')) {
+      context.handle(
+        _bioMeta,
+        bio.isAcceptableOrUnknown(data['bio']!, _bioMeta),
+      );
+    }
     return context;
   }
 
@@ -137,6 +212,22 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         DriftSqlType.string,
         data['${effectivePrefix}metadata'],
       ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status'],
+      )!,
+      statusMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status_message'],
+      ),
+      statusUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status_updated_at'],
+      ),
+      bio: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bio'],
+      ),
     );
   }
 
@@ -152,12 +243,28 @@ class Profile extends DataClass implements Insertable<Profile> {
   final String? avatarUrl;
   final int? updatedAt;
   final String? metadata;
+
+  /// User's presence status (0=offline, 1=online, 2=away, 3=busy, 4=doNotDisturb)
+  final int status;
+
+  /// Custom status message (e.g., "In a meeting", "On vacation")
+  final String? statusMessage;
+
+  /// Timestamp when status was last updated
+  final int? statusUpdatedAt;
+
+  /// User's bio/about text
+  final String? bio;
   const Profile({
     required this.id,
     this.name,
     this.avatarUrl,
     this.updatedAt,
     this.metadata,
+    required this.status,
+    this.statusMessage,
+    this.statusUpdatedAt,
+    this.bio,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -175,6 +282,16 @@ class Profile extends DataClass implements Insertable<Profile> {
     if (!nullToAbsent || metadata != null) {
       map['metadata'] = Variable<String>(metadata);
     }
+    map['status'] = Variable<int>(status);
+    if (!nullToAbsent || statusMessage != null) {
+      map['status_message'] = Variable<String>(statusMessage);
+    }
+    if (!nullToAbsent || statusUpdatedAt != null) {
+      map['status_updated_at'] = Variable<int>(statusUpdatedAt);
+    }
+    if (!nullToAbsent || bio != null) {
+      map['bio'] = Variable<String>(bio);
+    }
     return map;
   }
 
@@ -191,6 +308,14 @@ class Profile extends DataClass implements Insertable<Profile> {
       metadata: metadata == null && nullToAbsent
           ? const Value.absent()
           : Value(metadata),
+      status: Value(status),
+      statusMessage: statusMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(statusMessage),
+      statusUpdatedAt: statusUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(statusUpdatedAt),
+      bio: bio == null && nullToAbsent ? const Value.absent() : Value(bio),
     );
   }
 
@@ -205,6 +330,10 @@ class Profile extends DataClass implements Insertable<Profile> {
       avatarUrl: serializer.fromJson<String?>(json['avatarUrl']),
       updatedAt: serializer.fromJson<int?>(json['updatedAt']),
       metadata: serializer.fromJson<String?>(json['metadata']),
+      status: serializer.fromJson<int>(json['status']),
+      statusMessage: serializer.fromJson<String?>(json['statusMessage']),
+      statusUpdatedAt: serializer.fromJson<int?>(json['statusUpdatedAt']),
+      bio: serializer.fromJson<String?>(json['bio']),
     );
   }
   @override
@@ -216,6 +345,10 @@ class Profile extends DataClass implements Insertable<Profile> {
       'avatarUrl': serializer.toJson<String?>(avatarUrl),
       'updatedAt': serializer.toJson<int?>(updatedAt),
       'metadata': serializer.toJson<String?>(metadata),
+      'status': serializer.toJson<int>(status),
+      'statusMessage': serializer.toJson<String?>(statusMessage),
+      'statusUpdatedAt': serializer.toJson<int?>(statusUpdatedAt),
+      'bio': serializer.toJson<String?>(bio),
     };
   }
 
@@ -225,12 +358,24 @@ class Profile extends DataClass implements Insertable<Profile> {
     Value<String?> avatarUrl = const Value.absent(),
     Value<int?> updatedAt = const Value.absent(),
     Value<String?> metadata = const Value.absent(),
+    int? status,
+    Value<String?> statusMessage = const Value.absent(),
+    Value<int?> statusUpdatedAt = const Value.absent(),
+    Value<String?> bio = const Value.absent(),
   }) => Profile(
     id: id ?? this.id,
     name: name.present ? name.value : this.name,
     avatarUrl: avatarUrl.present ? avatarUrl.value : this.avatarUrl,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     metadata: metadata.present ? metadata.value : this.metadata,
+    status: status ?? this.status,
+    statusMessage: statusMessage.present
+        ? statusMessage.value
+        : this.statusMessage,
+    statusUpdatedAt: statusUpdatedAt.present
+        ? statusUpdatedAt.value
+        : this.statusUpdatedAt,
+    bio: bio.present ? bio.value : this.bio,
   );
   Profile copyWithCompanion(ProfilesCompanion data) {
     return Profile(
@@ -239,6 +384,14 @@ class Profile extends DataClass implements Insertable<Profile> {
       avatarUrl: data.avatarUrl.present ? data.avatarUrl.value : this.avatarUrl,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       metadata: data.metadata.present ? data.metadata.value : this.metadata,
+      status: data.status.present ? data.status.value : this.status,
+      statusMessage: data.statusMessage.present
+          ? data.statusMessage.value
+          : this.statusMessage,
+      statusUpdatedAt: data.statusUpdatedAt.present
+          ? data.statusUpdatedAt.value
+          : this.statusUpdatedAt,
+      bio: data.bio.present ? data.bio.value : this.bio,
     );
   }
 
@@ -249,13 +402,27 @@ class Profile extends DataClass implements Insertable<Profile> {
           ..write('name: $name, ')
           ..write('avatarUrl: $avatarUrl, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('metadata: $metadata')
+          ..write('metadata: $metadata, ')
+          ..write('status: $status, ')
+          ..write('statusMessage: $statusMessage, ')
+          ..write('statusUpdatedAt: $statusUpdatedAt, ')
+          ..write('bio: $bio')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, avatarUrl, updatedAt, metadata);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    avatarUrl,
+    updatedAt,
+    metadata,
+    status,
+    statusMessage,
+    statusUpdatedAt,
+    bio,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -264,7 +431,11 @@ class Profile extends DataClass implements Insertable<Profile> {
           other.name == this.name &&
           other.avatarUrl == this.avatarUrl &&
           other.updatedAt == this.updatedAt &&
-          other.metadata == this.metadata);
+          other.metadata == this.metadata &&
+          other.status == this.status &&
+          other.statusMessage == this.statusMessage &&
+          other.statusUpdatedAt == this.statusUpdatedAt &&
+          other.bio == this.bio);
 }
 
 class ProfilesCompanion extends UpdateCompanion<Profile> {
@@ -273,6 +444,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<String?> avatarUrl;
   final Value<int?> updatedAt;
   final Value<String?> metadata;
+  final Value<int> status;
+  final Value<String?> statusMessage;
+  final Value<int?> statusUpdatedAt;
+  final Value<String?> bio;
   final Value<int> rowid;
   const ProfilesCompanion({
     this.id = const Value.absent(),
@@ -280,6 +455,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     this.avatarUrl = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.metadata = const Value.absent(),
+    this.status = const Value.absent(),
+    this.statusMessage = const Value.absent(),
+    this.statusUpdatedAt = const Value.absent(),
+    this.bio = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProfilesCompanion.insert({
@@ -288,6 +467,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     this.avatarUrl = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.metadata = const Value.absent(),
+    this.status = const Value.absent(),
+    this.statusMessage = const Value.absent(),
+    this.statusUpdatedAt = const Value.absent(),
+    this.bio = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Profile> custom({
@@ -296,6 +479,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     Expression<String>? avatarUrl,
     Expression<int>? updatedAt,
     Expression<String>? metadata,
+    Expression<int>? status,
+    Expression<String>? statusMessage,
+    Expression<int>? statusUpdatedAt,
+    Expression<String>? bio,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -304,6 +491,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       if (avatarUrl != null) 'avatar_url': avatarUrl,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (metadata != null) 'metadata': metadata,
+      if (status != null) 'status': status,
+      if (statusMessage != null) 'status_message': statusMessage,
+      if (statusUpdatedAt != null) 'status_updated_at': statusUpdatedAt,
+      if (bio != null) 'bio': bio,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -314,6 +505,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     Value<String?>? avatarUrl,
     Value<int?>? updatedAt,
     Value<String?>? metadata,
+    Value<int>? status,
+    Value<String?>? statusMessage,
+    Value<int?>? statusUpdatedAt,
+    Value<String?>? bio,
     Value<int>? rowid,
   }) {
     return ProfilesCompanion(
@@ -322,6 +517,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       updatedAt: updatedAt ?? this.updatedAt,
       metadata: metadata ?? this.metadata,
+      status: status ?? this.status,
+      statusMessage: statusMessage ?? this.statusMessage,
+      statusUpdatedAt: statusUpdatedAt ?? this.statusUpdatedAt,
+      bio: bio ?? this.bio,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -344,6 +543,18 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     if (metadata.present) {
       map['metadata'] = Variable<String>(metadata.value);
     }
+    if (status.present) {
+      map['status'] = Variable<int>(status.value);
+    }
+    if (statusMessage.present) {
+      map['status_message'] = Variable<String>(statusMessage.value);
+    }
+    if (statusUpdatedAt.present) {
+      map['status_updated_at'] = Variable<int>(statusUpdatedAt.value);
+    }
+    if (bio.present) {
+      map['bio'] = Variable<String>(bio.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -358,6 +569,10 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
           ..write('avatarUrl: $avatarUrl, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('metadata: $metadata, ')
+          ..write('status: $status, ')
+          ..write('statusMessage: $statusMessage, ')
+          ..write('statusUpdatedAt: $statusUpdatedAt, ')
+          ..write('bio: $bio, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1140,6 +1355,31 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _memberLimitMeta = const VerificationMeta(
+    'memberLimit',
+  );
+  @override
+  late final GeneratedColumn<int> memberLimit = GeneratedColumn<int>(
+    'member_limit',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _memberLimitEnabledMeta =
+      const VerificationMeta('memberLimitEnabled');
+  @override
+  late final GeneratedColumn<bool> memberLimitEnabled = GeneratedColumn<bool>(
+    'member_limit_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("member_limit_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1151,6 +1391,8 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
     metadata,
     disappearingTimeout,
     mutedUntil,
+    memberLimit,
+    memberLimitEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1229,6 +1471,24 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         mutedUntil.isAcceptableOrUnknown(data['muted_until']!, _mutedUntilMeta),
       );
     }
+    if (data.containsKey('member_limit')) {
+      context.handle(
+        _memberLimitMeta,
+        memberLimit.isAcceptableOrUnknown(
+          data['member_limit']!,
+          _memberLimitMeta,
+        ),
+      );
+    }
+    if (data.containsKey('member_limit_enabled')) {
+      context.handle(
+        _memberLimitEnabledMeta,
+        memberLimitEnabled.isAcceptableOrUnknown(
+          data['member_limit_enabled']!,
+          _memberLimitEnabledMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1274,6 +1534,14 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
         DriftSqlType.int,
         data['${effectivePrefix}muted_until'],
       ),
+      memberLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}member_limit'],
+      ),
+      memberLimitEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}member_limit_enabled'],
+      )!,
     );
   }
 
@@ -1309,11 +1577,14 @@ class Room extends DataClass implements Insertable<Room> {
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   final int? disappearingTimeout;
 
-  /// Mute notifications until this timestamp (milliseconds since epoch)
-  /// - null = not muted
-  /// - 0 = muted forever
-  /// - timestamp = muted until that time
+  /// Mute notifications until this epoch timestamp (null = not muted)
   final int? mutedUntil;
+
+  /// Maximum number of members allowed in this room (null = default 256)
+  final int? memberLimit;
+
+  /// Whether member limit is enforced (only applicable for groups)
+  final bool memberLimitEnabled;
   const Room({
     required this.id,
     this.name,
@@ -1324,6 +1595,8 @@ class Room extends DataClass implements Insertable<Room> {
     this.metadata,
     this.disappearingTimeout,
     this.mutedUntil,
+    this.memberLimit,
+    required this.memberLimitEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1351,6 +1624,10 @@ class Room extends DataClass implements Insertable<Room> {
     if (!nullToAbsent || mutedUntil != null) {
       map['muted_until'] = Variable<int>(mutedUntil);
     }
+    if (!nullToAbsent || memberLimit != null) {
+      map['member_limit'] = Variable<int>(memberLimit);
+    }
+    map['member_limit_enabled'] = Variable<bool>(memberLimitEnabled);
     return map;
   }
 
@@ -1375,6 +1652,10 @@ class Room extends DataClass implements Insertable<Room> {
       mutedUntil: mutedUntil == null && nullToAbsent
           ? const Value.absent()
           : Value(mutedUntil),
+      memberLimit: memberLimit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(memberLimit),
+      memberLimitEnabled: Value(memberLimitEnabled),
     );
   }
 
@@ -1395,6 +1676,8 @@ class Room extends DataClass implements Insertable<Room> {
         json['disappearingTimeout'],
       ),
       mutedUntil: serializer.fromJson<int?>(json['mutedUntil']),
+      memberLimit: serializer.fromJson<int?>(json['memberLimit']),
+      memberLimitEnabled: serializer.fromJson<bool>(json['memberLimitEnabled']),
     );
   }
   @override
@@ -1410,6 +1693,8 @@ class Room extends DataClass implements Insertable<Room> {
       'metadata': serializer.toJson<String?>(metadata),
       'disappearingTimeout': serializer.toJson<int?>(disappearingTimeout),
       'mutedUntil': serializer.toJson<int?>(mutedUntil),
+      'memberLimit': serializer.toJson<int?>(memberLimit),
+      'memberLimitEnabled': serializer.toJson<bool>(memberLimitEnabled),
     };
   }
 
@@ -1423,6 +1708,8 @@ class Room extends DataClass implements Insertable<Room> {
     Value<String?> metadata = const Value.absent(),
     Value<int?> disappearingTimeout = const Value.absent(),
     Value<int?> mutedUntil = const Value.absent(),
+    Value<int?> memberLimit = const Value.absent(),
+    bool? memberLimitEnabled,
   }) => Room(
     id: id ?? this.id,
     name: name.present ? name.value : this.name,
@@ -1437,6 +1724,8 @@ class Room extends DataClass implements Insertable<Room> {
         ? disappearingTimeout.value
         : this.disappearingTimeout,
     mutedUntil: mutedUntil.present ? mutedUntil.value : this.mutedUntil,
+    memberLimit: memberLimit.present ? memberLimit.value : this.memberLimit,
+    memberLimitEnabled: memberLimitEnabled ?? this.memberLimitEnabled,
   );
   Room copyWithCompanion(RoomsCompanion data) {
     return Room(
@@ -1459,6 +1748,12 @@ class Room extends DataClass implements Insertable<Room> {
       mutedUntil: data.mutedUntil.present
           ? data.mutedUntil.value
           : this.mutedUntil,
+      memberLimit: data.memberLimit.present
+          ? data.memberLimit.value
+          : this.memberLimit,
+      memberLimitEnabled: data.memberLimitEnabled.present
+          ? data.memberLimitEnabled.value
+          : this.memberLimitEnabled,
     );
   }
 
@@ -1473,7 +1768,9 @@ class Room extends DataClass implements Insertable<Room> {
           ..write('unreadCount: $unreadCount, ')
           ..write('metadata: $metadata, ')
           ..write('disappearingTimeout: $disappearingTimeout, ')
-          ..write('mutedUntil: $mutedUntil')
+          ..write('mutedUntil: $mutedUntil, ')
+          ..write('memberLimit: $memberLimit, ')
+          ..write('memberLimitEnabled: $memberLimitEnabled')
           ..write(')'))
         .toString();
   }
@@ -1489,6 +1786,8 @@ class Room extends DataClass implements Insertable<Room> {
     metadata,
     disappearingTimeout,
     mutedUntil,
+    memberLimit,
+    memberLimitEnabled,
   );
   @override
   bool operator ==(Object other) =>
@@ -1502,7 +1801,9 @@ class Room extends DataClass implements Insertable<Room> {
           other.unreadCount == this.unreadCount &&
           other.metadata == this.metadata &&
           other.disappearingTimeout == this.disappearingTimeout &&
-          other.mutedUntil == this.mutedUntil);
+          other.mutedUntil == this.mutedUntil &&
+          other.memberLimit == this.memberLimit &&
+          other.memberLimitEnabled == this.memberLimitEnabled);
 }
 
 class RoomsCompanion extends UpdateCompanion<Room> {
@@ -1515,6 +1816,8 @@ class RoomsCompanion extends UpdateCompanion<Room> {
   final Value<String?> metadata;
   final Value<int?> disappearingTimeout;
   final Value<int?> mutedUntil;
+  final Value<int?> memberLimit;
+  final Value<bool> memberLimitEnabled;
   final Value<int> rowid;
   const RoomsCompanion({
     this.id = const Value.absent(),
@@ -1526,6 +1829,8 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.metadata = const Value.absent(),
     this.disappearingTimeout = const Value.absent(),
     this.mutedUntil = const Value.absent(),
+    this.memberLimit = const Value.absent(),
+    this.memberLimitEnabled = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomsCompanion.insert({
@@ -1538,6 +1843,8 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     this.metadata = const Value.absent(),
     this.disappearingTimeout = const Value.absent(),
     this.mutedUntil = const Value.absent(),
+    this.memberLimit = const Value.absent(),
+    this.memberLimitEnabled = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<Room> custom({
@@ -1550,6 +1857,8 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Expression<String>? metadata,
     Expression<int>? disappearingTimeout,
     Expression<int>? mutedUntil,
+    Expression<int>? memberLimit,
+    Expression<bool>? memberLimitEnabled,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1563,6 +1872,9 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       if (disappearingTimeout != null)
         'disappearing_timeout': disappearingTimeout,
       if (mutedUntil != null) 'muted_until': mutedUntil,
+      if (memberLimit != null) 'member_limit': memberLimit,
+      if (memberLimitEnabled != null)
+        'member_limit_enabled': memberLimitEnabled,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1577,6 +1889,8 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     Value<String?>? metadata,
     Value<int?>? disappearingTimeout,
     Value<int?>? mutedUntil,
+    Value<int?>? memberLimit,
+    Value<bool>? memberLimitEnabled,
     Value<int>? rowid,
   }) {
     return RoomsCompanion(
@@ -1589,6 +1903,8 @@ class RoomsCompanion extends UpdateCompanion<Room> {
       metadata: metadata ?? this.metadata,
       disappearingTimeout: disappearingTimeout ?? this.disappearingTimeout,
       mutedUntil: mutedUntil ?? this.mutedUntil,
+      memberLimit: memberLimit ?? this.memberLimit,
+      memberLimitEnabled: memberLimitEnabled ?? this.memberLimitEnabled,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1623,6 +1939,12 @@ class RoomsCompanion extends UpdateCompanion<Room> {
     if (mutedUntil.present) {
       map['muted_until'] = Variable<int>(mutedUntil.value);
     }
+    if (memberLimit.present) {
+      map['member_limit'] = Variable<int>(memberLimit.value);
+    }
+    if (memberLimitEnabled.present) {
+      map['member_limit_enabled'] = Variable<bool>(memberLimitEnabled.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1641,6 +1963,8 @@ class RoomsCompanion extends UpdateCompanion<Room> {
           ..write('metadata: $metadata, ')
           ..write('disappearingTimeout: $disappearingTimeout, ')
           ..write('mutedUntil: $mutedUntil, ')
+          ..write('memberLimit: $memberLimit, ')
+          ..write('memberLimitEnabled: $memberLimitEnabled, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2334,6 +2658,32 @@ class $RoomEventsTable extends RoomEvents
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _starredMeta = const VerificationMeta(
+    'starred',
+  );
+  @override
+  late final GeneratedColumn<bool> starred = GeneratedColumn<bool>(
+    'starred',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("starred" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _starredAtMeta = const VerificationMeta(
+    'starredAt',
+  );
+  @override
+  late final GeneratedColumn<int> starredAt = GeneratedColumn<int>(
+    'starred_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2359,6 +2709,8 @@ class $RoomEventsTable extends RoomEvents
     forwardCount,
     forwardRestricted,
     expiresAt,
+    starred,
+    starredAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2536,6 +2888,18 @@ class $RoomEventsTable extends RoomEvents
         expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
       );
     }
+    if (data.containsKey('starred')) {
+      context.handle(
+        _starredMeta,
+        starred.isAcceptableOrUnknown(data['starred']!, _starredMeta),
+      );
+    }
+    if (data.containsKey('starred_at')) {
+      context.handle(
+        _starredAtMeta,
+        starredAt.isAcceptableOrUnknown(data['starred_at']!, _starredAtMeta),
+      );
+    }
     return context;
   }
 
@@ -2637,6 +3001,14 @@ class $RoomEventsTable extends RoomEvents
         DriftSqlType.int,
         data['${effectivePrefix}expires_at'],
       ),
+      starred: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}starred'],
+      )!,
+      starredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}starred_at'],
+      ),
     );
   }
 
@@ -2717,6 +3089,12 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
   /// Timestamp when this message should be deleted (for disappearing messages)
   /// Null means the message does not expire
   final int? expiresAt;
+
+  /// Whether this message is starred/bookmarked by the user
+  final bool starred;
+
+  /// Timestamp when the message was starred (for sorting starred messages)
+  final int? starredAt;
   const RoomEvent({
     required this.id,
     required this.roomId,
@@ -2741,6 +3119,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     required this.forwardCount,
     required this.forwardRestricted,
     this.expiresAt,
+    required this.starred,
+    this.starredAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2795,6 +3175,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     map['forward_restricted'] = Variable<bool>(forwardRestricted);
     if (!nullToAbsent || expiresAt != null) {
       map['expires_at'] = Variable<int>(expiresAt);
+    }
+    map['starred'] = Variable<bool>(starred);
+    if (!nullToAbsent || starredAt != null) {
+      map['starred_at'] = Variable<int>(starredAt);
     }
     return map;
   }
@@ -2852,6 +3236,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       expiresAt: expiresAt == null && nullToAbsent
           ? const Value.absent()
           : Value(expiresAt),
+      starred: Value(starred),
+      starredAt: starredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(starredAt),
     );
   }
 
@@ -2888,6 +3276,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       forwardCount: serializer.fromJson<int>(json['forwardCount']),
       forwardRestricted: serializer.fromJson<bool>(json['forwardRestricted']),
       expiresAt: serializer.fromJson<int?>(json['expiresAt']),
+      starred: serializer.fromJson<bool>(json['starred']),
+      starredAt: serializer.fromJson<int?>(json['starredAt']),
     );
   }
   @override
@@ -2917,6 +3307,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
       'forwardCount': serializer.toJson<int>(forwardCount),
       'forwardRestricted': serializer.toJson<bool>(forwardRestricted),
       'expiresAt': serializer.toJson<int?>(expiresAt),
+      'starred': serializer.toJson<bool>(starred),
+      'starredAt': serializer.toJson<int?>(starredAt),
     };
   }
 
@@ -2944,6 +3336,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     int? forwardCount,
     bool? forwardRestricted,
     Value<int?> expiresAt = const Value.absent(),
+    bool? starred,
+    Value<int?> starredAt = const Value.absent(),
   }) => RoomEvent(
     id: id ?? this.id,
     roomId: roomId ?? this.roomId,
@@ -2976,6 +3370,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     forwardCount: forwardCount ?? this.forwardCount,
     forwardRestricted: forwardRestricted ?? this.forwardRestricted,
     expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
+    starred: starred ?? this.starred,
+    starredAt: starredAt.present ? starredAt.value : this.starredAt,
   );
   RoomEvent copyWithCompanion(RoomEventsCompanion data) {
     return RoomEvent(
@@ -3022,6 +3418,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ? data.forwardRestricted.value
           : this.forwardRestricted,
       expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
+      starred: data.starred.present ? data.starred.value : this.starred,
+      starredAt: data.starredAt.present ? data.starredAt.value : this.starredAt,
     );
   }
 
@@ -3050,7 +3448,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           ..write('forwardedFromEvent: $forwardedFromEvent, ')
           ..write('forwardCount: $forwardCount, ')
           ..write('forwardRestricted: $forwardRestricted, ')
-          ..write('expiresAt: $expiresAt')
+          ..write('expiresAt: $expiresAt, ')
+          ..write('starred: $starred, ')
+          ..write('starredAt: $starredAt')
           ..write(')'))
         .toString();
   }
@@ -3080,6 +3480,8 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
     forwardCount,
     forwardRestricted,
     expiresAt,
+    starred,
+    starredAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -3107,7 +3509,9 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
           other.forwardedFromEvent == this.forwardedFromEvent &&
           other.forwardCount == this.forwardCount &&
           other.forwardRestricted == this.forwardRestricted &&
-          other.expiresAt == this.expiresAt);
+          other.expiresAt == this.expiresAt &&
+          other.starred == this.starred &&
+          other.starredAt == this.starredAt);
 }
 
 class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
@@ -3134,6 +3538,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
   final Value<int> forwardCount;
   final Value<bool> forwardRestricted;
   final Value<int?> expiresAt;
+  final Value<bool> starred;
+  final Value<int?> starredAt;
   final Value<int> rowid;
   const RoomEventsCompanion({
     this.id = const Value.absent(),
@@ -3159,6 +3565,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.forwardCount = const Value.absent(),
     this.forwardRestricted = const Value.absent(),
     this.expiresAt = const Value.absent(),
+    this.starred = const Value.absent(),
+    this.starredAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RoomEventsCompanion.insert({
@@ -3185,6 +3593,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     this.forwardCount = const Value.absent(),
     this.forwardRestricted = const Value.absent(),
     this.expiresAt = const Value.absent(),
+    this.starred = const Value.absent(),
+    this.starredAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        roomId = Value(roomId),
@@ -3214,6 +3624,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Expression<int>? forwardCount,
     Expression<bool>? forwardRestricted,
     Expression<int>? expiresAt,
+    Expression<bool>? starred,
+    Expression<int>? starredAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3241,6 +3653,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       if (forwardCount != null) 'forward_count': forwardCount,
       if (forwardRestricted != null) 'forward_restricted': forwardRestricted,
       if (expiresAt != null) 'expires_at': expiresAt,
+      if (starred != null) 'starred': starred,
+      if (starredAt != null) 'starred_at': starredAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3269,6 +3683,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     Value<int>? forwardCount,
     Value<bool>? forwardRestricted,
     Value<int?>? expiresAt,
+    Value<bool>? starred,
+    Value<int?>? starredAt,
     Value<int>? rowid,
   }) {
     return RoomEventsCompanion(
@@ -3295,6 +3711,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
       forwardCount: forwardCount ?? this.forwardCount,
       forwardRestricted: forwardRestricted ?? this.forwardRestricted,
       expiresAt: expiresAt ?? this.expiresAt,
+      starred: starred ?? this.starred,
+      starredAt: starredAt ?? this.starredAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3371,6 +3789,12 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
     if (expiresAt.present) {
       map['expires_at'] = Variable<int>(expiresAt.value);
     }
+    if (starred.present) {
+      map['starred'] = Variable<bool>(starred.value);
+    }
+    if (starredAt.present) {
+      map['starred_at'] = Variable<int>(starredAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3403,6 +3827,8 @@ class RoomEventsCompanion extends UpdateCompanion<RoomEvent> {
           ..write('forwardCount: $forwardCount, ')
           ..write('forwardRestricted: $forwardRestricted, ')
           ..write('expiresAt: $expiresAt, ')
+          ..write('starred: $starred, ')
+          ..write('starredAt: $starredAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7753,6 +8179,771 @@ class InviteLinkJoinsCompanion extends UpdateCompanion<InviteLinkJoin> {
   }
 }
 
+class $CallHistoryTable extends CallHistory
+    with TableInfo<$CallHistoryTable, CallHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CallHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _roomIdMeta = const VerificationMeta('roomId');
+  @override
+  late final GeneratedColumn<String> roomId = GeneratedColumn<String>(
+    'room_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _callerIdMeta = const VerificationMeta(
+    'callerId',
+  );
+  @override
+  late final GeneratedColumn<String> callerId = GeneratedColumn<String>(
+    'caller_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recipientIdMeta = const VerificationMeta(
+    'recipientId',
+  );
+  @override
+  late final GeneratedColumn<String> recipientId = GeneratedColumn<String>(
+    'recipient_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _callTypeMeta = const VerificationMeta(
+    'callType',
+  );
+  @override
+  late final GeneratedColumn<int> callType = GeneratedColumn<int>(
+    'call_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _directionMeta = const VerificationMeta(
+    'direction',
+  );
+  @override
+  late final GeneratedColumn<int> direction = GeneratedColumn<int>(
+    'direction',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<int> status = GeneratedColumn<int>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<int> startedAt = GeneratedColumn<int>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _answeredAtMeta = const VerificationMeta(
+    'answeredAt',
+  );
+  @override
+  late final GeneratedColumn<int> answeredAt = GeneratedColumn<int>(
+    'answered_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endedAtMeta = const VerificationMeta(
+    'endedAt',
+  );
+  @override
+  late final GeneratedColumn<int> endedAt = GeneratedColumn<int>(
+    'ended_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _durationMeta = const VerificationMeta(
+    'duration',
+  );
+  @override
+  late final GeneratedColumn<int> duration = GeneratedColumn<int>(
+    'duration',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isReadMeta = const VerificationMeta('isRead');
+  @override
+  late final GeneratedColumn<bool> isRead = GeneratedColumn<bool>(
+    'is_read',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_read" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    roomId,
+    callerId,
+    recipientId,
+    callType,
+    direction,
+    status,
+    startedAt,
+    answeredAt,
+    endedAt,
+    duration,
+    isRead,
+    isDeleted,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'call_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CallHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('room_id')) {
+      context.handle(
+        _roomIdMeta,
+        roomId.isAcceptableOrUnknown(data['room_id']!, _roomIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roomIdMeta);
+    }
+    if (data.containsKey('caller_id')) {
+      context.handle(
+        _callerIdMeta,
+        callerId.isAcceptableOrUnknown(data['caller_id']!, _callerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_callerIdMeta);
+    }
+    if (data.containsKey('recipient_id')) {
+      context.handle(
+        _recipientIdMeta,
+        recipientId.isAcceptableOrUnknown(
+          data['recipient_id']!,
+          _recipientIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('call_type')) {
+      context.handle(
+        _callTypeMeta,
+        callType.isAcceptableOrUnknown(data['call_type']!, _callTypeMeta),
+      );
+    }
+    if (data.containsKey('direction')) {
+      context.handle(
+        _directionMeta,
+        direction.isAcceptableOrUnknown(data['direction']!, _directionMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('answered_at')) {
+      context.handle(
+        _answeredAtMeta,
+        answeredAt.isAcceptableOrUnknown(data['answered_at']!, _answeredAtMeta),
+      );
+    }
+    if (data.containsKey('ended_at')) {
+      context.handle(
+        _endedAtMeta,
+        endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta),
+      );
+    }
+    if (data.containsKey('duration')) {
+      context.handle(
+        _durationMeta,
+        duration.isAcceptableOrUnknown(data['duration']!, _durationMeta),
+      );
+    }
+    if (data.containsKey('is_read')) {
+      context.handle(
+        _isReadMeta,
+        isRead.isAcceptableOrUnknown(data['is_read']!, _isReadMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CallHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CallHistoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      roomId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}room_id'],
+      )!,
+      callerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caller_id'],
+      )!,
+      recipientId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recipient_id'],
+      ),
+      callType: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}call_type'],
+      )!,
+      direction: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}direction'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}started_at'],
+      )!,
+      answeredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}answered_at'],
+      ),
+      endedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}ended_at'],
+      ),
+      duration: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration'],
+      )!,
+      isRead: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_read'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+    );
+  }
+
+  @override
+  $CallHistoryTable createAlias(String alias) {
+    return $CallHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class CallHistoryData extends DataClass implements Insertable<CallHistoryData> {
+  /// Auto-incrementing primary key
+  final int id;
+
+  /// Room ID where the call occurred
+  final String roomId;
+
+  /// Profile ID of the caller (who initiated the call)
+  final String callerId;
+
+  /// Profile ID of the recipient (who received the call)
+  final String? recipientId;
+
+  /// Call type: 0=audio, 1=video
+  final int callType;
+
+  /// Call direction: 0=outgoing, 1=incoming
+  final int direction;
+
+  /// Call status: 0=missed, 1=answered, 2=declined, 3=busy, 4=failed
+  final int status;
+
+  /// Timestamp when call started (milliseconds since epoch)
+  final int startedAt;
+
+  /// Timestamp when call was answered (milliseconds since epoch)
+  final int? answeredAt;
+
+  /// Timestamp when call ended (milliseconds since epoch)
+  final int? endedAt;
+
+  /// Duration of the call in seconds (0 if not answered)
+  final int duration;
+
+  /// Whether this entry has been read/seen by the user
+  final bool isRead;
+
+  /// Whether the call has been deleted by the user
+  final bool isDeleted;
+  const CallHistoryData({
+    required this.id,
+    required this.roomId,
+    required this.callerId,
+    this.recipientId,
+    required this.callType,
+    required this.direction,
+    required this.status,
+    required this.startedAt,
+    this.answeredAt,
+    this.endedAt,
+    required this.duration,
+    required this.isRead,
+    required this.isDeleted,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['room_id'] = Variable<String>(roomId);
+    map['caller_id'] = Variable<String>(callerId);
+    if (!nullToAbsent || recipientId != null) {
+      map['recipient_id'] = Variable<String>(recipientId);
+    }
+    map['call_type'] = Variable<int>(callType);
+    map['direction'] = Variable<int>(direction);
+    map['status'] = Variable<int>(status);
+    map['started_at'] = Variable<int>(startedAt);
+    if (!nullToAbsent || answeredAt != null) {
+      map['answered_at'] = Variable<int>(answeredAt);
+    }
+    if (!nullToAbsent || endedAt != null) {
+      map['ended_at'] = Variable<int>(endedAt);
+    }
+    map['duration'] = Variable<int>(duration);
+    map['is_read'] = Variable<bool>(isRead);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    return map;
+  }
+
+  CallHistoryCompanion toCompanion(bool nullToAbsent) {
+    return CallHistoryCompanion(
+      id: Value(id),
+      roomId: Value(roomId),
+      callerId: Value(callerId),
+      recipientId: recipientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recipientId),
+      callType: Value(callType),
+      direction: Value(direction),
+      status: Value(status),
+      startedAt: Value(startedAt),
+      answeredAt: answeredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(answeredAt),
+      endedAt: endedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endedAt),
+      duration: Value(duration),
+      isRead: Value(isRead),
+      isDeleted: Value(isDeleted),
+    );
+  }
+
+  factory CallHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CallHistoryData(
+      id: serializer.fromJson<int>(json['id']),
+      roomId: serializer.fromJson<String>(json['roomId']),
+      callerId: serializer.fromJson<String>(json['callerId']),
+      recipientId: serializer.fromJson<String?>(json['recipientId']),
+      callType: serializer.fromJson<int>(json['callType']),
+      direction: serializer.fromJson<int>(json['direction']),
+      status: serializer.fromJson<int>(json['status']),
+      startedAt: serializer.fromJson<int>(json['startedAt']),
+      answeredAt: serializer.fromJson<int?>(json['answeredAt']),
+      endedAt: serializer.fromJson<int?>(json['endedAt']),
+      duration: serializer.fromJson<int>(json['duration']),
+      isRead: serializer.fromJson<bool>(json['isRead']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'roomId': serializer.toJson<String>(roomId),
+      'callerId': serializer.toJson<String>(callerId),
+      'recipientId': serializer.toJson<String?>(recipientId),
+      'callType': serializer.toJson<int>(callType),
+      'direction': serializer.toJson<int>(direction),
+      'status': serializer.toJson<int>(status),
+      'startedAt': serializer.toJson<int>(startedAt),
+      'answeredAt': serializer.toJson<int?>(answeredAt),
+      'endedAt': serializer.toJson<int?>(endedAt),
+      'duration': serializer.toJson<int>(duration),
+      'isRead': serializer.toJson<bool>(isRead),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+    };
+  }
+
+  CallHistoryData copyWith({
+    int? id,
+    String? roomId,
+    String? callerId,
+    Value<String?> recipientId = const Value.absent(),
+    int? callType,
+    int? direction,
+    int? status,
+    int? startedAt,
+    Value<int?> answeredAt = const Value.absent(),
+    Value<int?> endedAt = const Value.absent(),
+    int? duration,
+    bool? isRead,
+    bool? isDeleted,
+  }) => CallHistoryData(
+    id: id ?? this.id,
+    roomId: roomId ?? this.roomId,
+    callerId: callerId ?? this.callerId,
+    recipientId: recipientId.present ? recipientId.value : this.recipientId,
+    callType: callType ?? this.callType,
+    direction: direction ?? this.direction,
+    status: status ?? this.status,
+    startedAt: startedAt ?? this.startedAt,
+    answeredAt: answeredAt.present ? answeredAt.value : this.answeredAt,
+    endedAt: endedAt.present ? endedAt.value : this.endedAt,
+    duration: duration ?? this.duration,
+    isRead: isRead ?? this.isRead,
+    isDeleted: isDeleted ?? this.isDeleted,
+  );
+  CallHistoryData copyWithCompanion(CallHistoryCompanion data) {
+    return CallHistoryData(
+      id: data.id.present ? data.id.value : this.id,
+      roomId: data.roomId.present ? data.roomId.value : this.roomId,
+      callerId: data.callerId.present ? data.callerId.value : this.callerId,
+      recipientId: data.recipientId.present
+          ? data.recipientId.value
+          : this.recipientId,
+      callType: data.callType.present ? data.callType.value : this.callType,
+      direction: data.direction.present ? data.direction.value : this.direction,
+      status: data.status.present ? data.status.value : this.status,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      answeredAt: data.answeredAt.present
+          ? data.answeredAt.value
+          : this.answeredAt,
+      endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
+      duration: data.duration.present ? data.duration.value : this.duration,
+      isRead: data.isRead.present ? data.isRead.value : this.isRead,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CallHistoryData(')
+          ..write('id: $id, ')
+          ..write('roomId: $roomId, ')
+          ..write('callerId: $callerId, ')
+          ..write('recipientId: $recipientId, ')
+          ..write('callType: $callType, ')
+          ..write('direction: $direction, ')
+          ..write('status: $status, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('answeredAt: $answeredAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('duration: $duration, ')
+          ..write('isRead: $isRead, ')
+          ..write('isDeleted: $isDeleted')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    roomId,
+    callerId,
+    recipientId,
+    callType,
+    direction,
+    status,
+    startedAt,
+    answeredAt,
+    endedAt,
+    duration,
+    isRead,
+    isDeleted,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CallHistoryData &&
+          other.id == this.id &&
+          other.roomId == this.roomId &&
+          other.callerId == this.callerId &&
+          other.recipientId == this.recipientId &&
+          other.callType == this.callType &&
+          other.direction == this.direction &&
+          other.status == this.status &&
+          other.startedAt == this.startedAt &&
+          other.answeredAt == this.answeredAt &&
+          other.endedAt == this.endedAt &&
+          other.duration == this.duration &&
+          other.isRead == this.isRead &&
+          other.isDeleted == this.isDeleted);
+}
+
+class CallHistoryCompanion extends UpdateCompanion<CallHistoryData> {
+  final Value<int> id;
+  final Value<String> roomId;
+  final Value<String> callerId;
+  final Value<String?> recipientId;
+  final Value<int> callType;
+  final Value<int> direction;
+  final Value<int> status;
+  final Value<int> startedAt;
+  final Value<int?> answeredAt;
+  final Value<int?> endedAt;
+  final Value<int> duration;
+  final Value<bool> isRead;
+  final Value<bool> isDeleted;
+  const CallHistoryCompanion({
+    this.id = const Value.absent(),
+    this.roomId = const Value.absent(),
+    this.callerId = const Value.absent(),
+    this.recipientId = const Value.absent(),
+    this.callType = const Value.absent(),
+    this.direction = const Value.absent(),
+    this.status = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.answeredAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
+    this.duration = const Value.absent(),
+    this.isRead = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+  });
+  CallHistoryCompanion.insert({
+    this.id = const Value.absent(),
+    required String roomId,
+    required String callerId,
+    this.recipientId = const Value.absent(),
+    this.callType = const Value.absent(),
+    this.direction = const Value.absent(),
+    this.status = const Value.absent(),
+    required int startedAt,
+    this.answeredAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
+    this.duration = const Value.absent(),
+    this.isRead = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+  }) : roomId = Value(roomId),
+       callerId = Value(callerId),
+       startedAt = Value(startedAt);
+  static Insertable<CallHistoryData> custom({
+    Expression<int>? id,
+    Expression<String>? roomId,
+    Expression<String>? callerId,
+    Expression<String>? recipientId,
+    Expression<int>? callType,
+    Expression<int>? direction,
+    Expression<int>? status,
+    Expression<int>? startedAt,
+    Expression<int>? answeredAt,
+    Expression<int>? endedAt,
+    Expression<int>? duration,
+    Expression<bool>? isRead,
+    Expression<bool>? isDeleted,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (roomId != null) 'room_id': roomId,
+      if (callerId != null) 'caller_id': callerId,
+      if (recipientId != null) 'recipient_id': recipientId,
+      if (callType != null) 'call_type': callType,
+      if (direction != null) 'direction': direction,
+      if (status != null) 'status': status,
+      if (startedAt != null) 'started_at': startedAt,
+      if (answeredAt != null) 'answered_at': answeredAt,
+      if (endedAt != null) 'ended_at': endedAt,
+      if (duration != null) 'duration': duration,
+      if (isRead != null) 'is_read': isRead,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+    });
+  }
+
+  CallHistoryCompanion copyWith({
+    Value<int>? id,
+    Value<String>? roomId,
+    Value<String>? callerId,
+    Value<String?>? recipientId,
+    Value<int>? callType,
+    Value<int>? direction,
+    Value<int>? status,
+    Value<int>? startedAt,
+    Value<int?>? answeredAt,
+    Value<int?>? endedAt,
+    Value<int>? duration,
+    Value<bool>? isRead,
+    Value<bool>? isDeleted,
+  }) {
+    return CallHistoryCompanion(
+      id: id ?? this.id,
+      roomId: roomId ?? this.roomId,
+      callerId: callerId ?? this.callerId,
+      recipientId: recipientId ?? this.recipientId,
+      callType: callType ?? this.callType,
+      direction: direction ?? this.direction,
+      status: status ?? this.status,
+      startedAt: startedAt ?? this.startedAt,
+      answeredAt: answeredAt ?? this.answeredAt,
+      endedAt: endedAt ?? this.endedAt,
+      duration: duration ?? this.duration,
+      isRead: isRead ?? this.isRead,
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (roomId.present) {
+      map['room_id'] = Variable<String>(roomId.value);
+    }
+    if (callerId.present) {
+      map['caller_id'] = Variable<String>(callerId.value);
+    }
+    if (recipientId.present) {
+      map['recipient_id'] = Variable<String>(recipientId.value);
+    }
+    if (callType.present) {
+      map['call_type'] = Variable<int>(callType.value);
+    }
+    if (direction.present) {
+      map['direction'] = Variable<int>(direction.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<int>(status.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<int>(startedAt.value);
+    }
+    if (answeredAt.present) {
+      map['answered_at'] = Variable<int>(answeredAt.value);
+    }
+    if (endedAt.present) {
+      map['ended_at'] = Variable<int>(endedAt.value);
+    }
+    if (duration.present) {
+      map['duration'] = Variable<int>(duration.value);
+    }
+    if (isRead.present) {
+      map['is_read'] = Variable<bool>(isRead.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CallHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('roomId: $roomId, ')
+          ..write('callerId: $callerId, ')
+          ..write('recipientId: $recipientId, ')
+          ..write('callType: $callType, ')
+          ..write('direction: $direction, ')
+          ..write('status: $status, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('answeredAt: $answeredAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('duration: $duration, ')
+          ..write('isRead: $isRead, ')
+          ..write('isDeleted: $isDeleted')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7774,6 +8965,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $InviteLinkJoinsTable inviteLinkJoins = $InviteLinkJoinsTable(
     this,
   );
+  late final $CallHistoryTable callHistory = $CallHistoryTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7795,6 +8987,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     reports,
     inviteLinks,
     inviteLinkJoins,
+    callHistory,
   ];
 }
 
@@ -7805,6 +8998,10 @@ typedef $$ProfilesTableCreateCompanionBuilder =
       Value<String?> avatarUrl,
       Value<int?> updatedAt,
       Value<String?> metadata,
+      Value<int> status,
+      Value<String?> statusMessage,
+      Value<int?> statusUpdatedAt,
+      Value<String?> bio,
       Value<int> rowid,
     });
 typedef $$ProfilesTableUpdateCompanionBuilder =
@@ -7814,6 +9011,10 @@ typedef $$ProfilesTableUpdateCompanionBuilder =
       Value<String?> avatarUrl,
       Value<int?> updatedAt,
       Value<String?> metadata,
+      Value<int> status,
+      Value<String?> statusMessage,
+      Value<int?> statusUpdatedAt,
+      Value<String?> bio,
       Value<int> rowid,
     });
 
@@ -7848,6 +9049,26 @@ class $$ProfilesTableFilterComposer
 
   ColumnFilters<String> get metadata => $composableBuilder(
     column: $table.metadata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bio => $composableBuilder(
+    column: $table.bio,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7885,6 +9106,26 @@ class $$ProfilesTableOrderingComposer
     column: $table.metadata,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bio => $composableBuilder(
+    column: $table.bio,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProfilesTableAnnotationComposer
@@ -7910,6 +9151,22 @@ class $$ProfilesTableAnnotationComposer
 
   GeneratedColumn<String> get metadata =>
       $composableBuilder(column: $table.metadata, builder: (column) => column);
+
+  GeneratedColumn<int> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get statusMessage => $composableBuilder(
+    column: $table.statusMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get statusUpdatedAt => $composableBuilder(
+    column: $table.statusUpdatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bio =>
+      $composableBuilder(column: $table.bio, builder: (column) => column);
 }
 
 class $$ProfilesTableTableManager
@@ -7945,6 +9202,10 @@ class $$ProfilesTableTableManager
                 Value<String?> avatarUrl = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<String?> statusMessage = const Value.absent(),
+                Value<int?> statusUpdatedAt = const Value.absent(),
+                Value<String?> bio = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProfilesCompanion(
                 id: id,
@@ -7952,6 +9213,10 @@ class $$ProfilesTableTableManager
                 avatarUrl: avatarUrl,
                 updatedAt: updatedAt,
                 metadata: metadata,
+                status: status,
+                statusMessage: statusMessage,
+                statusUpdatedAt: statusUpdatedAt,
+                bio: bio,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7961,6 +9226,10 @@ class $$ProfilesTableTableManager
                 Value<String?> avatarUrl = const Value.absent(),
                 Value<int?> updatedAt = const Value.absent(),
                 Value<String?> metadata = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<String?> statusMessage = const Value.absent(),
+                Value<int?> statusUpdatedAt = const Value.absent(),
+                Value<String?> bio = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProfilesCompanion.insert(
                 id: id,
@@ -7968,6 +9237,10 @@ class $$ProfilesTableTableManager
                 avatarUrl: avatarUrl,
                 updatedAt: updatedAt,
                 metadata: metadata,
+                status: status,
+                statusMessage: statusMessage,
+                statusUpdatedAt: statusUpdatedAt,
+                bio: bio,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -8319,6 +9592,8 @@ typedef $$RoomsTableCreateCompanionBuilder =
       Value<String?> metadata,
       Value<int?> disappearingTimeout,
       Value<int?> mutedUntil,
+      Value<int?> memberLimit,
+      Value<bool> memberLimitEnabled,
       Value<int> rowid,
     });
 typedef $$RoomsTableUpdateCompanionBuilder =
@@ -8332,6 +9607,8 @@ typedef $$RoomsTableUpdateCompanionBuilder =
       Value<String?> metadata,
       Value<int?> disappearingTimeout,
       Value<int?> mutedUntil,
+      Value<int?> memberLimit,
+      Value<bool> memberLimitEnabled,
       Value<int> rowid,
     });
 
@@ -8462,6 +9739,16 @@ class $$RoomsTableFilterComposer extends Composer<_$AppDatabase, $RoomsTable> {
 
   ColumnFilters<int> get mutedUntil => $composableBuilder(
     column: $table.mutedUntil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get memberLimit => $composableBuilder(
+    column: $table.memberLimit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get memberLimitEnabled => $composableBuilder(
+    column: $table.memberLimitEnabled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8619,6 +9906,16 @@ class $$RoomsTableOrderingComposer
     column: $table.mutedUntil,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get memberLimit => $composableBuilder(
+    column: $table.memberLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get memberLimitEnabled => $composableBuilder(
+    column: $table.memberLimitEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RoomsTableAnnotationComposer
@@ -8664,6 +9961,16 @@ class $$RoomsTableAnnotationComposer
 
   GeneratedColumn<int> get mutedUntil => $composableBuilder(
     column: $table.mutedUntil,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get memberLimit => $composableBuilder(
+    column: $table.memberLimit,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get memberLimitEnabled => $composableBuilder(
+    column: $table.memberLimitEnabled,
     builder: (column) => column,
   );
 
@@ -8810,6 +10117,8 @@ class $$RoomsTableTableManager
                 Value<String?> metadata = const Value.absent(),
                 Value<int?> disappearingTimeout = const Value.absent(),
                 Value<int?> mutedUntil = const Value.absent(),
+                Value<int?> memberLimit = const Value.absent(),
+                Value<bool> memberLimitEnabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomsCompanion(
                 id: id,
@@ -8821,6 +10130,8 @@ class $$RoomsTableTableManager
                 metadata: metadata,
                 disappearingTimeout: disappearingTimeout,
                 mutedUntil: mutedUntil,
+                memberLimit: memberLimit,
+                memberLimitEnabled: memberLimitEnabled,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8834,6 +10145,8 @@ class $$RoomsTableTableManager
                 Value<String?> metadata = const Value.absent(),
                 Value<int?> disappearingTimeout = const Value.absent(),
                 Value<int?> mutedUntil = const Value.absent(),
+                Value<int?> memberLimit = const Value.absent(),
+                Value<bool> memberLimitEnabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomsCompanion.insert(
                 id: id,
@@ -8845,6 +10158,8 @@ class $$RoomsTableTableManager
                 metadata: metadata,
                 disappearingTimeout: disappearingTimeout,
                 mutedUntil: mutedUntil,
+                memberLimit: memberLimit,
+                memberLimitEnabled: memberLimitEnabled,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -9342,6 +10657,8 @@ typedef $$RoomEventsTableCreateCompanionBuilder =
       Value<int> forwardCount,
       Value<bool> forwardRestricted,
       Value<int?> expiresAt,
+      Value<bool> starred,
+      Value<int?> starredAt,
       Value<int> rowid,
     });
 typedef $$RoomEventsTableUpdateCompanionBuilder =
@@ -9369,6 +10686,8 @@ typedef $$RoomEventsTableUpdateCompanionBuilder =
       Value<int> forwardCount,
       Value<bool> forwardRestricted,
       Value<int?> expiresAt,
+      Value<bool> starred,
+      Value<int?> starredAt,
       Value<int> rowid,
     });
 
@@ -9511,6 +10830,16 @@ class $$RoomEventsTableFilterComposer
 
   ColumnFilters<int> get expiresAt => $composableBuilder(
     column: $table.expiresAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get starred => $composableBuilder(
+    column: $table.starred,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get starredAt => $composableBuilder(
+    column: $table.starredAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9657,6 +10986,16 @@ class $$RoomEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get starred => $composableBuilder(
+    column: $table.starred,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get starredAt => $composableBuilder(
+    column: $table.starredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RoomsTableOrderingComposer get roomId {
     final $$RoomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9776,6 +11115,12 @@ class $$RoomEventsTableAnnotationComposer
   GeneratedColumn<int> get expiresAt =>
       $composableBuilder(column: $table.expiresAt, builder: (column) => column);
 
+  GeneratedColumn<bool> get starred =>
+      $composableBuilder(column: $table.starred, builder: (column) => column);
+
+  GeneratedColumn<int> get starredAt =>
+      $composableBuilder(column: $table.starredAt, builder: (column) => column);
+
   $$RoomsTableAnnotationComposer get roomId {
     final $$RoomsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -9851,6 +11196,8 @@ class $$RoomEventsTableTableManager
                 Value<int> forwardCount = const Value.absent(),
                 Value<bool> forwardRestricted = const Value.absent(),
                 Value<int?> expiresAt = const Value.absent(),
+                Value<bool> starred = const Value.absent(),
+                Value<int?> starredAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion(
                 id: id,
@@ -9876,6 +11223,8 @@ class $$RoomEventsTableTableManager
                 forwardCount: forwardCount,
                 forwardRestricted: forwardRestricted,
                 expiresAt: expiresAt,
+                starred: starred,
+                starredAt: starredAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9903,6 +11252,8 @@ class $$RoomEventsTableTableManager
                 Value<int> forwardCount = const Value.absent(),
                 Value<bool> forwardRestricted = const Value.absent(),
                 Value<int?> expiresAt = const Value.absent(),
+                Value<bool> starred = const Value.absent(),
+                Value<int?> starredAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RoomEventsCompanion.insert(
                 id: id,
@@ -9928,6 +11279,8 @@ class $$RoomEventsTableTableManager
                 forwardCount: forwardCount,
                 forwardRestricted: forwardRestricted,
                 expiresAt: expiresAt,
+                starred: starred,
+                starredAt: starredAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -12729,6 +14082,356 @@ typedef $$InviteLinkJoinsTableProcessedTableManager =
       InviteLinkJoin,
       PrefetchHooks Function({bool inviteLinkId})
     >;
+typedef $$CallHistoryTableCreateCompanionBuilder =
+    CallHistoryCompanion Function({
+      Value<int> id,
+      required String roomId,
+      required String callerId,
+      Value<String?> recipientId,
+      Value<int> callType,
+      Value<int> direction,
+      Value<int> status,
+      required int startedAt,
+      Value<int?> answeredAt,
+      Value<int?> endedAt,
+      Value<int> duration,
+      Value<bool> isRead,
+      Value<bool> isDeleted,
+    });
+typedef $$CallHistoryTableUpdateCompanionBuilder =
+    CallHistoryCompanion Function({
+      Value<int> id,
+      Value<String> roomId,
+      Value<String> callerId,
+      Value<String?> recipientId,
+      Value<int> callType,
+      Value<int> direction,
+      Value<int> status,
+      Value<int> startedAt,
+      Value<int?> answeredAt,
+      Value<int?> endedAt,
+      Value<int> duration,
+      Value<bool> isRead,
+      Value<bool> isDeleted,
+    });
+
+class $$CallHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $CallHistoryTable> {
+  $$CallHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get roomId => $composableBuilder(
+    column: $table.roomId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get callerId => $composableBuilder(
+    column: $table.callerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recipientId => $composableBuilder(
+    column: $table.recipientId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get callType => $composableBuilder(
+    column: $table.callType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get direction => $composableBuilder(
+    column: $table.direction,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get answeredAt => $composableBuilder(
+    column: $table.answeredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get duration => $composableBuilder(
+    column: $table.duration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRead => $composableBuilder(
+    column: $table.isRead,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CallHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $CallHistoryTable> {
+  $$CallHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get roomId => $composableBuilder(
+    column: $table.roomId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get callerId => $composableBuilder(
+    column: $table.callerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recipientId => $composableBuilder(
+    column: $table.recipientId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get callType => $composableBuilder(
+    column: $table.callType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get direction => $composableBuilder(
+    column: $table.direction,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get answeredAt => $composableBuilder(
+    column: $table.answeredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get duration => $composableBuilder(
+    column: $table.duration,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isRead => $composableBuilder(
+    column: $table.isRead,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CallHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CallHistoryTable> {
+  $$CallHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get roomId =>
+      $composableBuilder(column: $table.roomId, builder: (column) => column);
+
+  GeneratedColumn<String> get callerId =>
+      $composableBuilder(column: $table.callerId, builder: (column) => column);
+
+  GeneratedColumn<String> get recipientId => $composableBuilder(
+    column: $table.recipientId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get callType =>
+      $composableBuilder(column: $table.callType, builder: (column) => column);
+
+  GeneratedColumn<int> get direction =>
+      $composableBuilder(column: $table.direction, builder: (column) => column);
+
+  GeneratedColumn<int> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get answeredAt => $composableBuilder(
+    column: $table.answeredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get duration =>
+      $composableBuilder(column: $table.duration, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRead =>
+      $composableBuilder(column: $table.isRead, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+}
+
+class $$CallHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CallHistoryTable,
+          CallHistoryData,
+          $$CallHistoryTableFilterComposer,
+          $$CallHistoryTableOrderingComposer,
+          $$CallHistoryTableAnnotationComposer,
+          $$CallHistoryTableCreateCompanionBuilder,
+          $$CallHistoryTableUpdateCompanionBuilder,
+          (
+            CallHistoryData,
+            BaseReferences<_$AppDatabase, $CallHistoryTable, CallHistoryData>,
+          ),
+          CallHistoryData,
+          PrefetchHooks Function()
+        > {
+  $$CallHistoryTableTableManager(_$AppDatabase db, $CallHistoryTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CallHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CallHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CallHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> roomId = const Value.absent(),
+                Value<String> callerId = const Value.absent(),
+                Value<String?> recipientId = const Value.absent(),
+                Value<int> callType = const Value.absent(),
+                Value<int> direction = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                Value<int> startedAt = const Value.absent(),
+                Value<int?> answeredAt = const Value.absent(),
+                Value<int?> endedAt = const Value.absent(),
+                Value<int> duration = const Value.absent(),
+                Value<bool> isRead = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+              }) => CallHistoryCompanion(
+                id: id,
+                roomId: roomId,
+                callerId: callerId,
+                recipientId: recipientId,
+                callType: callType,
+                direction: direction,
+                status: status,
+                startedAt: startedAt,
+                answeredAt: answeredAt,
+                endedAt: endedAt,
+                duration: duration,
+                isRead: isRead,
+                isDeleted: isDeleted,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String roomId,
+                required String callerId,
+                Value<String?> recipientId = const Value.absent(),
+                Value<int> callType = const Value.absent(),
+                Value<int> direction = const Value.absent(),
+                Value<int> status = const Value.absent(),
+                required int startedAt,
+                Value<int?> answeredAt = const Value.absent(),
+                Value<int?> endedAt = const Value.absent(),
+                Value<int> duration = const Value.absent(),
+                Value<bool> isRead = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+              }) => CallHistoryCompanion.insert(
+                id: id,
+                roomId: roomId,
+                callerId: callerId,
+                recipientId: recipientId,
+                callType: callType,
+                direction: direction,
+                status: status,
+                startedAt: startedAt,
+                answeredAt: answeredAt,
+                endedAt: endedAt,
+                duration: duration,
+                isRead: isRead,
+                isDeleted: isDeleted,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CallHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CallHistoryTable,
+      CallHistoryData,
+      $$CallHistoryTableFilterComposer,
+      $$CallHistoryTableOrderingComposer,
+      $$CallHistoryTableAnnotationComposer,
+      $$CallHistoryTableCreateCompanionBuilder,
+      $$CallHistoryTableUpdateCompanionBuilder,
+      (
+        CallHistoryData,
+        BaseReferences<_$AppDatabase, $CallHistoryTable, CallHistoryData>,
+      ),
+      CallHistoryData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12765,4 +14468,6 @@ class $AppDatabaseManager {
       $$InviteLinksTableTableManager(_db, _db.inviteLinks);
   $$InviteLinkJoinsTableTableManager get inviteLinkJoins =>
       $$InviteLinkJoinsTableTableManager(_db, _db.inviteLinkJoins);
+  $$CallHistoryTableTableManager get callHistory =>
+      $$CallHistoryTableTableManager(_db, _db.callHistory);
 }
