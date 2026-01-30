@@ -233,7 +233,7 @@ class _StarredMessageTile extends ConsumerWidget {
                           color: theme.colorScheme.outline,
                         ),
                       ),
-                      error: (_, __) => Text(
+                      error: (_, _) => Text(
                         'Unknown Room',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.outline,

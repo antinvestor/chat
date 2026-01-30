@@ -1309,10 +1309,7 @@ class Room extends DataClass implements Insertable<Room> {
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   final int? disappearingTimeout;
 
-  /// Mute notifications until this timestamp (milliseconds since epoch)
-  /// - null = not muted
-  /// - 0 = muted forever
-  /// - timestamp = muted until that time
+  /// Mute notifications until this epoch timestamp (null = not muted)
   final int? mutedUntil;
   const Room({
     required this.id,
@@ -2766,10 +2763,10 @@ class RoomEvent extends DataClass implements Insertable<RoomEvent> {
   /// Null means the message does not expire
   final int? expiresAt;
 
-  /// Whether this message has been starred by the user
+  /// Whether this message is starred/bookmarked by the user
   final bool starred;
 
-  /// Timestamp when this message was starred (null if not starred)
+  /// Timestamp when the message was starred (for sorting starred messages)
   final int? starredAt;
   const RoomEvent({
     required this.id,

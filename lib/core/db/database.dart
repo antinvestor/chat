@@ -90,6 +90,7 @@ class Rooms extends Table {
   /// Disappearing messages timeout in seconds (null = disabled)
   /// Supported values: null (off), 86400 (24h), 604800 (7d), 7776000 (90d)
   IntColumn get disappearingTimeout => integer().nullable()();
+
   /// Mute notifications until this epoch timestamp (null = not muted)
   IntColumn get mutedUntil => integer().nullable()();
 
