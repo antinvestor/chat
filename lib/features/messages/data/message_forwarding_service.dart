@@ -256,8 +256,6 @@ final messageForwardingServiceProvider = Provider<MessageForwardingService>((
 
   return MessageForwardingService(messageRepo, jobRepo, (String roomId) async {
     // Use AuthContextService for atomic auth state and automatic sync
-    return authContextService.requireSubscriptionIdForRoom(
-      roomId,
-    );
+    return authContextService.requireSubscriptionIdForRoom(roomId);
   });
 });
