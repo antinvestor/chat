@@ -264,7 +264,7 @@ jobs:
           exit 1
 
       - name: Upload to App Store Connect
-        uses: apple-actions/upload-testflight-build@v1
+        uses: apple-actions/upload-testflight-build@v4
         with:
           app-path: artifacts/Runner.ipa
           issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
