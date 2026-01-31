@@ -106,6 +106,8 @@ dev_dependencies:
   freezed: ^3.2.3
   import_sorter: ^4.6.0
   json_serializable: ^6.11.2
+  patrol: ^3.6.0
+  patrol_finders: ^2.0.0
   riverpod_generator: ^4.0.0+1
 
 
