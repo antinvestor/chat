@@ -8,10 +8,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../features/contacts/data/roster_repository.dart';
 import '../../../features/rooms/data/room_subscription_service.dart';
+import '../data/link_preview_service.dart';
 import '../data/upload_progress_provider.dart';
 import '../domain/room_event.dart';
 import '../domain/upload_progress.dart';
 import 'read_receipt_indicator.dart';
+import 'widgets/link_preview_card.dart';
 import 'widgets/upload_progress_indicator.dart';
 import 'widgets/voice_message_player.dart';
 
@@ -385,14 +387,25 @@ class MessageBubble extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 16,
-        height: 1.5,
-        color: _getTextColor(isMe, isDarkMode),
-        fontWeight: FontWeight.w400,
-      ),
+    // Check if text contains URLs for link preview
+    final hasUrls = LinkPreviewService.extractUrls(text).isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 16,
+            height: 1.5,
+            color: _getTextColor(isMe, isDarkMode),
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        // Show link preview for the first URL in the message
+        if (hasUrls) InlineMessageLinkPreview(text: text, isOwnMessage: isMe),
+      ],
     );
   }
 
