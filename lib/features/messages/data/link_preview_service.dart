@@ -163,14 +163,16 @@ class LinkPreviewService {
     String? getMetaProperty(String property) {
       return document
           .querySelector('meta[property="$property"]')
-          ?.attributes['content'];
+          ?.attributes['content']
+          ?.trim();
     }
 
     // Helper to get meta content by name attribute
     String? getMetaName(String name) {
       return document
           .querySelector('meta[name="$name"]')
-          ?.attributes['content'];
+          ?.attributes['content']
+          ?.trim();
     }
 
     // Helper to get link href by rel attribute
