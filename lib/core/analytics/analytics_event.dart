@@ -110,10 +110,26 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     },
   );
 
-  /// Create a call event
-  factory AnalyticsEvent.call({
+  /// Create a call started event
+  factory AnalyticsEvent.callStarted({
     required String id,
-    required AnalyticsEventType callEventType,
+    required String roomId,
+    required String callType,
+    String? userId,
+    String? sessionId,
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.callStarted,
+    name: 'call_started',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {'room_id': roomId, 'call_type': callType},
+  );
+
+  /// Create a call ended event
+  factory AnalyticsEvent.callEnded({
+    required String id,
     required String roomId,
     required String callType,
     String? userId,
@@ -121,8 +137,8 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     int? durationSeconds,
   }) => AnalyticsEvent(
     id: id,
-    type: callEventType,
-    name: 'call_${callEventType.name}',
+    type: AnalyticsEventType.callEnded,
+    name: 'call_ended',
     timestamp: DateTime.now().toUtc(),
     userId: userId,
     sessionId: sessionId,
@@ -133,10 +149,60 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     },
   );
 
-  /// Create a room event
-  factory AnalyticsEvent.room({
+  /// Create a call answered event
+  factory AnalyticsEvent.callAnswered({
     required String id,
-    required AnalyticsEventType roomEventType,
+    required String roomId,
+    required String callType,
+    String? userId,
+    String? sessionId,
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.callAnswered,
+    name: 'call_answered',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {'room_id': roomId, 'call_type': callType},
+  );
+
+  /// Create a call declined event
+  factory AnalyticsEvent.callDeclined({
+    required String id,
+    required String roomId,
+    required String callType,
+    String? userId,
+    String? sessionId,
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.callDeclined,
+    name: 'call_declined',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {'room_id': roomId, 'call_type': callType},
+  );
+
+  /// Create a call missed event
+  factory AnalyticsEvent.callMissed({
+    required String id,
+    required String roomId,
+    required String callType,
+    String? userId,
+    String? sessionId,
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.callMissed,
+    name: 'call_missed',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {'room_id': roomId, 'call_type': callType},
+  );
+
+  /// Create a room created event
+  factory AnalyticsEvent.roomCreated({
+    required String id,
     required String roomId,
     required String roomType,
     String? userId,
@@ -144,8 +210,8 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
     int? memberCount,
   }) => AnalyticsEvent(
     id: id,
-    type: roomEventType,
-    name: 'room_${roomEventType.name}',
+    type: AnalyticsEventType.roomCreated,
+    name: 'room_created',
     timestamp: DateTime.now().toUtc(),
     userId: userId,
     sessionId: sessionId,
@@ -154,6 +220,62 @@ abstract class AnalyticsEvent with _$AnalyticsEvent {
       'room_type': roomType,
       if (memberCount != null) 'member_count': memberCount,
     },
+  );
+
+  /// Create a room joined event
+  factory AnalyticsEvent.roomJoined({
+    required String id,
+    required String roomId,
+    required String roomType,
+    String? userId,
+    String? sessionId,
+    int? memberCount,
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.roomJoined,
+    name: 'room_joined',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {
+      'room_id': roomId,
+      'room_type': roomType,
+      if (memberCount != null) 'member_count': memberCount,
+    },
+  );
+
+  /// Create a room left event
+  factory AnalyticsEvent.roomLeft({
+    required String id,
+    required String roomId,
+    required String roomType,
+    String? userId,
+    String? sessionId,
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.roomLeft,
+    name: 'room_left',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {'room_id': roomId, 'room_type': roomType},
+  );
+
+  /// Create a room deleted event
+  factory AnalyticsEvent.roomDeleted({
+    required String id,
+    required String roomId,
+    required String roomType,
+    String? userId,
+    String? sessionId,
+  }) => AnalyticsEvent(
+    id: id,
+    type: AnalyticsEventType.roomDeleted,
+    name: 'room_deleted',
+    timestamp: DateTime.now().toUtc(),
+    userId: userId,
+    sessionId: sessionId,
+    properties: {'room_id': roomId, 'room_type': roomType},
   );
 
   /// Create a feature usage event

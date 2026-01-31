@@ -36,7 +36,7 @@
 /// - All user identifiers can be anonymized
 /// - Data is stored locally before batch upload
 /// - Users can opt-out completely via settings
-library;
+library analytics;
 
 export 'analytics_event.dart';
 export 'analytics_observer.dart';

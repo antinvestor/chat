@@ -3,8 +3,11 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../db/database.dart' as db;
+import '../db/database.dart' hide AnalyticsEvent;
 import 'analytics_event.dart';
+
+// Drift-generated data class for the analytics_events table
+typedef AnalyticsEventRow = dynamic;
 
 /// Repository for storing and retrieving analytics events from local database
 ///
@@ -12,14 +15,14 @@ import 'analytics_event.dart';
 class AnalyticsRepository {
   AnalyticsRepository(this._database);
 
-  final db.AppDatabase _database;
+  final AppDatabase _database;
 
   /// Insert a new analytics event
   Future<int> insertEvent(AnalyticsEvent event) async {
     return _database
         .into(_database.analyticsEvents)
         .insert(
-          db.AnalyticsEventsCompanion.insert(
+          AnalyticsEventsCompanion.insert(
             eventId: event.id,
             eventType: event.type.name,
             eventName: event.name,
@@ -41,7 +44,7 @@ class AnalyticsRepository {
       for (final event in events) {
         batch.insert(
           _database.analyticsEvents,
-          db.AnalyticsEventsCompanion.insert(
+          AnalyticsEventsCompanion.insert(
             eventId: event.id,
             eventType: event.type.name,
             eventName: event.name,
@@ -75,7 +78,7 @@ class AnalyticsRepository {
     await (_database.update(
       _database.analyticsEvents,
     )..where((t) => t.eventId.isIn(eventIds))).write(
-      db.AnalyticsEventsCompanion(
+      AnalyticsEventsCompanion(
         isSynced: const Value(true),
         syncedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
@@ -171,33 +174,33 @@ class AnalyticsRepository {
   }
 
   /// Convert database row to AnalyticsEvent
-  AnalyticsEvent _rowToEvent(db.AnalyticsEvent row) {
+  AnalyticsEvent _rowToEvent(row) {
     Map<String, dynamic>? properties;
     if (row.properties != null) {
       properties = jsonDecode(row.properties!) as Map<String, dynamic>;
     }
 
     return AnalyticsEvent(
-      id: row.eventId,
+      id: row.eventId as String,
       type: AnalyticsEventType.values.firstWhere(
         (t) => t.name == row.eventType,
         orElse: () => AnalyticsEventType.custom,
       ),
-      name: row.eventName,
+      name: row.eventName as String,
       timestamp: DateTime.fromMillisecondsSinceEpoch(
-        row.timestamp,
+        row.timestamp as int,
         isUtc: true,
       ),
-      userId: row.userId,
-      sessionId: row.sessionId,
-      screenName: row.screenName,
+      userId: row.userId as String?,
+      sessionId: row.sessionId as String?,
+      screenName: row.screenName as String?,
       properties: properties,
-      isSynced: row.isSynced,
+      isSynced: row.isSynced as bool,
     );
   }
 }
 
 /// Provider for the analytics repository
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
-  return AnalyticsRepository(db.AppDatabase.instance);
+  return AnalyticsRepository(AppDatabase.instance);
 });
