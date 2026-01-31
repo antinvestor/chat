@@ -106,6 +106,15 @@ class NotificationContentFormatter {
       case RoomEventType.callIce:
       case RoomEventType.callEnd:
         return 'Call activity';
+      case RoomEventType.groupCallStart:
+      case RoomEventType.groupCallJoin:
+      case RoomEventType.groupCallLeave:
+      case RoomEventType.groupCallEnd:
+      case RoomEventType.groupCallOffer:
+      case RoomEventType.groupCallAnswer:
+      case RoomEventType.groupCallIce:
+      case RoomEventType.groupCallMuteUpdate:
+        return 'Group call activity';
       case RoomEventType.roomKey:
         return 'Security update';
       case RoomEventType.roomChange:
@@ -161,8 +170,24 @@ class NotificationContentFormatter {
 
         case RoomEventType.callIce:
         case RoomEventType.roomKey:
+        case RoomEventType.groupCallOffer:
+        case RoomEventType.groupCallAnswer:
+        case RoomEventType.groupCallIce:
+        case RoomEventType.groupCallMuteUpdate:
           // These are internal events, shouldn't normally be shown
           return ('', null);
+
+        case RoomEventType.groupCallStart:
+          return ('Group call started', null);
+
+        case RoomEventType.groupCallJoin:
+          return ('Someone joined the call', null);
+
+        case RoomEventType.groupCallLeave:
+          return ('Someone left the call', null);
+
+        case RoomEventType.groupCallEnd:
+          return ('Group call ended', null);
 
         case RoomEventType.roomChange:
           final body =

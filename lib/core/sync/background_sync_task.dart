@@ -787,7 +787,15 @@ class BackgroundSyncTask {
       case domain.RoomEventType.callAnswer:
       case domain.RoomEventType.callIce:
       case domain.RoomEventType.callEnd:
-        // All call types now map to a single ROOM_EVENT_TYPE_CALL
+      case domain.RoomEventType.groupCallStart:
+      case domain.RoomEventType.groupCallJoin:
+      case domain.RoomEventType.groupCallLeave:
+      case domain.RoomEventType.groupCallEnd:
+      case domain.RoomEventType.groupCallOffer:
+      case domain.RoomEventType.groupCallAnswer:
+      case domain.RoomEventType.groupCallIce:
+      case domain.RoomEventType.groupCallMuteUpdate:
+        // All call types (1-on-1 and group) map to a single ROOM_EVENT_TYPE_CALL
         return pb.RoomEventType.ROOM_EVENT_TYPE_CALL;
       case domain.RoomEventType.motion:
         return pb.RoomEventType.ROOM_EVENT_TYPE_MOTION;
