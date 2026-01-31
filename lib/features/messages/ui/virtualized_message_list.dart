@@ -12,6 +12,7 @@ import '../data/message_sending_service.dart';
 import '../domain/room_event.dart';
 import 'date_header.dart';
 import 'message_bubble.dart';
+import 'system_event_bubble.dart';
 
 /// Configuration for the virtualized message list
 class VirtualizedMessageListConfig {
@@ -581,6 +582,20 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
         return MotionBubble(event: widget.message, isMe: isMe);
       case RoomEventType.transaction:
         return TransactionBubble(event: widget.message, isMe: isMe);
+      case RoomEventType.vote:
+        return VoteBubble(event: widget.message, isMe: isMe);
+      case RoomEventType.roomChange:
+        return SystemEventBubble(event: widget.message);
+      case RoomEventType.roomKey:
+        // Room key events are internal and should not be displayed
+        return const SizedBox.shrink();
+      case RoomEventType.callOffer:
+      case RoomEventType.callAnswer:
+      case RoomEventType.callIce:
+      case RoomEventType.callEnd:
+        // Call signaling events are handled by SignalingService
+        // and should not appear in the message list
+        return const SizedBox.shrink();
       default:
         return MessageBubble(
           message: widget.message,

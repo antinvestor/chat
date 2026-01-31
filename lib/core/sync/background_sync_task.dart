@@ -104,6 +104,33 @@ class BackgroundSyncTask {
         // Don't fail the sync task for cleanup errors
       }
 
+      // Clean up old failed jobs (older than 7 days)
+      try {
+        final cleanedJobs = await jobRepo.clearOldFailedJobs();
+        if (cleanedJobs > 0) {
+          AppLogger.info(
+            'Cleaned up old failed jobs',
+            data: {'cleanedCount': cleanedJobs},
+          );
+        }
+
+        // Log warning if there are recent failed jobs
+        final failedCount = await jobRepo.getFailedJobCount();
+        if (failedCount > 0) {
+          AppLogger.warning(
+            'There are failed messages that could not be sent',
+            data: {'failedCount': failedCount},
+          );
+        }
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Failed to clean up old failed jobs',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        // Don't fail the sync task for cleanup errors
+      }
+
       // Refresh badge count after sync
       if (BadgeService.isSupported) {
         try {

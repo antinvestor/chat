@@ -7,6 +7,11 @@ import '../logging/app_logger.dart';
 import '../sync/sync_engine.dart';
 
 /// Monitors network connectivity and triggers sync when coming back online
+///
+/// Features:
+/// - Debounces rapid connectivity changes to prevent excessive sync restarts
+/// - Tracks offline/online transitions
+/// - Triggers SyncEngine restart when coming back online
 class ConnectivityService {
   ConnectivityService(this._connectivity, this._syncEngine);
   final Connectivity _connectivity;
@@ -15,6 +20,11 @@ class ConnectivityService {
   StreamSubscription<List<ConnectivityResult>>? _subscription;
   bool _wasOffline = false;
   bool _isInitialized = false;
+
+  // Debouncing configuration
+  Timer? _debounceTimer;
+  static const _debounceDuration = Duration(milliseconds: 1500);
+  bool _pendingSync = false;
 
   /// Start monitoring connectivity changes
   void start() {
@@ -58,12 +68,37 @@ class ConnectivityService {
     );
 
     if (hasConnection && _wasOffline) {
-      // Just came back online - trigger sync
-      AppLogger.info('Back online, triggering sync');
-      _triggerSync();
+      // Just came back online - schedule debounced sync
+      _scheduleDebouncedSync();
+    } else if (!hasConnection) {
+      // Going offline - cancel any pending sync
+      _cancelPendingSync();
     }
 
     _wasOffline = !hasConnection;
+  }
+
+  /// Schedule a debounced sync to prevent rapid reconnection cycles
+  void _scheduleDebouncedSync() {
+    _pendingSync = true;
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounceDuration, () {
+      if (_pendingSync) {
+        AppLogger.info('Debounced sync triggered after stable connection');
+        _triggerSync();
+        _pendingSync = false;
+      }
+    });
+  }
+
+  /// Cancel any pending sync (called when going offline)
+  void _cancelPendingSync() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+    if (_pendingSync) {
+      AppLogger.info('Cancelled pending sync due to connection loss');
+      _pendingSync = false;
+    }
   }
 
   bool _hasConnection(List<ConnectivityResult> results) => results.any(
@@ -93,6 +128,8 @@ class ConnectivityService {
   }
 
   void stop() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
     _subscription?.cancel();
     _subscription = null;
     _isInitialized = false;

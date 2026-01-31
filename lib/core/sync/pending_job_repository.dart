@@ -352,6 +352,18 @@ class PendingJobRepository {
     return result.read(_database.pendingJobs.id.count()) ?? 0;
   }
 
+  /// Watch for failed jobs count (reactive)
+  /// Useful for showing notification badges
+  Stream<int> watchFailedJobCount() {
+    final query = _database.selectOnly(_database.pendingJobs)
+      ..where(_database.pendingJobs.status.equals('failed'))
+      ..addColumns([_database.pendingJobs.id.count()]);
+
+    return query.watchSingle().map(
+      (row) => row.read(_database.pendingJobs.id.count()) ?? 0,
+    );
+  }
+
   /// Get comprehensive health metrics for the job queue
   Future<JobQueueHealth> getQueueHealth() async {
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -532,6 +544,17 @@ class PendingJobRepository {
     return results.map(_rowToJob).toList();
   }
 
+  /// Get details of recent failed jobs for user notification
+  Future<List<domain.PendingJob>> getRecentFailedJobs({int limit = 10}) async {
+    final query = _database.select(_database.pendingJobs)
+      ..where((t) => t.status.equals('failed'))
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..limit(limit);
+
+    final results = await query.get();
+    return results.map(_rowToJob).toList();
+  }
+
   /// Retry a specific failed job
   ///
   /// Resets the job to pending status with reset retry count
@@ -560,6 +583,13 @@ class PendingJobRepository {
 
     AppLogger.info('Failed job manually retried', data: {'jobId': id});
     return true;
+  }
+
+  /// Delete a specific failed job (give up on it)
+  Future<void> deleteFailedJob(int id) async {
+    await (_database.delete(
+      _database.pendingJobs,
+    )..where((t) => t.id.equals(id))).go();
   }
 
   /// Safely decode job payload with error handling for data corruption
