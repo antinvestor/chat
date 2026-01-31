@@ -108,7 +108,7 @@ class RichNotificationService {
       );
 
       await _localNotifications.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: _onNotificationResponse,
         onDidReceiveBackgroundNotificationResponse:
             _onBackgroundNotificationResponse,
@@ -294,10 +294,10 @@ class RichNotificationService {
     final payload = '$roomId:${roomName ?? ''}';
 
     await _localNotifications.show(
-      notificationId,
-      content.title,
-      content.body,
-      notificationDetails,
+      id: notificationId,
+      title: content.title,
+      body: content.body,
+      notificationDetails: notificationDetails,
       payload: payload,
     );
 
@@ -455,10 +455,10 @@ class RichNotificationService {
     );
 
     await _localNotifications.show(
-      notificationId,
-      isVideoCall ? 'Incoming Video Call' : 'Incoming Call',
-      callerName,
-      NotificationDetails(
+      id: notificationId,
+      title: isVideoCall ? 'Incoming Video Call' : 'Incoming Call',
+      body: callerName,
+      notificationDetails: NotificationDetails(
         android: androidDetails,
         iOS: darwinDetails,
         macOS: darwinDetails,
@@ -469,7 +469,7 @@ class RichNotificationService {
 
   /// Cancel a notification by room ID
   Future<void> cancelNotification(String roomId) async {
-    await _localNotifications.cancel(roomId.hashCode);
+    await _localNotifications.cancel(id: roomId.hashCode);
   }
 
   /// Cancel all notifications

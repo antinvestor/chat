@@ -381,9 +381,11 @@ class InviteLinksScreen extends ConsumerWidget {
   }
 
   void _shareLink(InviteLink link) {
-    Share.share(
-      'Join our group on Chat!\n${link.inviteUrl}',
-      subject: 'Invite to join $roomName',
+    SharePlus.instance.share(
+      ShareParams(
+        text: 'Join our group on Chat!\n${link.inviteUrl}',
+        subject: 'Invite to join $roomName',
+      ),
     );
   }
 

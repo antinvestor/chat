@@ -151,7 +151,7 @@ class NotificationGroupingService {
 
       // Initialize the plugin
       await _notificationsPlugin.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
         onDidReceiveBackgroundNotificationResponse:
             _onBackgroundNotificationTapped,
@@ -237,7 +237,7 @@ class NotificationGroupingService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
-        ?.deleteNotificationChannel(channelId);
+        ?.deleteNotificationChannel(channelId: channelId);
 
     _roomChannelMap.remove(roomId);
 
@@ -317,10 +317,10 @@ class NotificationGroupingService {
 
       // Show the notification
       await _notificationsPlugin.show(
-        notificationId,
-        title,
-        body,
-        details,
+        id: notificationId,
+        title: title,
+        body: body,
+        notificationDetails: details,
         payload: roomId,
       );
 
@@ -438,10 +438,10 @@ class NotificationGroupingService {
     );
 
     await _notificationsPlugin.show(
-      summaryId,
-      roomName,
-      '$messageCount new messages',
-      NotificationDetails(android: androidDetails),
+      id: summaryId,
+      title: roomName,
+      body: '$messageCount new messages',
+      notificationDetails: NotificationDetails(android: androidDetails),
       payload: roomId,
     );
   }
@@ -487,12 +487,12 @@ class NotificationGroupingService {
       // Cancel the main notification using our tracked ID
       final notificationId = _roomNotificationIds[roomId];
       if (notificationId != null) {
-        await _notificationsPlugin.cancel(notificationId);
+        await _notificationsPlugin.cancel(id: notificationId);
 
         // Cancel the summary notification (Android)
         if (Platform.isAndroid) {
           final summaryId = notificationId + _summaryNotificationIdOffset;
-          await _notificationsPlugin.cancel(summaryId);
+          await _notificationsPlugin.cancel(id: summaryId);
         }
       }
 

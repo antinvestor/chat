@@ -85,7 +85,9 @@ class InviteLinkDetailSheet extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.share),
                   label: const Text('Share'),
-                  onPressed: () => Share.share(link.inviteUrl),
+                  onPressed: () => SharePlus.instance.share(
+                    ShareParams(text: link.inviteUrl),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
