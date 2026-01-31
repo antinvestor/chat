@@ -36,7 +36,7 @@ class FailedJobsBanner extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.red.shade900.withValues(alpha: 0.3)
+            ? Colors.red.shade900.withOpacity(0.3)
             : Colors.red.shade50,
         border: Border(
           bottom: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
