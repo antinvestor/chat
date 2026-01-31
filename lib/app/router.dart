@@ -14,6 +14,7 @@ import '../features/profile/ui/profile_screen.dart';
 import '../features/rooms/ui/group_settings_screen.dart';
 import '../features/rooms/ui/room_detail_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
+import '../features/search/ui/global_search_screen.dart';
 import '../features/settings/ui/account_settings_screen.dart';
 import '../features/settings/ui/cache_settings_screen.dart';
 import '../features/settings/ui/chat_settings_screen.dart';
@@ -160,6 +161,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/calls/history',
         builder: (context, state) => const CallHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const GlobalSearchScreen(),
       ),
     ],
   );
