@@ -164,7 +164,9 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# dependency_overrides:
-#   antinvestor_api_common:
-#     path: ../apis/dart/common
-# Note: Commented out to use pub.dev version for compatibility with notification package
+dependency_overrides:
+  # Fix record_linux compatibility with record_platform_interface 1.5.0
+  # See: https://pub.dev/packages/record_linux/changelog
+  record_linux: ^1.3.0
+
+# Note: antinvestor_api_common override commented out to use pub.dev version
