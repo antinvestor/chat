@@ -631,6 +631,122 @@ class UploadChunks extends Table {
   IntColumn get createdAt => integer()();
 }
 
+/// Tracks chunk progress for resumable downloads
+///
+/// Stores download state to allow resuming interrupted downloads.
+/// Each chunk is recorded separately for precise resume points.
+///
+/// Example:
+/// ```dart
+/// final chunks = await (db.downloadChunks.select()
+///   ..where((c) => c.downloadId.equals(downloadId))
+///   ..orderBy([(c) => OrderingTerm.asc(c.chunkIndex)])
+/// ).get();
+/// ```
+class DownloadChunks extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Unique download identifier for tracking
+  TextColumn get downloadId => text()();
+
+  /// Remote file URL being downloaded
+  TextColumn get fileUrl => text()();
+
+  /// Local file path where download is being saved
+  TextColumn get localPath => text()();
+
+  /// Total file size in bytes
+  IntColumn get totalSize => integer()();
+
+  /// Index of this chunk (0-based, -1 for metadata row)
+  IntColumn get chunkIndex => integer().withDefault(const Constant(-1))();
+
+  /// Size of this chunk in bytes
+  IntColumn get chunkSize => integer().withDefault(const Constant(0))();
+
+  /// Bytes downloaded for this chunk
+  IntColumn get bytesDownloaded => integer().withDefault(const Constant(0))();
+
+  /// ETag for HTTP caching and resume validation
+  TextColumn get etag => text().nullable()();
+
+  /// Timestamp when this chunk was created (milliseconds since epoch)
+  IntColumn get createdAt => integer()();
+
+  /// Timestamp when this chunk was last updated
+  IntColumn get updatedAt => integer().nullable()();
+}
+
+/// Transfer jobs table for unified upload/download queue management
+///
+/// Stores both upload and download jobs in a single queue with priority ordering.
+/// Uploads are typically given higher priority than downloads.
+///
+/// Example:
+/// ```dart
+/// final pendingJobs = await (db.transferJobs.select()
+///   ..where((t) => t.status.equals('pending'))
+///   ..orderBy([
+///     (t) => OrderingTerm.asc(t.priority),
+///     (t) => OrderingTerm.asc(t.createdAt),
+///   ])
+/// ).get();
+/// ```
+class TransferJobs extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Transfer type: 'upload' or 'download'
+  TextColumn get transferType => text()();
+
+  /// Reference ID (localId for uploads, downloadId for downloads)
+  TextColumn get referenceId => text()();
+
+  /// Room ID associated with this transfer
+  TextColumn get roomId => text()();
+
+  /// File URL (destination for uploads, source for downloads)
+  TextColumn get fileUrl => text()();
+
+  /// Local file path (source for uploads, destination for downloads)
+  TextColumn get localPath => text()();
+
+  /// File name for display purposes
+  TextColumn get fileName => text()();
+
+  /// Total file size in bytes
+  IntColumn get totalSize => integer()();
+
+  /// Bytes transferred so far
+  IntColumn get transferredSize => integer().withDefault(const Constant(0))();
+
+  /// MIME type of the file
+  TextColumn get mimeType => text().nullable()();
+
+  /// Priority level (0=critical, 1=high, 2=normal, 3=low)
+  /// Uploads default to priority 1, downloads to priority 2
+  IntColumn get priority => integer().withDefault(const Constant(2))();
+
+  /// Job status: 'pending', 'active', 'paused', 'completed', 'failed'
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+
+  /// Number of retry attempts
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+
+  /// Last error message if failed
+  TextColumn get lastError => text().nullable()();
+
+  /// Timestamp when job was created (milliseconds since epoch)
+  IntColumn get createdAt => integer()();
+
+  /// Timestamp when job was last updated
+  IntColumn get updatedAt => integer().nullable()();
+
+  /// Earliest time this job can be retried (for exponential backoff)
+  IntColumn get nextRetryAt => integer().nullable()();
+}
+
 /// Analytics events table for local event storage
 ///
 /// Stores analytics events locally before batch upload to backend.
@@ -760,6 +876,8 @@ class CallHistory extends Table {
     InviteLinks,
     InviteLinkJoins,
     UploadChunks,
+    DownloadChunks,
+    TransferJobs,
     CallHistory,
     AnalyticsEvents,
   ],
@@ -774,7 +892,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -955,6 +1073,36 @@ class AppDatabase extends _$AppDatabase {
           CREATE INDEX IF NOT EXISTS idx_pending_jobs_priority
           ON pending_jobs(priority ASC, created_at ASC)
           WHERE status = 'pending'
+        ''');
+      }
+      if (from <= 16) {
+        // Migration from v16 to v17: Add download chunks and transfer jobs tables
+        await m.createTable(downloadChunks);
+        await m.createTable(transferJobs);
+
+        // Create index for efficient querying by downloadId
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_download_chunks_download_id
+          ON download_chunks(download_id)
+        ''');
+
+        // Create index for efficient querying pending transfer jobs by priority
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_transfer_jobs_priority
+          ON transfer_jobs(priority ASC, created_at ASC)
+          WHERE status = 'pending'
+        ''');
+
+        // Create index for querying transfer jobs by reference ID
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_transfer_jobs_reference_id
+          ON transfer_jobs(reference_id)
+        ''');
+
+        // Create index for querying transfer jobs by room ID
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_transfer_jobs_room_id
+          ON transfer_jobs(room_id)
         ''');
       }
     },
