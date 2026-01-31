@@ -39,6 +39,7 @@ class _GroupCallScreenState extends ConsumerState<GroupCallScreen> {
   MediaStream? _localStream;
   Map<String, MediaStream> _remoteStreams = {};
   String? _activeSpeaker;
+  String? _currentProfileId;
   bool _isAudioMuted = false;
   bool _isVideoOff = false;
   bool _showControls = true;
@@ -64,6 +65,8 @@ class _GroupCallScreenState extends ConsumerState<GroupCallScreen> {
       if (mounted) {
         setState(() {
           _currentCall = call;
+          // Update current profile ID from manager
+          _currentProfileId = manager.currentProfileId;
         });
       }
     });
@@ -344,9 +347,8 @@ class _GroupCallScreenState extends ConsumerState<GroupCallScreen> {
         itemCount: activeParticipants.length,
         itemBuilder: (context, index) {
           final participant = activeParticipants[index];
-          final isLocal =
-              participant.profileId == _currentCall?.hostProfileId &&
-              widget.callId == null;
+          // Check if participant is the current user by comparing profile IDs
+          final isLocal = participant.profileId == _currentProfileId;
 
           return ParticipantTile(
             participant: participant,
@@ -376,12 +378,10 @@ class _GroupCallScreenState extends ConsumerState<GroupCallScreen> {
   }
 
   Widget _buildControls() {
+    // Check if current user is the host by comparing profile IDs
     final isHost =
-        _currentCall?.hostProfileId ==
-        _currentCall?.participants
-            .where((p) => p.isHost)
-            .firstOrNull
-            ?.profileId;
+        _currentCall?.hostProfileId == _currentProfileId &&
+        _currentProfileId != null;
 
     return Container(
       padding: EdgeInsets.only(

@@ -84,6 +84,9 @@ class GroupCallManager {
   /// Current call getter
   GroupCall? get currentCall => _currentCall;
 
+  /// Current user's profile ID getter
+  String? get currentProfileId => _currentProfileId;
+
   /// Media state getters
   bool get isAudioMuted => _isAudioMuted;
   bool get isVideoOff => _isVideoOff;
@@ -165,10 +168,13 @@ class GroupCallManager {
         state: ParticipantState.connected,
       );
 
+      // Get host info from pending call starts or leave empty to be updated later
+      final hostProfileId = _pendingCallHosts.remove(callId) ?? '';
+
       _currentCall = GroupCall(
         callId: callId,
         roomId: roomId,
-        hostProfileId: '', // Will be updated when we receive info
+        hostProfileId: hostProfileId,
         participants: [selfParticipant],
         state: GroupCallState.active,
         startedAt: DateTime.now(),
@@ -426,15 +432,24 @@ class GroupCallManager {
     }
   }
 
+  /// Pending call info received from call start events (before joining)
+  final Map<String, String> _pendingCallHosts = {};
+
   /// Handle group call start notification
   Future<void> _handleGroupCallStart(RoomEvent event) async {
     // This is a notification that someone started a call in a room
     // The UI can show a "call started" notification
+    final callId = event.content['callId'] as String?;
+    if (callId != null) {
+      // Store the host info for when we join this call
+      _pendingCallHosts[callId] = event.senderId;
+    }
+
     AppLogger.info(
       'Group call started in room',
       data: {
         'roomId': event.roomId,
-        'callId': event.content['callId'],
+        'callId': callId,
         'startedBy': event.senderId,
       },
     );
@@ -465,11 +480,18 @@ class GroupCallManager {
     final offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
+    // Include host info in the offer so the joining participant knows who's the host
+    final isHost = _currentCall!.hostProfileId == _currentProfileId;
     await _signalingService.sendGroupCallOffer(
       _currentCall!.roomId,
       _currentCall!.callId,
       joinedProfileId,
-      {'sdp': offer.sdp, 'type': offer.type},
+      {
+        'sdp': offer.sdp,
+        'type': offer.type,
+        'hostProfileId': _currentCall!.hostProfileId,
+        'isHost': isHost,
+      },
     );
 
     AppLogger.info(
@@ -523,6 +545,30 @@ class GroupCallManager {
     if (targetProfileId != _currentProfileId) return;
 
     final fromProfileId = event.senderId;
+
+    // Extract host info from offer if present and update call state
+    final hostProfileId = event.content['hostProfileId'] as String?;
+    if (hostProfileId != null && _currentCall!.hostProfileId.isEmpty) {
+      _currentCall = _currentCall!.copyWith(hostProfileId: hostProfileId);
+      _callController.add(_currentCall);
+    }
+
+    // Add the sender as a participant if not already present
+    final isHost = event.content['isHost'] as bool? ?? false;
+    if (!_currentCall!.participants.any((p) => p.profileId == fromProfileId)) {
+      final newParticipant = GroupCallParticipant(
+        profileId: fromProfileId,
+        displayName: fromProfileId,
+        isHost: isHost,
+        joinedAt: DateTime.now(),
+      );
+      final updatedParticipants = [
+        ..._currentCall!.participants,
+        newParticipant,
+      ];
+      _currentCall = _currentCall!.copyWith(participants: updatedParticipants);
+      _callController.add(_currentCall);
+    }
 
     // Create peer connection if it doesn't exist
     if (!_peerConnections.containsKey(fromProfileId)) {
@@ -624,41 +670,76 @@ class GroupCallManager {
     );
   }
 
-  /// Detect active speaker based on audio levels
+  /// Detect active speaker based on audio levels from WebRTC stats
   Future<void> _detectActiveSpeaker() async {
     if (_currentCall == null) return;
 
-    // For now, use a simple round-robin or random detection
-    // In a real implementation, you would analyze audio levels from each stream
     String? loudestSpeaker;
     double maxLevel = 0;
 
-    for (final entry in _remoteStreams.entries) {
-      final stream = entry.value;
-      final audioTracks = stream.getAudioTracks();
-      if (audioTracks.isNotEmpty) {
-        // Simplified: just check if audio is enabled
-        // Real implementation would measure actual audio levels
-        final track = audioTracks.first;
-        if (track.enabled == true) {
-          // Simulate some audio level detection
-          const level = 0.5; // Placeholder
-          if (level > maxLevel) {
-            maxLevel = level;
-            loudestSpeaker = entry.key;
+    // Get audio levels from WebRTC stats for each peer connection
+    for (final entry in _peerConnections.entries) {
+      final profileId = entry.key;
+      final pc = entry.value;
+
+      try {
+        final stats = await pc.getStats();
+        for (final report in stats) {
+          // Look for inbound-rtp audio reports which contain audioLevel
+          if (report.type == 'inbound-rtp') {
+            final values = report.values;
+            final kind = values['kind'] as String?;
+            if (kind == 'audio') {
+              // audioLevel is a value from 0.0 to 1.0
+              final audioLevel = values['audioLevel'] as double? ?? 0.0;
+              // Also consider voice activity detection if available
+              final voiceActivity =
+                  values['voiceActivityFlag'] as bool? ?? true;
+
+              if (voiceActivity && audioLevel > maxLevel) {
+                maxLevel = audioLevel;
+                loudestSpeaker = profileId;
+              }
+            }
           }
         }
+      } catch (e) {
+        // Stats may not be available for all connections
+        AppLogger.debug(
+          'Failed to get stats for peer',
+          data: {'profileId': profileId, 'error': e.toString()},
+        );
       }
     }
 
-    if (loudestSpeaker != _currentActiveSpeaker && maxLevel > 0.2) {
-      _currentActiveSpeaker = loudestSpeaker;
-      _activeSpeakerController.add(_currentActiveSpeaker);
+    // Threshold to avoid flickering on background noise
+    const speakingThreshold = 0.01;
+    if (maxLevel > speakingThreshold) {
+      if (loudestSpeaker != _currentActiveSpeaker) {
+        _currentActiveSpeaker = loudestSpeaker;
+        _activeSpeakerController.add(_currentActiveSpeaker);
 
-      // Update participant speaking state
+        // Update participant speaking state
+        if (_currentCall != null) {
+          final updatedParticipants = _currentCall!.participants.map((p) {
+            return p.copyWith(isSpeaking: p.profileId == loudestSpeaker);
+          }).toList();
+
+          _currentCall = _currentCall!.copyWith(
+            participants: updatedParticipants,
+          );
+          _callController.add(_currentCall);
+        }
+      }
+    } else if (_currentActiveSpeaker != null) {
+      // No one is speaking above threshold
+      _currentActiveSpeaker = null;
+      _activeSpeakerController.add(null);
+
+      // Clear all speaking states
       if (_currentCall != null) {
         final updatedParticipants = _currentCall!.participants.map((p) {
-          return p.copyWith(isSpeaking: p.profileId == loudestSpeaker);
+          return p.copyWith(isSpeaking: false);
         }).toList();
 
         _currentCall = _currentCall!.copyWith(
@@ -693,14 +774,18 @@ class GroupCallManager {
     _localStream = null;
     _localStreamController.add(null);
 
-    // Reset state
-    _currentCall = _currentCall?.copyWith(
-      state: GroupCallState.ended,
-      endedAt: DateTime.now(),
-    );
-    _callController.add(null);
+    // Reset state - emit ended state first so listeners can react to it
+    if (_currentCall != null) {
+      _currentCall = _currentCall!.copyWith(
+        state: GroupCallState.ended,
+        endedAt: DateTime.now(),
+      );
+      _callController.add(_currentCall);
+    }
 
+    // Then clear the call state
     _currentCall = null;
+    _callController.add(null);
     _isAudioMuted = false;
     _isVideoOff = false;
   }
