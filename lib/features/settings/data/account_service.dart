@@ -183,9 +183,7 @@ class AccountService {
         error: e,
         stackTrace: stackTrace,
       );
-      // Return mock data on error
-      final currentDeviceId = await _keyManager.getDeviceId();
-      return _getMockDevices(currentDeviceId);
+      rethrow;
     }
   }
 
@@ -202,7 +200,9 @@ class AccountService {
   }
 
   /// Remove a linked device (logout from that device)
-  Future<bool> removeDevice(String deviceId) async {
+  ///
+  /// Throws an exception if the operation fails.
+  Future<void> removeDevice(String deviceId) async {
     try {
       final token = await _getAccessToken();
 
@@ -222,21 +222,17 @@ class AccountService {
           '[AccountService] Device removed successfully',
           data: {'deviceId': deviceId},
         );
-        return true;
+        return;
       }
 
-      AppLogger.warning(
-        '[AccountService] Failed to remove device',
-        data: {'deviceId': deviceId, 'statusCode': response.statusCode},
-      );
-      return false;
+      throw Exception('Failed to remove device: HTTP ${response.statusCode}');
     } catch (e, stackTrace) {
       AppLogger.error(
         '[AccountService] Failed to remove device',
         error: e,
         stackTrace: stackTrace,
       );
-      return false;
+      rethrow;
     }
   }
 

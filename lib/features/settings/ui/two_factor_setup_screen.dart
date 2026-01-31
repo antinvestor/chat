@@ -635,10 +635,10 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
     );
   }
 
-  void _showDisable2FADialog(BuildContext context) {
+  Future<void> _showDisable2FADialog(BuildContext context) async {
     final codeController = TextEditingController();
 
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Turn Off Two-Step Verification'),

@@ -393,26 +393,25 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
 
     try {
       final service = ref.read(accountServiceProvider);
-      final success = await service.removeDevice(device.id);
+      await service.removeDevice(device.id);
 
       if (!mounted) return;
 
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Removed ${device.name}'),
-            backgroundColor: AppTheme.primaryGreen,
-          ),
-        );
-        ref.invalidate(linkedDevicesProvider);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to remove device'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed ${device.name}'),
+          backgroundColor: AppTheme.primaryGreen,
+        ),
+      );
+      ref.invalidate(linkedDevicesProvider);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to remove device'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isRemoving = false);
@@ -435,8 +434,11 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
 
       var successCount = 0;
       for (final device in otherDevices) {
-        if (await service.removeDevice(device.id)) {
+        try {
+          await service.removeDevice(device.id);
           successCount++;
+        } catch (_) {
+          // Continue with other devices even if one fails
         }
       }
 
