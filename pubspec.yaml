@@ -83,6 +83,7 @@ dependencies:
   riverpod_annotation: ^4.0.0
   sentry_flutter: ^9.10.0
   share_plus: ^12.0.1
+  shared_preferences: ^2.4.0
   sim_card_code: ^0.1.0
   sqlite3: any
   url_launcher: ^6.3.2
