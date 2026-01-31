@@ -39,9 +39,7 @@ class FailedJobsBanner extends ConsumerWidget {
             ? Colors.red.shade900.withValues(alpha: 0.3)
             : Colors.red.shade50,
         border: Border(
-          bottom: BorderSide(
-            color: Colors.red.withValues(alpha: 0.3),
-          ),
+          bottom: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
         ),
       ),
       child: SafeArea(

@@ -134,9 +134,7 @@ class VoteBubble extends StatelessWidget {
               ? Colors.purple.shade900.withValues(alpha: 0.3)
               : Colors.purple.shade50,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.purple.withValues(alpha: 0.2),
-          ),
+          border: Border.all(color: Colors.purple.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
