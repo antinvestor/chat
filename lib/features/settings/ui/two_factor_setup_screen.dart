@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
+import '../data/account_service.dart';
 
 /// Screen for setting up two-factor authentication
 class TwoFactorSetupScreen extends ConsumerStatefulWidget {
@@ -18,23 +19,58 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
   int _currentStep = 0;
   bool _is2FAEnabled = false;
   bool _isLoading = false;
+  bool _isInitializing = true;
   final _codeController = TextEditingController();
   final _codeFocusNode = FocusNode();
 
-  // Mock data - in production these would come from the server
-  final String _mockSecretKey = 'JBSWY3DPEHPK3PXP';
-  final List<String> _mockBackupCodes = [
-    'A1B2-C3D4-E5F6',
-    'G7H8-I9J0-K1L2',
-    'M3N4-O5P6-Q7R8',
-    'S9T0-U1V2-W3X4',
-    'Y5Z6-A7B8-C9D0',
-    'E1F2-G3H4-I5J6',
-    'K7L8-M9N0-O1P2',
-    'Q3R4-S5T6-U7V8',
-    'W9X0-Y1Z2-A3B4',
-    'C5D6-E7F8-G9H0',
-  ];
+  // 2FA setup data from server
+  TwoFactorSetupData? _setupData;
+  List<String> _backupCodes = [];
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      final service = ref.read(accountServiceProvider);
+      final status = await service.get2FAStatus();
+
+      if (mounted) {
+        setState(() {
+          _is2FAEnabled = status.isEnabled;
+          _isInitializing = false;
+        });
+
+        // If already enabled, fetch backup codes
+        if (status.isEnabled) {
+          await _loadBackupCodes();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _errorMessage = 'Failed to check 2FA status';
+        });
+      }
+    }
+  }
+
+  Future<void> _loadBackupCodes() async {
+    try {
+      final service = ref.read(accountServiceProvider);
+      final codes = await service.getBackupCodes();
+      if (mounted) {
+        setState(() => _backupCodes = codes);
+      }
+    } catch (e) {
+      // Non-fatal, just log
+    }
+  }
 
   @override
   void dispose() {
@@ -57,9 +93,37 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
           onPressed: () => context.navigateBack('/settings/account'),
         ),
       ),
-      body: _is2FAEnabled
+      body: _isInitializing
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+          ? _buildErrorView(theme)
+          : _is2FAEnabled
           ? _buildEnabledView(theme)
           : _buildSetupStepper(theme),
+    );
+  }
+
+  Widget _buildErrorView(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+          const SizedBox(height: 16),
+          Text(_errorMessage ?? 'An error occurred'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _errorMessage = null;
+                _isInitializing = true;
+              });
+              _initialize();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -325,7 +389,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
             children: [
               Expanded(
                 child: Text(
-                  _mockSecretKey,
+                  _setupData?.secretKey ?? '',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontFamily: 'monospace',
                     letterSpacing: 2,
@@ -335,7 +399,9 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
               IconButton(
                 icon: const Icon(Icons.copy),
                 onPressed: () {
-                  Clipboard.setData(ClipboardData(text: _mockSecretKey));
+                  Clipboard.setData(
+                    ClipboardData(text: _setupData?.secretKey ?? ''),
+                  );
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Key copied to clipboard'),
@@ -439,7 +505,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
               Wrap(
                 spacing: 16,
                 runSpacing: 8,
-                children: _mockBackupCodes
+                children: _backupCodes
                     .map(
                       (code) => Text(
                         code,
@@ -457,7 +523,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
                   OutlinedButton.icon(
                     onPressed: () {
                       Clipboard.setData(
-                        ClipboardData(text: _mockBackupCodes.join('\n')),
+                        ClipboardData(text: _backupCodes.join('\n')),
                       );
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -487,22 +553,60 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
     );
   }
 
-  void _handleStepContinue() {
+  Future<void> _handleStepContinue() async {
     if (_currentStep == 0) {
-      setState(() => _currentStep = 1);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _codeFocusNode.requestFocus();
-      });
+      await _initiate2FASetup();
     } else if (_currentStep == 1) {
-      _verifyCode();
+      await _verifyCode();
     } else if (_currentStep == 2) {
       setState(() => _is2FAEnabled = true);
+      ref.invalidate(twoFactorStatusProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Two-step verification enabled!'),
           backgroundColor: AppTheme.primaryGreen,
         ),
       );
+    }
+  }
+
+  Future<void> _initiate2FASetup() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final service = ref.read(accountServiceProvider);
+      final setupData = await service.initiate2FASetup();
+
+      if (!mounted) return;
+
+      if (setupData != null) {
+        setState(() {
+          _setupData = setupData;
+          _currentStep = 1;
+          _isLoading = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _codeFocusNode.requestFocus();
+        });
+      } else {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to initiate 2FA setup'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -528,14 +632,29 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Simulate verification
-      await Future.delayed(const Duration(seconds: 1));
+      final service = ref.read(accountServiceProvider);
+      final success = await service.verify2FACode(code);
 
-      // For demo, accept any 6-digit code
-      setState(() {
-        _currentStep = 2;
-        _isLoading = false;
-      });
+      if (!mounted) return;
+
+      if (success) {
+        // Fetch backup codes after successful verification
+        final codes = await service.getBackupCodes();
+
+        setState(() {
+          _backupCodes = codes;
+          _currentStep = 2;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid code. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -563,7 +682,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
                 'Each code can only be used once.',
               ),
               const SizedBox(height: 16),
-              ..._mockBackupCodes.map(
+              ..._backupCodes.map(
                 (code) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Text(
@@ -581,9 +700,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Clipboard.setData(
-                ClipboardData(text: _mockBackupCodes.join('\n')),
-              );
+              Clipboard.setData(ClipboardData(text: _backupCodes.join('\n')));
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -606,7 +723,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
   void _showRegenerateCodesDialog(BuildContext context) {
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Regenerate Backup Codes'),
         content: const Text(
           'This will invalidate all your current backup codes and generate new ones. '
@@ -614,19 +731,38 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('New backup codes generated'),
-                  backgroundColor: AppTheme.primaryGreen,
-                ),
-              );
-              // In production, call API to regenerate codes
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+
+              try {
+                final service = ref.read(accountServiceProvider);
+                final newCodes = await service.regenerateBackupCodes();
+
+                if (mounted && newCodes.isNotEmpty) {
+                  setState(() => _backupCodes = newCodes);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('New backup codes generated'),
+                      backgroundColor: AppTheme.primaryGreen,
+                    ),
+                  );
+                  // Show the new codes
+                  _showBackupCodesDialog(context);
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to regenerate codes: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Regenerate'),
           ),
@@ -640,7 +776,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
 
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Turn Off Two-Step Verification'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -669,19 +805,57 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              setState(() => _is2FAEnabled = false);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Two-step verification disabled'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+            onPressed: () async {
+              final code = codeController.text.trim();
+              if (code.length != 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a 6-digit code'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              Navigator.of(dialogContext).pop();
+
+              try {
+                final service = ref.read(accountServiceProvider);
+                final success = await service.disable2FA(code);
+
+                if (mounted) {
+                  if (success) {
+                    setState(() => _is2FAEnabled = false);
+                    ref.invalidate(twoFactorStatusProvider);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Two-step verification disabled'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Invalid code. Please try again.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to disable 2FA: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
