@@ -268,6 +268,10 @@ class MessageBatchConfig {
 }
 
 /// Test data cleanup helper.
+///
+/// Tracks resources created during E2E tests for cleanup after test completion.
+/// Register a cleanup callback using `registerCleanupCallbacks` to handle actual
+/// deletion of test data via API calls or database operations.
 class TestDataCleanup {
   /// Private constructor.
   TestDataCleanup._();
@@ -277,6 +281,13 @@ class TestDataCleanup {
 
   /// List of message IDs created during tests.
   static final List<String> _createdMessageIds = [];
+
+  /// Callback function to delete a room by ID.
+  /// Set this via `registerCleanupCallbacks` before running cleanup.
+  static Future<void> Function(String roomId)? _deleteRoomCallback;
+
+  /// Callback function to delete a message by ID.
+  static Future<void> Function(String messageId)? _deleteMessageCallback;
 
   /// Records a room ID for later cleanup.
   static void recordRoom(String roomId) {
@@ -294,9 +305,76 @@ class TestDataCleanup {
   /// Gets all recorded message IDs.
   static List<String> get messageIds => List.unmodifiable(_createdMessageIds);
 
-  /// Clears all recorded IDs.
+  /// Registers callbacks for cleanup operations.
+  ///
+  /// These callbacks should perform the actual deletion via API calls.
+  ///
+  /// Example:
+  /// ```dart
+  /// TestDataCleanup.registerCleanupCallbacks(
+  ///   deleteRoom: (roomId) => apiClient.deleteRoom(roomId),
+  ///   deleteMessage: (msgId) => apiClient.deleteMessage(msgId),
+  /// );
+  /// ```
+  static void registerCleanupCallbacks({
+    Future<void> Function(String roomId)? deleteRoom,
+    Future<void> Function(String messageId)? deleteMessage,
+  }) {
+    _deleteRoomCallback = deleteRoom;
+    _deleteMessageCallback = deleteMessage;
+  }
+
+  /// Cleans up all recorded test data.
+  ///
+  /// Calls the registered cleanup callbacks for each recorded room and message.
+  /// Continues cleanup even if individual deletions fail, collecting all errors.
+  ///
+  /// Returns a list of errors encountered during cleanup (empty if all succeeded).
+  static Future<List<String>> cleanupAll() async {
+    final errors = <String>[];
+
+    // Clean up messages first (they may be in rooms we're about to delete)
+    if (_deleteMessageCallback != null) {
+      for (final messageId in _createdMessageIds) {
+        try {
+          await _deleteMessageCallback!(messageId);
+        } catch (e) {
+          errors.add('Failed to delete message $messageId: $e');
+        }
+      }
+    }
+
+    // Clean up rooms
+    if (_deleteRoomCallback != null) {
+      for (final roomId in _createdRoomIds) {
+        try {
+          await _deleteRoomCallback!(roomId);
+        } catch (e) {
+          errors.add('Failed to delete room $roomId: $e');
+        }
+      }
+    }
+
+    // Clear records after cleanup attempt
+    clearRecords();
+
+    return errors;
+  }
+
+  /// Clears all recorded IDs without performing cleanup.
+  ///
+  /// Use this when test data doesn't need to be cleaned up (e.g., test failed
+  /// before data was created, or cleanup is handled elsewhere).
   static void clearRecords() {
     _createdRoomIds.clear();
     _createdMessageIds.clear();
+  }
+
+  /// Resets cleanup callbacks.
+  ///
+  /// Call this in test teardown to prevent stale callbacks.
+  static void resetCallbacks() {
+    _deleteRoomCallback = null;
+    _deleteMessageCallback = null;
   }
 }

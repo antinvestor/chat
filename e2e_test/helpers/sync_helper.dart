@@ -192,21 +192,50 @@ class SyncHelper {
     );
   }
 
-  /// Simulates going offline by enabling airplane mode (native only).
+  /// Simulates going offline by enabling airplane mode.
   ///
-  /// Note: This requires native device capabilities and may not work
-  /// in all test environments.
+  /// Uses Patrol's native automation to toggle airplane mode on the device.
+  /// This will disable all network connectivity (WiFi, cellular).
+  ///
+  /// Throws [UnsupportedError] if native automation is not available.
   Future<void> simulateOffline() async {
-    // In a real implementation, this would use platform channels
-    // to toggle airplane mode or disable network interfaces.
-    // For now, we just pump to ensure UI stability.
-    await $.pump(const Duration(milliseconds: 500));
+    try {
+      // Use Patrol's native automation to enable airplane mode
+      await $.native.enableAirplaneMode();
+      // Wait for the network change to propagate
+      await $.pumpAndSettle(timeout: const Duration(seconds: 3));
+    } catch (e) {
+      // Fallback: Log warning if native automation isn't available
+      // This can happen on emulators without proper native support
+      throw UnsupportedError(
+        'simulateOffline requires native device automation. '
+        'Ensure tests are running on a real device with Patrol native support. '
+        'Original error: $e',
+      );
+    }
   }
 
   /// Simulates coming back online by disabling airplane mode.
+  ///
+  /// Uses Patrol's native automation to restore network connectivity.
+  ///
+  /// Throws [UnsupportedError] if native automation is not available.
   Future<void> simulateOnline() async {
-    // In a real implementation, this would restore network connectivity.
-    await $.pump(const Duration(milliseconds: 500));
+    try {
+      // Use Patrol's native automation to disable airplane mode
+      await $.native.disableAirplaneMode();
+      // Wait for network reconnection
+      await $.pumpAndSettle(timeout: const Duration(seconds: 5));
+      // Additional wait for sync engine to reconnect
+      await $.pump(const Duration(seconds: 2));
+    } catch (e) {
+      // Fallback: Log warning if native automation isn't available
+      throw UnsupportedError(
+        'simulateOnline requires native device automation. '
+        'Ensure tests are running on a real device with Patrol native support. '
+        'Original error: $e',
+      );
+    }
   }
 
   /// Checks if the app is currently connected to the sync service.
@@ -235,6 +264,9 @@ class SyncHelper {
   }
 
   /// Checks if a message has the expected delivery status.
+  ///
+  /// For read status, checks both the icon (done_all) and the color (typically
+  /// blue/primary color to distinguish from gray delivered status).
   Future<bool> _checkMessageStatus(MessageDeliveryStatus status) async {
     IconData expectedIcon;
 
@@ -246,12 +278,44 @@ class SyncHelper {
       case MessageDeliveryStatus.delivered:
         expectedIcon = Icons.done_all;
       case MessageDeliveryStatus.read:
-        // Read status often uses same icon but with different color
+        // Read status uses same icon as delivered but with a distinct color
         expectedIcon = Icons.done_all;
     }
 
+    // Find icons matching the expected icon type
     final statusIcon = $(Icon).which<Icon>((icon) => icon.icon == expectedIcon);
-    return statusIcon.exists;
+
+    if (!statusIcon.exists) {
+      return false;
+    }
+
+    // For read status, also verify the color is the "read" color (typically blue)
+    // to distinguish from delivered (typically gray)
+    if (status == MessageDeliveryStatus.read) {
+      // Check if any done_all icon has a blue-ish color indicating "read"
+      final readIcon = $(Icon).which<Icon>((icon) {
+        if (icon.icon != Icons.done_all) return false;
+
+        // Read receipts typically use primary/blue color
+        // Colors.blue.value = 0xFF2196F3
+        final color = icon.color;
+        if (color == null) return false;
+
+        // Check for blue-ish hues (common read receipt colors)
+        // This covers various shades of blue used for read receipts
+        final isBlue =
+            color == Colors.blue ||
+            color == Colors.lightBlue ||
+            color == Colors.blueAccent ||
+            color.b > 0.5; // Blue channel dominant (using component accessor)
+
+        return isBlue;
+      });
+
+      return readIcon.exists;
+    }
+
+    return true;
   }
 }
 

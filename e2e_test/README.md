@@ -59,19 +59,19 @@ export E2E_AUTH_URL="https://auth.staging.antinvestor.com"
 export E2E_OAUTH_CLIENT_ID="e2e-test-client"
 
 # Test User 1 (Primary)
-export E2E_USER1_EMAIL="e2e-user1@test.antinvestor.com"
-export E2E_USER1_PASSWORD="secure-password-1"
-export E2E_USER1_PROFILE_ID="profile-id-1"
+export E2E_USER1_EMAIL="<YOUR_TEST_USER1_EMAIL>"
+export E2E_USER1_PASSWORD="<YOUR_TEST_USER1_PASSWORD>"
+export E2E_USER1_PROFILE_ID="<YOUR_TEST_USER1_PROFILE_ID>"
 
 # Test User 2 (Secondary)
-export E2E_USER2_EMAIL="e2e-user2@test.antinvestor.com"
-export E2E_USER2_PASSWORD="secure-password-2"
-export E2E_USER2_PROFILE_ID="profile-id-2"
+export E2E_USER2_EMAIL="<YOUR_TEST_USER2_EMAIL>"
+export E2E_USER2_PASSWORD="<YOUR_TEST_USER2_PASSWORD>"
+export E2E_USER2_PROFILE_ID="<YOUR_TEST_USER2_PROFILE_ID>"
 
 # Test User 3 (Optional, for group tests)
-export E2E_USER3_EMAIL="e2e-user3@test.antinvestor.com"
-export E2E_USER3_PASSWORD="secure-password-3"
-export E2E_USER3_PROFILE_ID="profile-id-3"
+export E2E_USER3_EMAIL="<YOUR_TEST_USER3_EMAIL>"
+export E2E_USER3_PASSWORD="<YOUR_TEST_USER3_PASSWORD>"
+export E2E_USER3_PROFILE_ID="<YOUR_TEST_USER3_PROFILE_ID>"
 ```
 
 ## Running Tests
