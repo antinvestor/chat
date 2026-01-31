@@ -410,6 +410,292 @@ class AccountService {
       return false;
     }
   }
+
+  // ==========================================================================
+  // Two-Factor Authentication
+  // ==========================================================================
+
+  /// Get current 2FA status
+  Future<TwoFactorStatus> get2FAStatus() async {
+    try {
+      final token = await _getAccessToken();
+
+      final uri = Uri.parse(
+        '${ApiConfig.profileBaseUrl}/v1/account/2fa/status',
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return TwoFactorStatus.fromJson(json);
+      }
+
+      return const TwoFactorStatus(isEnabled: false);
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[AccountService] Failed to get 2FA status',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return const TwoFactorStatus(isEnabled: false);
+    }
+  }
+
+  /// Initiate 2FA setup - returns secret key and QR code URL
+  Future<TwoFactorSetupData?> initiate2FASetup() async {
+    try {
+      final token = await _getAccessToken();
+
+      final uri = Uri.parse('${ApiConfig.profileBaseUrl}/v1/account/2fa/setup');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return TwoFactorSetupData.fromJson(json);
+      }
+
+      AppLogger.warning(
+        '[AccountService] Failed to initiate 2FA setup',
+        data: {'statusCode': response.statusCode},
+      );
+      return null;
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[AccountService] Failed to initiate 2FA setup',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Verify TOTP code during 2FA setup
+  Future<bool> verify2FACode(String code) async {
+    try {
+      final token = await _getAccessToken();
+
+      final uri = Uri.parse(
+        '${ApiConfig.profileBaseUrl}/v1/account/2fa/verify',
+      );
+
+      final response = await http.post(
+        uri,
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'code': code}),
+      );
+
+      if (response.statusCode == 200) {
+        AppLogger.info('[AccountService] 2FA code verified successfully');
+        return true;
+      }
+
+      AppLogger.warning(
+        '[AccountService] 2FA code verification failed',
+        data: {'statusCode': response.statusCode},
+      );
+      return false;
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[AccountService] Failed to verify 2FA code',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Get backup codes after 2FA is enabled
+  Future<List<String>> getBackupCodes() async {
+    try {
+      final token = await _getAccessToken();
+
+      final uri = Uri.parse(
+        '${ApiConfig.profileBaseUrl}/v1/account/2fa/backup-codes',
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final codes = json['codes'] as List<dynamic>?;
+        return codes?.map((e) => e.toString()).toList() ?? [];
+      }
+
+      return [];
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[AccountService] Failed to get backup codes',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Regenerate backup codes
+  Future<List<String>> regenerateBackupCodes() async {
+    try {
+      final token = await _getAccessToken();
+
+      final uri = Uri.parse(
+        '${ApiConfig.profileBaseUrl}/v1/account/2fa/backup-codes/regenerate',
+      );
+
+      final response = await http.post(
+        uri,
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final codes = json['codes'] as List<dynamic>?;
+        AppLogger.info('[AccountService] Backup codes regenerated');
+        return codes?.map((e) => e.toString()).toList() ?? [];
+      }
+
+      AppLogger.warning(
+        '[AccountService] Failed to regenerate backup codes',
+        data: {'statusCode': response.statusCode},
+      );
+      return [];
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[AccountService] Failed to regenerate backup codes',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Disable 2FA with verification code
+  Future<bool> disable2FA(String code) async {
+    try {
+      final token = await _getAccessToken();
+
+      final uri = Uri.parse(
+        '${ApiConfig.profileBaseUrl}/v1/account/2fa/disable',
+      );
+
+      final response = await http.post(
+        uri,
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'code': code}),
+      );
+
+      if (response.statusCode == 200) {
+        AppLogger.info('[AccountService] 2FA disabled successfully');
+        return true;
+      }
+
+      AppLogger.warning(
+        '[AccountService] Failed to disable 2FA',
+        data: {'statusCode': response.statusCode},
+      );
+      return false;
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        '[AccountService] Failed to disable 2FA',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+}
+
+// ============================================================================
+// Two-Factor Authentication Models
+// ============================================================================
+
+/// Data returned when initiating 2FA setup
+class TwoFactorSetupData {
+  const TwoFactorSetupData({
+    required this.secretKey,
+    required this.qrCodeUrl,
+    required this.issuer,
+    required this.accountName,
+  });
+
+  factory TwoFactorSetupData.fromJson(Map<String, dynamic> json) {
+    return TwoFactorSetupData(
+      secretKey: json['secret_key'] as String,
+      qrCodeUrl: json['qr_code_url'] as String,
+      issuer: json['issuer'] as String? ?? 'Stawi',
+      accountName: json['account_name'] as String? ?? '',
+    );
+  }
+
+  final String secretKey;
+  final String qrCodeUrl;
+  final String issuer;
+  final String accountName;
+
+  /// Generate otpauth:// URI for QR code
+  String get otpauthUri =>
+      'otpauth://totp/$issuer:$accountName?secret=$secretKey&issuer=$issuer';
+}
+
+/// 2FA status information
+class TwoFactorStatus {
+  const TwoFactorStatus({
+    required this.isEnabled,
+    this.enabledAt,
+    this.backupCodesRemaining,
+  });
+
+  factory TwoFactorStatus.fromJson(Map<String, dynamic> json) {
+    return TwoFactorStatus(
+      isEnabled: json['is_enabled'] as bool? ?? false,
+      enabledAt: json['enabled_at'] != null
+          ? DateTime.parse(json['enabled_at'] as String)
+          : null,
+      backupCodesRemaining: json['backup_codes_remaining'] as int?,
+    );
+  }
+
+  final bool isEnabled;
+  final DateTime? enabledAt;
+  final int? backupCodesRemaining;
 }
 
 @riverpod
@@ -424,4 +710,11 @@ AccountService accountService(Ref ref) {
 Future<List<LinkedDevice>> linkedDevices(Ref ref) async {
   final service = ref.watch(accountServiceProvider);
   return service.getLinkedDevices();
+}
+
+/// Provider to get 2FA status
+@riverpod
+Future<TwoFactorStatus> twoFactorStatus(Ref ref) async {
+  final service = ref.watch(accountServiceProvider);
+  return service.get2FAStatus();
 }
