@@ -200,14 +200,21 @@ class TransferJobRepository {
   /// Watch pending jobs as a stream
   ///
   /// Emits whenever the pending jobs list changes.
+  /// Uses SQLite's strftime to compute current time at query evaluation,
+  /// ensuring jobs become visible when their retry time passes.
   Stream<List<TransferJob>> watchPendingJobs({int limit = 10}) {
-    final now = DateTime.now().millisecondsSinceEpoch;
+    // Use SQLite expression to get current timestamp at query time
+    // strftime('%s', 'now') returns Unix timestamp in seconds, multiply by 1000 for ms
+    const currentTimeMs = CustomExpression<int>(
+      "(strftime('%s', 'now') * 1000)",
+    );
 
     final query = _db.select(_db.transferJobs)
       ..where(
         (t) =>
             t.status.equals(TransferStatus.pending) &
-            (t.nextRetryAt.isNull() | t.nextRetryAt.isSmallerOrEqualValue(now)),
+            (t.nextRetryAt.isNull() |
+                t.nextRetryAt.isSmallerOrEqual(currentTimeMs)),
       )
       ..orderBy([
         (t) => OrderingTerm.asc(t.priority),

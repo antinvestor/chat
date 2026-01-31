@@ -552,6 +552,9 @@ class ProgressiveDownloadService {
           chunkIndex: chunkIndex,
           chunkSize: chunkBytes.length,
           bytesDownloaded: chunkBytes.length,
+          fileUrl: fileUrl,
+          localPath: localPath,
+          totalSize: totalSize,
         );
 
         downloadedBytes = chunkEnd + 1;
@@ -774,27 +777,27 @@ class ProgressiveDownloadService {
   }
 
   /// Save chunk progress
+  ///
+  /// Takes metadata parameters directly to avoid redundant DB reads on each chunk.
   Future<void> _saveChunkProgress({
     required String downloadId,
     required int chunkIndex,
     required int chunkSize,
     required int bytesDownloaded,
+    required String fileUrl,
+    required String localPath,
+    required int totalSize,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-
-    // Get metadata to preserve fileUrl, localPath, totalSize
-    final metadataQuery = _db.select(_db.downloadChunks)
-      ..where((t) => t.downloadId.equals(downloadId) & t.chunkIndex.equals(-1));
-    final metadata = await metadataQuery.getSingleOrNull();
 
     await _db
         .into(_db.downloadChunks)
         .insert(
           DownloadChunksCompanion.insert(
             downloadId: downloadId,
-            fileUrl: metadata?.fileUrl ?? '',
-            localPath: metadata?.localPath ?? '',
-            totalSize: metadata?.totalSize ?? 0,
+            fileUrl: fileUrl,
+            localPath: localPath,
+            totalSize: totalSize,
             chunkIndex: Value(chunkIndex),
             chunkSize: Value(chunkSize),
             bytesDownloaded: Value(bytesDownloaded),
