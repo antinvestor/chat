@@ -6,6 +6,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
 import '../data/account_service.dart';
 
+/// Steps in the delete account dialog flow
+enum _DeleteAccountStep { warning, reason, confirm }
+
 /// Dialog for confirming account deletion with warnings
 class DeleteAccountDialog extends ConsumerStatefulWidget {
   const DeleteAccountDialog({super.key});
@@ -28,7 +31,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
   final TextEditingController _reasonController = TextEditingController();
   bool _confirmChecked = false;
   bool _isDeleting = false;
-  int _step = 0; // 0 = warning, 1 = reason, 2 = confirm
+  _DeleteAccountStep _step = _DeleteAccountStep.warning;
 
   @override
   void dispose() {
@@ -61,16 +64,11 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
   }
 
   Widget _buildStepContent(ThemeData theme) {
-    switch (_step) {
-      case 0:
-        return _buildWarningStep(theme);
-      case 1:
-        return _buildReasonStep(theme);
-      case 2:
-        return _buildConfirmStep(theme);
-      default:
-        return const SizedBox.shrink();
-    }
+    return switch (_step) {
+      _DeleteAccountStep.warning => _buildWarningStep(theme),
+      _DeleteAccountStep.reason => _buildReasonStep(theme),
+      _DeleteAccountStep.confirm => _buildConfirmStep(theme),
+    };
   }
 
   Widget _buildWarningStep(ThemeData theme) {
@@ -243,55 +241,50 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       ];
     }
 
-    switch (_step) {
-      case 0:
-        return [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+    return switch (_step) {
+      _DeleteAccountStep.warning => [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => setState(() => _step = _DeleteAccountStep.reason),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade600,
+            foregroundColor: Colors.white,
           ),
-          ElevatedButton(
-            onPressed: () => setState(() => _step = 1),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Continue'),
+          child: const Text('Continue'),
+        ),
+      ],
+      _DeleteAccountStep.reason => [
+        TextButton(
+          onPressed: () => setState(() => _step = _DeleteAccountStep.warning),
+          child: const Text('Back'),
+        ),
+        ElevatedButton(
+          onPressed: () => setState(() => _step = _DeleteAccountStep.confirm),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade600,
+            foregroundColor: Colors.white,
           ),
-        ];
-      case 1:
-        return [
-          TextButton(
-            onPressed: () => setState(() => _step = 0),
-            child: const Text('Back'),
+          child: const Text('Continue'),
+        ),
+      ],
+      _DeleteAccountStep.confirm => [
+        TextButton(
+          onPressed: () => setState(() => _step = _DeleteAccountStep.reason),
+          child: const Text('Back'),
+        ),
+        ElevatedButton(
+          onPressed: _confirmChecked ? _deleteAccount : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade700,
+            foregroundColor: Colors.white,
           ),
-          ElevatedButton(
-            onPressed: () => setState(() => _step = 2),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Continue'),
-          ),
-        ];
-      case 2:
-        return [
-          TextButton(
-            onPressed: () => setState(() => _step = 1),
-            child: const Text('Back'),
-          ),
-          ElevatedButton(
-            onPressed: _confirmChecked ? _deleteAccount : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete My Account'),
-          ),
-        ];
-      default:
-        return [];
-    }
+          child: const Text('Delete My Account'),
+        ),
+      ],
+    };
   }
 
   Future<void> _deleteAccount() async {
