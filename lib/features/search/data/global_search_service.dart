@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
@@ -20,6 +21,9 @@ const kMaxResultsPerCategory = 20;
 
 /// Maximum recent searches to store
 const kMaxRecentSearches = 10;
+
+/// SharedPreferences key for recent searches
+const kRecentSearchesKey = 'global_search_recent_searches';
 
 // ============================================================================
 // Search Tab Enum
@@ -370,13 +374,21 @@ class GlobalSearch extends _$GlobalSearch {
   /// Load recent searches from storage
   Future<void> _loadRecentSearches() async {
     try {
-      // For simplicity, we'll store in memory for now
-      // Can add persistence via SharedPreferences later
-      AppLogger.debug('[GlobalSearch] Loaded recent searches');
-    } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      final searchesJson = prefs.getStringList(kRecentSearchesKey);
+
+      if (searchesJson != null && searchesJson.isNotEmpty) {
+        state = state.copyWith(recentSearches: searchesJson);
+        AppLogger.debug(
+          '[GlobalSearch] Loaded recent searches',
+          data: {'count': searchesJson.length},
+        );
+      }
+    } catch (e, stackTrace) {
       AppLogger.error(
         '[GlobalSearch] Failed to load recent searches',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }
@@ -384,15 +396,18 @@ class GlobalSearch extends _$GlobalSearch {
   /// Save recent searches to storage
   Future<void> _saveRecentSearches(List<String> searches) async {
     try {
-      // Persistence can be implemented using SharedPreferences or database
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(kRecentSearchesKey, searches);
+
       AppLogger.debug(
         '[GlobalSearch] Saved recent searches',
         data: {'count': searches.length},
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.error(
         '[GlobalSearch] Failed to save recent searches',
         error: e,
+        stackTrace: stackTrace,
       );
     }
   }
