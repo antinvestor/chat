@@ -41,12 +41,77 @@ class _ValueStream<T> {
   bool get isClosed => _controller.isClosed;
 }
 
+/// Health metrics for room synchronization
+class RoomSyncHealth {
+  const RoomSyncHealth({
+    required this.totalRooms,
+    required this.readyRooms,
+    required this.creatingRooms,
+    required this.syncingRooms,
+    required this.stuckRooms,
+    required this.isHealthy,
+    required this.healthIssues,
+  });
+
+  /// Total number of tracked rooms
+  final int totalRooms;
+
+  /// Rooms in ready state
+  final int readyRooms;
+
+  /// Rooms in creating state
+  final int creatingRooms;
+
+  /// Rooms in syncing state
+  final int syncingRooms;
+
+  /// Rooms stuck in non-ready state for too long
+  final int stuckRooms;
+
+  /// Whether room sync is in a healthy state
+  final bool isHealthy;
+
+  /// List of detected health issues
+  final List<String> healthIssues;
+
+  Map<String, dynamic> toJson() => {
+    'totalRooms': totalRooms,
+    'readyRooms': readyRooms,
+    'creatingRooms': creatingRooms,
+    'syncingRooms': syncingRooms,
+    'stuckRooms': stuckRooms,
+    'isHealthy': isHealthy,
+    'healthIssues': healthIssues,
+  };
+}
+
+/// Result of a room sync recovery operation
+class RoomSyncRecoveryResult {
+  const RoomSyncRecoveryResult({
+    required this.recoveredCount,
+    required this.failedCount,
+    required this.recoveredRoomIds,
+    required this.failedRoomIds,
+  });
+
+  final int recoveredCount;
+  final int failedCount;
+  final List<String> recoveredRoomIds;
+  final List<String> failedRoomIds;
+}
+
 /// Manager for tracking room synchronization state
 ///
 /// This service tracks the state of each room through its lifecycle:
 /// - CREATING: Room created locally, waiting for server confirmation
 /// - SYNCING: Room confirmed on server, waiting for member data
 /// - READY: Has current user's subscription ID, can send messages
+///
+/// Features:
+/// - Health monitoring with metrics
+/// - Automatic recovery for stuck rooms
+/// - Extended timeout with multiple retry attempts
+/// - Manual recovery mechanisms
 ///
 /// The manager receives updates from:
 /// 1. RoomService when a room is created locally
@@ -61,12 +126,30 @@ class RoomSyncManager {
   /// In-memory state tracking per room
   final Map<String, _ValueStream<RoomSyncStatus>> _roomStates = {};
 
+  /// Track when each room entered non-ready state
+  final Map<String, DateTime> _nonReadyStartTimes = {};
+
   /// Timeout before falling back to API sync (seconds)
   /// Kept short to minimize user waiting time
   static const _syncTimeoutSeconds = 2;
 
+  /// Maximum time a room can be in non-ready state before considered stuck (seconds)
+  static const _stuckThresholdSeconds = 60;
+
+  /// Extended timeout for retry attempts (seconds)
+  static const _extendedTimeoutSeconds = 10;
+
+  /// Maximum retry attempts before marking as stuck
+  static const _maxRetryAttempts = 3;
+
+  /// Track retry attempts per room
+  final Map<String, int> _retryAttempts = {};
+
   /// Pending timeout timers for rooms awaiting member events
   final Map<String, Timer> _syncTimeouts = {};
+
+  /// Recovery timer for periodic stuck room recovery
+  Timer? _recoveryTimer;
 
   /// Get or create a state stream for a room
   ///
@@ -97,12 +180,201 @@ class RoomSyncManager {
     return _roomStates[roomId]?.value;
   }
 
+  /// Start the recovery timer for automatic stuck room recovery
+  void startRecoveryTimer() {
+    _recoveryTimer?.cancel();
+    _recoveryTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _checkAndRecoverStuckRooms(),
+    );
+    AppLogger.debug('RoomSyncManager: Recovery timer started');
+  }
+
+  /// Stop the recovery timer
+  void stopRecoveryTimer() {
+    _recoveryTimer?.cancel();
+    _recoveryTimer = null;
+  }
+
+  /// Get health metrics for room synchronization
+  RoomSyncHealth getHealth() {
+    var readyCount = 0;
+    var creatingCount = 0;
+    var syncingCount = 0;
+    var stuckCount = 0;
+    final issues = <String>[];
+    final now = DateTime.now();
+
+    for (final entry in _roomStates.entries) {
+      final status = entry.value.value;
+      switch (status.state) {
+        case RoomSyncState.ready:
+          readyCount++;
+        case RoomSyncState.creating:
+          creatingCount++;
+          // Check if stuck
+          final startTime = _nonReadyStartTimes[entry.key];
+          if (startTime != null &&
+              now.difference(startTime).inSeconds > _stuckThresholdSeconds) {
+            stuckCount++;
+          }
+        case RoomSyncState.syncing:
+          syncingCount++;
+          // Check if stuck
+          final startTime = _nonReadyStartTimes[entry.key];
+          if (startTime != null &&
+              now.difference(startTime).inSeconds > _stuckThresholdSeconds) {
+            stuckCount++;
+          }
+      }
+    }
+
+    if (stuckCount > 0) {
+      issues.add('$stuckCount room(s) stuck in sync state');
+    }
+    if (creatingCount > 5) {
+      issues.add('Many rooms in creating state: $creatingCount');
+    }
+    if (syncingCount > 10) {
+      issues.add('Many rooms in syncing state: $syncingCount');
+    }
+
+    return RoomSyncHealth(
+      totalRooms: _roomStates.length,
+      readyRooms: readyCount,
+      creatingRooms: creatingCount,
+      syncingRooms: syncingCount,
+      stuckRooms: stuckCount,
+      isHealthy: issues.isEmpty,
+      healthIssues: issues,
+    );
+  }
+
+  /// Get list of stuck room IDs
+  List<String> getStuckRoomIds() {
+    final now = DateTime.now();
+    final stuckIds = <String>[];
+
+    for (final entry in _roomStates.entries) {
+      final status = entry.value.value;
+      if (status.state != RoomSyncState.ready) {
+        final startTime = _nonReadyStartTimes[entry.key];
+        if (startTime != null &&
+            now.difference(startTime).inSeconds > _stuckThresholdSeconds) {
+          stuckIds.add(entry.key);
+        }
+      }
+    }
+
+    return stuckIds;
+  }
+
+  /// Attempt to recover a specific stuck room
+  ///
+  /// Returns true if recovery was successful (room is now ready)
+  Future<bool> recoverRoom(String roomId) async {
+    final status = getStatus(roomId);
+    if (status == null || status.state == RoomSyncState.ready) {
+      return true; // Already ready or not tracked
+    }
+
+    AppLogger.info(
+      'RoomSyncManager: Attempting recovery for stuck room',
+      data: {'roomId': roomId, 'currentState': status.state.name},
+    );
+
+    // Try to find subscription in database
+    final subscriptionId = await _findMySubscriptionInDb(roomId);
+
+    if (subscriptionId != null) {
+      final stream = _getOrCreateStream(roomId);
+      stream.add(RoomSyncStatus.ready(subscriptionId));
+      _nonReadyStartTimes.remove(roomId);
+      _retryAttempts.remove(roomId);
+
+      AppLogger.info(
+        'RoomSyncManager: Room recovered - found subscription',
+        data: {'roomId': roomId},
+      );
+      return true;
+    }
+
+    // If no subscription found, mark as ready optimistically
+    // This allows the user to try sending messages, and any real
+    // permission issues will be caught then
+    final stream = _getOrCreateStream(roomId);
+    stream.add(const RoomSyncStatus(state: RoomSyncState.ready));
+    _nonReadyStartTimes.remove(roomId);
+    _retryAttempts.remove(roomId);
+
+    AppLogger.warning(
+      'RoomSyncManager: Room recovered optimistically - no subscription found',
+      data: {'roomId': roomId},
+    );
+    return true;
+  }
+
+  /// Recover all stuck rooms
+  Future<RoomSyncRecoveryResult> recoverAllStuckRooms() async {
+    final stuckRoomIds = getStuckRoomIds();
+    final recoveredIds = <String>[];
+    final failedIds = <String>[];
+
+    for (final roomId in stuckRoomIds) {
+      try {
+        final recovered = await recoverRoom(roomId);
+        if (recovered) {
+          recoveredIds.add(roomId);
+        } else {
+          failedIds.add(roomId);
+        }
+      } catch (e) {
+        AppLogger.error(
+          'RoomSyncManager: Failed to recover room',
+          error: e,
+          data: {'roomId': roomId},
+        );
+        failedIds.add(roomId);
+      }
+    }
+
+    AppLogger.info(
+      'RoomSyncManager: Bulk recovery completed',
+      data: {
+        'total': stuckRoomIds.length,
+        'recovered': recoveredIds.length,
+        'failed': failedIds.length,
+      },
+    );
+
+    return RoomSyncRecoveryResult(
+      recoveredCount: recoveredIds.length,
+      failedCount: failedIds.length,
+      recoveredRoomIds: recoveredIds,
+      failedRoomIds: failedIds,
+    );
+  }
+
+  /// Internal method to check and recover stuck rooms
+  Future<void> _checkAndRecoverStuckRooms() async {
+    final health = getHealth();
+    if (health.stuckRooms > 0) {
+      AppLogger.info(
+        'RoomSyncManager: Auto-recovering stuck rooms',
+        data: {'stuckCount': health.stuckRooms},
+      );
+      await recoverAllStuckRooms();
+    }
+  }
+
   /// Called when a room is created locally
   ///
   /// Sets the room to CREATING state and starts a timeout for API fallback.
   void onRoomCreatedLocally(String roomId) {
     final stream = _getOrCreateStream(roomId);
     stream.add(RoomSyncStatus.creating());
+    _nonReadyStartTimes[roomId] = DateTime.now();
+    _retryAttempts[roomId] = 0;
 
     AppLogger.debug(
       'Room sync: Room created locally',
@@ -149,12 +421,17 @@ class RoomSyncManager {
     if (mySubscription != null) {
       final stream = _getOrCreateStream(roomId);
       stream.add(RoomSyncStatus.ready(mySubscription));
+      _nonReadyStartTimes.remove(roomId);
+      _retryAttempts.remove(roomId);
 
       AppLogger.info(
         'Room sync: Ready - found my subscription from moderation event',
         data: {
           'roomId': roomId,
-          'subscriptionId': mySubscription.substring(0, 8),
+          'subscriptionId': mySubscription.substring(
+            0,
+            mySubscription.length < 8 ? mySubscription.length : 8,
+          ),
           'totalMembers': subscriptionIds.length,
         },
       );
@@ -176,12 +453,17 @@ class RoomSyncManager {
     if (isMySubscription) {
       final stream = _getOrCreateStream(roomId);
       stream.add(RoomSyncStatus.ready(subscriptionId));
+      _nonReadyStartTimes.remove(roomId);
+      _retryAttempts.remove(roomId);
 
       AppLogger.info(
         'Room sync: Ready - current user added to room',
         data: {
           'roomId': roomId,
-          'subscriptionId': subscriptionId.substring(0, 8),
+          'subscriptionId': subscriptionId.substring(
+            0,
+            subscriptionId.length < 8 ? subscriptionId.length : 8,
+          ),
         },
       );
     }
@@ -198,6 +480,7 @@ class RoomSyncManager {
       final stream = _getOrCreateStream(roomId);
       // Set to syncing - the UI will handle showing appropriate message
       stream.add(RoomSyncStatus.syncing(lastSyncAttempt: DateTime.now()));
+      _nonReadyStartTimes[roomId] = DateTime.now();
 
       AppLogger.info(
         'Room sync: Current user removed from room',
@@ -221,11 +504,17 @@ class RoomSyncManager {
 
     if (subscriptionId != null) {
       stream.add(RoomSyncStatus.ready(subscriptionId));
+      _nonReadyStartTimes.remove(roomId);
+      _retryAttempts.remove(roomId);
+
       AppLogger.info(
         'Room sync: Ready - found subscription via API sync',
         data: {
           'roomId': roomId,
-          'subscriptionId': subscriptionId.substring(0, 8),
+          'subscriptionId': subscriptionId.substring(
+            0,
+            subscriptionId.length < 8 ? subscriptionId.length : 8,
+          ),
         },
       );
     } else {
@@ -233,6 +522,9 @@ class RoomSyncManager {
       // to not block the user. The actual subscription lookup will
       // happen when sending messages, and errors will be shown then.
       stream.add(const RoomSyncStatus(state: RoomSyncState.ready));
+      _nonReadyStartTimes.remove(roomId);
+      _retryAttempts.remove(roomId);
+
       AppLogger.warning(
         'Room sync: Ready (optimistic) - subscription not found but API sync complete',
         data: {'roomId': roomId},
@@ -246,6 +538,8 @@ class RoomSyncManager {
   void markReady(String roomId, String subscriptionId) {
     final stream = _getOrCreateStream(roomId);
     stream.add(RoomSyncStatus.ready(subscriptionId));
+    _nonReadyStartTimes.remove(roomId);
+    _retryAttempts.remove(roomId);
 
     AppLogger.debug(
       'Room sync: Marked ready with known subscription',
@@ -269,6 +563,7 @@ class RoomSyncManager {
     final current = stream.value;
     if (current.state != RoomSyncState.ready) {
       stream.add(const RoomSyncStatus(state: RoomSyncState.ready));
+      _nonReadyStartTimes.remove(roomId);
 
       AppLogger.debug(
         'Room sync: Room downloaded from server, marked ready',
@@ -281,8 +576,13 @@ class RoomSyncManager {
   void _startSyncTimeout(String roomId) {
     _cancelSyncTimeout(roomId);
 
+    final retryCount = _retryAttempts[roomId] ?? 0;
+    final timeoutDuration = retryCount == 0
+        ? const Duration(seconds: _syncTimeoutSeconds)
+        : const Duration(seconds: _extendedTimeoutSeconds);
+
     _syncTimeouts[roomId] = Timer(
-      const Duration(seconds: _syncTimeoutSeconds),
+      timeoutDuration,
       () => _onSyncTimeout(roomId),
     );
   }
@@ -293,12 +593,21 @@ class RoomSyncManager {
     _syncTimeouts.remove(roomId);
   }
 
-  /// Called when sync timeout fires - triggers API fallback
+  /// Called when sync timeout fires - triggers API fallback with retry logic
   void _onSyncTimeout(String roomId) {
+    final retryCount = _retryAttempts[roomId] ?? 0;
+
     AppLogger.debug(
-      'Room sync: Timeout waiting for member events, will use API fallback',
-      data: {'roomId': roomId, 'timeoutSeconds': _syncTimeoutSeconds},
+      'Room sync: Timeout waiting for member events',
+      data: {
+        'roomId': roomId,
+        'retryCount': retryCount,
+        'maxRetries': _maxRetryAttempts,
+      },
     );
+
+    // Update retry count
+    _retryAttempts[roomId] = retryCount + 1;
 
     // The actual API call will be triggered by whoever is watching the state
     // This just updates the state to indicate we're still syncing
@@ -306,7 +615,21 @@ class RoomSyncManager {
     final current = stream.value;
 
     if (current.state != RoomSyncState.ready) {
-      stream.add(RoomSyncStatus.syncing(lastSyncAttempt: DateTime.now()));
+      if (retryCount >= _maxRetryAttempts) {
+        // Max retries reached, mark as ready optimistically
+        AppLogger.warning(
+          'Room sync: Max retries reached, marking ready optimistically',
+          data: {'roomId': roomId},
+        );
+        stream.add(const RoomSyncStatus(state: RoomSyncState.ready));
+        _nonReadyStartTimes.remove(roomId);
+        _retryAttempts.remove(roomId);
+      } else {
+        // Still retrying
+        stream.add(RoomSyncStatus.syncing(lastSyncAttempt: DateTime.now()));
+        // Schedule another timeout
+        _startSyncTimeout(roomId);
+      }
     }
   }
 
@@ -401,10 +724,14 @@ class RoomSyncManager {
     _cancelSyncTimeout(roomId);
     _roomStates[roomId]?.close();
     _roomStates.remove(roomId);
+    _nonReadyStartTimes.remove(roomId);
+    _retryAttempts.remove(roomId);
   }
 
   /// Clean up all resources
   void dispose() {
+    stopRecoveryTimer();
+
     for (final roomId in _syncTimeouts.keys.toList()) {
       _cancelSyncTimeout(roomId);
     }
@@ -413,6 +740,8 @@ class RoomSyncManager {
       stream.close();
     }
     _roomStates.clear();
+    _nonReadyStartTimes.clear();
+    _retryAttempts.clear();
   }
 }
 
@@ -423,7 +752,16 @@ final roomSyncManagerProvider = Provider<RoomSyncManager>((ref) {
 
   final manager = RoomSyncManager(authRepo, memberRepo);
 
+  // Start the recovery timer for automatic stuck room recovery
+  manager.startRecoveryTimer();
+
   ref.onDispose(manager.dispose);
 
   return manager;
+});
+
+/// Provider for room sync health
+final roomSyncHealthProvider = Provider<RoomSyncHealth>((ref) {
+  final manager = ref.watch(roomSyncManagerProvider);
+  return manager.getHealth();
 });

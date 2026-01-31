@@ -258,9 +258,9 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 15', () {
-        // Version 15 includes upload chunks for resumable uploads
-        expect(db.schemaVersion, equals(15));
+      test('schema version is 16', () {
+        // Version 16: v15 added upload chunks, v16 adds priority/lastError to PendingJobs
+        expect(db.schemaVersion, equals(16));
       });
     });
 

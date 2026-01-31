@@ -4619,6 +4619,29 @@ class $PendingJobsTable extends PendingJobs
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _priorityMeta = const VerificationMeta(
+    'priority',
+  );
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(2),
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4628,6 +4651,8 @@ class $PendingJobsTable extends PendingJobs
     retryCount,
     status,
     nextRetryAt,
+    priority,
+    lastError,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4685,6 +4710,18 @@ class $PendingJobsTable extends PendingJobs
         ),
       );
     }
+    if (data.containsKey('priority')) {
+      context.handle(
+        _priorityMeta,
+        priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
     return context;
   }
 
@@ -4722,6 +4759,14 @@ class $PendingJobsTable extends PendingJobs
         DriftSqlType.int,
         data['${effectivePrefix}next_retry_at'],
       ),
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}priority'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
     );
   }
 
@@ -4753,6 +4798,14 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
   /// Earliest time this job can be retried (for exponential backoff)
   /// Null means job can be processed immediately
   final int? nextRetryAt;
+
+  /// Job priority level (0=critical, 1=high, 2=normal, 3=low)
+  /// Lower values are processed first
+  final int priority;
+
+  /// JSON-encoded last error information for debugging
+  /// Contains error message, code, and timestamp
+  final String? lastError;
   const PendingJob({
     required this.id,
     required this.type,
@@ -4761,6 +4814,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     required this.retryCount,
     required this.status,
     this.nextRetryAt,
+    required this.priority,
+    this.lastError,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4777,6 +4832,10 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || nextRetryAt != null) {
       map['next_retry_at'] = Variable<int>(nextRetryAt);
+    }
+    map['priority'] = Variable<int>(priority);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
     }
     return map;
   }
@@ -4796,6 +4855,10 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
       nextRetryAt: nextRetryAt == null && nullToAbsent
           ? const Value.absent()
           : Value(nextRetryAt),
+      priority: Value(priority),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
     );
   }
 
@@ -4812,6 +4875,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
       retryCount: serializer.fromJson<int>(json['retryCount']),
       status: serializer.fromJson<String>(json['status']),
       nextRetryAt: serializer.fromJson<int?>(json['nextRetryAt']),
+      priority: serializer.fromJson<int>(json['priority']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
     );
   }
   @override
@@ -4825,6 +4890,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
       'retryCount': serializer.toJson<int>(retryCount),
       'status': serializer.toJson<String>(status),
       'nextRetryAt': serializer.toJson<int?>(nextRetryAt),
+      'priority': serializer.toJson<int>(priority),
+      'lastError': serializer.toJson<String?>(lastError),
     };
   }
 
@@ -4836,6 +4903,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     int? retryCount,
     String? status,
     Value<int?> nextRetryAt = const Value.absent(),
+    int? priority,
+    Value<String?> lastError = const Value.absent(),
   }) => PendingJob(
     id: id ?? this.id,
     type: type ?? this.type,
@@ -4844,6 +4913,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     retryCount: retryCount ?? this.retryCount,
     status: status ?? this.status,
     nextRetryAt: nextRetryAt.present ? nextRetryAt.value : this.nextRetryAt,
+    priority: priority ?? this.priority,
+    lastError: lastError.present ? lastError.value : this.lastError,
   );
   PendingJob copyWithCompanion(PendingJobsCompanion data) {
     return PendingJob(
@@ -4858,6 +4929,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
       nextRetryAt: data.nextRetryAt.present
           ? data.nextRetryAt.value
           : this.nextRetryAt,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
     );
   }
 
@@ -4870,7 +4943,9 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
           ..write('createdAt: $createdAt, ')
           ..write('retryCount: $retryCount, ')
           ..write('status: $status, ')
-          ..write('nextRetryAt: $nextRetryAt')
+          ..write('nextRetryAt: $nextRetryAt, ')
+          ..write('priority: $priority, ')
+          ..write('lastError: $lastError')
           ..write(')'))
         .toString();
   }
@@ -4884,6 +4959,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     retryCount,
     status,
     nextRetryAt,
+    priority,
+    lastError,
   );
   @override
   bool operator ==(Object other) =>
@@ -4895,7 +4972,9 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
           other.createdAt == this.createdAt &&
           other.retryCount == this.retryCount &&
           other.status == this.status &&
-          other.nextRetryAt == this.nextRetryAt);
+          other.nextRetryAt == this.nextRetryAt &&
+          other.priority == this.priority &&
+          other.lastError == this.lastError);
 }
 
 class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
@@ -4906,6 +4985,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
   final Value<int> retryCount;
   final Value<String> status;
   final Value<int?> nextRetryAt;
+  final Value<int> priority;
+  final Value<String?> lastError;
   const PendingJobsCompanion({
     this.id = const Value.absent(),
     this.type = const Value.absent(),
@@ -4914,6 +4995,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     this.retryCount = const Value.absent(),
     this.status = const Value.absent(),
     this.nextRetryAt = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.lastError = const Value.absent(),
   });
   PendingJobsCompanion.insert({
     this.id = const Value.absent(),
@@ -4923,6 +5006,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     this.retryCount = const Value.absent(),
     this.status = const Value.absent(),
     this.nextRetryAt = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.lastError = const Value.absent(),
   }) : type = Value(type);
   static Insertable<PendingJob> custom({
     Expression<int>? id,
@@ -4932,6 +5017,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     Expression<int>? retryCount,
     Expression<String>? status,
     Expression<int>? nextRetryAt,
+    Expression<int>? priority,
+    Expression<String>? lastError,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4941,6 +5028,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
       if (retryCount != null) 'retry_count': retryCount,
       if (status != null) 'status': status,
       if (nextRetryAt != null) 'next_retry_at': nextRetryAt,
+      if (priority != null) 'priority': priority,
+      if (lastError != null) 'last_error': lastError,
     });
   }
 
@@ -4952,6 +5041,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     Value<int>? retryCount,
     Value<String>? status,
     Value<int?>? nextRetryAt,
+    Value<int>? priority,
+    Value<String?>? lastError,
   }) {
     return PendingJobsCompanion(
       id: id ?? this.id,
@@ -4961,6 +5052,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
       retryCount: retryCount ?? this.retryCount,
       status: status ?? this.status,
       nextRetryAt: nextRetryAt ?? this.nextRetryAt,
+      priority: priority ?? this.priority,
+      lastError: lastError ?? this.lastError,
     );
   }
 
@@ -4988,6 +5081,12 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     if (nextRetryAt.present) {
       map['next_retry_at'] = Variable<int>(nextRetryAt.value);
     }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
     return map;
   }
 
@@ -5000,7 +5099,9 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
           ..write('createdAt: $createdAt, ')
           ..write('retryCount: $retryCount, ')
           ..write('status: $status, ')
-          ..write('nextRetryAt: $nextRetryAt')
+          ..write('nextRetryAt: $nextRetryAt, ')
+          ..write('priority: $priority, ')
+          ..write('lastError: $lastError')
           ..write(')'))
         .toString();
   }
@@ -12817,6 +12918,8 @@ typedef $$PendingJobsTableCreateCompanionBuilder =
       Value<int> retryCount,
       Value<String> status,
       Value<int?> nextRetryAt,
+      Value<int> priority,
+      Value<String?> lastError,
     });
 typedef $$PendingJobsTableUpdateCompanionBuilder =
     PendingJobsCompanion Function({
@@ -12827,6 +12930,8 @@ typedef $$PendingJobsTableUpdateCompanionBuilder =
       Value<int> retryCount,
       Value<String> status,
       Value<int?> nextRetryAt,
+      Value<int> priority,
+      Value<String?> lastError,
     });
 
 class $$PendingJobsTableFilterComposer
@@ -12870,6 +12975,16 @@ class $$PendingJobsTableFilterComposer
 
   ColumnFilters<int> get nextRetryAt => $composableBuilder(
     column: $table.nextRetryAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12917,6 +13032,16 @@ class $$PendingJobsTableOrderingComposer
     column: $table.nextRetryAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PendingJobsTableAnnotationComposer
@@ -12952,6 +13077,12 @@ class $$PendingJobsTableAnnotationComposer
     column: $table.nextRetryAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
 }
 
 class $$PendingJobsTableTableManager
@@ -12992,6 +13123,8 @@ class $$PendingJobsTableTableManager
                 Value<int> retryCount = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int?> nextRetryAt = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
               }) => PendingJobsCompanion(
                 id: id,
                 type: type,
@@ -13000,6 +13133,8 @@ class $$PendingJobsTableTableManager
                 retryCount: retryCount,
                 status: status,
                 nextRetryAt: nextRetryAt,
+                priority: priority,
+                lastError: lastError,
               ),
           createCompanionCallback:
               ({
@@ -13010,6 +13145,8 @@ class $$PendingJobsTableTableManager
                 Value<int> retryCount = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int?> nextRetryAt = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
               }) => PendingJobsCompanion.insert(
                 id: id,
                 type: type,
@@ -13018,6 +13155,8 @@ class $$PendingJobsTableTableManager
                 retryCount: retryCount,
                 status: status,
                 nextRetryAt: nextRetryAt,
+                priority: priority,
+                lastError: lastError,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
