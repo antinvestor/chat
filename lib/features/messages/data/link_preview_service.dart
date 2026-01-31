@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:html/parser.dart' as html_parser;
+import 'package:html_unescape/html_unescape.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/logging/app_logger.dart';
@@ -18,7 +20,7 @@ class LinkPreviewService {
 
   final Future<String?> Function() _getAccessToken;
 
-  /// In-memory cache for link previews (LRU with TTL)
+  /// In-memory cache for link previews (FIFO eviction with TTL)
   final Map<String, _CachedPreview> _cache = {};
   static const int _maxCacheSize = 100;
   static const Duration _cacheTtl = Duration(hours: 1);
@@ -147,66 +149,57 @@ class LinkPreviewService {
     }
   }
 
-  /// Parse OpenGraph tags from HTML
-  LinkPreview? _parseOpenGraphTags(String url, String html) {
-    String? title;
-    String? description;
-    String? imageUrl;
-    String? siteName;
-    String? favicon;
+  /// HTML entity decoder instance
+  static final _htmlUnescape = HtmlUnescape();
 
-    // Parse og:title
-    final titleMatch = RegExp(
-      '''<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["']''',
-      caseSensitive: false,
-    ).firstMatch(html);
-    title = titleMatch?.group(1);
+  /// Parse OpenGraph tags from HTML using proper HTML parsing
+  ///
+  /// This uses the html package for robust parsing that handles
+  /// attribute order variations and HTML quirks.
+  LinkPreview? _parseOpenGraphTags(String url, String htmlContent) {
+    final document = html_parser.parse(htmlContent);
 
-    // Fallback to <title> tag
-    if (title == null || title.isEmpty) {
-      final htmlTitleMatch = RegExp(
-        '<title[^>]*>([^<]*)</title>',
-        caseSensitive: false,
-      ).firstMatch(html);
-      title = htmlTitleMatch?.group(1)?.trim();
+    // Helper to get meta content by property attribute
+    String? getMetaProperty(String property) {
+      return document
+          .querySelector('meta[property="$property"]')
+          ?.attributes['content'];
     }
 
-    // Parse og:description
-    final descMatch = RegExp(
-      '''<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)["']''',
-      caseSensitive: false,
-    ).firstMatch(html);
-    description = descMatch?.group(1);
+    // Helper to get meta content by name attribute
+    String? getMetaName(String name) {
+      return document
+          .querySelector('meta[name="$name"]')
+          ?.attributes['content'];
+    }
 
-    // Fallback to meta description
+    // Helper to get link href by rel attribute
+    String? getLinkHref(String rel) {
+      // Try exact match first, then contains match for "shortcut icon" etc.
+      return document.querySelector('link[rel="$rel"]')?.attributes['href'] ??
+          document.querySelector('link[rel*="$rel"]')?.attributes['href'];
+    }
+
+    // Parse og:title, fallback to <title> tag
+    var title = getMetaProperty('og:title');
+    if (title == null || title.isEmpty) {
+      title = document.querySelector('title')?.text.trim();
+    }
+
+    // Parse og:description, fallback to meta description
+    var description = getMetaProperty('og:description');
     if (description == null || description.isEmpty) {
-      final metaDescMatch = RegExp(
-        '''<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']''',
-        caseSensitive: false,
-      ).firstMatch(html);
-      description = metaDescMatch?.group(1);
+      description = getMetaName('description');
     }
 
     // Parse og:image
-    final imageMatch = RegExp(
-      '''<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']*)["']''',
-      caseSensitive: false,
-    ).firstMatch(html);
-    imageUrl = imageMatch?.group(1);
+    var imageUrl = getMetaProperty('og:image');
 
     // Parse og:site_name
-    final siteMatch = RegExp(
-      '''<meta[^>]*property=["']og:site_name["'][^>]*content=["']([^"']*)["']''',
-      caseSensitive: false,
-    ).firstMatch(html);
-    siteName = siteMatch?.group(1);
+    final siteName = getMetaProperty('og:site_name');
 
     // Parse favicon
-    final faviconMatch = RegExp(
-      '''<link[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']*)["']''',
-      caseSensitive: false,
-    ).firstMatch(html);
-    favicon = faviconMatch?.group(1);
+    var favicon = getLinkHref('icon');
 
     // Resolve relative URLs
     final baseUri = Uri.parse(url);
@@ -224,27 +217,14 @@ class LinkPreviewService {
 
     return LinkPreview(
       url: url,
-      title: _decodeHtmlEntities(title),
+      title: _htmlUnescape.convert(title),
       description: description != null
-          ? _decodeHtmlEntities(description)
+          ? _htmlUnescape.convert(description)
           : null,
       imageUrl: imageUrl,
       siteName: siteName ?? baseUri.host,
       favicon: favicon,
     );
-  }
-
-  /// Decode common HTML entities
-  String _decodeHtmlEntities(String text) {
-    return text
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', "'")
-        .replaceAll('&nbsp;', ' ')
-        .replaceAll('&#x27;', "'")
-        .replaceAll('&#x2F;', '/');
   }
 
   LinkPreview? _getCached(String url) {
