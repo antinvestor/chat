@@ -35,7 +35,6 @@ class BandwidthStatsCard extends ConsumerWidget {
     BandwidthStats stats,
     WidgetRef ref,
   ) {
-
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,

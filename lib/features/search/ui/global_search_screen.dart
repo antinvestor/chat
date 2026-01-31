@@ -485,7 +485,9 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen>
         // Navigate to chat if contact is on platform, otherwise show options
         if (contact.profileId != null) {
           final name = contact.displayName ?? contact.contactDetail;
-          context.push('/chat/${contact.profileId}?name=${Uri.encodeComponent(name)}');
+          context.push(
+            '/chat/${contact.profileId}?name=${Uri.encodeComponent(name)}',
+          );
         } else {
           _showContactOptions(context, contact);
         }
@@ -553,9 +555,9 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen>
               title: const Text('Invite to App'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Invite sent to $name')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Invite sent to $name')));
               },
             ),
             ListTile(
