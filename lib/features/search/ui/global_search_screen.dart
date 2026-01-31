@@ -162,7 +162,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen>
             Icon(
               Icons.search,
               size: 64,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -236,7 +236,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen>
             Icon(
               Icons.search_off,
               size: 64,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -482,7 +482,13 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen>
         ref
             .read(globalSearchProvider.notifier)
             .addToRecentSearches(state.query);
-        // Contact tap action - start direct chat or show profile
+        // Navigate to chat if contact is on platform, otherwise show options
+        if (contact.profileId != null) {
+          final name = contact.displayName ?? contact.contactDetail;
+          context.push('/chat/${contact.profileId}?name=${Uri.encodeComponent(name)}');
+        } else {
+          _showContactOptions(context, contact);
+        }
       },
     );
   }
@@ -530,6 +536,36 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen>
       ),
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  void _showContactOptions(BuildContext context, RosterEntry contact) {
+    final name = contact.displayName ?? contact.contactDetail;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('Invite to App'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Invite sent to $name')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('View Details'),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
