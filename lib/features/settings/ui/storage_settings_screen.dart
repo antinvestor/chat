@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/settings_providers.dart';
+import 'widgets/bandwidth_stats_card.dart';
 
 class StorageSettingsScreen extends ConsumerStatefulWidget {
   const StorageSettingsScreen({super.key});
@@ -35,6 +36,8 @@ class _StorageSettingsScreenState extends ConsumerState<StorageSettingsScreen> {
           body: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
+              // Bandwidth statistics card
+              const BandwidthStatsCard(),
               _buildSettingsSection(
                 context,
                 title: 'Network usage',
