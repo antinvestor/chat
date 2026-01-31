@@ -11,40 +11,40 @@ void main() {
   IntegrationTestConfig.ensureInitialized();
 
   group('Authentication Flow Integration Tests', () {
+    /// Helper to build auth-aware widget with routing logic
+    Widget buildAuthAwareWidget(AuthRepository authRepo) {
+      return ProviderScope(
+        overrides: [authRepositoryProvider.overrideWithValue(authRepo)],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              return FutureBuilder<bool>(
+                future: authRepo.isLoggedIn(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final isLoggedIn = snapshot.data ?? false;
+                  if (isLoggedIn) {
+                    return const RoomListScreen();
+                  }
+                  return const LoginScreen();
+                },
+              );
+            },
+          ),
+        ),
+      );
+    }
+
     testWidgets('displays login screen when not authenticated', (
       WidgetTester tester,
     ) async {
-      // Create a mock auth repository that returns not authenticated
       final mockAuthService = MockAuthServiceImpl();
       mockAuthService.setAuthenticated(authenticated: false);
       final mockAuthRepo = AuthRepository(mockAuthService);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [authRepositoryProvider.overrideWithValue(mockAuthRepo)],
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) {
-                // Simulate router redirect logic
-                return FutureBuilder<bool>(
-                  future: mockAuthRepo.isLoggedIn(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final isLoggedIn = snapshot.data ?? false;
-                    if (isLoggedIn) {
-                      return const RoomListScreen();
-                    }
-                    return const LoginScreen();
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildAuthAwareWidget(mockAuthRepo));
       await tester.pumpAndSettle();
 
       // Verify login screen is displayed
@@ -54,40 +54,14 @@ void main() {
     testWidgets('navigates to room list after successful authentication', (
       WidgetTester tester,
     ) async {
-      // Create a mock auth repository that returns authenticated
       final mockAuthService = MockAuthServiceImpl();
       mockAuthService.setAuthenticated(
         authenticated: true,
-        profileId: 'test-profile-123',
-        token: 'test-token-abc',
+        token: 'test-token',
       );
       final mockAuthRepo = AuthRepository(mockAuthService);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [authRepositoryProvider.overrideWithValue(mockAuthRepo)],
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) {
-                return FutureBuilder<bool>(
-                  future: mockAuthRepo.isLoggedIn(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final isLoggedIn = snapshot.data ?? false;
-                    if (isLoggedIn) {
-                      return const RoomListScreen();
-                    }
-                    return const LoginScreen();
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
+      await tester.pumpWidget(buildAuthAwareWidget(mockAuthRepo));
       await tester.pumpAndSettle();
 
       // Verify room list screen is displayed
@@ -166,7 +140,7 @@ void main() {
       final mockAuthService = MockAuthServiceImpl();
       mockAuthService.setAuthenticated(
         authenticated: true,
-        profileId: 'test-profile',
+        token: 'test-token',
       );
       final mockAuthRepo = AuthRepository(mockAuthService);
 

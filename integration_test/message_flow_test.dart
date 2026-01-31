@@ -19,7 +19,6 @@ void main() {
       mockAuthService = MockAuthServiceImpl();
       mockAuthService.setAuthenticated(
         authenticated: true,
-        profileId: 'current-user-id',
         token: 'test-token',
       );
       mockAuthRepo = AuthRepository(mockAuthService);
@@ -44,8 +43,8 @@ void main() {
       // Verify input field exists
       expect(find.byType(TextField), findsOneWidget);
 
-      // Verify send button exists
-      expect(find.byIcon(Icons.send), findsOneWidget);
+      // Verify voice record button exists (shown when no text is entered)
+      expect(find.byIcon(Icons.mic), findsOneWidget);
 
       // Verify attachment button exists
       expect(find.byIcon(Icons.attach_file), findsOneWidget);
@@ -253,8 +252,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify failed message is displayed
+      // Verify failed message is displayed with retry option
       expect(find.byType(MessageBubble), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.textContaining('Not sent'), findsOneWidget);
     });
 
     testWidgets('long press on message shows context menu', (

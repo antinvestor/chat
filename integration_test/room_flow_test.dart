@@ -19,7 +19,6 @@ void main() {
       mockAuthService = MockAuthServiceImpl();
       mockAuthService.setAuthenticated(
         authenticated: true,
-        profileId: 'current-user-id',
         token: 'test-token',
       );
       mockAuthRepo = AuthRepository(mockAuthService);
@@ -144,8 +143,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Screen should still render without rooms
+      // Screen should render with empty state
       expect(find.byType(RoomListScreen), findsOneWidget);
+      // Verify empty state message is shown
+      expect(find.text('No conversations yet'), findsOneWidget);
     });
 
     testWidgets('room list tile handles direct message room type', (

@@ -33,11 +33,7 @@ class MockAuthServiceImpl extends AuthService {
   bool _isAuthenticated = false;
   String? _accessToken;
 
-  void setAuthenticated({
-    required bool authenticated,
-    String? profileId,
-    String? token,
-  }) {
+  void setAuthenticated({required bool authenticated, String? token}) {
     _isAuthenticated = authenticated;
     _accessToken = token ?? (authenticated ? 'test-access-token' : null);
   }
