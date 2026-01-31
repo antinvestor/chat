@@ -25,6 +25,7 @@ import '../logging/app_logger.dart';
 import '../networking/client.dart';
 import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
+import 'sync_health_monitor.dart';
 
 final pendingJobRepositoryProvider = Provider<PendingJobRepository>(
   (ref) => PendingJobRepository(AppDatabase.instance),
@@ -62,9 +63,13 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
   final encryptionService = ref.watch(e2eEncryptionServiceProvider);
   final coordinator = ref.watch(tokenRefreshCoordinatorProvider);
   final roomSyncManager = ref.watch(roomSyncManagerProvider);
+  final healthMonitor = ref.watch(syncHealthMonitorProvider);
 
   // Initialize encryption service
   await encryptionService.initialize();
+
+  // Start health monitoring
+  healthMonitor.start();
 
   final engine = SyncEngine(
     gatewayClient,
@@ -78,6 +83,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     ref.watch(readReceiptRepositoryProvider),
     roomSyncManager,
     RoomRepository(AppDatabase.instance),
+    healthMonitor: healthMonitor,
     onTokenRefresh: () async {
       // Delegate ALL token refresh logic to the coordinator
       // This ensures consistent behavior across TokenManager, SyncEngine,
@@ -174,7 +180,9 @@ class SyncEngine with WidgetsBindingObserver {
     this._roomSyncManager,
     this._roomRepository, {
     TokenRefreshCallback? onTokenRefresh,
-  }) : _onTokenRefresh = onTokenRefresh;
+    SyncHealthMonitor? healthMonitor,
+  }) : _onTokenRefresh = onTokenRefresh,
+       _healthMonitor = healthMonitor;
 
   final pb.GatewayServiceClient _gatewayClient;
   final pb.ChatServiceClient _chatClient;
@@ -188,6 +196,7 @@ class SyncEngine with WidgetsBindingObserver {
   final RoomSyncManager _roomSyncManager;
   final RoomRepository _roomRepository;
   final TokenRefreshCallback? _onTokenRefresh;
+  final SyncHealthMonitor? _healthMonitor;
 
   StreamSubscription? _connectSubscription;
   StreamSubscription<List<domain_job.PendingJob>>? _jobWatchSubscription;
@@ -429,6 +438,17 @@ class SyncEngine with WidgetsBindingObserver {
 
     // Run connection loop in a way that doesn't block the main thread
     while (!_shouldStop) {
+      // Check circuit breaker before attempting connection
+      final healthMonitor = _healthMonitor;
+      if (healthMonitor != null && !healthMonitor.isConnectionAllowed) {
+        AppLogger.warning(
+          'Circuit breaker open, delaying connection attempt',
+          data: {'circuitState': healthMonitor.circuitState.name},
+        );
+        await Future.delayed(const Duration(seconds: 5));
+        continue;
+      }
+
       try {
         // Create a StreamController for bidirectional communication
         // This stays open so we can send multiple requests (hello, typing, receipts, etc.)
@@ -459,6 +479,9 @@ class SyncEngine with WidgetsBindingObserver {
         _authErrorCount = 0; // Reset auth error count on successful connection
         _connectionStateController.add(SyncConnectionState.connected);
 
+        // Record successful connection with health monitor
+        _healthMonitor?.recordConnectionSuccess();
+
         // Process stream events with timeout to detect stalled connections
         await _processStreamWithTimeout(stream);
       } catch (e, stackTrace) {
@@ -466,6 +489,13 @@ class SyncEngine with WidgetsBindingObserver {
         final isAuthError = _isAuthenticationError(errorStr);
         final isNormalDisconnect = _isNormalDisconnect(errorStr);
         final isTimeout = e is TimeoutException;
+
+        // Record failure with health monitor (not for normal disconnects)
+        if (!isNormalDisconnect) {
+          _healthMonitor?.recordConnectionFailure(
+            isAuthError ? 'auth_error' : (isTimeout ? 'timeout' : errorStr),
+          );
+        }
 
         // Log appropriately based on error type
         if (isNormalDisconnect) {
@@ -700,17 +730,31 @@ class SyncEngine with WidgetsBindingObserver {
   }
 
   Future<void> _handleConnectResponse(pb.StreamResponse response) async {
-    // Handle different event types
-    if (response.hasMessage()) {
-      await _processPbRoomEvent(response.message);
-    } else if (response.hasTypingEvent()) {
-      _typingEventsController.add(response.typingEvent);
-    } else if (response.hasPresenceEvent()) {
-      // Note: Presence events will be handled when needed
-    } else if (response.hasReceiptEvent()) {
-      await _processReceiptEvent(response.receiptEvent);
-    } else if (response.hasReadEvent()) {
-      // Note: Read marker events will be handled when needed
+    final startTime = DateTime.now();
+
+    try {
+      // Handle different event types
+      if (response.hasMessage()) {
+        await _processPbRoomEvent(response.message);
+
+        // Track message processing success with latency
+        final latencyMs = DateTime.now().difference(startTime).inMilliseconds;
+        _healthMonitor?.recordMessageSuccess(latencyMs: latencyMs);
+      } else if (response.hasTypingEvent()) {
+        _typingEventsController.add(response.typingEvent);
+      } else if (response.hasPresenceEvent()) {
+        // Note: Presence events will be handled when needed
+      } else if (response.hasReceiptEvent()) {
+        await _processReceiptEvent(response.receiptEvent);
+      } else if (response.hasReadEvent()) {
+        // Note: Read marker events will be handled when needed
+      }
+    } catch (e) {
+      // Track message processing failure
+      if (response.hasMessage()) {
+        _healthMonitor?.recordMessageFailure();
+      }
+      rethrow;
     }
   }
 

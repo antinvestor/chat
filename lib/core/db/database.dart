@@ -327,6 +327,14 @@ class PendingJobs extends Table {
   /// Earliest time this job can be retried (for exponential backoff)
   /// Null means job can be processed immediately
   IntColumn get nextRetryAt => integer().nullable()();
+
+  /// Job priority level (0=critical, 1=high, 2=normal, 3=low)
+  /// Lower values are processed first
+  IntColumn get priority => integer().withDefault(const Constant(2))();
+
+  /// JSON-encoded last error information for debugging
+  /// Contains error message, code, and timestamp
+  TextColumn get lastError => text().nullable()();
 }
 
 /// Financial transactions within group savings (chama) rooms
@@ -591,6 +599,38 @@ class InviteLinkJoins extends Table {
   TextColumn get status => text().withDefault(const Constant('approved'))();
 }
 
+/// Tracks chunk progress for resumable uploads
+///
+/// Stores upload state to allow resuming interrupted uploads.
+/// Each chunk is recorded separately for precise resume points.
+///
+/// Example:
+/// ```dart
+/// final chunks = await (db.uploadChunks.select()
+///   ..where((c) => c.localId.equals(messageLocalId))
+///   ..orderBy([(c) => OrderingTerm.asc(c.chunkIndex)])
+/// ).get();
+/// ```
+class UploadChunks extends Table {
+  /// Auto-incrementing primary key
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Local message ID this upload is associated with
+  TextColumn get localId => text()();
+
+  /// Server-assigned upload ID for resumable uploads
+  TextColumn get uploadId => text().nullable()();
+
+  /// Index of this chunk (0-based, -1 for metadata row)
+  IntColumn get chunkIndex => integer().withDefault(const Constant(-1))();
+
+  /// Size of this chunk in bytes
+  IntColumn get chunkSize => integer().withDefault(const Constant(0))();
+
+  /// Timestamp when this chunk was uploaded (milliseconds since epoch)
+  IntColumn get createdAt => integer()();
+}
+
 /// Analytics events table for local event storage
 ///
 /// Stores analytics events locally before batch upload to backend.
@@ -719,6 +759,7 @@ class CallHistory extends Table {
     Reports,
     InviteLinks,
     InviteLinkJoins,
+    UploadChunks,
     CallHistory,
     AnalyticsEvents,
   ],
@@ -733,7 +774,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -894,6 +935,26 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('''
           CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_events_event_id
           ON analytics_events(event_id)
+        ''');
+      }
+      if (from <= 14) {
+        // Migration from v14 to v15: Add upload chunks table for resumable uploads
+        await m.createTable(uploadChunks);
+        // Create index for efficient querying by localId
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_upload_chunks_local_id
+          ON upload_chunks(local_id)
+        ''');
+      }
+      if (from <= 15) {
+        // Migration from v15 to v16: Add job queue priority and error tracking
+        await m.addColumn(pendingJobs, pendingJobs.priority);
+        await m.addColumn(pendingJobs, pendingJobs.lastError);
+        // Create index for efficient priority-based job retrieval
+        await customStatement('''
+          CREATE INDEX IF NOT EXISTS idx_pending_jobs_priority
+          ON pending_jobs(priority ASC, created_at ASC)
+          WHERE status = 'pending'
         ''');
       }
     },

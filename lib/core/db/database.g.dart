@@ -4619,6 +4619,29 @@ class $PendingJobsTable extends PendingJobs
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _priorityMeta = const VerificationMeta(
+    'priority',
+  );
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(2),
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4628,6 +4651,8 @@ class $PendingJobsTable extends PendingJobs
     retryCount,
     status,
     nextRetryAt,
+    priority,
+    lastError,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4685,6 +4710,18 @@ class $PendingJobsTable extends PendingJobs
         ),
       );
     }
+    if (data.containsKey('priority')) {
+      context.handle(
+        _priorityMeta,
+        priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
     return context;
   }
 
@@ -4722,6 +4759,14 @@ class $PendingJobsTable extends PendingJobs
         DriftSqlType.int,
         data['${effectivePrefix}next_retry_at'],
       ),
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}priority'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
     );
   }
 
@@ -4753,6 +4798,14 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
   /// Earliest time this job can be retried (for exponential backoff)
   /// Null means job can be processed immediately
   final int? nextRetryAt;
+
+  /// Job priority level (0=critical, 1=high, 2=normal, 3=low)
+  /// Lower values are processed first
+  final int priority;
+
+  /// JSON-encoded last error information for debugging
+  /// Contains error message, code, and timestamp
+  final String? lastError;
   const PendingJob({
     required this.id,
     required this.type,
@@ -4761,6 +4814,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     required this.retryCount,
     required this.status,
     this.nextRetryAt,
+    required this.priority,
+    this.lastError,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4777,6 +4832,10 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || nextRetryAt != null) {
       map['next_retry_at'] = Variable<int>(nextRetryAt);
+    }
+    map['priority'] = Variable<int>(priority);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
     }
     return map;
   }
@@ -4796,6 +4855,10 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
       nextRetryAt: nextRetryAt == null && nullToAbsent
           ? const Value.absent()
           : Value(nextRetryAt),
+      priority: Value(priority),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
     );
   }
 
@@ -4812,6 +4875,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
       retryCount: serializer.fromJson<int>(json['retryCount']),
       status: serializer.fromJson<String>(json['status']),
       nextRetryAt: serializer.fromJson<int?>(json['nextRetryAt']),
+      priority: serializer.fromJson<int>(json['priority']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
     );
   }
   @override
@@ -4825,6 +4890,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
       'retryCount': serializer.toJson<int>(retryCount),
       'status': serializer.toJson<String>(status),
       'nextRetryAt': serializer.toJson<int?>(nextRetryAt),
+      'priority': serializer.toJson<int>(priority),
+      'lastError': serializer.toJson<String?>(lastError),
     };
   }
 
@@ -4836,6 +4903,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     int? retryCount,
     String? status,
     Value<int?> nextRetryAt = const Value.absent(),
+    int? priority,
+    Value<String?> lastError = const Value.absent(),
   }) => PendingJob(
     id: id ?? this.id,
     type: type ?? this.type,
@@ -4844,6 +4913,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     retryCount: retryCount ?? this.retryCount,
     status: status ?? this.status,
     nextRetryAt: nextRetryAt.present ? nextRetryAt.value : this.nextRetryAt,
+    priority: priority ?? this.priority,
+    lastError: lastError.present ? lastError.value : this.lastError,
   );
   PendingJob copyWithCompanion(PendingJobsCompanion data) {
     return PendingJob(
@@ -4858,6 +4929,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
       nextRetryAt: data.nextRetryAt.present
           ? data.nextRetryAt.value
           : this.nextRetryAt,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
     );
   }
 
@@ -4870,7 +4943,9 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
           ..write('createdAt: $createdAt, ')
           ..write('retryCount: $retryCount, ')
           ..write('status: $status, ')
-          ..write('nextRetryAt: $nextRetryAt')
+          ..write('nextRetryAt: $nextRetryAt, ')
+          ..write('priority: $priority, ')
+          ..write('lastError: $lastError')
           ..write(')'))
         .toString();
   }
@@ -4884,6 +4959,8 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
     retryCount,
     status,
     nextRetryAt,
+    priority,
+    lastError,
   );
   @override
   bool operator ==(Object other) =>
@@ -4895,7 +4972,9 @@ class PendingJob extends DataClass implements Insertable<PendingJob> {
           other.createdAt == this.createdAt &&
           other.retryCount == this.retryCount &&
           other.status == this.status &&
-          other.nextRetryAt == this.nextRetryAt);
+          other.nextRetryAt == this.nextRetryAt &&
+          other.priority == this.priority &&
+          other.lastError == this.lastError);
 }
 
 class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
@@ -4906,6 +4985,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
   final Value<int> retryCount;
   final Value<String> status;
   final Value<int?> nextRetryAt;
+  final Value<int> priority;
+  final Value<String?> lastError;
   const PendingJobsCompanion({
     this.id = const Value.absent(),
     this.type = const Value.absent(),
@@ -4914,6 +4995,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     this.retryCount = const Value.absent(),
     this.status = const Value.absent(),
     this.nextRetryAt = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.lastError = const Value.absent(),
   });
   PendingJobsCompanion.insert({
     this.id = const Value.absent(),
@@ -4923,6 +5006,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     this.retryCount = const Value.absent(),
     this.status = const Value.absent(),
     this.nextRetryAt = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.lastError = const Value.absent(),
   }) : type = Value(type);
   static Insertable<PendingJob> custom({
     Expression<int>? id,
@@ -4932,6 +5017,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     Expression<int>? retryCount,
     Expression<String>? status,
     Expression<int>? nextRetryAt,
+    Expression<int>? priority,
+    Expression<String>? lastError,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4941,6 +5028,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
       if (retryCount != null) 'retry_count': retryCount,
       if (status != null) 'status': status,
       if (nextRetryAt != null) 'next_retry_at': nextRetryAt,
+      if (priority != null) 'priority': priority,
+      if (lastError != null) 'last_error': lastError,
     });
   }
 
@@ -4952,6 +5041,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     Value<int>? retryCount,
     Value<String>? status,
     Value<int?>? nextRetryAt,
+    Value<int>? priority,
+    Value<String?>? lastError,
   }) {
     return PendingJobsCompanion(
       id: id ?? this.id,
@@ -4961,6 +5052,8 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
       retryCount: retryCount ?? this.retryCount,
       status: status ?? this.status,
       nextRetryAt: nextRetryAt ?? this.nextRetryAt,
+      priority: priority ?? this.priority,
+      lastError: lastError ?? this.lastError,
     );
   }
 
@@ -4988,6 +5081,12 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
     if (nextRetryAt.present) {
       map['next_retry_at'] = Variable<int>(nextRetryAt.value);
     }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
     return map;
   }
 
@@ -5000,7 +5099,9 @@ class PendingJobsCompanion extends UpdateCompanion<PendingJob> {
           ..write('createdAt: $createdAt, ')
           ..write('retryCount: $retryCount, ')
           ..write('status: $status, ')
-          ..write('nextRetryAt: $nextRetryAt')
+          ..write('nextRetryAt: $nextRetryAt, ')
+          ..write('priority: $priority, ')
+          ..write('lastError: $lastError')
           ..write(')'))
         .toString();
   }
@@ -8179,6 +8280,416 @@ class InviteLinkJoinsCompanion extends UpdateCompanion<InviteLinkJoin> {
   }
 }
 
+class $UploadChunksTable extends UploadChunks
+    with TableInfo<$UploadChunksTable, UploadChunk> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $UploadChunksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _localIdMeta = const VerificationMeta(
+    'localId',
+  );
+  @override
+  late final GeneratedColumn<String> localId = GeneratedColumn<String>(
+    'local_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _uploadIdMeta = const VerificationMeta(
+    'uploadId',
+  );
+  @override
+  late final GeneratedColumn<String> uploadId = GeneratedColumn<String>(
+    'upload_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _chunkIndexMeta = const VerificationMeta(
+    'chunkIndex',
+  );
+  @override
+  late final GeneratedColumn<int> chunkIndex = GeneratedColumn<int>(
+    'chunk_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(-1),
+  );
+  static const VerificationMeta _chunkSizeMeta = const VerificationMeta(
+    'chunkSize',
+  );
+  @override
+  late final GeneratedColumn<int> chunkSize = GeneratedColumn<int>(
+    'chunk_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    localId,
+    uploadId,
+    chunkIndex,
+    chunkSize,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'upload_chunks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<UploadChunk> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('local_id')) {
+      context.handle(
+        _localIdMeta,
+        localId.isAcceptableOrUnknown(data['local_id']!, _localIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localIdMeta);
+    }
+    if (data.containsKey('upload_id')) {
+      context.handle(
+        _uploadIdMeta,
+        uploadId.isAcceptableOrUnknown(data['upload_id']!, _uploadIdMeta),
+      );
+    }
+    if (data.containsKey('chunk_index')) {
+      context.handle(
+        _chunkIndexMeta,
+        chunkIndex.isAcceptableOrUnknown(data['chunk_index']!, _chunkIndexMeta),
+      );
+    }
+    if (data.containsKey('chunk_size')) {
+      context.handle(
+        _chunkSizeMeta,
+        chunkSize.isAcceptableOrUnknown(data['chunk_size']!, _chunkSizeMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  UploadChunk map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return UploadChunk(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      localId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_id'],
+      )!,
+      uploadId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}upload_id'],
+      ),
+      chunkIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chunk_index'],
+      )!,
+      chunkSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chunk_size'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $UploadChunksTable createAlias(String alias) {
+    return $UploadChunksTable(attachedDatabase, alias);
+  }
+}
+
+class UploadChunk extends DataClass implements Insertable<UploadChunk> {
+  /// Auto-incrementing primary key
+  final int id;
+
+  /// Local message ID this upload is associated with
+  final String localId;
+
+  /// Server-assigned upload ID for resumable uploads
+  final String? uploadId;
+
+  /// Index of this chunk (0-based, -1 for metadata row)
+  final int chunkIndex;
+
+  /// Size of this chunk in bytes
+  final int chunkSize;
+
+  /// Timestamp when this chunk was uploaded (milliseconds since epoch)
+  final int createdAt;
+  const UploadChunk({
+    required this.id,
+    required this.localId,
+    this.uploadId,
+    required this.chunkIndex,
+    required this.chunkSize,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['local_id'] = Variable<String>(localId);
+    if (!nullToAbsent || uploadId != null) {
+      map['upload_id'] = Variable<String>(uploadId);
+    }
+    map['chunk_index'] = Variable<int>(chunkIndex);
+    map['chunk_size'] = Variable<int>(chunkSize);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  UploadChunksCompanion toCompanion(bool nullToAbsent) {
+    return UploadChunksCompanion(
+      id: Value(id),
+      localId: Value(localId),
+      uploadId: uploadId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(uploadId),
+      chunkIndex: Value(chunkIndex),
+      chunkSize: Value(chunkSize),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory UploadChunk.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return UploadChunk(
+      id: serializer.fromJson<int>(json['id']),
+      localId: serializer.fromJson<String>(json['localId']),
+      uploadId: serializer.fromJson<String?>(json['uploadId']),
+      chunkIndex: serializer.fromJson<int>(json['chunkIndex']),
+      chunkSize: serializer.fromJson<int>(json['chunkSize']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'localId': serializer.toJson<String>(localId),
+      'uploadId': serializer.toJson<String?>(uploadId),
+      'chunkIndex': serializer.toJson<int>(chunkIndex),
+      'chunkSize': serializer.toJson<int>(chunkSize),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  UploadChunk copyWith({
+    int? id,
+    String? localId,
+    Value<String?> uploadId = const Value.absent(),
+    int? chunkIndex,
+    int? chunkSize,
+    int? createdAt,
+  }) => UploadChunk(
+    id: id ?? this.id,
+    localId: localId ?? this.localId,
+    uploadId: uploadId.present ? uploadId.value : this.uploadId,
+    chunkIndex: chunkIndex ?? this.chunkIndex,
+    chunkSize: chunkSize ?? this.chunkSize,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  UploadChunk copyWithCompanion(UploadChunksCompanion data) {
+    return UploadChunk(
+      id: data.id.present ? data.id.value : this.id,
+      localId: data.localId.present ? data.localId.value : this.localId,
+      uploadId: data.uploadId.present ? data.uploadId.value : this.uploadId,
+      chunkIndex: data.chunkIndex.present
+          ? data.chunkIndex.value
+          : this.chunkIndex,
+      chunkSize: data.chunkSize.present ? data.chunkSize.value : this.chunkSize,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UploadChunk(')
+          ..write('id: $id, ')
+          ..write('localId: $localId, ')
+          ..write('uploadId: $uploadId, ')
+          ..write('chunkIndex: $chunkIndex, ')
+          ..write('chunkSize: $chunkSize, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, localId, uploadId, chunkIndex, chunkSize, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UploadChunk &&
+          other.id == this.id &&
+          other.localId == this.localId &&
+          other.uploadId == this.uploadId &&
+          other.chunkIndex == this.chunkIndex &&
+          other.chunkSize == this.chunkSize &&
+          other.createdAt == this.createdAt);
+}
+
+class UploadChunksCompanion extends UpdateCompanion<UploadChunk> {
+  final Value<int> id;
+  final Value<String> localId;
+  final Value<String?> uploadId;
+  final Value<int> chunkIndex;
+  final Value<int> chunkSize;
+  final Value<int> createdAt;
+  const UploadChunksCompanion({
+    this.id = const Value.absent(),
+    this.localId = const Value.absent(),
+    this.uploadId = const Value.absent(),
+    this.chunkIndex = const Value.absent(),
+    this.chunkSize = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  UploadChunksCompanion.insert({
+    this.id = const Value.absent(),
+    required String localId,
+    this.uploadId = const Value.absent(),
+    this.chunkIndex = const Value.absent(),
+    this.chunkSize = const Value.absent(),
+    required int createdAt,
+  }) : localId = Value(localId),
+       createdAt = Value(createdAt);
+  static Insertable<UploadChunk> custom({
+    Expression<int>? id,
+    Expression<String>? localId,
+    Expression<String>? uploadId,
+    Expression<int>? chunkIndex,
+    Expression<int>? chunkSize,
+    Expression<int>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (localId != null) 'local_id': localId,
+      if (uploadId != null) 'upload_id': uploadId,
+      if (chunkIndex != null) 'chunk_index': chunkIndex,
+      if (chunkSize != null) 'chunk_size': chunkSize,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  UploadChunksCompanion copyWith({
+    Value<int>? id,
+    Value<String>? localId,
+    Value<String?>? uploadId,
+    Value<int>? chunkIndex,
+    Value<int>? chunkSize,
+    Value<int>? createdAt,
+  }) {
+    return UploadChunksCompanion(
+      id: id ?? this.id,
+      localId: localId ?? this.localId,
+      uploadId: uploadId ?? this.uploadId,
+      chunkIndex: chunkIndex ?? this.chunkIndex,
+      chunkSize: chunkSize ?? this.chunkSize,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (localId.present) {
+      map['local_id'] = Variable<String>(localId.value);
+    }
+    if (uploadId.present) {
+      map['upload_id'] = Variable<String>(uploadId.value);
+    }
+    if (chunkIndex.present) {
+      map['chunk_index'] = Variable<int>(chunkIndex.value);
+    }
+    if (chunkSize.present) {
+      map['chunk_size'] = Variable<int>(chunkSize.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UploadChunksCompanion(')
+          ..write('id: $id, ')
+          ..write('localId: $localId, ')
+          ..write('uploadId: $uploadId, ')
+          ..write('chunkIndex: $chunkIndex, ')
+          ..write('chunkSize: $chunkSize, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CallHistoryTable extends CallHistory
     with TableInfo<$CallHistoryTable, CallHistoryData> {
   @override
@@ -9640,6 +10151,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $InviteLinkJoinsTable inviteLinkJoins = $InviteLinkJoinsTable(
     this,
   );
+  late final $UploadChunksTable uploadChunks = $UploadChunksTable(this);
   late final $CallHistoryTable callHistory = $CallHistoryTable(this);
   late final $AnalyticsEventsTable analyticsEvents = $AnalyticsEventsTable(
     this,
@@ -9665,6 +10177,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     reports,
     inviteLinks,
     inviteLinkJoins,
+    uploadChunks,
     callHistory,
     analyticsEvents,
   ];
@@ -12405,6 +12918,8 @@ typedef $$PendingJobsTableCreateCompanionBuilder =
       Value<int> retryCount,
       Value<String> status,
       Value<int?> nextRetryAt,
+      Value<int> priority,
+      Value<String?> lastError,
     });
 typedef $$PendingJobsTableUpdateCompanionBuilder =
     PendingJobsCompanion Function({
@@ -12415,6 +12930,8 @@ typedef $$PendingJobsTableUpdateCompanionBuilder =
       Value<int> retryCount,
       Value<String> status,
       Value<int?> nextRetryAt,
+      Value<int> priority,
+      Value<String?> lastError,
     });
 
 class $$PendingJobsTableFilterComposer
@@ -12458,6 +12975,16 @@ class $$PendingJobsTableFilterComposer
 
   ColumnFilters<int> get nextRetryAt => $composableBuilder(
     column: $table.nextRetryAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -12505,6 +13032,16 @@ class $$PendingJobsTableOrderingComposer
     column: $table.nextRetryAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PendingJobsTableAnnotationComposer
@@ -12540,6 +13077,12 @@ class $$PendingJobsTableAnnotationComposer
     column: $table.nextRetryAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
 }
 
 class $$PendingJobsTableTableManager
@@ -12580,6 +13123,8 @@ class $$PendingJobsTableTableManager
                 Value<int> retryCount = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int?> nextRetryAt = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
               }) => PendingJobsCompanion(
                 id: id,
                 type: type,
@@ -12588,6 +13133,8 @@ class $$PendingJobsTableTableManager
                 retryCount: retryCount,
                 status: status,
                 nextRetryAt: nextRetryAt,
+                priority: priority,
+                lastError: lastError,
               ),
           createCompanionCallback:
               ({
@@ -12598,6 +13145,8 @@ class $$PendingJobsTableTableManager
                 Value<int> retryCount = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int?> nextRetryAt = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
               }) => PendingJobsCompanion.insert(
                 id: id,
                 type: type,
@@ -12606,6 +13155,8 @@ class $$PendingJobsTableTableManager
                 retryCount: retryCount,
                 status: status,
                 nextRetryAt: nextRetryAt,
+                priority: priority,
+                lastError: lastError,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -14761,6 +15312,221 @@ typedef $$InviteLinkJoinsTableProcessedTableManager =
       InviteLinkJoin,
       PrefetchHooks Function({bool inviteLinkId})
     >;
+typedef $$UploadChunksTableCreateCompanionBuilder =
+    UploadChunksCompanion Function({
+      Value<int> id,
+      required String localId,
+      Value<String?> uploadId,
+      Value<int> chunkIndex,
+      Value<int> chunkSize,
+      required int createdAt,
+    });
+typedef $$UploadChunksTableUpdateCompanionBuilder =
+    UploadChunksCompanion Function({
+      Value<int> id,
+      Value<String> localId,
+      Value<String?> uploadId,
+      Value<int> chunkIndex,
+      Value<int> chunkSize,
+      Value<int> createdAt,
+    });
+
+class $$UploadChunksTableFilterComposer
+    extends Composer<_$AppDatabase, $UploadChunksTable> {
+  $$UploadChunksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localId => $composableBuilder(
+    column: $table.localId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uploadId => $composableBuilder(
+    column: $table.uploadId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chunkIndex => $composableBuilder(
+    column: $table.chunkIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chunkSize => $composableBuilder(
+    column: $table.chunkSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$UploadChunksTableOrderingComposer
+    extends Composer<_$AppDatabase, $UploadChunksTable> {
+  $$UploadChunksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localId => $composableBuilder(
+    column: $table.localId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uploadId => $composableBuilder(
+    column: $table.uploadId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get chunkIndex => $composableBuilder(
+    column: $table.chunkIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get chunkSize => $composableBuilder(
+    column: $table.chunkSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$UploadChunksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $UploadChunksTable> {
+  $$UploadChunksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get localId =>
+      $composableBuilder(column: $table.localId, builder: (column) => column);
+
+  GeneratedColumn<String> get uploadId =>
+      $composableBuilder(column: $table.uploadId, builder: (column) => column);
+
+  GeneratedColumn<int> get chunkIndex => $composableBuilder(
+    column: $table.chunkIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get chunkSize =>
+      $composableBuilder(column: $table.chunkSize, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$UploadChunksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $UploadChunksTable,
+          UploadChunk,
+          $$UploadChunksTableFilterComposer,
+          $$UploadChunksTableOrderingComposer,
+          $$UploadChunksTableAnnotationComposer,
+          $$UploadChunksTableCreateCompanionBuilder,
+          $$UploadChunksTableUpdateCompanionBuilder,
+          (
+            UploadChunk,
+            BaseReferences<_$AppDatabase, $UploadChunksTable, UploadChunk>,
+          ),
+          UploadChunk,
+          PrefetchHooks Function()
+        > {
+  $$UploadChunksTableTableManager(_$AppDatabase db, $UploadChunksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$UploadChunksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$UploadChunksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$UploadChunksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> localId = const Value.absent(),
+                Value<String?> uploadId = const Value.absent(),
+                Value<int> chunkIndex = const Value.absent(),
+                Value<int> chunkSize = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+              }) => UploadChunksCompanion(
+                id: id,
+                localId: localId,
+                uploadId: uploadId,
+                chunkIndex: chunkIndex,
+                chunkSize: chunkSize,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String localId,
+                Value<String?> uploadId = const Value.absent(),
+                Value<int> chunkIndex = const Value.absent(),
+                Value<int> chunkSize = const Value.absent(),
+                required int createdAt,
+              }) => UploadChunksCompanion.insert(
+                id: id,
+                localId: localId,
+                uploadId: uploadId,
+                chunkIndex: chunkIndex,
+                chunkSize: chunkSize,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$UploadChunksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $UploadChunksTable,
+      UploadChunk,
+      $$UploadChunksTableFilterComposer,
+      $$UploadChunksTableOrderingComposer,
+      $$UploadChunksTableAnnotationComposer,
+      $$UploadChunksTableCreateCompanionBuilder,
+      $$UploadChunksTableUpdateCompanionBuilder,
+      (
+        UploadChunk,
+        BaseReferences<_$AppDatabase, $UploadChunksTable, UploadChunk>,
+      ),
+      UploadChunk,
+      PrefetchHooks Function()
+    >;
 typedef $$CallHistoryTableCreateCompanionBuilder =
     CallHistoryCompanion Function({
       Value<int> id,
@@ -15465,6 +16231,8 @@ class $AppDatabaseManager {
       $$InviteLinksTableTableManager(_db, _db.inviteLinks);
   $$InviteLinkJoinsTableTableManager get inviteLinkJoins =>
       $$InviteLinkJoinsTableTableManager(_db, _db.inviteLinkJoins);
+  $$UploadChunksTableTableManager get uploadChunks =>
+      $$UploadChunksTableTableManager(_db, _db.uploadChunks);
   $$CallHistoryTableTableManager get callHistory =>
       $$CallHistoryTableTableManager(_db, _db.callHistory);
   $$AnalyticsEventsTableTableManager get analyticsEvents =>

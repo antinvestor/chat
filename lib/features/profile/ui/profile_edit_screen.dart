@@ -538,7 +538,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   ? null
                   : () async {
                       final code = codeController.text.trim();
-                      if (code.isEmpty || code.length < 4) {
+                      if (code.isEmpty || code.length != 6) {
                         return;
                       }
 
@@ -565,7 +565,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           ],
         ),
       ),
-    );
+    ).whenComplete(codeController.dispose);
   }
 
   /// Submit verification code

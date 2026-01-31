@@ -149,6 +149,9 @@ mixin AnalyticsRouteMixin<T extends StatefulWidget> on State<T>, RouteAware {
 
 /// Widget wrapper for tracking time spent on a screen
 ///
+/// Uses [WidgetsBindingObserver] to pause/resume timing when the app goes
+/// to background/foreground, ensuring accurate duration tracking.
+///
 /// Example:
 /// ```dart
 /// AnalyticsScreenTracker(
@@ -175,13 +178,15 @@ class AnalyticsScreenTracker extends StatefulWidget {
   State<AnalyticsScreenTracker> createState() => _AnalyticsScreenTrackerState();
 }
 
-class _AnalyticsScreenTrackerState extends State<AnalyticsScreenTracker> {
-  late DateTime _startTime;
+class _AnalyticsScreenTrackerState extends State<AnalyticsScreenTracker>
+    with WidgetsBindingObserver {
+  final Stopwatch _stopwatch = Stopwatch();
 
   @override
   void initState() {
     super.initState();
-    _startTime = DateTime.now();
+    WidgetsBinding.instance.addObserver(this);
+    _stopwatch.start();
     widget.analyticsService.trackScreenView(
       widget.screenName,
       properties: widget.properties,
@@ -189,14 +194,29 @@ class _AnalyticsScreenTrackerState extends State<AnalyticsScreenTracker> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+        _stopwatch.stop();
+      case AppLifecycleState.resumed:
+        _stopwatch.start();
+      case AppLifecycleState.detached:
+        _stopwatch.stop();
+    }
+  }
+
+  @override
   void dispose() {
-    final duration = DateTime.now().difference(_startTime);
+    _stopwatch.stop();
+    WidgetsBinding.instance.removeObserver(this);
     widget.analyticsService.trackEvent(
       'screen_exit',
       screenName: widget.screenName,
       properties: {
-        'duration_seconds': duration.inSeconds,
-        'duration_ms': duration.inMilliseconds,
+        'duration_seconds': _stopwatch.elapsed.inSeconds,
+        'duration_ms': _stopwatch.elapsedMilliseconds,
         ...?widget.properties,
       },
     );
