@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:drift/drift.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/db/database.dart';
@@ -213,28 +212,32 @@ class GlobalSearch extends _$GlobalSearch {
     }
   }
 
-  /// Search messages in local database
+  /// Search messages in local database using FTS5 for efficient full-text search
   Future<List<MessageSearchResult>> _searchMessages(String query) async {
     try {
       final db = AppDatabase.instance;
-      final queryLower = query.toLowerCase();
 
-      // Search in room_events table for text messages containing the query
-      // Note: Drift's contains() is case-insensitive on some databases
-      final events =
-          await (db.select(db.roomEvents)
-                ..where((e) => e.content.like('%$queryLower%'))
-                ..orderBy([(e) => OrderingTerm.desc(e.createdAt)])
-                ..limit(kMaxResultsPerCategory))
-              .get();
+      // Use the optimized FTS5 search method from the database
+      final events = await db.searchMessages(
+        query,
+        limit: kMaxResultsPerCategory,
+      );
+
+      if (events.isEmpty) {
+        return [];
+      }
+
+      // Fetch all necessary room data in a single query to avoid N+1
+      final roomIds = events.map((e) => e.roomId).toSet();
+      final rooms = await (db.select(
+        db.rooms,
+      )..where((r) => r.id.isIn(roomIds))).get();
+      final roomsById = {for (final room in rooms) room.id: room};
 
       // Convert to search results with room info
       final results = <MessageSearchResult>[];
       for (final event in events) {
-        // Get room info
-        final room = await (db.select(
-          db.rooms,
-        )..where((r) => r.id.equals(event.roomId))).getSingleOrNull();
+        final room = roomsById[event.roomId];
 
         if (room != null) {
           // Parse content JSON string to get text
@@ -247,13 +250,10 @@ class GlobalSearch extends _$GlobalSearch {
             final content = jsonDecode(contentStr) as Map<String, dynamic>?;
             if (content != null && content.containsKey('text')) {
               text = content['text']?.toString() ?? '';
+            } else {
+              continue; // Not a text message or no text content
             }
           } catch (_) {
-            continue;
-          }
-
-          // Skip if text doesn't actually contain query
-          if (!text.toLowerCase().contains(queryLower)) {
             continue;
           }
 
