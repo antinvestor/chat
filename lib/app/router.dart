@@ -17,12 +17,14 @@ import '../features/rooms/ui/room_list_screen.dart';
 import '../features/settings/ui/account_settings_screen.dart';
 import '../features/settings/ui/cache_settings_screen.dart';
 import '../features/settings/ui/chat_settings_screen.dart';
+import '../features/settings/ui/linked_devices_screen.dart';
 import '../features/settings/ui/media_compression_settings_screen.dart';
 import '../features/settings/ui/notification_settings_screen.dart';
 import '../features/settings/ui/privacy_settings_screen.dart';
 import '../features/settings/ui/security_settings_screen.dart';
 import '../features/settings/ui/settings_screen.dart';
 import '../features/settings/ui/storage_settings_screen.dart';
+import '../features/settings/ui/two_factor_setup_screen.dart';
 
 part 'router.g.dart';
 
@@ -106,6 +108,14 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/settings/storage/cache',
         builder: (context, state) => const CacheSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/account/devices',
+        builder: (context, state) => const LinkedDevicesScreen(),
+      ),
+      GoRoute(
+        path: '/settings/security/2fa',
+        builder: (context, state) => const TwoFactorSetupScreen(),
       ),
       GoRoute(
         path: '/chat/:roomId',
