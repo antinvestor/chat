@@ -220,25 +220,21 @@ class LinkPreviewCard extends ConsumerWidget {
   }
 }
 
-/// Inline link preview that shows for the first URL in a text message
+/// Inline link preview that shows for a specific URL
+///
+/// Accepts a pre-extracted URL to avoid duplicate URL parsing.
 class InlineMessageLinkPreview extends ConsumerWidget {
   const InlineMessageLinkPreview({
-    required this.text,
+    required this.url,
     this.isOwnMessage = false,
     super.key,
   });
 
-  final String text;
+  final String url;
   final bool isOwnMessage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Extract first URL from text
-    final urls = LinkPreviewService.extractUrls(text);
-    if (urls.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return LinkPreviewCard(url: urls.first, isOwnMessage: isOwnMessage);
+    return LinkPreviewCard(url: url, isOwnMessage: isOwnMessage);
   }
 }

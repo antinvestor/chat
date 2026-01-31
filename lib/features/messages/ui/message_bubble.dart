@@ -387,8 +387,8 @@ class MessageBubble extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 
-    // Check if text contains URLs for link preview
-    final hasUrls = LinkPreviewService.extractUrls(text).isNotEmpty;
+    // Extract URLs once to avoid duplicate parsing
+    final urls = LinkPreviewService.extractUrls(text);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,7 +404,8 @@ class MessageBubble extends ConsumerWidget {
           ),
         ),
         // Show link preview for the first URL in the message
-        if (hasUrls) InlineMessageLinkPreview(text: text, isOwnMessage: isMe),
+        if (urls.isNotEmpty)
+          InlineMessageLinkPreview(url: urls.first, isOwnMessage: isMe),
       ],
     );
   }
