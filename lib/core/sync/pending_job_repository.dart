@@ -163,4 +163,60 @@ class PendingJobRepository {
         ))
         .go();
   }
+
+  /// Watch for failed jobs count (reactive)
+  /// Useful for showing notification badges
+  Stream<int> watchFailedJobCount() {
+    final query = _database.selectOnly(_database.pendingJobs)
+      ..where(_database.pendingJobs.status.equals('failed'))
+      ..addColumns([_database.pendingJobs.id.count()]);
+
+    return query.watchSingle().map(
+      (row) => row.read(_database.pendingJobs.id.count()) ?? 0,
+    );
+  }
+
+  /// Get details of recent failed jobs for user notification
+  Future<List<domain.PendingJob>> getRecentFailedJobs({int limit = 10}) async {
+    final query = _database.select(_database.pendingJobs)
+      ..where((t) => t.status.equals('failed'))
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..limit(limit);
+
+    final results = await query.get();
+
+    return results
+        .map(
+          (row) => domain.PendingJob(
+            id: row.id,
+            type: domain.JobType.values.firstWhere((e) => e.name == row.type),
+            payload: row.payload != null ? jsonDecode(row.payload!) : {},
+            createdAt: row.createdAt ?? 0,
+            retryCount: row.retryCount,
+            status: row.status,
+            nextRetryAt: row.nextRetryAt,
+          ),
+        )
+        .toList();
+  }
+
+  /// Retry a specific failed job (reset status to pending)
+  Future<void> retryFailedJob(int id) async {
+    await (_database.update(
+      _database.pendingJobs,
+    )..where((t) => t.id.equals(id))).write(
+      const PendingJobsCompanion(
+        status: Value('pending'),
+        retryCount: Value(0),
+        nextRetryAt: Value(null),
+      ),
+    );
+  }
+
+  /// Delete a specific failed job (give up on it)
+  Future<void> deleteFailedJob(int id) async {
+    await (_database.delete(
+      _database.pendingJobs,
+    )..where((t) => t.id.equals(id))).go();
+  }
 }

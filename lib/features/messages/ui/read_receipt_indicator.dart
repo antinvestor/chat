@@ -7,9 +7,12 @@ import 'read_receipt_sheet.dart';
 /// WhatsApp-style read receipt indicator for messages
 ///
 /// Shows check marks based on message status:
+/// - Clock icon: Pending (waiting to send)
+/// - Retry indicator: Pending with retry count > 0
 /// - Single grey check: Sent
 /// - Double grey check: Delivered
 /// - Double blue check: Read (at least one person)
+/// - Error icon: Failed (max retries exceeded)
 ///
 /// In group chats, tapping the indicator shows who has read the message.
 class ReadReceiptIndicator extends ConsumerWidget {
@@ -20,6 +23,7 @@ class ReadReceiptIndicator extends ConsumerWidget {
     this.size = 16.0,
     this.sentColor,
     this.readColor,
+    this.showRetryCount = false,
   });
 
   final RoomEvent event;
@@ -27,6 +31,7 @@ class ReadReceiptIndicator extends ConsumerWidget {
   final double size;
   final Color? sentColor;
   final Color? readColor;
+  final bool showRetryCount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,17 +44,27 @@ class ReadReceiptIndicator extends ConsumerWidget {
     Widget indicator;
     switch (event.status) {
       case EventStatus.pending:
-        indicator = SizedBox(
-          width: size,
-          height: size,
-          child: Padding(
-            padding: const EdgeInsets.all(2),
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              color: effectiveSentColor,
+        // Show retry count if message has been retried
+        if (event.retryCount > 0) {
+          indicator = _RetryIndicator(
+            size: size,
+            retryCount: event.retryCount,
+            maxRetries: maxAutoRetries,
+          );
+        } else {
+          // First attempt - show spinner
+          indicator = SizedBox(
+            width: size,
+            height: size,
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: effectiveSentColor,
+              ),
             ),
-          ),
-        );
+          );
+        }
       case EventStatus.sent:
         // Single check for sent
         indicator = Icon(Icons.check, size: size, color: effectiveSentColor);
@@ -111,6 +126,52 @@ class _DoubleCheck extends StatelessWidget {
             child: Icon(Icons.check, size: size, color: color),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Retry indicator showing progress during auto-retry attempts
+class _RetryIndicator extends StatelessWidget {
+  const _RetryIndicator({
+    required this.size,
+    required this.retryCount,
+    required this.maxRetries,
+  });
+
+  final double size;
+  final int retryCount;
+  final int maxRetries;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Retrying ($retryCount/$maxRetries)',
+      child: SizedBox(
+        width: size + 4,
+        height: size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Circular progress showing retry progress
+            SizedBox(
+              width: size,
+              height: size,
+              child: CircularProgressIndicator(
+                value: retryCount / maxRetries,
+                strokeWidth: 1.5,
+                backgroundColor: Colors.orange.shade200,
+                color: Colors.orange.shade600,
+              ),
+            ),
+            // Retry icon in center
+            Icon(
+              Icons.refresh,
+              size: size * 0.6,
+              color: Colors.orange.shade600,
+            ),
+          ],
+        ),
       ),
     );
   }

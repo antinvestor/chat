@@ -30,6 +30,21 @@ final pendingJobRepositoryProvider = Provider<PendingJobRepository>(
   (ref) => PendingJobRepository(AppDatabase.instance),
 );
 
+/// Stream provider for watching failed job count
+/// Useful for showing notification badges or banners
+final failedJobCountProvider = StreamProvider<int>((ref) {
+  final jobRepo = ref.watch(pendingJobRepositoryProvider);
+  return jobRepo.watchFailedJobCount();
+});
+
+/// Provider to get recent failed jobs for display
+final recentFailedJobsProvider = FutureProvider<List<domain_job.PendingJob>>((
+  ref,
+) async {
+  final jobRepo = ref.watch(pendingJobRepositoryProvider);
+  return jobRepo.getRecentFailedJobs();
+});
+
 /// Exception thrown when token refresh fails permanently and user must re-authenticate
 class TokenRefreshPermanentError implements Exception {
   TokenRefreshPermanentError(this.message);
