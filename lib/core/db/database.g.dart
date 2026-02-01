@@ -8690,6 +8690,1656 @@ class UploadChunksCompanion extends UpdateCompanion<UploadChunk> {
   }
 }
 
+class $DownloadChunksTable extends DownloadChunks
+    with TableInfo<$DownloadChunksTable, DownloadChunk> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DownloadChunksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _downloadIdMeta = const VerificationMeta(
+    'downloadId',
+  );
+  @override
+  late final GeneratedColumn<String> downloadId = GeneratedColumn<String>(
+    'download_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fileUrlMeta = const VerificationMeta(
+    'fileUrl',
+  );
+  @override
+  late final GeneratedColumn<String> fileUrl = GeneratedColumn<String>(
+    'file_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localPathMeta = const VerificationMeta(
+    'localPath',
+  );
+  @override
+  late final GeneratedColumn<String> localPath = GeneratedColumn<String>(
+    'local_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalSizeMeta = const VerificationMeta(
+    'totalSize',
+  );
+  @override
+  late final GeneratedColumn<int> totalSize = GeneratedColumn<int>(
+    'total_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _chunkIndexMeta = const VerificationMeta(
+    'chunkIndex',
+  );
+  @override
+  late final GeneratedColumn<int> chunkIndex = GeneratedColumn<int>(
+    'chunk_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(-1),
+  );
+  static const VerificationMeta _chunkSizeMeta = const VerificationMeta(
+    'chunkSize',
+  );
+  @override
+  late final GeneratedColumn<int> chunkSize = GeneratedColumn<int>(
+    'chunk_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _bytesDownloadedMeta = const VerificationMeta(
+    'bytesDownloaded',
+  );
+  @override
+  late final GeneratedColumn<int> bytesDownloaded = GeneratedColumn<int>(
+    'bytes_downloaded',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _etagMeta = const VerificationMeta('etag');
+  @override
+  late final GeneratedColumn<String> etag = GeneratedColumn<String>(
+    'etag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    downloadId,
+    fileUrl,
+    localPath,
+    totalSize,
+    chunkIndex,
+    chunkSize,
+    bytesDownloaded,
+    etag,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'download_chunks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DownloadChunk> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('download_id')) {
+      context.handle(
+        _downloadIdMeta,
+        downloadId.isAcceptableOrUnknown(data['download_id']!, _downloadIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_downloadIdMeta);
+    }
+    if (data.containsKey('file_url')) {
+      context.handle(
+        _fileUrlMeta,
+        fileUrl.isAcceptableOrUnknown(data['file_url']!, _fileUrlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileUrlMeta);
+    }
+    if (data.containsKey('local_path')) {
+      context.handle(
+        _localPathMeta,
+        localPath.isAcceptableOrUnknown(data['local_path']!, _localPathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localPathMeta);
+    }
+    if (data.containsKey('total_size')) {
+      context.handle(
+        _totalSizeMeta,
+        totalSize.isAcceptableOrUnknown(data['total_size']!, _totalSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_totalSizeMeta);
+    }
+    if (data.containsKey('chunk_index')) {
+      context.handle(
+        _chunkIndexMeta,
+        chunkIndex.isAcceptableOrUnknown(data['chunk_index']!, _chunkIndexMeta),
+      );
+    }
+    if (data.containsKey('chunk_size')) {
+      context.handle(
+        _chunkSizeMeta,
+        chunkSize.isAcceptableOrUnknown(data['chunk_size']!, _chunkSizeMeta),
+      );
+    }
+    if (data.containsKey('bytes_downloaded')) {
+      context.handle(
+        _bytesDownloadedMeta,
+        bytesDownloaded.isAcceptableOrUnknown(
+          data['bytes_downloaded']!,
+          _bytesDownloadedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('etag')) {
+      context.handle(
+        _etagMeta,
+        etag.isAcceptableOrUnknown(data['etag']!, _etagMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DownloadChunk map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DownloadChunk(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      downloadId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}download_id'],
+      )!,
+      fileUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_url'],
+      )!,
+      localPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_path'],
+      )!,
+      totalSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_size'],
+      )!,
+      chunkIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chunk_index'],
+      )!,
+      chunkSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chunk_size'],
+      )!,
+      bytesDownloaded: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bytes_downloaded'],
+      )!,
+      etag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}etag'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+    );
+  }
+
+  @override
+  $DownloadChunksTable createAlias(String alias) {
+    return $DownloadChunksTable(attachedDatabase, alias);
+  }
+}
+
+class DownloadChunk extends DataClass implements Insertable<DownloadChunk> {
+  /// Auto-incrementing primary key
+  final int id;
+
+  /// Unique download identifier for tracking
+  final String downloadId;
+
+  /// Remote file URL being downloaded
+  final String fileUrl;
+
+  /// Local file path where download is being saved
+  final String localPath;
+
+  /// Total file size in bytes
+  final int totalSize;
+
+  /// Index of this chunk (0-based, -1 for metadata row)
+  final int chunkIndex;
+
+  /// Size of this chunk in bytes
+  final int chunkSize;
+
+  /// Bytes downloaded for this chunk
+  final int bytesDownloaded;
+
+  /// ETag for HTTP caching and resume validation
+  final String? etag;
+
+  /// Timestamp when this chunk was created (milliseconds since epoch)
+  final int createdAt;
+
+  /// Timestamp when this chunk was last updated
+  final int? updatedAt;
+  const DownloadChunk({
+    required this.id,
+    required this.downloadId,
+    required this.fileUrl,
+    required this.localPath,
+    required this.totalSize,
+    required this.chunkIndex,
+    required this.chunkSize,
+    required this.bytesDownloaded,
+    this.etag,
+    required this.createdAt,
+    this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['download_id'] = Variable<String>(downloadId);
+    map['file_url'] = Variable<String>(fileUrl);
+    map['local_path'] = Variable<String>(localPath);
+    map['total_size'] = Variable<int>(totalSize);
+    map['chunk_index'] = Variable<int>(chunkIndex);
+    map['chunk_size'] = Variable<int>(chunkSize);
+    map['bytes_downloaded'] = Variable<int>(bytesDownloaded);
+    if (!nullToAbsent || etag != null) {
+      map['etag'] = Variable<String>(etag);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    return map;
+  }
+
+  DownloadChunksCompanion toCompanion(bool nullToAbsent) {
+    return DownloadChunksCompanion(
+      id: Value(id),
+      downloadId: Value(downloadId),
+      fileUrl: Value(fileUrl),
+      localPath: Value(localPath),
+      totalSize: Value(totalSize),
+      chunkIndex: Value(chunkIndex),
+      chunkSize: Value(chunkSize),
+      bytesDownloaded: Value(bytesDownloaded),
+      etag: etag == null && nullToAbsent ? const Value.absent() : Value(etag),
+      createdAt: Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory DownloadChunk.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DownloadChunk(
+      id: serializer.fromJson<int>(json['id']),
+      downloadId: serializer.fromJson<String>(json['downloadId']),
+      fileUrl: serializer.fromJson<String>(json['fileUrl']),
+      localPath: serializer.fromJson<String>(json['localPath']),
+      totalSize: serializer.fromJson<int>(json['totalSize']),
+      chunkIndex: serializer.fromJson<int>(json['chunkIndex']),
+      chunkSize: serializer.fromJson<int>(json['chunkSize']),
+      bytesDownloaded: serializer.fromJson<int>(json['bytesDownloaded']),
+      etag: serializer.fromJson<String?>(json['etag']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'downloadId': serializer.toJson<String>(downloadId),
+      'fileUrl': serializer.toJson<String>(fileUrl),
+      'localPath': serializer.toJson<String>(localPath),
+      'totalSize': serializer.toJson<int>(totalSize),
+      'chunkIndex': serializer.toJson<int>(chunkIndex),
+      'chunkSize': serializer.toJson<int>(chunkSize),
+      'bytesDownloaded': serializer.toJson<int>(bytesDownloaded),
+      'etag': serializer.toJson<String?>(etag),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int?>(updatedAt),
+    };
+  }
+
+  DownloadChunk copyWith({
+    int? id,
+    String? downloadId,
+    String? fileUrl,
+    String? localPath,
+    int? totalSize,
+    int? chunkIndex,
+    int? chunkSize,
+    int? bytesDownloaded,
+    Value<String?> etag = const Value.absent(),
+    int? createdAt,
+    Value<int?> updatedAt = const Value.absent(),
+  }) => DownloadChunk(
+    id: id ?? this.id,
+    downloadId: downloadId ?? this.downloadId,
+    fileUrl: fileUrl ?? this.fileUrl,
+    localPath: localPath ?? this.localPath,
+    totalSize: totalSize ?? this.totalSize,
+    chunkIndex: chunkIndex ?? this.chunkIndex,
+    chunkSize: chunkSize ?? this.chunkSize,
+    bytesDownloaded: bytesDownloaded ?? this.bytesDownloaded,
+    etag: etag.present ? etag.value : this.etag,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+  );
+  DownloadChunk copyWithCompanion(DownloadChunksCompanion data) {
+    return DownloadChunk(
+      id: data.id.present ? data.id.value : this.id,
+      downloadId: data.downloadId.present
+          ? data.downloadId.value
+          : this.downloadId,
+      fileUrl: data.fileUrl.present ? data.fileUrl.value : this.fileUrl,
+      localPath: data.localPath.present ? data.localPath.value : this.localPath,
+      totalSize: data.totalSize.present ? data.totalSize.value : this.totalSize,
+      chunkIndex: data.chunkIndex.present
+          ? data.chunkIndex.value
+          : this.chunkIndex,
+      chunkSize: data.chunkSize.present ? data.chunkSize.value : this.chunkSize,
+      bytesDownloaded: data.bytesDownloaded.present
+          ? data.bytesDownloaded.value
+          : this.bytesDownloaded,
+      etag: data.etag.present ? data.etag.value : this.etag,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadChunk(')
+          ..write('id: $id, ')
+          ..write('downloadId: $downloadId, ')
+          ..write('fileUrl: $fileUrl, ')
+          ..write('localPath: $localPath, ')
+          ..write('totalSize: $totalSize, ')
+          ..write('chunkIndex: $chunkIndex, ')
+          ..write('chunkSize: $chunkSize, ')
+          ..write('bytesDownloaded: $bytesDownloaded, ')
+          ..write('etag: $etag, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    downloadId,
+    fileUrl,
+    localPath,
+    totalSize,
+    chunkIndex,
+    chunkSize,
+    bytesDownloaded,
+    etag,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DownloadChunk &&
+          other.id == this.id &&
+          other.downloadId == this.downloadId &&
+          other.fileUrl == this.fileUrl &&
+          other.localPath == this.localPath &&
+          other.totalSize == this.totalSize &&
+          other.chunkIndex == this.chunkIndex &&
+          other.chunkSize == this.chunkSize &&
+          other.bytesDownloaded == this.bytesDownloaded &&
+          other.etag == this.etag &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class DownloadChunksCompanion extends UpdateCompanion<DownloadChunk> {
+  final Value<int> id;
+  final Value<String> downloadId;
+  final Value<String> fileUrl;
+  final Value<String> localPath;
+  final Value<int> totalSize;
+  final Value<int> chunkIndex;
+  final Value<int> chunkSize;
+  final Value<int> bytesDownloaded;
+  final Value<String?> etag;
+  final Value<int> createdAt;
+  final Value<int?> updatedAt;
+  const DownloadChunksCompanion({
+    this.id = const Value.absent(),
+    this.downloadId = const Value.absent(),
+    this.fileUrl = const Value.absent(),
+    this.localPath = const Value.absent(),
+    this.totalSize = const Value.absent(),
+    this.chunkIndex = const Value.absent(),
+    this.chunkSize = const Value.absent(),
+    this.bytesDownloaded = const Value.absent(),
+    this.etag = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  DownloadChunksCompanion.insert({
+    this.id = const Value.absent(),
+    required String downloadId,
+    required String fileUrl,
+    required String localPath,
+    required int totalSize,
+    this.chunkIndex = const Value.absent(),
+    this.chunkSize = const Value.absent(),
+    this.bytesDownloaded = const Value.absent(),
+    this.etag = const Value.absent(),
+    required int createdAt,
+    this.updatedAt = const Value.absent(),
+  }) : downloadId = Value(downloadId),
+       fileUrl = Value(fileUrl),
+       localPath = Value(localPath),
+       totalSize = Value(totalSize),
+       createdAt = Value(createdAt);
+  static Insertable<DownloadChunk> custom({
+    Expression<int>? id,
+    Expression<String>? downloadId,
+    Expression<String>? fileUrl,
+    Expression<String>? localPath,
+    Expression<int>? totalSize,
+    Expression<int>? chunkIndex,
+    Expression<int>? chunkSize,
+    Expression<int>? bytesDownloaded,
+    Expression<String>? etag,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (downloadId != null) 'download_id': downloadId,
+      if (fileUrl != null) 'file_url': fileUrl,
+      if (localPath != null) 'local_path': localPath,
+      if (totalSize != null) 'total_size': totalSize,
+      if (chunkIndex != null) 'chunk_index': chunkIndex,
+      if (chunkSize != null) 'chunk_size': chunkSize,
+      if (bytesDownloaded != null) 'bytes_downloaded': bytesDownloaded,
+      if (etag != null) 'etag': etag,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  DownloadChunksCompanion copyWith({
+    Value<int>? id,
+    Value<String>? downloadId,
+    Value<String>? fileUrl,
+    Value<String>? localPath,
+    Value<int>? totalSize,
+    Value<int>? chunkIndex,
+    Value<int>? chunkSize,
+    Value<int>? bytesDownloaded,
+    Value<String?>? etag,
+    Value<int>? createdAt,
+    Value<int?>? updatedAt,
+  }) {
+    return DownloadChunksCompanion(
+      id: id ?? this.id,
+      downloadId: downloadId ?? this.downloadId,
+      fileUrl: fileUrl ?? this.fileUrl,
+      localPath: localPath ?? this.localPath,
+      totalSize: totalSize ?? this.totalSize,
+      chunkIndex: chunkIndex ?? this.chunkIndex,
+      chunkSize: chunkSize ?? this.chunkSize,
+      bytesDownloaded: bytesDownloaded ?? this.bytesDownloaded,
+      etag: etag ?? this.etag,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (downloadId.present) {
+      map['download_id'] = Variable<String>(downloadId.value);
+    }
+    if (fileUrl.present) {
+      map['file_url'] = Variable<String>(fileUrl.value);
+    }
+    if (localPath.present) {
+      map['local_path'] = Variable<String>(localPath.value);
+    }
+    if (totalSize.present) {
+      map['total_size'] = Variable<int>(totalSize.value);
+    }
+    if (chunkIndex.present) {
+      map['chunk_index'] = Variable<int>(chunkIndex.value);
+    }
+    if (chunkSize.present) {
+      map['chunk_size'] = Variable<int>(chunkSize.value);
+    }
+    if (bytesDownloaded.present) {
+      map['bytes_downloaded'] = Variable<int>(bytesDownloaded.value);
+    }
+    if (etag.present) {
+      map['etag'] = Variable<String>(etag.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadChunksCompanion(')
+          ..write('id: $id, ')
+          ..write('downloadId: $downloadId, ')
+          ..write('fileUrl: $fileUrl, ')
+          ..write('localPath: $localPath, ')
+          ..write('totalSize: $totalSize, ')
+          ..write('chunkIndex: $chunkIndex, ')
+          ..write('chunkSize: $chunkSize, ')
+          ..write('bytesDownloaded: $bytesDownloaded, ')
+          ..write('etag: $etag, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TransferJobsTable extends TransferJobs
+    with TableInfo<$TransferJobsTable, TransferJob> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TransferJobsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _transferTypeMeta = const VerificationMeta(
+    'transferType',
+  );
+  @override
+  late final GeneratedColumn<String> transferType = GeneratedColumn<String>(
+    'transfer_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _referenceIdMeta = const VerificationMeta(
+    'referenceId',
+  );
+  @override
+  late final GeneratedColumn<String> referenceId = GeneratedColumn<String>(
+    'reference_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roomIdMeta = const VerificationMeta('roomId');
+  @override
+  late final GeneratedColumn<String> roomId = GeneratedColumn<String>(
+    'room_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fileUrlMeta = const VerificationMeta(
+    'fileUrl',
+  );
+  @override
+  late final GeneratedColumn<String> fileUrl = GeneratedColumn<String>(
+    'file_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localPathMeta = const VerificationMeta(
+    'localPath',
+  );
+  @override
+  late final GeneratedColumn<String> localPath = GeneratedColumn<String>(
+    'local_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fileNameMeta = const VerificationMeta(
+    'fileName',
+  );
+  @override
+  late final GeneratedColumn<String> fileName = GeneratedColumn<String>(
+    'file_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalSizeMeta = const VerificationMeta(
+    'totalSize',
+  );
+  @override
+  late final GeneratedColumn<int> totalSize = GeneratedColumn<int>(
+    'total_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _transferredSizeMeta = const VerificationMeta(
+    'transferredSize',
+  );
+  @override
+  late final GeneratedColumn<int> transferredSize = GeneratedColumn<int>(
+    'transferred_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
+  @override
+  late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
+    'mime_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _priorityMeta = const VerificationMeta(
+    'priority',
+  );
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(2),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _retryCountMeta = const VerificationMeta(
+    'retryCount',
+  );
+  @override
+  late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
+    'retry_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nextRetryAtMeta = const VerificationMeta(
+    'nextRetryAt',
+  );
+  @override
+  late final GeneratedColumn<int> nextRetryAt = GeneratedColumn<int>(
+    'next_retry_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transferType,
+    referenceId,
+    roomId,
+    fileUrl,
+    localPath,
+    fileName,
+    totalSize,
+    transferredSize,
+    mimeType,
+    priority,
+    status,
+    retryCount,
+    lastError,
+    createdAt,
+    updatedAt,
+    nextRetryAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'transfer_jobs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TransferJob> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('transfer_type')) {
+      context.handle(
+        _transferTypeMeta,
+        transferType.isAcceptableOrUnknown(
+          data['transfer_type']!,
+          _transferTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transferTypeMeta);
+    }
+    if (data.containsKey('reference_id')) {
+      context.handle(
+        _referenceIdMeta,
+        referenceId.isAcceptableOrUnknown(
+          data['reference_id']!,
+          _referenceIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_referenceIdMeta);
+    }
+    if (data.containsKey('room_id')) {
+      context.handle(
+        _roomIdMeta,
+        roomId.isAcceptableOrUnknown(data['room_id']!, _roomIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roomIdMeta);
+    }
+    if (data.containsKey('file_url')) {
+      context.handle(
+        _fileUrlMeta,
+        fileUrl.isAcceptableOrUnknown(data['file_url']!, _fileUrlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileUrlMeta);
+    }
+    if (data.containsKey('local_path')) {
+      context.handle(
+        _localPathMeta,
+        localPath.isAcceptableOrUnknown(data['local_path']!, _localPathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localPathMeta);
+    }
+    if (data.containsKey('file_name')) {
+      context.handle(
+        _fileNameMeta,
+        fileName.isAcceptableOrUnknown(data['file_name']!, _fileNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fileNameMeta);
+    }
+    if (data.containsKey('total_size')) {
+      context.handle(
+        _totalSizeMeta,
+        totalSize.isAcceptableOrUnknown(data['total_size']!, _totalSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_totalSizeMeta);
+    }
+    if (data.containsKey('transferred_size')) {
+      context.handle(
+        _transferredSizeMeta,
+        transferredSize.isAcceptableOrUnknown(
+          data['transferred_size']!,
+          _transferredSizeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mime_type')) {
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
+      );
+    }
+    if (data.containsKey('priority')) {
+      context.handle(
+        _priorityMeta,
+        priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('retry_count')) {
+      context.handle(
+        _retryCountMeta,
+        retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('next_retry_at')) {
+      context.handle(
+        _nextRetryAtMeta,
+        nextRetryAt.isAcceptableOrUnknown(
+          data['next_retry_at']!,
+          _nextRetryAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TransferJob map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TransferJob(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      transferType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}transfer_type'],
+      )!,
+      referenceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference_id'],
+      )!,
+      roomId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}room_id'],
+      )!,
+      fileUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_url'],
+      )!,
+      localPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_path'],
+      )!,
+      fileName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_name'],
+      )!,
+      totalSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_size'],
+      )!,
+      transferredSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transferred_size'],
+      )!,
+      mimeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mime_type'],
+      ),
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}priority'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      retryCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retry_count'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
+      nextRetryAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}next_retry_at'],
+      ),
+    );
+  }
+
+  @override
+  $TransferJobsTable createAlias(String alias) {
+    return $TransferJobsTable(attachedDatabase, alias);
+  }
+}
+
+class TransferJob extends DataClass implements Insertable<TransferJob> {
+  /// Auto-incrementing primary key
+  final int id;
+
+  /// Transfer type: 'upload' or 'download'
+  final String transferType;
+
+  /// Reference ID (localId for uploads, downloadId for downloads)
+  final String referenceId;
+
+  /// Room ID associated with this transfer
+  final String roomId;
+
+  /// File URL (destination for uploads, source for downloads)
+  final String fileUrl;
+
+  /// Local file path (source for uploads, destination for downloads)
+  final String localPath;
+
+  /// File name for display purposes
+  final String fileName;
+
+  /// Total file size in bytes
+  final int totalSize;
+
+  /// Bytes transferred so far
+  final int transferredSize;
+
+  /// MIME type of the file
+  final String? mimeType;
+
+  /// Priority level (0=critical, 1=high, 2=normal, 3=low)
+  /// Uploads default to priority 1, downloads to priority 2
+  final int priority;
+
+  /// Job status: 'pending', 'active', 'paused', 'completed', 'failed'
+  final String status;
+
+  /// Number of retry attempts
+  final int retryCount;
+
+  /// Last error message if failed
+  final String? lastError;
+
+  /// Timestamp when job was created (milliseconds since epoch)
+  final int createdAt;
+
+  /// Timestamp when job was last updated
+  final int? updatedAt;
+
+  /// Earliest time this job can be retried (for exponential backoff)
+  final int? nextRetryAt;
+  const TransferJob({
+    required this.id,
+    required this.transferType,
+    required this.referenceId,
+    required this.roomId,
+    required this.fileUrl,
+    required this.localPath,
+    required this.fileName,
+    required this.totalSize,
+    required this.transferredSize,
+    this.mimeType,
+    required this.priority,
+    required this.status,
+    required this.retryCount,
+    this.lastError,
+    required this.createdAt,
+    this.updatedAt,
+    this.nextRetryAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['transfer_type'] = Variable<String>(transferType);
+    map['reference_id'] = Variable<String>(referenceId);
+    map['room_id'] = Variable<String>(roomId);
+    map['file_url'] = Variable<String>(fileUrl);
+    map['local_path'] = Variable<String>(localPath);
+    map['file_name'] = Variable<String>(fileName);
+    map['total_size'] = Variable<int>(totalSize);
+    map['transferred_size'] = Variable<int>(transferredSize);
+    if (!nullToAbsent || mimeType != null) {
+      map['mime_type'] = Variable<String>(mimeType);
+    }
+    map['priority'] = Variable<int>(priority);
+    map['status'] = Variable<String>(status);
+    map['retry_count'] = Variable<int>(retryCount);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
+    if (!nullToAbsent || nextRetryAt != null) {
+      map['next_retry_at'] = Variable<int>(nextRetryAt);
+    }
+    return map;
+  }
+
+  TransferJobsCompanion toCompanion(bool nullToAbsent) {
+    return TransferJobsCompanion(
+      id: Value(id),
+      transferType: Value(transferType),
+      referenceId: Value(referenceId),
+      roomId: Value(roomId),
+      fileUrl: Value(fileUrl),
+      localPath: Value(localPath),
+      fileName: Value(fileName),
+      totalSize: Value(totalSize),
+      transferredSize: Value(transferredSize),
+      mimeType: mimeType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mimeType),
+      priority: Value(priority),
+      status: Value(status),
+      retryCount: Value(retryCount),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      createdAt: Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      nextRetryAt: nextRetryAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextRetryAt),
+    );
+  }
+
+  factory TransferJob.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TransferJob(
+      id: serializer.fromJson<int>(json['id']),
+      transferType: serializer.fromJson<String>(json['transferType']),
+      referenceId: serializer.fromJson<String>(json['referenceId']),
+      roomId: serializer.fromJson<String>(json['roomId']),
+      fileUrl: serializer.fromJson<String>(json['fileUrl']),
+      localPath: serializer.fromJson<String>(json['localPath']),
+      fileName: serializer.fromJson<String>(json['fileName']),
+      totalSize: serializer.fromJson<int>(json['totalSize']),
+      transferredSize: serializer.fromJson<int>(json['transferredSize']),
+      mimeType: serializer.fromJson<String?>(json['mimeType']),
+      priority: serializer.fromJson<int>(json['priority']),
+      status: serializer.fromJson<String>(json['status']),
+      retryCount: serializer.fromJson<int>(json['retryCount']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int?>(json['updatedAt']),
+      nextRetryAt: serializer.fromJson<int?>(json['nextRetryAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'transferType': serializer.toJson<String>(transferType),
+      'referenceId': serializer.toJson<String>(referenceId),
+      'roomId': serializer.toJson<String>(roomId),
+      'fileUrl': serializer.toJson<String>(fileUrl),
+      'localPath': serializer.toJson<String>(localPath),
+      'fileName': serializer.toJson<String>(fileName),
+      'totalSize': serializer.toJson<int>(totalSize),
+      'transferredSize': serializer.toJson<int>(transferredSize),
+      'mimeType': serializer.toJson<String?>(mimeType),
+      'priority': serializer.toJson<int>(priority),
+      'status': serializer.toJson<String>(status),
+      'retryCount': serializer.toJson<int>(retryCount),
+      'lastError': serializer.toJson<String?>(lastError),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int?>(updatedAt),
+      'nextRetryAt': serializer.toJson<int?>(nextRetryAt),
+    };
+  }
+
+  TransferJob copyWith({
+    int? id,
+    String? transferType,
+    String? referenceId,
+    String? roomId,
+    String? fileUrl,
+    String? localPath,
+    String? fileName,
+    int? totalSize,
+    int? transferredSize,
+    Value<String?> mimeType = const Value.absent(),
+    int? priority,
+    String? status,
+    int? retryCount,
+    Value<String?> lastError = const Value.absent(),
+    int? createdAt,
+    Value<int?> updatedAt = const Value.absent(),
+    Value<int?> nextRetryAt = const Value.absent(),
+  }) => TransferJob(
+    id: id ?? this.id,
+    transferType: transferType ?? this.transferType,
+    referenceId: referenceId ?? this.referenceId,
+    roomId: roomId ?? this.roomId,
+    fileUrl: fileUrl ?? this.fileUrl,
+    localPath: localPath ?? this.localPath,
+    fileName: fileName ?? this.fileName,
+    totalSize: totalSize ?? this.totalSize,
+    transferredSize: transferredSize ?? this.transferredSize,
+    mimeType: mimeType.present ? mimeType.value : this.mimeType,
+    priority: priority ?? this.priority,
+    status: status ?? this.status,
+    retryCount: retryCount ?? this.retryCount,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    nextRetryAt: nextRetryAt.present ? nextRetryAt.value : this.nextRetryAt,
+  );
+  TransferJob copyWithCompanion(TransferJobsCompanion data) {
+    return TransferJob(
+      id: data.id.present ? data.id.value : this.id,
+      transferType: data.transferType.present
+          ? data.transferType.value
+          : this.transferType,
+      referenceId: data.referenceId.present
+          ? data.referenceId.value
+          : this.referenceId,
+      roomId: data.roomId.present ? data.roomId.value : this.roomId,
+      fileUrl: data.fileUrl.present ? data.fileUrl.value : this.fileUrl,
+      localPath: data.localPath.present ? data.localPath.value : this.localPath,
+      fileName: data.fileName.present ? data.fileName.value : this.fileName,
+      totalSize: data.totalSize.present ? data.totalSize.value : this.totalSize,
+      transferredSize: data.transferredSize.present
+          ? data.transferredSize.value
+          : this.transferredSize,
+      mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      status: data.status.present ? data.status.value : this.status,
+      retryCount: data.retryCount.present
+          ? data.retryCount.value
+          : this.retryCount,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      nextRetryAt: data.nextRetryAt.present
+          ? data.nextRetryAt.value
+          : this.nextRetryAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TransferJob(')
+          ..write('id: $id, ')
+          ..write('transferType: $transferType, ')
+          ..write('referenceId: $referenceId, ')
+          ..write('roomId: $roomId, ')
+          ..write('fileUrl: $fileUrl, ')
+          ..write('localPath: $localPath, ')
+          ..write('fileName: $fileName, ')
+          ..write('totalSize: $totalSize, ')
+          ..write('transferredSize: $transferredSize, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('priority: $priority, ')
+          ..write('status: $status, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('nextRetryAt: $nextRetryAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    transferType,
+    referenceId,
+    roomId,
+    fileUrl,
+    localPath,
+    fileName,
+    totalSize,
+    transferredSize,
+    mimeType,
+    priority,
+    status,
+    retryCount,
+    lastError,
+    createdAt,
+    updatedAt,
+    nextRetryAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TransferJob &&
+          other.id == this.id &&
+          other.transferType == this.transferType &&
+          other.referenceId == this.referenceId &&
+          other.roomId == this.roomId &&
+          other.fileUrl == this.fileUrl &&
+          other.localPath == this.localPath &&
+          other.fileName == this.fileName &&
+          other.totalSize == this.totalSize &&
+          other.transferredSize == this.transferredSize &&
+          other.mimeType == this.mimeType &&
+          other.priority == this.priority &&
+          other.status == this.status &&
+          other.retryCount == this.retryCount &&
+          other.lastError == this.lastError &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.nextRetryAt == this.nextRetryAt);
+}
+
+class TransferJobsCompanion extends UpdateCompanion<TransferJob> {
+  final Value<int> id;
+  final Value<String> transferType;
+  final Value<String> referenceId;
+  final Value<String> roomId;
+  final Value<String> fileUrl;
+  final Value<String> localPath;
+  final Value<String> fileName;
+  final Value<int> totalSize;
+  final Value<int> transferredSize;
+  final Value<String?> mimeType;
+  final Value<int> priority;
+  final Value<String> status;
+  final Value<int> retryCount;
+  final Value<String?> lastError;
+  final Value<int> createdAt;
+  final Value<int?> updatedAt;
+  final Value<int?> nextRetryAt;
+  const TransferJobsCompanion({
+    this.id = const Value.absent(),
+    this.transferType = const Value.absent(),
+    this.referenceId = const Value.absent(),
+    this.roomId = const Value.absent(),
+    this.fileUrl = const Value.absent(),
+    this.localPath = const Value.absent(),
+    this.fileName = const Value.absent(),
+    this.totalSize = const Value.absent(),
+    this.transferredSize = const Value.absent(),
+    this.mimeType = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.status = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.nextRetryAt = const Value.absent(),
+  });
+  TransferJobsCompanion.insert({
+    this.id = const Value.absent(),
+    required String transferType,
+    required String referenceId,
+    required String roomId,
+    required String fileUrl,
+    required String localPath,
+    required String fileName,
+    required int totalSize,
+    this.transferredSize = const Value.absent(),
+    this.mimeType = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.status = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.lastError = const Value.absent(),
+    required int createdAt,
+    this.updatedAt = const Value.absent(),
+    this.nextRetryAt = const Value.absent(),
+  }) : transferType = Value(transferType),
+       referenceId = Value(referenceId),
+       roomId = Value(roomId),
+       fileUrl = Value(fileUrl),
+       localPath = Value(localPath),
+       fileName = Value(fileName),
+       totalSize = Value(totalSize),
+       createdAt = Value(createdAt);
+  static Insertable<TransferJob> custom({
+    Expression<int>? id,
+    Expression<String>? transferType,
+    Expression<String>? referenceId,
+    Expression<String>? roomId,
+    Expression<String>? fileUrl,
+    Expression<String>? localPath,
+    Expression<String>? fileName,
+    Expression<int>? totalSize,
+    Expression<int>? transferredSize,
+    Expression<String>? mimeType,
+    Expression<int>? priority,
+    Expression<String>? status,
+    Expression<int>? retryCount,
+    Expression<String>? lastError,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? nextRetryAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transferType != null) 'transfer_type': transferType,
+      if (referenceId != null) 'reference_id': referenceId,
+      if (roomId != null) 'room_id': roomId,
+      if (fileUrl != null) 'file_url': fileUrl,
+      if (localPath != null) 'local_path': localPath,
+      if (fileName != null) 'file_name': fileName,
+      if (totalSize != null) 'total_size': totalSize,
+      if (transferredSize != null) 'transferred_size': transferredSize,
+      if (mimeType != null) 'mime_type': mimeType,
+      if (priority != null) 'priority': priority,
+      if (status != null) 'status': status,
+      if (retryCount != null) 'retry_count': retryCount,
+      if (lastError != null) 'last_error': lastError,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (nextRetryAt != null) 'next_retry_at': nextRetryAt,
+    });
+  }
+
+  TransferJobsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? transferType,
+    Value<String>? referenceId,
+    Value<String>? roomId,
+    Value<String>? fileUrl,
+    Value<String>? localPath,
+    Value<String>? fileName,
+    Value<int>? totalSize,
+    Value<int>? transferredSize,
+    Value<String?>? mimeType,
+    Value<int>? priority,
+    Value<String>? status,
+    Value<int>? retryCount,
+    Value<String?>? lastError,
+    Value<int>? createdAt,
+    Value<int?>? updatedAt,
+    Value<int?>? nextRetryAt,
+  }) {
+    return TransferJobsCompanion(
+      id: id ?? this.id,
+      transferType: transferType ?? this.transferType,
+      referenceId: referenceId ?? this.referenceId,
+      roomId: roomId ?? this.roomId,
+      fileUrl: fileUrl ?? this.fileUrl,
+      localPath: localPath ?? this.localPath,
+      fileName: fileName ?? this.fileName,
+      totalSize: totalSize ?? this.totalSize,
+      transferredSize: transferredSize ?? this.transferredSize,
+      mimeType: mimeType ?? this.mimeType,
+      priority: priority ?? this.priority,
+      status: status ?? this.status,
+      retryCount: retryCount ?? this.retryCount,
+      lastError: lastError ?? this.lastError,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      nextRetryAt: nextRetryAt ?? this.nextRetryAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (transferType.present) {
+      map['transfer_type'] = Variable<String>(transferType.value);
+    }
+    if (referenceId.present) {
+      map['reference_id'] = Variable<String>(referenceId.value);
+    }
+    if (roomId.present) {
+      map['room_id'] = Variable<String>(roomId.value);
+    }
+    if (fileUrl.present) {
+      map['file_url'] = Variable<String>(fileUrl.value);
+    }
+    if (localPath.present) {
+      map['local_path'] = Variable<String>(localPath.value);
+    }
+    if (fileName.present) {
+      map['file_name'] = Variable<String>(fileName.value);
+    }
+    if (totalSize.present) {
+      map['total_size'] = Variable<int>(totalSize.value);
+    }
+    if (transferredSize.present) {
+      map['transferred_size'] = Variable<int>(transferredSize.value);
+    }
+    if (mimeType.present) {
+      map['mime_type'] = Variable<String>(mimeType.value);
+    }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (retryCount.present) {
+      map['retry_count'] = Variable<int>(retryCount.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (nextRetryAt.present) {
+      map['next_retry_at'] = Variable<int>(nextRetryAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TransferJobsCompanion(')
+          ..write('id: $id, ')
+          ..write('transferType: $transferType, ')
+          ..write('referenceId: $referenceId, ')
+          ..write('roomId: $roomId, ')
+          ..write('fileUrl: $fileUrl, ')
+          ..write('localPath: $localPath, ')
+          ..write('fileName: $fileName, ')
+          ..write('totalSize: $totalSize, ')
+          ..write('transferredSize: $transferredSize, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('priority: $priority, ')
+          ..write('status: $status, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('nextRetryAt: $nextRetryAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CallHistoryTable extends CallHistory
     with TableInfo<$CallHistoryTable, CallHistoryData> {
   @override
@@ -10152,6 +11802,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $UploadChunksTable uploadChunks = $UploadChunksTable(this);
+  late final $DownloadChunksTable downloadChunks = $DownloadChunksTable(this);
+  late final $TransferJobsTable transferJobs = $TransferJobsTable(this);
   late final $CallHistoryTable callHistory = $CallHistoryTable(this);
   late final $AnalyticsEventsTable analyticsEvents = $AnalyticsEventsTable(
     this,
@@ -10178,6 +11830,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inviteLinks,
     inviteLinkJoins,
     uploadChunks,
+    downloadChunks,
+    transferJobs,
     callHistory,
     analyticsEvents,
   ];
@@ -15527,6 +17181,754 @@ typedef $$UploadChunksTableProcessedTableManager =
       UploadChunk,
       PrefetchHooks Function()
     >;
+typedef $$DownloadChunksTableCreateCompanionBuilder =
+    DownloadChunksCompanion Function({
+      Value<int> id,
+      required String downloadId,
+      required String fileUrl,
+      required String localPath,
+      required int totalSize,
+      Value<int> chunkIndex,
+      Value<int> chunkSize,
+      Value<int> bytesDownloaded,
+      Value<String?> etag,
+      required int createdAt,
+      Value<int?> updatedAt,
+    });
+typedef $$DownloadChunksTableUpdateCompanionBuilder =
+    DownloadChunksCompanion Function({
+      Value<int> id,
+      Value<String> downloadId,
+      Value<String> fileUrl,
+      Value<String> localPath,
+      Value<int> totalSize,
+      Value<int> chunkIndex,
+      Value<int> chunkSize,
+      Value<int> bytesDownloaded,
+      Value<String?> etag,
+      Value<int> createdAt,
+      Value<int?> updatedAt,
+    });
+
+class $$DownloadChunksTableFilterComposer
+    extends Composer<_$AppDatabase, $DownloadChunksTable> {
+  $$DownloadChunksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get downloadId => $composableBuilder(
+    column: $table.downloadId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fileUrl => $composableBuilder(
+    column: $table.fileUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localPath => $composableBuilder(
+    column: $table.localPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalSize => $composableBuilder(
+    column: $table.totalSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chunkIndex => $composableBuilder(
+    column: $table.chunkIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chunkSize => $composableBuilder(
+    column: $table.chunkSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bytesDownloaded => $composableBuilder(
+    column: $table.bytesDownloaded,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DownloadChunksTableOrderingComposer
+    extends Composer<_$AppDatabase, $DownloadChunksTable> {
+  $$DownloadChunksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get downloadId => $composableBuilder(
+    column: $table.downloadId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fileUrl => $composableBuilder(
+    column: $table.fileUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localPath => $composableBuilder(
+    column: $table.localPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalSize => $composableBuilder(
+    column: $table.totalSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get chunkIndex => $composableBuilder(
+    column: $table.chunkIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get chunkSize => $composableBuilder(
+    column: $table.chunkSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bytesDownloaded => $composableBuilder(
+    column: $table.bytesDownloaded,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get etag => $composableBuilder(
+    column: $table.etag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DownloadChunksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DownloadChunksTable> {
+  $$DownloadChunksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get downloadId => $composableBuilder(
+    column: $table.downloadId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fileUrl =>
+      $composableBuilder(column: $table.fileUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get localPath =>
+      $composableBuilder(column: $table.localPath, builder: (column) => column);
+
+  GeneratedColumn<int> get totalSize =>
+      $composableBuilder(column: $table.totalSize, builder: (column) => column);
+
+  GeneratedColumn<int> get chunkIndex => $composableBuilder(
+    column: $table.chunkIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get chunkSize =>
+      $composableBuilder(column: $table.chunkSize, builder: (column) => column);
+
+  GeneratedColumn<int> get bytesDownloaded => $composableBuilder(
+    column: $table.bytesDownloaded,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get etag =>
+      $composableBuilder(column: $table.etag, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$DownloadChunksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DownloadChunksTable,
+          DownloadChunk,
+          $$DownloadChunksTableFilterComposer,
+          $$DownloadChunksTableOrderingComposer,
+          $$DownloadChunksTableAnnotationComposer,
+          $$DownloadChunksTableCreateCompanionBuilder,
+          $$DownloadChunksTableUpdateCompanionBuilder,
+          (
+            DownloadChunk,
+            BaseReferences<_$AppDatabase, $DownloadChunksTable, DownloadChunk>,
+          ),
+          DownloadChunk,
+          PrefetchHooks Function()
+        > {
+  $$DownloadChunksTableTableManager(
+    _$AppDatabase db,
+    $DownloadChunksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DownloadChunksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DownloadChunksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DownloadChunksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> downloadId = const Value.absent(),
+                Value<String> fileUrl = const Value.absent(),
+                Value<String> localPath = const Value.absent(),
+                Value<int> totalSize = const Value.absent(),
+                Value<int> chunkIndex = const Value.absent(),
+                Value<int> chunkSize = const Value.absent(),
+                Value<int> bytesDownloaded = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+              }) => DownloadChunksCompanion(
+                id: id,
+                downloadId: downloadId,
+                fileUrl: fileUrl,
+                localPath: localPath,
+                totalSize: totalSize,
+                chunkIndex: chunkIndex,
+                chunkSize: chunkSize,
+                bytesDownloaded: bytesDownloaded,
+                etag: etag,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String downloadId,
+                required String fileUrl,
+                required String localPath,
+                required int totalSize,
+                Value<int> chunkIndex = const Value.absent(),
+                Value<int> chunkSize = const Value.absent(),
+                Value<int> bytesDownloaded = const Value.absent(),
+                Value<String?> etag = const Value.absent(),
+                required int createdAt,
+                Value<int?> updatedAt = const Value.absent(),
+              }) => DownloadChunksCompanion.insert(
+                id: id,
+                downloadId: downloadId,
+                fileUrl: fileUrl,
+                localPath: localPath,
+                totalSize: totalSize,
+                chunkIndex: chunkIndex,
+                chunkSize: chunkSize,
+                bytesDownloaded: bytesDownloaded,
+                etag: etag,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DownloadChunksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DownloadChunksTable,
+      DownloadChunk,
+      $$DownloadChunksTableFilterComposer,
+      $$DownloadChunksTableOrderingComposer,
+      $$DownloadChunksTableAnnotationComposer,
+      $$DownloadChunksTableCreateCompanionBuilder,
+      $$DownloadChunksTableUpdateCompanionBuilder,
+      (
+        DownloadChunk,
+        BaseReferences<_$AppDatabase, $DownloadChunksTable, DownloadChunk>,
+      ),
+      DownloadChunk,
+      PrefetchHooks Function()
+    >;
+typedef $$TransferJobsTableCreateCompanionBuilder =
+    TransferJobsCompanion Function({
+      Value<int> id,
+      required String transferType,
+      required String referenceId,
+      required String roomId,
+      required String fileUrl,
+      required String localPath,
+      required String fileName,
+      required int totalSize,
+      Value<int> transferredSize,
+      Value<String?> mimeType,
+      Value<int> priority,
+      Value<String> status,
+      Value<int> retryCount,
+      Value<String?> lastError,
+      required int createdAt,
+      Value<int?> updatedAt,
+      Value<int?> nextRetryAt,
+    });
+typedef $$TransferJobsTableUpdateCompanionBuilder =
+    TransferJobsCompanion Function({
+      Value<int> id,
+      Value<String> transferType,
+      Value<String> referenceId,
+      Value<String> roomId,
+      Value<String> fileUrl,
+      Value<String> localPath,
+      Value<String> fileName,
+      Value<int> totalSize,
+      Value<int> transferredSize,
+      Value<String?> mimeType,
+      Value<int> priority,
+      Value<String> status,
+      Value<int> retryCount,
+      Value<String?> lastError,
+      Value<int> createdAt,
+      Value<int?> updatedAt,
+      Value<int?> nextRetryAt,
+    });
+
+class $$TransferJobsTableFilterComposer
+    extends Composer<_$AppDatabase, $TransferJobsTable> {
+  $$TransferJobsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get transferType => $composableBuilder(
+    column: $table.transferType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get referenceId => $composableBuilder(
+    column: $table.referenceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get roomId => $composableBuilder(
+    column: $table.roomId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fileUrl => $composableBuilder(
+    column: $table.fileUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localPath => $composableBuilder(
+    column: $table.localPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fileName => $composableBuilder(
+    column: $table.fileName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalSize => $composableBuilder(
+    column: $table.totalSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get transferredSize => $composableBuilder(
+    column: $table.transferredSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nextRetryAt => $composableBuilder(
+    column: $table.nextRetryAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TransferJobsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TransferJobsTable> {
+  $$TransferJobsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get transferType => $composableBuilder(
+    column: $table.transferType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get referenceId => $composableBuilder(
+    column: $table.referenceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get roomId => $composableBuilder(
+    column: $table.roomId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fileUrl => $composableBuilder(
+    column: $table.fileUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localPath => $composableBuilder(
+    column: $table.localPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fileName => $composableBuilder(
+    column: $table.fileName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalSize => $composableBuilder(
+    column: $table.totalSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get transferredSize => $composableBuilder(
+    column: $table.transferredSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nextRetryAt => $composableBuilder(
+    column: $table.nextRetryAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TransferJobsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TransferJobsTable> {
+  $$TransferJobsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get transferType => $composableBuilder(
+    column: $table.transferType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get referenceId => $composableBuilder(
+    column: $table.referenceId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get roomId =>
+      $composableBuilder(column: $table.roomId, builder: (column) => column);
+
+  GeneratedColumn<String> get fileUrl =>
+      $composableBuilder(column: $table.fileUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get localPath =>
+      $composableBuilder(column: $table.localPath, builder: (column) => column);
+
+  GeneratedColumn<String> get fileName =>
+      $composableBuilder(column: $table.fileName, builder: (column) => column);
+
+  GeneratedColumn<int> get totalSize =>
+      $composableBuilder(column: $table.totalSize, builder: (column) => column);
+
+  GeneratedColumn<int> get transferredSize => $composableBuilder(
+    column: $table.transferredSize,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mimeType =>
+      $composableBuilder(column: $table.mimeType, builder: (column) => column);
+
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get nextRetryAt => $composableBuilder(
+    column: $table.nextRetryAt,
+    builder: (column) => column,
+  );
+}
+
+class $$TransferJobsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TransferJobsTable,
+          TransferJob,
+          $$TransferJobsTableFilterComposer,
+          $$TransferJobsTableOrderingComposer,
+          $$TransferJobsTableAnnotationComposer,
+          $$TransferJobsTableCreateCompanionBuilder,
+          $$TransferJobsTableUpdateCompanionBuilder,
+          (
+            TransferJob,
+            BaseReferences<_$AppDatabase, $TransferJobsTable, TransferJob>,
+          ),
+          TransferJob,
+          PrefetchHooks Function()
+        > {
+  $$TransferJobsTableTableManager(_$AppDatabase db, $TransferJobsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TransferJobsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TransferJobsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TransferJobsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> transferType = const Value.absent(),
+                Value<String> referenceId = const Value.absent(),
+                Value<String> roomId = const Value.absent(),
+                Value<String> fileUrl = const Value.absent(),
+                Value<String> localPath = const Value.absent(),
+                Value<String> fileName = const Value.absent(),
+                Value<int> totalSize = const Value.absent(),
+                Value<int> transferredSize = const Value.absent(),
+                Value<String?> mimeType = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int?> nextRetryAt = const Value.absent(),
+              }) => TransferJobsCompanion(
+                id: id,
+                transferType: transferType,
+                referenceId: referenceId,
+                roomId: roomId,
+                fileUrl: fileUrl,
+                localPath: localPath,
+                fileName: fileName,
+                totalSize: totalSize,
+                transferredSize: transferredSize,
+                mimeType: mimeType,
+                priority: priority,
+                status: status,
+                retryCount: retryCount,
+                lastError: lastError,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                nextRetryAt: nextRetryAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String transferType,
+                required String referenceId,
+                required String roomId,
+                required String fileUrl,
+                required String localPath,
+                required String fileName,
+                required int totalSize,
+                Value<int> transferredSize = const Value.absent(),
+                Value<String?> mimeType = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                required int createdAt,
+                Value<int?> updatedAt = const Value.absent(),
+                Value<int?> nextRetryAt = const Value.absent(),
+              }) => TransferJobsCompanion.insert(
+                id: id,
+                transferType: transferType,
+                referenceId: referenceId,
+                roomId: roomId,
+                fileUrl: fileUrl,
+                localPath: localPath,
+                fileName: fileName,
+                totalSize: totalSize,
+                transferredSize: transferredSize,
+                mimeType: mimeType,
+                priority: priority,
+                status: status,
+                retryCount: retryCount,
+                lastError: lastError,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                nextRetryAt: nextRetryAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TransferJobsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TransferJobsTable,
+      TransferJob,
+      $$TransferJobsTableFilterComposer,
+      $$TransferJobsTableOrderingComposer,
+      $$TransferJobsTableAnnotationComposer,
+      $$TransferJobsTableCreateCompanionBuilder,
+      $$TransferJobsTableUpdateCompanionBuilder,
+      (
+        TransferJob,
+        BaseReferences<_$AppDatabase, $TransferJobsTable, TransferJob>,
+      ),
+      TransferJob,
+      PrefetchHooks Function()
+    >;
 typedef $$CallHistoryTableCreateCompanionBuilder =
     CallHistoryCompanion Function({
       Value<int> id,
@@ -16233,6 +18635,10 @@ class $AppDatabaseManager {
       $$InviteLinkJoinsTableTableManager(_db, _db.inviteLinkJoins);
   $$UploadChunksTableTableManager get uploadChunks =>
       $$UploadChunksTableTableManager(_db, _db.uploadChunks);
+  $$DownloadChunksTableTableManager get downloadChunks =>
+      $$DownloadChunksTableTableManager(_db, _db.downloadChunks);
+  $$TransferJobsTableTableManager get transferJobs =>
+      $$TransferJobsTableTableManager(_db, _db.transferJobs);
   $$CallHistoryTableTableManager get callHistory =>
       $$CallHistoryTableTableManager(_db, _db.callHistory);
   $$AnalyticsEventsTableTableManager get analyticsEvents =>
