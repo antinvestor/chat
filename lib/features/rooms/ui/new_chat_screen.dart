@@ -277,7 +277,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                         : null,
                     selected: isSelected,
                     selectedTileColor: theme.colorScheme.primaryContainer
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                     onTap: () {
                       setState(() {
                         if (isSelected) {

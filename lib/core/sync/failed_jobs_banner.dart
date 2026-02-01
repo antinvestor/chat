@@ -24,7 +24,7 @@ class FailedJobsBanner extends ConsumerWidget {
         return _buildBanner(context, ref, count);
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -36,7 +36,7 @@ class FailedJobsBanner extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.red.shade900.withOpacity(0.3)
+            ? Colors.red.shade900.withValues(alpha: 0.3)
             : Colors.red.shade50,
         border: Border(
           bottom: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
@@ -158,7 +158,7 @@ class FailedJobsSheet extends ConsumerWidget {
                     controller: scrollController,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: jobs.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final job = jobs[index];
                       return _FailedJobTile(job: job);

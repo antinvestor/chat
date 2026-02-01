@@ -374,6 +374,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
   Future<void> _showChangePhoneDialog(BuildContext context) async {
     final controller = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -419,7 +420,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
         final success = await service.updatePhoneNumber(phone);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text(
                 success
@@ -438,6 +439,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
   Future<void> _showChangeEmailDialog(BuildContext context) async {
     final controller = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -483,7 +485,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
         final success = await service.updateEmail(email);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text(
                 success
@@ -550,7 +552,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              // TODO: Implement password change
+              // TODO(settings): Implement password change
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -571,6 +573,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   }
 
   Future<void> _requestAccountData(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isRequestingData = true);
 
     try {
@@ -581,8 +584,8 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
       if (result != null) {
         showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
+          context: this.context,
+          builder: (dialogContext) => AlertDialog(
             title: const Text('Data Request Submitted'),
             content: const Text(
               'Your data export request has been submitted. '
@@ -591,14 +594,14 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => Navigator.of(dialogContext).pop(),
                 child: const Text('OK'),
               ),
             ],
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Failed to request account data'),
             backgroundColor: Colors.red,

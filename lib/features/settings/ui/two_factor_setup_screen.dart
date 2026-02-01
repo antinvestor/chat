@@ -721,6 +721,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
   }
 
   void _showRegenerateCodesDialog(BuildContext context) {
+    final messenger = ScaffoldMessenger.of(context);
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -744,18 +745,18 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
 
                 if (mounted && newCodes.isNotEmpty) {
                   setState(() => _backupCodes = newCodes);
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     const SnackBar(
                       content: Text('New backup codes generated'),
                       backgroundColor: AppTheme.primaryGreen,
                     ),
                   );
                   // Show the new codes
-                  _showBackupCodesDialog(context);
+                  _showBackupCodesDialog(this.context);
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text('Failed to regenerate codes: $e'),
                       backgroundColor: Colors.red,
@@ -773,6 +774,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
 
   Future<void> _showDisable2FADialog(BuildContext context) async {
     final codeController = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
 
     await showDialog<void>(
       context: context,
@@ -812,7 +814,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
             onPressed: () async {
               final code = codeController.text.trim();
               if (code.length != 6) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Please enter a 6-digit code'),
                     backgroundColor: Colors.red,
@@ -831,14 +833,14 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
                   if (success) {
                     setState(() => _is2FAEnabled = false);
                     ref.invalidate(twoFactorStatusProvider);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       const SnackBar(
                         content: Text('Two-step verification disabled'),
                         backgroundColor: Colors.orange,
                       ),
                     );
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       const SnackBar(
                         content: Text('Invalid code. Please try again.'),
                         backgroundColor: Colors.red,
@@ -848,7 +850,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text('Failed to disable 2FA: $e'),
                       backgroundColor: Colors.red,

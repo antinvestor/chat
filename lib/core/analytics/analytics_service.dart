@@ -528,7 +528,7 @@ class AnalyticsService {
         return;
       }
 
-      // TODO: Send events to backend analytics service
+      // TODO(analytics): Send events to backend analytics service
       // In production, this would send to your analytics backend:
       // await _sendEventsToBackend(eventsToSend);
 

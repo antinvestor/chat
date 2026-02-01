@@ -143,7 +143,7 @@ class AccountService {
       );
 
       if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
         final devices =
             (json['devices'] as List?)
                 ?.map((d) => LinkedDevice.fromJson(d as Map<String, dynamic>))
