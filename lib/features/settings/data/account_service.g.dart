@@ -95,3 +95,47 @@ final class LinkedDevicesProvider
 }
 
 String _$linkedDevicesHash() => r'87a1cd6461b0f49228f440a1b765f83cab992f2b';
+
+/// Provider to get 2FA status
+
+@ProviderFor(twoFactorStatus)
+final twoFactorStatusProvider = TwoFactorStatusProvider._();
+
+/// Provider to get 2FA status
+
+final class TwoFactorStatusProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<TwoFactorStatus>,
+          TwoFactorStatus,
+          FutureOr<TwoFactorStatus>
+        >
+    with $FutureModifier<TwoFactorStatus>, $FutureProvider<TwoFactorStatus> {
+  /// Provider to get 2FA status
+  TwoFactorStatusProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'twoFactorStatusProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$twoFactorStatusHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<TwoFactorStatus> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<TwoFactorStatus> create(Ref ref) {
+    return twoFactorStatus(ref);
+  }
+}
+
+String _$twoFactorStatusHash() => r'a60193f38c2b2a310923c19e244811c3e2604303';

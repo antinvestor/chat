@@ -44,7 +44,7 @@ final class GlobalSearchProvider
   }
 }
 
-String _$globalSearchHash() => r'4b62051156b326b1fbe624fc6372a2a28065d473';
+String _$globalSearchHash() => r'e765e272cdc523be8af4aff8692919c63fc28eeb';
 
 /// Notifier for global search functionality
 
