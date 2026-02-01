@@ -26,6 +26,17 @@ enum RoomEventType {
   callAnswer,
   callIce,
   callEnd,
+
+  // Group call event types
+  groupCallStart,
+  groupCallJoin,
+  groupCallLeave,
+  groupCallEnd,
+  groupCallOffer,
+  groupCallAnswer,
+  groupCallIce,
+  groupCallMuteUpdate,
+
   motion,
   vote,
   transaction,
