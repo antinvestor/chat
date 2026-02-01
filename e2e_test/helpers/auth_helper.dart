@@ -4,7 +4,6 @@
 /// authentication state during E2E test execution.
 library;
 
-
 import 'package:flutter/material.dart';
 import 'package:patrol/patrol.dart';
 import 'package:stawi/core/error/error_handler.dart' show TimeoutException;

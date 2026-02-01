@@ -125,49 +125,53 @@ void main() {
     timeout: const Timeout(TestTimeouts.defaultTestTimeout),
   );
 
-  patrolTest('Add reaction to message', ($) async {
-    TestAccounts.validateConfiguration();
+  patrolTest(
+    'Add reaction to message',
+    ($) async {
+      TestAccounts.validateConfiguration();
 
-    await $.auth.loginWithCredentials(TestAccounts.user1);
-    await $.sync.waitForSyncConnection();
-    await $.sync.waitForRoomList();
+      await $.auth.loginWithCredentials(TestAccounts.user1);
+      await $.sync.waitForSyncConnection();
+      await $.sync.waitForRoomList();
 
-    // Open first room
-    final roomItem = $(ListTile).first;
-    if (roomItem.exists) {
-      await roomItem.tap();
-      await $.pumpAndSettle();
-    }
+      // Open first room
+      final roomItem = $(ListTile).first;
+      if (roomItem.exists) {
+        await roomItem.tap();
+        await $.pumpAndSettle();
+      }
 
-    // Find an existing message to react to
-    final messages = $(Text);
-    if (messages.exists) {
-      // Long press on first message to show context menu
-      await messages.first.longPress();
-      await $.pumpAndSettle();
-
-      // Look for reaction button or emoji picker
-      final reactionButton = $(IconButton).containing(Icons.emoji_emotions);
-      if (reactionButton.exists) {
-        await reactionButton.tap();
+      // Find an existing message to react to
+      final messages = $(Text);
+      if (messages.exists) {
+        // Long press on first message to show context menu
+        await messages.first.longPress();
         await $.pumpAndSettle();
 
-        // Select a reaction (like thumbs up)
-        final thumbsUp = $(Text).containing('\u{1F44D}');
-        if (thumbsUp.exists) {
-          await thumbsUp.tap();
+        // Look for reaction button or emoji picker
+        final reactionButton = $(IconButton).containing(Icons.emoji_emotions);
+        if (reactionButton.exists) {
+          await reactionButton.tap();
           await $.pumpAndSettle();
 
-          // Verify reaction appears
-          expect(
-            $(Text).containing('\u{1F44D}').exists,
-            isTrue,
-            reason: 'Reaction should appear on message',
-          );
+          // Select a reaction (like thumbs up)
+          final thumbsUp = $(Text).containing('\u{1F44D}');
+          if (thumbsUp.exists) {
+            await thumbsUp.tap();
+            await $.pumpAndSettle();
+
+            // Verify reaction appears
+            expect(
+              $(Text).containing('\u{1F44D}').exists,
+              isTrue,
+              reason: 'Reaction should appear on message',
+            );
+          }
         }
       }
-    }
-  }, timeout: const Timeout(TestTimeouts.defaultTestTimeout));
+    },
+    timeout: const Timeout(TestTimeouts.defaultTestTimeout),
+  );
 
   patrolTest('Reply to message', ($) async {
     TestAccounts.validateConfiguration();
