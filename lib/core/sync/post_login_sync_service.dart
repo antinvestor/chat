@@ -174,13 +174,20 @@ class PostLoginSyncService {
 
   /// Process a single room from the API response
   Future<void> _processRoom(pb_chat.Room pbRoom) async {
+    // Extract room type from metadata if available
+    var roomType = '';
+    if (pbRoom.hasMetadata()) {
+      final typeValue = pbRoom.metadata.fields['room_type'];
+      if (typeValue != null && typeValue.hasStringValue()) {
+        roomType = typeValue.stringValue;
+      }
+    }
+
     // Convert protobuf room to domain model
-    // Room type is determined by metadata or defaults to empty
     final room = domain.Room(
       id: pbRoom.id,
       name: pbRoom.name,
-      type:
-          '', // Type is not in protobuf Room, will be determined by other means
+      type: roomType,
       // Leave lastEventId/lastEventIndex as defaults - will be updated by sync engine
     );
 
@@ -209,12 +216,15 @@ class PostLoginSyncService {
       await _roomService.syncRoomMembers(roomId);
       // Call API sync complete to update any cached state
       await _roomSyncManager.onApiSyncComplete(roomId);
-    } catch (e) {
-      AppLogger.debug(
+    } catch (e, stackTrace) {
+      // Log as warning for visibility - these failures should be investigated
+      AppLogger.warning(
         'PostLoginSync: Background member sync failed for room $roomId',
-        data: {'error': e.toString()},
+        error: e,
+        stackTrace: stackTrace,
+        data: {'roomId': roomId},
       );
-      // Don't rethrow - this is background work
+      // Don't rethrow - this is background work but we want visibility
     }
   }
 

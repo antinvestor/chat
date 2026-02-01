@@ -421,11 +421,11 @@ class BackgroundSyncTask {
   ) async {
     final payload = job.payload;
 
-    // Convert member profile IDs to ContactLink objects
-    final memberIds =
-        (payload['members'] as List<dynamic>?)?.cast<String>() ?? [];
-    final memberLinks = memberIds
-        .map((id) => common.ContactLink(profileId: id))
+    // Convert contact IDs to ContactLink objects for server routing
+    final contactIds =
+        (payload['contactIds'] as List<dynamic>?)?.cast<String>() ?? [];
+    final memberLinks = contactIds
+        .map((id) => common.ContactLink(contactId: id))
         .toList();
 
     final request = pb.CreateRoomRequest(

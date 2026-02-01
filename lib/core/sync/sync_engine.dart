@@ -1550,11 +1550,11 @@ class SyncEngine with WidgetsBindingObserver {
   Future<void> _processCreateRoom(domain_job.PendingJob job) async {
     final payload = job.payload;
 
-    // Convert member profile IDs to ContactLink objects
-    final memberIds =
-        (payload['members'] as List<dynamic>?)?.cast<String>() ?? [];
-    final memberLinks = memberIds
-        .map((id) => common_types.ContactLink(profileId: id))
+    // Convert contact IDs to ContactLink objects for server routing
+    final contactIds =
+        (payload['contactIds'] as List<dynamic>?)?.cast<String>() ?? [];
+    final memberLinks = contactIds
+        .map((id) => common_types.ContactLink(contactId: id))
         .toList();
 
     final request = pb.CreateRoomRequest(
