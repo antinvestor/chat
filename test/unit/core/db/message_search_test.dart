@@ -258,9 +258,9 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 16', () {
-        // Version 16: v15 added upload chunks, v16 adds priority/lastError to PendingJobs
-        expect(db.schemaVersion, equals(16));
+      test('schema version is 17', () {
+        // Version 17: v16 added priority/lastError to PendingJobs, v17 adds transfer_jobs table
+        expect(db.schemaVersion, equals(17));
       });
     });
 
