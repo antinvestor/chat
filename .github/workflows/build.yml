@@ -63,7 +63,7 @@ jobs:
 
       # Cache Gradle
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -144,7 +144,7 @@ jobs:
 
       # Cache CocoaPods
       - name: Cache CocoaPods
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ios/Pods
           key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
@@ -308,7 +308,7 @@ jobs:
 
       # Cache CocoaPods
       - name: Cache CocoaPods
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: macos/Pods
           key: macos-pods-${{ runner.os }}-${{ hashFiles('macos/Podfile.lock') }}
