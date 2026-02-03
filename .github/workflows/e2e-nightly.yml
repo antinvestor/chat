@@ -74,7 +74,7 @@ jobs:
           echo "apk_path=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_OUTPUT
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: staging-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
@@ -124,7 +124,7 @@ jobs:
           echo "test_apk_path=build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk" >> $GITHUB_OUTPUT
 
       - name: Upload Test APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-apk
           path: build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk
@@ -196,7 +196,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: e2e-test-results
           path: test-results/
