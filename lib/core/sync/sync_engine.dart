@@ -1404,6 +1404,42 @@ class SyncEngine with WidgetsBindingObserver {
     }
   }
 
+  /// Trigger an immediate upload of pending jobs.
+  ///
+  /// Use this after queueing high-priority jobs (e.g. room creation) to
+  /// avoid waiting for the reactive watch stream to fire. If an upload
+  /// is already in progress, the jobs will be picked up when it finishes.
+  Future<void> triggerUpload() async {
+    if (_isUploading || !_isConnected || _shouldStop) return;
+
+    final jobs = await _jobRepo.getPendingJobs();
+    if (jobs.isEmpty) return;
+
+    _isUploading = true;
+    AppLogger.debug(
+      'Triggered upload of pending jobs',
+      data: {'count': jobs.length},
+    );
+
+    try {
+      for (final job in jobs) {
+        if (_shouldStop || !_isConnected) break;
+        try {
+          await _processJob(job);
+        } catch (e, stackTrace) {
+          AppLogger.error(
+            'Error processing job',
+            error: e,
+            stackTrace: stackTrace,
+            data: {'jobId': job.id, 'jobType': job.type.toString()},
+          );
+        }
+      }
+    } finally {
+      _isUploading = false;
+    }
+  }
+
   void _startUploadLoop() {
     // Cancel existing subscription to prevent multiple watchers
     _jobWatchSubscription?.cancel();
@@ -1580,14 +1616,10 @@ class SyncEngine with WidgetsBindingObserver {
         data: {'localId': payload['id'], 'serverId': roomId},
       );
 
-      // Notify RoomSyncManager that the room is confirmed on server
-      // This transitions room from CREATING to SYNCING state
-      // Member subscription IDs will arrive via moderation event
-      _roomSyncManager.onRoomConfirmedByServer(roomId);
-
-      // Perform API sync as a fallback in case moderation events
-      // don't arrive in time. Mark as complete regardless of outcome
-      // to not block the user.
+      // Sync room members immediately to get the current user's subscription ID.
+      // This goes directly from CREATING → READY, skipping the intermediate
+      // SYNCING state and its timeout-based fallback. The timeout/moderation-event
+      // path is only useful when we can't do an inline API sync, but here we can.
       try {
         await _syncRoomMembers(roomId);
         AppLogger.debug(
@@ -1601,8 +1633,8 @@ class SyncEngine with WidgetsBindingObserver {
         );
       }
 
-      // Always mark API sync complete - room exists on server,
-      // user should be able to use it
+      // Transition directly to READY - room exists on server,
+      // user should be able to use it immediately
       await _roomSyncManager.onApiSyncComplete(roomId);
     } else if (response.hasError()) {
       AppLogger.error(

@@ -265,10 +265,12 @@ class _InputBarState extends ConsumerState<InputBar>
     // Determine if sending is enabled based on room sync state
     final canSend = syncStatus.state == RoomSyncState.ready;
 
-    // Always show the input row - just disable send button if not ready
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Setup indicator for rooms still being created/synced
+        if (syncStatus.isSettingUp) _buildSetupIndicator(theme),
+
         // Reply preview
         if (widget.replyingToMessageId != null) _buildReplyPreview(theme),
 
@@ -281,6 +283,31 @@ class _InputBarState extends ConsumerState<InputBar>
       ],
     );
   }
+
+  Widget _buildSetupIndicator(ThemeData theme) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 12,
+          height: 12,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: theme.colorScheme.primary.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Setting up group...',
+          style: TextStyle(
+            fontSize: 13,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildReplyPreview(ThemeData theme) => Container(
     padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),

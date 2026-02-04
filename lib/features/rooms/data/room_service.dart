@@ -26,14 +26,18 @@ class RoomService {
     this._chatClient,
     this._database,
     this._memberRepo,
-    this._roomSyncManager,
-  );
+    this._roomSyncManager, {
+    Future<void> Function()? onJobCreated,
+  }) : _onJobCreated = onJobCreated;
   final RoomRepository _roomRepo;
   final PendingJobRepository _jobRepo;
   final pb_chat.ChatServiceClient _chatClient;
   final AppDatabase _database;
   final RoomMemberRepository _memberRepo;
   final RoomSyncManager _roomSyncManager;
+
+  /// Optional callback to trigger immediate job processing (e.g. SyncEngine.triggerUpload)
+  final Future<void> Function()? _onJobCreated;
 
   /// Create a new room (group or direct chat)
   /// Saves locally first, then queues for server sync
@@ -94,6 +98,10 @@ class RoomService {
         'memberCount': contactIds.length,
       },
     );
+
+    // Trigger immediate upload so the room creation job is processed ASAP
+    // rather than waiting for the reactive watch stream
+    _onJobCreated?.call();
 
     return room;
   }
@@ -507,6 +515,7 @@ final roomServiceProvider = FutureProvider<RoomService>((ref) async {
   final database = AppDatabase.instance;
   final memberRepo = ref.watch(roomMemberRepositoryProvider);
   final roomSyncManager = ref.watch(roomSyncManagerProvider);
+  final syncEngine = await ref.watch(syncEngineProvider.future);
   return RoomService(
     roomRepo,
     jobRepo,
@@ -514,6 +523,7 @@ final roomServiceProvider = FutureProvider<RoomService>((ref) async {
     database,
     memberRepo,
     roomSyncManager,
+    onJobCreated: syncEngine.triggerUpload,
   );
 });
 

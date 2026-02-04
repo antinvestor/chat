@@ -55,8 +55,12 @@ class RoomSyncStatus {
   final String? syncError;
 
   /// Whether the user can send messages in this room
-  bool get canSendMessages =>
-      state == RoomSyncState.ready && currentUserSubscriptionId != null;
+  ///
+  /// Only requires READY state. Subscription ID is looked up lazily
+  /// at send time via AuthContextService.requireSubscriptionIdForRoom(),
+  /// which will sync if needed. This prevents optimistic-READY states
+  /// (after timeout recovery) from permanently blocking the input.
+  bool get canSendMessages => state == RoomSyncState.ready;
 
   /// Whether the room is still being set up
   bool get isSettingUp =>

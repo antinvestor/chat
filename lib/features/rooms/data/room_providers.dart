@@ -70,6 +70,18 @@ final roomCanSendMessagesProvider = Provider.family<bool, String>((
 Future<void> syncRoomMembersOnEntry(Ref ref, String roomId) async {
   final roomSyncManager = ref.watch(roomSyncManagerProvider);
 
+  // Skip sync if the room is still being created on the server.
+  // The createRoom job in SyncEngine will handle the initial member sync.
+  // Calling the API now would fail because the room doesn't exist yet.
+  final currentStatus = roomSyncManager.getStatus(roomId);
+  if (currentStatus != null && currentStatus.state == RoomSyncState.creating) {
+    AppLogger.debug(
+      'Skipping member sync on entry - room still creating',
+      data: {'roomId': roomId},
+    );
+    return;
+  }
+
   try {
     final service = await ref.watch(roomServiceProvider.future);
     await service.syncRoomMembers(roomId);

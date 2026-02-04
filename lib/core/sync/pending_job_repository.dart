@@ -125,8 +125,11 @@ class PendingJobRepository {
       case domain.JobType.vote:
         return JobPriority.high;
 
-      // Normal - room operations
+      // Critical - room creation blocks user from messaging
       case domain.JobType.createRoom:
+        return JobPriority.critical;
+
+      // Normal - room operations
       case domain.JobType.updateRoom:
       case domain.JobType.updateRoomAvatar:
       case domain.JobType.updateRoomPermissions:

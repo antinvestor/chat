@@ -706,16 +706,6 @@ class RoomSyncManager {
       if (member != null) return member.subscriptionId;
     }
 
-    // If we have at least one member in the room, assume we're a member
-    // This is the most optimistic fallback for new rooms
-    final members = await _roomMemberRepository.getMembersForRoom(roomId);
-    if (members.isNotEmpty) {
-      // For a newly created room, we're likely the creator
-      // Return any subscription - the actual subscription ID will be
-      // used from the member repository when sending messages
-      return members.first.subscriptionId;
-    }
-
     return null;
   }
 
