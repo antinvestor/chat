@@ -2377,6 +2377,8 @@ class RosterRepository implements ContactSyncRepository {
     // Build ProfileWithContacts list
     final result = <ProfileWithContacts>[];
     for (final profileId in groupedByProfile.keys) {
+      // Skip unlinked contacts - they don't have a real profile
+      if (profileId == 'unlinked') continue;
       final contacts = groupedByProfile[profileId]!;
 
       // Get profile or create placeholder from roster data

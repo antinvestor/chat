@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/logging/app_logger.dart';
-import '../../contacts/data/contact_sync_repository.dart';
 import '../../contacts/data/roster_repository.dart';
 import '../../contacts/services/contact_service.dart';
 import '../../contacts/ui/contact_permission_view.dart';
@@ -64,13 +65,13 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             return ContactPermissionView(
               onPermissionGranted: () async {
                 ref.invalidate(contactPermissionGrantedProvider);
-                // Directly sync contacts
+                // Phase 1: Read device contacts locally (~200ms)
                 final rosterRepo = await ref.read(
                   rosterRepositoryProvider.future,
                 );
                 await rosterRepo.syncContactsLocal();
-                await rosterRepo.syncContactsToServer();
-                ref.invalidate(rosterEntriesProvider);
+                // Phase 2: Server sync in background (stream auto-updates)
+                unawaited(rosterRepo.syncContactsToServer());
               },
             );
           }
@@ -96,7 +97,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   }
 
   Widget _buildContactSelectionBody(ThemeData theme) {
-    final rosterAsync = ref.watch(rosterEntriesProvider);
+    final rosterAsync = ref.watch(rosterStreamProvider);
 
     return Column(
       children: [
@@ -308,7 +309,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                   ),
                   const SizedBox(height: 8),
                   FilledButton(
-                    onPressed: () => ref.invalidate(rosterEntriesProvider),
+                    onPressed: () => ref.invalidate(rosterStreamProvider),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -379,18 +380,14 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   }
 
   Future<void> _syncContacts() async {
-    // Directly sync contacts
+    // Phase 1: Read device contacts locally (~200ms)
     final rosterRepo = await ref.read(rosterRepositoryProvider.future);
 
     if (!mounted) return;
 
     await rosterRepo.syncContactsLocal();
-    await rosterRepo.syncContactsToServer();
-
-    if (mounted) {
-      // Refresh the contacts list
-      ref.invalidate(rosterEntriesProvider);
-    }
+    // Phase 2: Server sync in background (stream auto-updates)
+    unawaited(rosterRepo.syncContactsToServer());
   }
 
   /// Get the correct contact identifier based on priority:

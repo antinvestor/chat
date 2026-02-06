@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,19 +51,19 @@ class ContactListBuilder extends ConsumerWidget {
             onPermissionGranted: () async {
               // Invalidate permission provider to refresh state
               ref.invalidate(contactPermissionGrantedProvider);
-              // Directly sync contacts (permission was just granted)
+              // Phase 1: Read device contacts locally (~200ms)
               final rosterRepo = await ref.read(
                 rosterRepositoryProvider.future,
               );
               await rosterRepo.syncContactsLocal();
-              await rosterRepo.syncContactsToServer();
-              ref.invalidate(profilesWithContactsProvider);
+              // Phase 2: Server sync in background (stream auto-updates)
+              unawaited(rosterRepo.syncContactsToServer());
             },
           );
         }
 
-        // Permission granted - show contacts
-        final contactsAsync = ref.watch(profilesWithContactsProvider);
+        // Permission granted - show contacts (stream auto-updates)
+        final contactsAsync = ref.watch(profilesWithContactsStreamProvider);
 
         return contactsAsync.when(
           data: (contacts) {
@@ -118,7 +120,7 @@ class ContactListBuilder extends ConsumerWidget {
           Text('Error: $error'),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: () => ref.invalidate(profilesWithContactsProvider),
+            onPressed: () => ref.invalidate(profilesWithContactsStreamProvider),
             child: const Text('Retry'),
           ),
         ],
@@ -185,18 +187,20 @@ class SliverContactListBuilder extends ConsumerWidget {
             child: ContactPermissionView(
               onPermissionGranted: () async {
                 ref.invalidate(contactPermissionGrantedProvider);
+                // Phase 1: Read device contacts locally (~200ms)
                 final rosterRepo = await ref.read(
                   rosterRepositoryProvider.future,
                 );
                 await rosterRepo.syncContactsLocal();
-                await rosterRepo.syncContactsToServer();
-                ref.invalidate(profilesWithContactsProvider);
+                // Phase 2: Server sync in background (stream auto-updates)
+                unawaited(rosterRepo.syncContactsToServer());
               },
             ),
           );
         }
 
-        final contactsAsync = ref.watch(profilesWithContactsProvider);
+        // Permission granted - show contacts (stream auto-updates)
+        final contactsAsync = ref.watch(profilesWithContactsStreamProvider);
 
         return contactsAsync.when(
           data: (contacts) {
@@ -263,7 +267,7 @@ class SliverContactListBuilder extends ConsumerWidget {
           Text('Error: $error'),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: () => ref.invalidate(profilesWithContactsProvider),
+            onPressed: () => ref.invalidate(profilesWithContactsStreamProvider),
             child: const Text('Retry'),
           ),
         ],

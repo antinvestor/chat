@@ -1220,7 +1220,7 @@ class MessageBubble extends ConsumerWidget {
     final profileIdAsync = ref.watch(
       profileIdFromSubscriptionProvider(message.senderId),
     );
-    final profilesAsync = ref.watch(profilesWithContactsProvider);
+    final profilesAsync = ref.watch(profilesWithContactsStreamProvider);
 
     // Get the profile ID (or use senderId as fallback if lookup fails)
     final profileId = profileIdAsync.when(

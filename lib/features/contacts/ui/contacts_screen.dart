@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -53,20 +55,13 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
 
       if (!mounted) return;
 
-      // Phase 1: Read device contacts and store locally
+      // Phase 1: Read device contacts and store locally (~200ms)
+      // Stream providers auto-update UI as DB changes
       await rosterRepo.syncContactsLocal();
 
-      if (!mounted) return;
-
-      // Phase 2: Sync to server (links contacts with platform profiles)
-      await rosterRepo.syncContactsToServer();
-
-      if (mounted) {
-        // Refresh the contacts list
-        ref.invalidate(syncedContactsProvider);
-        ref.invalidate(rosterEntriesProvider);
-        ref.invalidate(profilesWithContactsProvider);
-      }
+      // Phase 2: Sync to server in background (fire-and-forget)
+      // Stream providers will auto-update as each batch writes to DB
+      unawaited(rosterRepo.syncContactsToServer());
     } finally {
       if (mounted) setState(() => _isSyncing = false);
     }
@@ -467,8 +462,8 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
           );
         }
 
-        // Permission granted - show contacts
-        final profilesAsync = ref.watch(profilesWithContactsProvider);
+        // Permission granted - show contacts (stream auto-updates)
+        final profilesAsync = ref.watch(profilesWithContactsStreamProvider);
         return profilesAsync.when(
           data: (profiles) {
             if (profiles.isEmpty) {
@@ -514,7 +509,8 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
                 Text('Error: $error'),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: () => ref.invalidate(profilesWithContactsProvider),
+                  onPressed: () =>
+                      ref.invalidate(profilesWithContactsStreamProvider),
                   child: const Text('Retry'),
                 ),
               ],
