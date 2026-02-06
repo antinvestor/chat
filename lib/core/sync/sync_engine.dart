@@ -1824,10 +1824,16 @@ class SyncEngine with WidgetsBindingObserver {
     // Build event with payload-based content
     final pbPayload = pb.Payload();
     if (localType == domain.RoomEventType.text) {
-      pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+      pbPayload.text = pb.TextContent(
+        body: content['text'] as String? ?? '',
+        format: 'plain',
+      );
     } else if (localType == domain.RoomEventType.roomKey) {
       // Room key events are sent as JSON-encoded text for key sharing
-      pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+      pbPayload.text = pb.TextContent(
+        body: content['text'] as String? ?? '',
+        format: 'plain',
+      );
     } else if (localType == domain.RoomEventType.image ||
         localType == domain.RoomEventType.video ||
         localType == domain.RoomEventType.audio ||
@@ -1888,7 +1894,7 @@ class SyncEngine with WidgetsBindingObserver {
       'option': payload['option'],
       'type': 'vote',
     };
-    pbPayload.text = pb.TextContent(body: voteData.toString());
+    pbPayload.text = pb.TextContent(body: voteData.toString(), format: 'plain');
 
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
@@ -1942,7 +1948,10 @@ class SyncEngine with WidgetsBindingObserver {
     final timestamp = common_types.Timestamp.fromDateTime(DateTime.now());
 
     final pbPayload = pb.Payload();
-    pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+    pbPayload.text = pb.TextContent(
+      body: content['text'] as String? ?? '',
+      format: 'plain',
+    );
 
     // Send as an edit event to the server
     // Note: Backend API for editing may need to be implemented
@@ -2003,7 +2012,10 @@ class SyncEngine with WidgetsBindingObserver {
     final pbPayload = pb.Payload();
 
     if (localType == domain.RoomEventType.text) {
-      pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+      pbPayload.text = pb.TextContent(
+        body: content['text'] as String? ?? '',
+        format: 'plain',
+      );
     } else if (localType == domain.RoomEventType.image ||
         localType == domain.RoomEventType.video ||
         localType == domain.RoomEventType.audio ||
@@ -2702,18 +2714,24 @@ class SyncEngine with WidgetsBindingObserver {
       switch (event.type) {
         case domain.RoomEventType.text:
           final textContent = event.content['text'] as String? ?? '';
-          pbPayload.text = pb.TextContent(body: textContent);
+          pbPayload.text = pb.TextContent(body: textContent, format: 'plain');
           break;
         case domain.RoomEventType.image:
           final imageUrl = event.content['url'] as String? ?? '';
           final imageData = {'url': imageUrl, 'type': 'image'};
-          pbPayload.text = pb.TextContent(body: imageData.toString());
+          pbPayload.text = pb.TextContent(
+            body: imageData.toString(),
+            format: 'plain',
+          );
           break;
         case domain.RoomEventType.file:
           final fileUrl = event.content['url'] as String? ?? '';
           final fileName = event.content['name'] as String? ?? '';
           final fileData = {'url': fileUrl, 'name': fileName, 'type': 'file'};
-          pbPayload.text = pb.TextContent(body: fileData.toString());
+          pbPayload.text = pb.TextContent(
+            body: fileData.toString(),
+            format: 'plain',
+          );
           break;
         default:
           throw Exception('Unsupported event type: ${event.type}');

@@ -699,7 +699,10 @@ class BackgroundSyncTask {
     // Build event with payload-based content
     final pbPayload = pb.Payload();
     if (localType == domain.RoomEventType.text) {
-      pbPayload.text = pb.TextContent(body: content['text'] as String? ?? '');
+      pbPayload.text = pb.TextContent(
+        body: content['text'] as String? ?? '',
+        format: 'plain',
+      );
     } else if (localType == domain.RoomEventType.image ||
         localType == domain.RoomEventType.video ||
         localType == domain.RoomEventType.audio ||

@@ -76,6 +76,9 @@ class MessageSendingService {
     String? replyToId,
     bool encrypt = true, // E2EE enabled by default
   }) async {
+    if (text.trim().isEmpty) {
+      throw ArgumentError('Message text cannot be empty');
+    }
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
     final senderId = await _getSubscriptionIdOrProvisional(roomId);
