@@ -63,7 +63,7 @@ jobs:
 
       # Cache Gradle
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -110,7 +110,7 @@ jobs:
           fi
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: android-apk-${{ inputs.environment }}
           path: ${{ steps.build.outputs.apk_path }}
@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload AAB
         if: inputs.build_type == 'release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: android-aab-${{ inputs.environment }}
           path: ${{ steps.build.outputs.aab_path }}
@@ -144,7 +144,7 @@ jobs:
 
       # Cache CocoaPods
       - name: Cache CocoaPods
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ios/Pods
           key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
@@ -216,7 +216,7 @@ jobs:
           echo "ipa_path=build/ios/ipa/Runner.ipa" >> $GITHUB_OUTPUT
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ios-ipa-${{ inputs.environment }}
           path: build/ios/ipa/
@@ -247,7 +247,7 @@ jobs:
           flutter build web ${{ inputs.build_type == 'release' && '--release' || '--profile' }} --base-href /
 
       - name: Upload Web
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-build-${{ inputs.environment }}
           path: build/web/
@@ -285,7 +285,7 @@ jobs:
           tar -czf linux-bundle.tar.gz -C build/linux/x64/${BUILD_MODE}/bundle .
 
       - name: Upload Linux bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-bundle-${{ inputs.environment }}
           path: linux-bundle.tar.gz
@@ -308,7 +308,7 @@ jobs:
 
       # Cache CocoaPods
       - name: Cache CocoaPods
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: macos/Pods
           key: macos-pods-${{ runner.os }}-${{ hashFiles('macos/Podfile.lock') }}
@@ -330,7 +330,7 @@ jobs:
           zip -r ${GITHUB_WORKSPACE}/macos-app.zip *.app
 
       - name: Upload macOS app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macos-app-${{ inputs.environment }}
           path: macos-app.zip
