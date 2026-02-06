@@ -82,8 +82,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (status.isGranted) return;
 
     // Check if we've already prompted the user
-    final settingsNotifier = ref.read(settingsProvider.notifier);
-    final hasPrompted = await settingsNotifier
+    if (!mounted) return;
+    final hasPrompted = await ref
+        .read(settingsProvider.notifier)
         .hasNotificationPermissionBeenPrompted();
     if (hasPrompted) return;
 
@@ -92,9 +93,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final result = await NotificationPermissionDialog.show(context);
 
     // Mark as prompted so we don't ask again
-    await settingsNotifier.markNotificationPermissionPrompted();
+    // Re-read notifier fresh since the provider may have been disposed/rebuilt
+    // during the dialog
+    if (!mounted) return;
+    try {
+      await ref
+          .read(settingsProvider.notifier)
+          .markNotificationPermissionPrompted();
+    } catch (e) {
+      AppLogger.warning('Could not save notification prompt state', error: e);
+    }
 
     // Handle the result
+    if (!mounted) return;
     if (result == NotificationPermissionResult.granted) {
       // User granted permission - complete notification service initialization
       final notificationService = ref.read(notificationServiceProvider);

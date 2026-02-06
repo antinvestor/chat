@@ -69,125 +69,130 @@ class NotificationPermissionDialog extends StatelessWidget {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Notification bell icon in circular container
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.notifications_rounded,
-              size: 40,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Title
-          Text(
-            'Enable Notifications',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-
-          // Explanation text
-          Text(
-            'To make sure you never miss important messages, we need your permission to send notifications.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-
-          // Benefits container
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                _BenefitRow(
-                  icon: Icons.message_rounded,
-                  text: 'Know when new messages arrive',
-                  theme: theme,
-                ),
-                const SizedBox(height: 12),
-                _BenefitRow(
-                  icon: Icons.call_rounded,
-                  text: 'Get alerted for incoming calls',
-                  theme: theme,
-                ),
-                const SizedBox(height: 12),
-                _BenefitRow(
-                  icon: Icons.groups_rounded,
-                  text: 'Stay updated on group activities',
-                  theme: theme,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Privacy reassurance
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.tune_rounded,
-                size: 16,
-                color: theme.colorScheme.outline,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'You can customize notifications anytime',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                ),
-              ),
-            ],
-          ),
-
-          // Warning for permanently denied
-          if (isPermanentlyDenied) ...[
-            const SizedBox(height: 16),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Notification bell icon in circular container
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(8),
+                color: theme.colorScheme.primaryContainer,
+                shape: BoxShape.circle,
               ),
-              child: Row(
+              child: Icon(
+                Icons.notifications_rounded,
+                size: 40,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Title
+            Text(
+              'Enable Notifications',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+
+            // Explanation text
+            Text(
+              'To make sure you never miss important messages, we need your permission to send notifications.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+
+            // Benefits container
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    size: 18,
-                    color: theme.colorScheme.onErrorContainer,
+                  _BenefitRow(
+                    icon: Icons.message_rounded,
+                    text: 'Know when new messages arrive',
+                    theme: theme,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Permission was previously denied. Please enable it in Settings.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onErrorContainer,
-                      ),
-                    ),
+                  const SizedBox(height: 12),
+                  _BenefitRow(
+                    icon: Icons.call_rounded,
+                    text: 'Get alerted for incoming calls',
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 12),
+                  _BenefitRow(
+                    icon: Icons.groups_rounded,
+                    text: 'Stay updated on group activities',
+                    theme: theme,
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+
+            // Privacy reassurance
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.tune_rounded,
+                  size: 16,
+                  color: theme.colorScheme.outline,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'You can customize notifications anytime',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ],
+            ),
+
+            // Warning for permanently denied
+            if (isPermanentlyDenied) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 18,
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Permission was previously denied. Please enable it in Settings.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
       actions: [
         // Not Now button

@@ -1412,16 +1412,19 @@ class SyncEngine with WidgetsBindingObserver {
   Future<void> triggerUpload() async {
     if (_isUploading || !_isConnected || _shouldStop) return;
 
-    final jobs = await _jobRepo.getPendingJobs();
-    if (jobs.isEmpty) return;
-
+    // Set flag before any await to prevent the watch stream listener from
+    // concurrently processing the same jobs.
     _isUploading = true;
-    AppLogger.debug(
-      'Triggered upload of pending jobs',
-      data: {'count': jobs.length},
-    );
 
     try {
+      final jobs = await _jobRepo.getPendingJobs();
+      if (jobs.isEmpty) return;
+
+      AppLogger.debug(
+        'Triggered upload of pending jobs',
+        data: {'count': jobs.length},
+      );
+
       for (final job in jobs) {
         if (_shouldStop || !_isConnected) break;
         try {

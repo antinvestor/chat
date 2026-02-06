@@ -54,6 +54,9 @@ class SettingsNotifier extends _$SettingsNotifier {
       await _storage.write(key: key, value: value);
     }
 
+    // Provider may have been disposed during the async storage write
+    if (!ref.mounted) return;
+
     final currentState = await future;
     state = AsyncValue.data({...currentState, key: value});
   }
