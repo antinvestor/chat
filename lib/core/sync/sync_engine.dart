@@ -18,6 +18,7 @@ import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
 import '../../features/rooms/data/room_sync_manager.dart';
+import '../../features/rooms/data/room_sync_state.dart';
 import '../auth/token_refresh_coordinator.dart';
 import '../crypto/e2e_encryption_service.dart';
 import '../db/database.dart';
@@ -481,6 +482,9 @@ class SyncEngine with WidgetsBindingObserver {
 
         // Record successful connection with health monitor
         _healthMonitor?.recordConnectionSuccess();
+
+        // Proactively sync rooms that need it (provisional subscriptions, etc.)
+        unawaited(_performPostConnectionSync());
 
         // Process stream events with timeout to detect stalled connections
         await _processStreamWithTimeout(stream);
@@ -1629,11 +1633,17 @@ class SyncEngine with WidgetsBindingObserver {
           'Room members synced after creation',
           data: {'roomId': roomId},
         );
+
+        // Replace provisional subscription with the real one
+        await _replaceProvisionalSubscription(roomId);
       } catch (e) {
         AppLogger.warning(
-          'API sync failed after room creation',
+          'API sync failed after room creation, provisional subscription kept',
           data: {'roomId': roomId, 'error': e.toString()},
         );
+        // Even on failure, mark as API sync complete so room is usable.
+        // Provisional subscription remains in place and will be replaced
+        // on the next reconnection sync.
       }
 
       // Transition directly to READY - room exists on server,
@@ -2371,6 +2381,139 @@ class SyncEngine with WidgetsBindingObserver {
   /// Can be called by external services when needed
   Future<void> syncRoomMembers(String roomId, {bool forceSync = false}) async {
     await _syncRoomMembersIfNeeded(roomId, forceSync: forceSync);
+  }
+
+  /// Replace a provisional subscription with the real server-assigned one.
+  ///
+  /// Looks up `provisional_<roomId>` in the local DB. If found, uses the
+  /// profileId/contactId from it to find the real subscription, then:
+  /// 1. Updates all messages' senderId from provisional → real
+  /// 2. Removes the provisional subscription record
+  /// 3. Marks the room as ready with the real subscription
+  ///
+  /// Returns true if a replacement was performed.
+  Future<bool> _replaceProvisionalSubscription(String roomId) async {
+    final provisionalId = 'provisional_$roomId';
+    final provisional = await _roomMemberRepository.getSubscription(
+      provisionalId,
+    );
+
+    if (provisional == null) return false;
+
+    final profileId = provisional.profileId ?? '';
+    final contactId = provisional.contactId ?? '';
+
+    if (contactId.isEmpty) {
+      AppLogger.warning(
+        'Provisional subscription has no contactId, cannot find real subscription',
+        data: {'roomId': roomId},
+      );
+      return false;
+    }
+
+    // Look up the real subscription using the same profileId/contactId
+    final realSubId = await _subscriptionService.getCurrentSubscriptionId(
+      roomId,
+      profileId,
+      contactId,
+    );
+
+    if (realSubId == null || realSubId == provisionalId) {
+      AppLogger.debug(
+        'No real subscription found yet for room',
+        data: {'roomId': roomId},
+      );
+      return false;
+    }
+
+    // 1. Update messages that used the provisional ID as senderId
+    final updated = await _messageRepo.updateSenderIdForRoom(
+      roomId,
+      provisionalId,
+      realSubId,
+    );
+
+    // 2. Remove the provisional subscription record
+    await _roomMemberRepository.removeSubscription(provisionalId);
+
+    // 3. Mark room as ready with the real subscription
+    _roomSyncManager.markReady(roomId, realSubId);
+
+    AppLogger.info(
+      'Provisional subscription replaced with real one',
+      data: {
+        'roomId': roomId,
+        'provisionalId': provisionalId,
+        'realSubId': realSubId.substring(
+          0,
+          realSubId.length < 8 ? realSubId.length : 8,
+        ),
+        'messagesUpdated': updated,
+      },
+    );
+
+    return true;
+  }
+
+  /// Sync all rooms that need it after a successful connection.
+  ///
+  /// This handles rooms that were created offline (still have provisional
+  /// subscriptions) or rooms that failed to sync before disconnection.
+  Future<void> _performPostConnectionSync() async {
+    try {
+      final rooms = await _roomRepository.getAllRooms();
+      var syncedCount = 0;
+      var failedCount = 0;
+
+      for (final room in rooms) {
+        final status = _roomSyncManager.getStatus(room.id);
+
+        // Sync rooms that:
+        // 1. Have no status tracked yet (unknown state)
+        // 2. Are not in READY state
+        // 3. Have a provisional subscription
+        final needsSync =
+            status == null ||
+            status.state != RoomSyncState.ready ||
+            status.isProvisional;
+
+        if (!needsSync) continue;
+
+        try {
+          await _syncRoomMembers(room.id);
+
+          // Replace provisional subscription if one exists
+          final replaced = await _replaceProvisionalSubscription(room.id);
+
+          if (!replaced) {
+            // No provisional to replace, just mark sync complete
+            await _roomSyncManager.onApiSyncComplete(room.id);
+          }
+
+          syncedCount++;
+        } catch (e) {
+          failedCount++;
+          AppLogger.debug(
+            'Post-connection sync failed for room',
+            data: {'roomId': room.id, 'error': e.toString()},
+          );
+        }
+      }
+
+      if (syncedCount > 0 || failedCount > 0) {
+        AppLogger.info(
+          'Post-connection sync complete',
+          data: {'synced': syncedCount, 'failed': failedCount},
+        );
+      }
+    } catch (e, stackTrace) {
+      // Post-connection sync failure should never crash the engine
+      AppLogger.warning(
+        'Post-connection sync failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   /// Check if a SUBSCRIPTION ID belongs to the current profile's contact

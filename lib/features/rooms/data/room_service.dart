@@ -9,6 +9,7 @@ import '../../../core/networking/client.dart';
 import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
+import '../../auth/data/auth_repository.dart';
 import '../domain/room.dart' as domain;
 import 'room_member_repository.dart';
 import 'room_repository.dart';
@@ -26,7 +27,8 @@ class RoomService {
     this._chatClient,
     this._database,
     this._memberRepo,
-    this._roomSyncManager, {
+    this._roomSyncManager,
+    this._authRepo, {
     Future<void> Function()? onJobCreated,
   }) : _onJobCreated = onJobCreated;
   final RoomRepository _roomRepo;
@@ -35,6 +37,7 @@ class RoomService {
   final AppDatabase _database;
   final RoomMemberRepository _memberRepo;
   final RoomSyncManager _roomSyncManager;
+  final AuthRepository _authRepo;
 
   /// Optional callback to trigger immediate job processing (e.g. SyncEngine.triggerUpload)
   final Future<void> Function()? _onJobCreated;
@@ -75,9 +78,37 @@ class RoomService {
     // Save locally first
     await _roomRepo.insertRoom(room);
 
-    // Notify RoomSyncManager that room is being created
-    // This sets the room to CREATING state for UI display
-    _roomSyncManager.onRoomCreatedLocally(roomId);
+    // Create a provisional subscription so the room is immediately usable,
+    // even while offline. The provisional ID will be replaced with the real
+    // server-assigned subscription once the createRoom job is processed.
+    String? provisionalSubscriptionId;
+    try {
+      final profileId = await _authRepo.getCurrentProfileId();
+      final contactId = await _authRepo.getCurrentContactId();
+      if (profileId != null && contactId != null) {
+        provisionalSubscriptionId = 'provisional_$roomId';
+        await _memberRepo.createSubscription(
+          subscriptionId: provisionalSubscriptionId,
+          roomId: roomId,
+          profileId: profileId,
+          contactId: contactId,
+          role: 'admin',
+        );
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Failed to create provisional subscription, falling back to CREATING state',
+        data: {'roomId': roomId, 'error': e.toString()},
+      );
+      provisionalSubscriptionId = null;
+    }
+
+    // Notify RoomSyncManager - if provisional subscription exists, room
+    // goes directly to READY (provisional) state; otherwise CREATING.
+    _roomSyncManager.onRoomCreatedLocally(
+      roomId,
+      provisionalSubscriptionId: provisionalSubscriptionId,
+    );
 
     // Queue for server sync - server handles all member types
     await _jobRepo.addJob(JobType.createRoom, {
@@ -515,6 +546,7 @@ final roomServiceProvider = FutureProvider<RoomService>((ref) async {
   final database = AppDatabase.instance;
   final memberRepo = ref.watch(roomMemberRepositoryProvider);
   final roomSyncManager = ref.watch(roomSyncManagerProvider);
+  final authRepo = ref.watch(authRepositoryProvider);
   final syncEngine = await ref.watch(syncEngineProvider.future);
   return RoomService(
     roomRepo,
@@ -523,6 +555,7 @@ final roomServiceProvider = FutureProvider<RoomService>((ref) async {
     database,
     memberRepo,
     roomSyncManager,
+    authRepo,
     onJobCreated: syncEngine.triggerUpload,
   );
 });

@@ -246,6 +246,9 @@ class AuthContextService {
   }
 
   /// Internal method to sync room members with caching
+  ///
+  /// Only caches successful syncs. Failed syncs are removed from cache
+  /// so they can be retried immediately on the next attempt.
   Future<void> _syncRoomMembersIfNeeded(
     String roomId, {
     bool forceSync = false,
@@ -256,25 +259,48 @@ class AuthContextService {
       if (lastSync != null) {
         final elapsed = DateTime.now().difference(lastSync);
         if (elapsed < _syncCacheDuration) {
-          AppLogger.debug(
-            'Skipping room sync - recently synced',
-            data: {
-              'roomId': roomId,
-              'elapsedSeconds': elapsed.inSeconds,
-              'cacheSeconds': _syncCacheDuration.inSeconds,
-            },
-          );
-          return;
+          // Even if cached, verify subscription actually exists locally.
+          // If it's missing, fall through to sync.
+          final context = await getAuthContext();
+          if (context != null && context.isValid) {
+            final subId = await _subscriptionService.getCurrentSubscriptionId(
+              roomId,
+              context.profileId,
+              context.contactId,
+            );
+            if (subId != null) {
+              AppLogger.debug(
+                'Skipping room sync - recently synced',
+                data: {
+                  'roomId': roomId,
+                  'elapsedSeconds': elapsed.inSeconds,
+                  'cacheSeconds': _syncCacheDuration.inSeconds,
+                },
+              );
+              return;
+            }
+            // Subscription missing despite recent sync - force re-sync
+            AppLogger.debug(
+              'Subscription missing despite cache hit, re-syncing',
+              data: {'roomId': roomId},
+            );
+          }
         }
       }
     }
 
     // Perform sync
-    final roomService = await _roomServiceFuture;
-    await roomService.syncRoomMembers(roomId);
+    try {
+      final roomService = await _roomServiceFuture;
+      await roomService.syncRoomMembers(roomId);
 
-    // Update cache
-    _syncedRooms[roomId] = DateTime.now();
+      // Only cache on success
+      _syncedRooms[roomId] = DateTime.now();
+    } catch (e) {
+      // Remove from cache on failure so retry is not blocked
+      _syncedRooms.remove(roomId);
+      rethrow;
+    }
   }
 }
 

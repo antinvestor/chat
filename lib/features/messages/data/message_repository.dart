@@ -427,6 +427,20 @@ class MessageRepository {
     );
   }
 
+  /// Batch update senderId for messages in a room.
+  /// Used to replace a provisional subscription ID with the real one
+  /// after the server confirms room creation.
+  Future<int> updateSenderIdForRoom(
+    String roomId,
+    String oldSenderId,
+    String newSenderId,
+  ) async {
+    return (_database.update(_database.roomEvents)..where(
+          (t) => t.roomId.equals(roomId) & t.senderId.equals(oldSenderId),
+        ))
+        .write(RoomEventsCompanion(senderId: Value(newSenderId)));
+  }
+
   domain.RoomEvent _toRoomEvent(RoomEvent row) => domain.RoomEvent(
     id: row.id,
     roomId: row.roomId,

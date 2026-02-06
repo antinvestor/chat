@@ -269,7 +269,11 @@ class _InputBarState extends ConsumerState<InputBar>
       mainAxisSize: MainAxisSize.min,
       children: [
         // Setup indicator for rooms still being created/synced
-        if (syncStatus.isSettingUp) _buildSetupIndicator(theme),
+        if (syncStatus.isSettingUp) _buildSetupIndicator(theme, syncStatus),
+
+        // Provisional indicator - input stays enabled but shows subtle hint
+        if (!syncStatus.isSettingUp && syncStatus.isProvisional)
+          _buildProvisionalIndicator(theme),
 
         // Reply preview
         if (widget.replyingToMessageId != null) _buildReplyPreview(theme),
@@ -284,25 +288,53 @@ class _InputBarState extends ConsumerState<InputBar>
     );
   }
 
-  Widget _buildSetupIndicator(ThemeData theme) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+  Widget _buildSetupIndicator(ThemeData theme, RoomSyncStatus syncStatus) {
+    final message = syncStatus.state == RoomSyncState.creating
+        ? 'Creating group...'
+        : 'Syncing members...';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: theme.colorScheme.primary.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProvisionalIndicator(ThemeData theme) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(
-          width: 12,
-          height: 12,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: theme.colorScheme.primary.withValues(alpha: 0.7),
-          ),
+        Icon(
+          Icons.cloud_off,
+          size: 12,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Text(
-          'Setting up group...',
+          'Messages will sync when online',
           style: TextStyle(
-            fontSize: 13,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            fontSize: 12,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
           ),
         ),
       ],

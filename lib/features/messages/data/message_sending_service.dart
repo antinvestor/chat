@@ -49,6 +49,23 @@ class MessageSendingService {
   /// Returns the subscription ID or throws if not found
   final Future<String> Function(String roomId) _getSubscriptionIdForRoom;
 
+  /// Get subscription ID for a room, falling back to provisional ID
+  /// if the real one can't be found (e.g. offline, room still creating).
+  Future<String> _getSubscriptionIdOrProvisional(String roomId) async {
+    try {
+      return await _getSubscriptionIdForRoom(roomId);
+    } catch (e) {
+      // Fall back to provisional subscription ID so messages can be queued
+      // locally. The provisional ID will be replaced with the real one
+      // once the room syncs with the server.
+      AppLogger.debug(
+        'Subscription lookup failed, using provisional ID',
+        data: {'roomId': roomId, 'error': e.toString()},
+      );
+      return 'provisional_$roomId';
+    }
+  }
+
   /// Send a text message
   ///
   /// Messages are encrypted by default using Megolm (E2EE).
@@ -61,7 +78,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getSubscriptionIdForRoom(roomId);
+    final senderId = await _getSubscriptionIdOrProvisional(roomId);
 
     var content = <String, dynamic>{'text': text};
 
@@ -288,7 +305,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getSubscriptionIdForRoom(roomId);
+    final senderId = await _getSubscriptionIdOrProvisional(roomId);
     final fileName = file.path.split('/').last;
     final fileSize = await file.length();
 
@@ -436,7 +453,7 @@ class MessageSendingService {
   }) async {
     final localId = Xid().toString();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final senderId = await _getSubscriptionIdForRoom(roomId);
+    final senderId = await _getSubscriptionIdOrProvisional(roomId);
 
     final event = domain.RoomEvent(
       id: localId,

@@ -24,6 +24,7 @@ class RoomSyncStatus {
     this.currentUserSubscriptionId,
     this.lastSyncAttempt,
     this.syncError,
+    this.isProvisional = false,
   });
 
   /// Factory for creating initial creating state
@@ -42,6 +43,16 @@ class RoomSyncStatus {
     currentUserSubscriptionId: subscriptionId,
   );
 
+  /// Factory for creating ready state with a provisional subscription ID.
+  /// The room is usable but messages will be re-attributed once the real
+  /// subscription arrives from the server.
+  factory RoomSyncStatus.readyProvisional(String subscriptionId) =>
+      RoomSyncStatus(
+        state: RoomSyncState.ready,
+        currentUserSubscriptionId: subscriptionId,
+        isProvisional: true,
+      );
+
   /// The current sync state
   final RoomSyncState state;
 
@@ -53,6 +64,9 @@ class RoomSyncStatus {
 
   /// Error message if sync failed (internal use, not shown to users)
   final String? syncError;
+
+  /// Whether the subscription is provisional (created locally, not yet confirmed by server)
+  final bool isProvisional;
 
   /// Whether the user can send messages in this room
   ///
@@ -72,15 +86,17 @@ class RoomSyncStatus {
     String? currentUserSubscriptionId,
     DateTime? lastSyncAttempt,
     String? syncError,
+    bool? isProvisional,
   }) => RoomSyncStatus(
     state: state ?? this.state,
     currentUserSubscriptionId:
         currentUserSubscriptionId ?? this.currentUserSubscriptionId,
     lastSyncAttempt: lastSyncAttempt ?? this.lastSyncAttempt,
     syncError: syncError ?? this.syncError,
+    isProvisional: isProvisional ?? this.isProvisional,
   );
 
   @override
   String toString() =>
-      'RoomSyncStatus(state: $state, subscriptionId: ${currentUserSubscriptionId?.substring(0, 8) ?? "null"})';
+      'RoomSyncStatus(state: $state, subscriptionId: ${currentUserSubscriptionId?.substring(0, 8) ?? "null"}, provisional: $isProvisional)';
 }

@@ -369,17 +369,32 @@ class RoomSyncManager {
 
   /// Called when a room is created locally
   ///
-  /// Sets the room to CREATING state and starts a timeout for API fallback.
-  void onRoomCreatedLocally(String roomId) {
+  /// If [provisionalSubscriptionId] is provided, the room goes directly to
+  /// READY (provisional) state so the user can start sending messages
+  /// immediately even while offline. Otherwise falls back to CREATING state.
+  void onRoomCreatedLocally(
+    String roomId, {
+    String? provisionalSubscriptionId,
+  }) {
     final stream = _getOrCreateStream(roomId);
-    stream.add(RoomSyncStatus.creating());
-    _nonReadyStartTimes[roomId] = DateTime.now();
-    _retryAttempts[roomId] = 0;
 
-    AppLogger.debug(
-      'Room sync: Room created locally',
-      data: {'roomId': roomId},
-    );
+    if (provisionalSubscriptionId != null) {
+      // Room is immediately usable with provisional subscription
+      stream.add(RoomSyncStatus.readyProvisional(provisionalSubscriptionId));
+      AppLogger.debug(
+        'Room sync: Room created locally with provisional subscription',
+        data: {'roomId': roomId},
+      );
+    } else {
+      // Fallback: no provisional subscription, enter CREATING state
+      stream.add(RoomSyncStatus.creating());
+      _nonReadyStartTimes[roomId] = DateTime.now();
+      _retryAttempts[roomId] = 0;
+      AppLogger.debug(
+        'Room sync: Room created locally',
+        data: {'roomId': roomId},
+      );
+    }
   }
 
   /// Called when room creation is confirmed by the server

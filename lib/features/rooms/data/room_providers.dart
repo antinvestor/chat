@@ -82,6 +82,17 @@ Future<void> syncRoomMembersOnEntry(Ref ref, String roomId) async {
     return;
   }
 
+  // Skip API call when we already have a real (non-provisional) subscription.
+  // Provisional subscriptions still need syncing to get the real server ID.
+  final subId = currentStatus?.currentUserSubscriptionId;
+  if (subId != null && !subId.startsWith('provisional_')) {
+    AppLogger.debug(
+      'Skipping member sync on entry - subscription already known',
+      data: {'roomId': roomId},
+    );
+    return;
+  }
+
   try {
     final service = await ref.watch(roomServiceProvider.future);
     await service.syncRoomMembers(roomId);

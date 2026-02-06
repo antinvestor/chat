@@ -217,9 +217,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } catch (e) {
       AppLogger.error('Failed to send message', error: e);
       if (mounted) {
+        final errorMessage = e.toString().contains('SubscriptionNotFound')
+            ? 'Message will be sent when online'
+            : 'Failed to send message: ${e.toString()}';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send message: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: 'Retry',
