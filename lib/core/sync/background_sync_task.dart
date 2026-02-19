@@ -509,10 +509,10 @@ class BackgroundSyncTask {
 
       // Insert or update room member
       await database
-          .into(database.roomMembers)
+          .into(database.roomSubscriptions)
           .insertOnConflictUpdate(
-            RoomMembersCompanion.insert(
-              subscriptionId: subscriptionId,
+            RoomSubscriptionsCompanion.insert(
+              id: subscriptionId,
               roomId: subscription.roomId,
               profileId: Value(profileId),
               contactId: Value(contactId),

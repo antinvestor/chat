@@ -3,42 +3,42 @@ import 'package:drift/drift.dart';
 import '../../../core/db/database.dart';
 import '../../../core/logging/app_logger.dart';
 
-/// Repository for managing room members and subscriptions
-/// Handles all database access for room membership operations
-class RoomMemberRepository {
-  RoomMemberRepository(this._database);
+/// Repository for managing room subscriptions
+/// Handles all database access for room subscription operations
+class RoomSubscriptionRepository {
+  RoomSubscriptionRepository(this._database);
   final AppDatabase _database;
 
   /// Update profile ID for an existing subscription
   /// Used when a user authenticates and their profile ID becomes known
   ///
-  /// @param subscriptionId The room subscription to update
+  /// @param id The room subscription to update
   /// @param profileId The profile ID to associate with this subscription
   /// @param contactId Optional contact ID used for this subscription
   /// @return true if update was successful, false if subscription not found
   Future<bool> updateSubscriptionProfile({
-    required String subscriptionId,
+    required String id,
     required String profileId,
     String? contactId,
   }) async {
     try {
-      final query = _database.select(_database.roomMembers)
-        ..where((t) => t.subscriptionId.equals(subscriptionId));
+      final query = _database.select(_database.roomSubscriptions)
+        ..where((t) => t.id.equals(id));
 
       final existingMember = await query.getSingleOrNull();
       if (existingMember == null) {
         AppLogger.warning(
           'Subscription not found for profile update',
-          data: {'subscriptionId': subscriptionId},
+          data: {'id': id},
         );
         return false;
       }
 
       // Update the subscription with profile information
       await (_database.update(
-        _database.roomMembers,
-      )..where((t) => t.subscriptionId.equals(subscriptionId))).write(
-        RoomMembersCompanion(
+        _database.roomSubscriptions,
+      )..where((t) => t.id.equals(id))).write(
+        RoomSubscriptionsCompanion(
           profileId: Value(profileId),
           contactId: contactId != null
               ? Value(contactId)
@@ -52,7 +52,7 @@ class RoomMemberRepository {
       AppLogger.info(
         'Subscription profile updated successfully',
         data: {
-          'subscriptionId': subscriptionId,
+          'id': id,
           'profileId': profileId,
           'contactId': contactId,
         },
@@ -73,10 +73,10 @@ class RoomMemberRepository {
   /// Useful for finding all rooms a user is subscribed to
   ///
   /// @param profileId The profile ID to search for
-  /// @return List of room memberships for this profile
-  Future<List<RoomMember>> getProfileSubscriptions(String profileId) async {
+  /// @return List of room subscriptions for this profile
+  Future<List<RoomSubscription>> getProfileSubscriptions(String profileId) async {
     try {
-      final query = _database.select(_database.roomMembers)
+      final query = _database.select(_database.roomSubscriptions)
         ..where((t) => t.profileId.equals(profileId));
 
       return await query.get();
@@ -95,9 +95,9 @@ class RoomMemberRepository {
   ///
   /// @param roomId Optional room filter
   /// @return List of anonymous subscriptions
-  Future<List<RoomMember>> getAnonymousSubscriptions({String? roomId}) async {
+  Future<List<RoomSubscription>> getAnonymousSubscriptions({String? roomId}) async {
     try {
-      var query = _database.select(_database.roomMembers)
+      var query = _database.select(_database.roomSubscriptions)
         ..where((t) => t.profileId.isNull());
 
       if (roomId != null) {
@@ -117,14 +117,14 @@ class RoomMemberRepository {
 
   /// Create a new subscription (can be anonymous initially)
   ///
-  /// @param subscriptionId The subscription ID from API
+  /// @param id The subscription ID from API
   /// @param roomId The room ID
   /// @param profileId Optional profile ID (can be null for anonymous)
   /// @param contactId Optional contact ID
   /// @param role Optional role in the room
   /// @return true if creation was successful
   Future<bool> createSubscription({
-    required String subscriptionId,
+    required String id,
     required String roomId,
     String? profileId,
     String? contactId,
@@ -132,10 +132,10 @@ class RoomMemberRepository {
   }) async {
     try {
       await _database
-          .into(_database.roomMembers)
+          .into(_database.roomSubscriptions)
           .insert(
-            RoomMembersCompanion.insert(
-              subscriptionId: subscriptionId,
+            RoomSubscriptionsCompanion.insert(
+              id: id,
               roomId: roomId,
               profileId: profileId != null
                   ? Value(profileId)
@@ -151,7 +151,7 @@ class RoomMemberRepository {
       AppLogger.info(
         'Subscription created successfully',
         data: {
-          'subscriptionId': subscriptionId,
+          'id': id,
           'roomId': roomId,
           'profileId': profileId,
           'contactId': contactId,
@@ -172,25 +172,25 @@ class RoomMemberRepository {
 
   /// Remove a subscription from a room
   ///
-  /// @param subscriptionId The subscription ID to remove
+  /// @param id The subscription ID to remove
   /// @return true if removal was successful
-  Future<bool> removeSubscription(String subscriptionId) async {
+  Future<bool> removeSubscription(String id) async {
     try {
       final deleteCount = await (_database.delete(
-        _database.roomMembers,
-      )..where((t) => t.subscriptionId.equals(subscriptionId))).go();
+        _database.roomSubscriptions,
+      )..where((t) => t.id.equals(id))).go();
 
       final success = deleteCount > 0;
 
       if (success) {
         AppLogger.info(
           'Subscription removed successfully',
-          data: {'subscriptionId': subscriptionId},
+          data: {'id': id},
         );
       } else {
         AppLogger.warning(
           'Subscription not found for removal',
-          data: {'subscriptionId': subscriptionId},
+          data: {'id': id},
         );
       }
 
@@ -212,11 +212,12 @@ class RoomMemberRepository {
   /// @return true if subscription exists
   Future<bool> hasSubscription(String roomId, String profileId) async {
     try {
-      final query = _database.select(_database.roomMembers)
-        ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(profileId));
+      final query = _database.select(_database.roomSubscriptions)
+        ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(profileId))
+        ..limit(1);
 
-      final member = await query.getSingleOrNull();
-      return member != null;
+      final members = await query.get();
+      return members.isNotEmpty;
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to check subscription existence',
@@ -229,12 +230,12 @@ class RoomMemberRepository {
 
   /// Get subscription by subscription ID
   ///
-  /// @param subscriptionId The subscription ID
-  /// @return Room member if found, null otherwise
-  Future<RoomMember?> getSubscription(String subscriptionId) async {
+  /// @param id The subscription ID
+  /// @return Room subscription if found, null otherwise
+  Future<RoomSubscription?> getSubscription(String id) async {
     try {
-      final query = _database.select(_database.roomMembers)
-        ..where((t) => t.subscriptionId.equals(subscriptionId));
+      final query = _database.select(_database.roomSubscriptions)
+        ..where((t) => t.id.equals(id));
 
       return await query.getSingleOrNull();
     } catch (e, stackTrace) {
@@ -260,7 +261,7 @@ class RoomMemberRepository {
     String contactId,
   ) async {
     try {
-      final query = _database.select(_database.roomMembers)
+      final query = _database.select(_database.roomSubscriptions)
         ..where(
           (t) =>
               t.roomId.equals(roomId) &
@@ -271,8 +272,10 @@ class RoomMemberRepository {
                   : t.profileId.equals(profileId)),
         );
 
-      final member = await query.getSingleOrNull();
-      return member?.subscriptionId;
+      // Use get() + firstOrNull to handle duplicate subscriptions gracefully
+      // (e.g. provisional + real subscription for the same profile)
+      final members = await query.get();
+      return members.firstOrNull?.id;
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to get current profile subscription ID',
@@ -287,10 +290,10 @@ class RoomMemberRepository {
   /// Returns all room members ordered by join date
   ///
   /// @param roomId The room ID
-  /// @return List of room members
-  Future<List<RoomMember>> getMembersForRoom(String roomId) async {
+  /// @return List of room subscriptions
+  Future<List<RoomSubscription>> getMembersForRoom(String roomId) async {
     try {
-      final query = _database.select(_database.roomMembers)
+      final query = _database.select(_database.roomSubscriptions)
         ..where((t) => t.roomId.equals(roomId))
         ..orderBy([(t) => OrderingTerm.asc(t.joinedAt)]);
 
@@ -308,9 +311,9 @@ class RoomMemberRepository {
   /// Watch members for a room - provides reactive updates
   ///
   /// @param roomId The room ID
-  /// @return Stream of room members
-  Stream<List<RoomMember>> watchMembersForRoom(String roomId) {
-    final query = _database.select(_database.roomMembers)
+  /// @return Stream of room subscriptions
+  Stream<List<RoomSubscription>> watchMembersForRoom(String roomId) {
+    final query = _database.select(_database.roomSubscriptions)
       ..where((t) => t.roomId.equals(roomId))
       ..orderBy([(t) => OrderingTerm.asc(t.joinedAt)]);
 
@@ -323,7 +326,7 @@ class RoomMemberRepository {
   /// @return Number of members in the room
   Future<int> getMemberCount(String roomId) async {
     try {
-      final query = _database.select(_database.roomMembers)
+      final query = _database.select(_database.roomSubscriptions)
         ..where((t) => t.roomId.equals(roomId));
       final members = await query.get();
       return members.length;
@@ -342,7 +345,7 @@ class RoomMemberRepository {
   /// @param roomId The room ID
   /// @return Stream of member count
   Stream<int> watchMemberCount(String roomId) {
-    final query = _database.select(_database.roomMembers)
+    final query = _database.select(_database.roomSubscriptions)
       ..where((t) => t.roomId.equals(roomId));
 
     return query.watch().map((members) => members.length);
@@ -383,22 +386,22 @@ class RoomMemberRepository {
   /// Check if a subscription ID belongs to the current profile's contact
   ///
   /// @param roomId The room context
-  /// @param subscriptionId The subscription ID to check
+  /// @param id The subscription ID to check
   /// @param profileId The current profile's ID (can be empty for anonymous subscriptions)
   /// @param contactId The current contact's ID
   /// @return true if this subscription belongs to current profile's contact
   Future<bool> isCurrentUserSubscription(
     String roomId,
-    String subscriptionId,
+    String id,
     String profileId,
     String contactId,
   ) async {
     try {
-      final query = _database.select(_database.roomMembers)
+      final query = _database.select(_database.roomSubscriptions)
         ..where(
           (t) =>
               t.roomId.equals(roomId) &
-              t.subscriptionId.equals(subscriptionId) &
+              t.id.equals(id) &
               t.contactId.equals(contactId) &
               // Only include profileId in query if it's not empty
               (profileId.isEmpty
@@ -420,33 +423,33 @@ class RoomMemberRepository {
 
   /// Update a member's role in a room
   ///
-  /// @param subscriptionId The subscription ID to update
+  /// @param id The subscription ID to update
   /// @param newRole The new role to assign
   /// @return true if update was successful
   Future<bool> updateMemberRole({
-    required String subscriptionId,
+    required String id,
     required String newRole,
   }) async {
     try {
-      final query = _database.select(_database.roomMembers)
-        ..where((t) => t.subscriptionId.equals(subscriptionId));
+      final query = _database.select(_database.roomSubscriptions)
+        ..where((t) => t.id.equals(id));
 
       final existingMember = await query.getSingleOrNull();
       if (existingMember == null) {
         AppLogger.warning(
           'Subscription not found for role update',
-          data: {'subscriptionId': subscriptionId},
+          data: {'id': id},
         );
         return false;
       }
 
-      await (_database.update(_database.roomMembers)
-            ..where((t) => t.subscriptionId.equals(subscriptionId)))
-          .write(RoomMembersCompanion(role: Value(newRole)));
+      await (_database.update(_database.roomSubscriptions)
+            ..where((t) => t.id.equals(id)))
+          .write(RoomSubscriptionsCompanion(role: Value(newRole)));
 
       AppLogger.info(
         'Member role updated successfully',
-        data: {'subscriptionId': subscriptionId, 'newRole': newRole},
+        data: {'id': id, 'newRole': newRole},
       );
 
       return true;
@@ -464,10 +467,10 @@ class RoomMemberRepository {
   ///
   /// @param roomId The room ID
   /// @param role The role to filter by
-  /// @return List of room members with the specified role
-  Future<List<RoomMember>> getMembersByRole(String roomId, String role) async {
+  /// @return List of room subscriptions with the specified role
+  Future<List<RoomSubscription>> getMembersByRole(String roomId, String role) async {
     try {
-      final query = _database.select(_database.roomMembers)
+      final query = _database.select(_database.roomSubscriptions)
         ..where(
           (t) => t.roomId.equals(roomId) & t.role.equals(role.toLowerCase()),
         )
@@ -514,16 +517,19 @@ class RoomMemberRepository {
   ///
   /// @param roomId The room ID
   /// @param profileId The profile ID
-  /// @return Room member if found, null otherwise
-  Future<RoomMember?> getMemberByProfileId(
+  /// @return Room subscription if found, null otherwise
+  Future<RoomSubscription?> getMemberByProfileId(
     String roomId,
     String profileId,
   ) async {
     try {
-      final query = _database.select(_database.roomMembers)
+      final query = _database.select(_database.roomSubscriptions)
         ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(profileId));
 
-      return await query.getSingleOrNull();
+      // Use get() + firstOrNull to handle duplicate subscriptions gracefully
+      // (e.g. provisional + real subscription for the same profile)
+      final members = await query.get();
+      return members.firstOrNull;
     } catch (e, stackTrace) {
       AppLogger.error(
         'Failed to get member by profile ID',

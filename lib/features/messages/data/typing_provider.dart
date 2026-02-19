@@ -90,11 +90,8 @@ class Typing extends _$Typing {
       final db = AppDatabase.instance;
 
       // Get member info
-      final memberQuery = db.select(db.roomMembers)
-        ..where(
-          (t) =>
-              t.roomId.equals(roomId) & t.subscriptionId.equals(subscriptionId),
-        );
+      final memberQuery = db.select(db.roomSubscriptions)
+        ..where((t) => t.roomId.equals(roomId) & t.id.equals(subscriptionId));
       final member = await memberQuery.getSingleOrNull();
       if (member?.profileId == null) return null;
 

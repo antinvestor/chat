@@ -11,8 +11,8 @@ import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../../auth/data/auth_repository.dart';
 import '../domain/room.dart' as domain;
-import 'room_member_repository.dart';
 import 'room_repository.dart';
+import 'room_subscription_repository.dart';
 import 'room_subscription_service.dart';
 import 'room_sync_manager.dart';
 import 'room_sync_state.dart';
@@ -35,7 +35,7 @@ class RoomService {
   final PendingJobRepository _jobRepo;
   final pb_chat.ChatServiceClient _chatClient;
   final AppDatabase _database;
-  final RoomMemberRepository _memberRepo;
+  final RoomSubscriptionRepository _memberRepo;
   final RoomSyncManager _roomSyncManager;
   final AuthRepository _authRepo;
 
@@ -88,7 +88,7 @@ class RoomService {
       if (profileId != null && contactId != null) {
         provisionalSubscriptionId = 'provisional_$roomId';
         await _memberRepo.createSubscription(
-          subscriptionId: provisionalSubscriptionId,
+          id: provisionalSubscriptionId,
           roomId: roomId,
           profileId: profileId,
           contactId: contactId,
@@ -385,7 +385,7 @@ class RoomService {
   }) async {
     // Update locally first using repository
     final success = await _memberRepo.updateMemberRole(
-      subscriptionId: subscriptionId,
+      id: subscriptionId,
       newRole: newRole,
     );
 
@@ -447,8 +447,8 @@ class RoomService {
   }) async {
     // Remove from local database
     await (_database.delete(
-      _database.roomMembers,
-    )..where((t) => t.subscriptionId.equals(subscriptionId))).go();
+      _database.roomSubscriptions,
+    )..where((t) => t.id.equals(subscriptionId))).go();
 
     // Queue for server sync
     await _jobRepo.addJob(JobType.removeRoomMembers, {
@@ -507,10 +507,10 @@ class RoomService {
 
         // Insert or update room member
         await _database
-            .into(_database.roomMembers)
+            .into(_database.roomSubscriptions)
             .insertOnConflictUpdate(
-              RoomMembersCompanion.insert(
-                subscriptionId: subscriptionId,
+              RoomSubscriptionsCompanion.insert(
+                id: subscriptionId,
                 roomId: subscription.roomId,
                 profileId: Value(profileId),
                 contactId: Value(contactId),
@@ -544,7 +544,7 @@ final roomServiceProvider = FutureProvider<RoomService>((ref) async {
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
   final chatClient = await ref.watch(chatServiceClientProvider.future);
   final database = AppDatabase.instance;
-  final memberRepo = ref.watch(roomMemberRepositoryProvider);
+  final memberRepo = ref.watch(roomSubscriptionRepositoryProvider);
   final roomSyncManager = ref.watch(roomSyncManagerProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   final syncEngine = await ref.watch(syncEngineProvider.future);

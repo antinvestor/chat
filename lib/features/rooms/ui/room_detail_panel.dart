@@ -628,83 +628,81 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
   );
 
-  Widget _buildMembersList(AsyncValue<List<RoomMemberInfo>> membersAsync) =>
-      membersAsync.when(
-        data: (members) {
-          if (members.isEmpty) {
-            return const Text('No members found');
-          }
+  Widget _buildMembersList(
+    AsyncValue<List<RoomSubscriptionInfo>> membersAsync,
+  ) => membersAsync.when(
+    data: (members) {
+      if (members.isEmpty) {
+        return const Text('No members found');
+      }
 
-          return Column(
-            children: members.map((member) {
-              final color = _getColorForName(member.name);
-              final isAdmin = member.role.toLowerCase() == 'admin';
+      return Column(
+        children: members.map((member) {
+          final color = _getColorForName(member.name);
+          final isAdmin = member.role.toLowerCase() == 'admin';
 
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: color.withValues(alpha: 0.2),
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: color.withValues(alpha: 0.2),
+              child: Text(
+                member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                style: TextStyle(color: color, fontWeight: FontWeight.bold),
+              ),
+            ),
+            title: Row(
+              children: [
+                Flexible(
                   child: Text(
-                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                    member.name,
+                    style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                title: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        member.name,
-                        style: const TextStyle(fontSize: 14),
-                        overflow: TextOverflow.ellipsis,
+                if (isAdmin) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Admin',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (isAdmin) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'Admin',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                subtitle: Text(
-                  member.role,
-                  style: const TextStyle(fontSize: 12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                onTap: () => _openMemberProfile(context, member),
-              );
-            }).toList(),
+                  ),
+                ],
+              ],
+            ),
+            subtitle: Text(member.role, style: const TextStyle(fontSize: 12)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 4,
+            ),
+            onTap: () => _openMemberProfile(context, member),
           );
-        },
-        loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(),
-          ),
-        ),
-        error: (e, _) => Text('Error loading members: $e'),
+        }).toList(),
       );
+    },
+    loading: () => const Center(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: CircularProgressIndicator(),
+      ),
+    ),
+    error: (e, _) => Text('Error loading members: $e'),
+  );
 
-  void _openMemberProfile(BuildContext context, RoomMemberInfo member) {
+  void _openMemberProfile(BuildContext context, RoomSubscriptionInfo member) {
     // Show member action sheet with admin controls
     showMemberActionSheet(
       context: context,

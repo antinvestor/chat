@@ -51,7 +51,7 @@ class MemberActionSheet extends ConsumerWidget {
   });
 
   final String roomId;
-  final RoomMemberInfo member;
+  final RoomSubscriptionInfo member;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -288,7 +288,7 @@ class MemberActionSheet extends ConsumerWidget {
       final roomService = await ref.read(roomServiceProvider.future);
       await roomService.promoteToAdmin(
         roomId: roomId,
-        subscriptionId: member.subscriptionId,
+        subscriptionId: member.id,
       );
 
       if (context.mounted) {
@@ -317,7 +317,7 @@ class MemberActionSheet extends ConsumerWidget {
       final roomService = await ref.read(roomServiceProvider.future);
       await roomService.demoteFromAdmin(
         roomId: roomId,
-        subscriptionId: member.subscriptionId,
+        subscriptionId: member.id,
       );
 
       if (context.mounted) {
@@ -383,7 +383,7 @@ class MemberActionSheet extends ConsumerWidget {
       final roomService = await ref.read(roomServiceProvider.future);
       await roomService.removeMemberByAdmin(
         roomId: roomId,
-        subscriptionId: member.subscriptionId,
+        subscriptionId: member.id,
         profileId: member.profileId!,
       );
 
@@ -450,7 +450,7 @@ class MemberActionSheet extends ConsumerWidget {
 final isCurrentUserAdminProvider =
     FutureProvider.family<bool, (String, String)>((ref, args) async {
       final (roomId, profileId) = args;
-      final memberRepo = ref.watch(roomMemberRepositoryProvider);
+      final memberRepo = ref.watch(roomSubscriptionRepositoryProvider);
       return memberRepo.isRoomAdmin(roomId, profileId);
     });
 
@@ -458,7 +458,7 @@ final isCurrentUserAdminProvider =
 void showMemberActionSheet({
   required BuildContext context,
   required String roomId,
-  required RoomMemberInfo member,
+  required RoomSubscriptionInfo member,
 }) {
   showModalBottomSheet(
     context: context,

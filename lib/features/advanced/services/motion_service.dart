@@ -35,7 +35,7 @@ class MotionService {
 
   /// Helper method to check if user has admin/owner role in room
   Future<String?> _getRoomRole(String roomId, String profileId) async {
-    final query = _database.select(_database.roomMembers)
+    final query = _database.select(_database.roomSubscriptions)
       ..where((t) => t.roomId.equals(roomId) & t.profileId.equals(profileId));
 
     final member = await query.getSingleOrNull();

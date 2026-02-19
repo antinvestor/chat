@@ -258,9 +258,9 @@ void main() {
         expect(db, isNotNull);
       });
 
-      test('schema version is 17', () {
-        // Version 17: v16 added priority/lastError to PendingJobs, v17 adds transfer_jobs table
-        expect(db.schemaVersion, equals(17));
+      test('schema version is 18', () {
+        // Version 18: renamed room_members → room_subscriptions, subscription_id → id
+        expect(db.schemaVersion, equals(18));
       });
     });
 

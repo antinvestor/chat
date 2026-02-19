@@ -3,7 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stawi/core/db/database.dart';
 import 'package:stawi/core/sync/pending_job.dart';
-import 'package:stawi/features/rooms/data/room_member_repository.dart';
+import 'package:stawi/features/rooms/data/room_subscription_repository.dart';
 import 'package:stawi/features/rooms/ui/member_action_sheet.dart';
 
 void main() {
@@ -59,14 +59,14 @@ void main() {
       });
     });
 
-    group('RoomMemberRepository', () {
+    group('RoomSubscriptionRepository', () {
       late AppDatabase db;
-      late RoomMemberRepository repo;
+      late RoomSubscriptionRepository repo;
 
       setUp(() async {
         // Create in-memory database for testing
         db = AppDatabase.forTesting(NativeDatabase.memory());
-        repo = RoomMemberRepository(db);
+        repo = RoomSubscriptionRepository(db);
 
         // Insert test profiles first (required by foreign key constraints)
         await db
@@ -104,12 +104,12 @@ void main() {
               ),
             );
 
-        // Insert test room members
+        // Insert test room subscriptions
         await db
-            .into(db.roomMembers)
+            .into(db.roomSubscriptions)
             .insert(
-              RoomMembersCompanion.insert(
-                subscriptionId: 'sub1',
+              RoomSubscriptionsCompanion.insert(
+                id: 'sub1',
                 roomId: 'room1',
                 profileId: const Value('profile1'),
                 role: const Value('admin'),
@@ -117,10 +117,10 @@ void main() {
               ),
             );
         await db
-            .into(db.roomMembers)
+            .into(db.roomSubscriptions)
             .insert(
-              RoomMembersCompanion.insert(
-                subscriptionId: 'sub2',
+              RoomSubscriptionsCompanion.insert(
+                id: 'sub2',
                 roomId: 'room1',
                 profileId: const Value('profile2'),
                 role: const Value('member'),
@@ -128,10 +128,10 @@ void main() {
               ),
             );
         await db
-            .into(db.roomMembers)
+            .into(db.roomSubscriptions)
             .insert(
-              RoomMembersCompanion.insert(
-                subscriptionId: 'sub3',
+              RoomSubscriptionsCompanion.insert(
+                id: 'sub3',
                 roomId: 'room1',
                 profileId: const Value('profile3'),
                 role: const Value('owner'),
@@ -146,7 +146,7 @@ void main() {
 
       test('updateMemberRole updates role successfully', () async {
         final result = await repo.updateMemberRole(
-          subscriptionId: 'sub2',
+          id: 'sub2',
           newRole: 'admin',
         );
 
@@ -160,7 +160,7 @@ void main() {
         'updateMemberRole returns false for non-existent subscription',
         () async {
           final result = await repo.updateMemberRole(
-            subscriptionId: 'non-existent',
+            id: 'non-existent',
             newRole: 'admin',
           );
 
@@ -172,7 +172,7 @@ void main() {
         final admins = await repo.getMembersByRole('room1', 'admin');
 
         expect(admins.length, equals(1));
-        expect(admins.first.subscriptionId, equals('sub1'));
+        expect(admins.first.id, equals('sub1'));
       });
 
       test('getMembersByRole returns empty list for no matches', () async {
@@ -209,7 +209,7 @@ void main() {
         final member = await repo.getMemberByProfileId('room1', 'profile1');
 
         expect(member, isNotNull);
-        expect(member!.subscriptionId, equals('sub1'));
+        expect(member!.id, equals('sub1'));
         expect(member.role, equals('admin'));
       });
 

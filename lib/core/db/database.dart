@@ -118,17 +118,17 @@ class Rooms extends Table {
 }
 
 /// Room subscriptions table - represents a profile's presence in a room
-/// Uses subscription_id from API as primary key (room-specific presence)
+/// Uses subscription ID from API as primary key (room-specific presence)
 ///
 /// ID Types Clarified:
-/// - subscriptionId: Room-specific presence ID (primary key) - UNIQUE per room per profile
+/// - id: Room-specific presence/subscription ID (primary key) - UNIQUE per room per profile
 /// - profileId: Global profile identity (from JWT 'sub' claim) - SAME across all rooms for user
 ///           - Can be null initially for anonymous/provisional subscriptions
 ///           - Can be updated later when user identity is established
 /// - contactId: Contact method used (phone, email, etc.) - HOW the profile was reached
 /// - roomId: Room identifier - WHICH room the subscription belongs to
-class RoomMembers extends Table {
-  TextColumn get subscriptionId => text()(); // Primary key from API
+class RoomSubscriptions extends Table {
+  TextColumn get id => text()(); // Primary key from API
   TextColumn get roomId => text().references(Rooms, #id)();
   TextColumn get profileId => text()
       .nullable()(); // Global profile identity (from JWT) - nullable for anonymous subscriptions
@@ -138,7 +138,7 @@ class RoomMembers extends Table {
   IntColumn get joinedAt => integer().nullable()();
 
   @override
-  Set<Column> get primaryKey => {subscriptionId};
+  Set<Column> get primaryKey => {id};
 }
 
 /// Messages and events within chat rooms
@@ -162,7 +162,7 @@ class RoomEvents extends Table {
   TextColumn get roomId => text().references(Rooms, #id)();
 
   /// Subscription ID of the sender (room-specific identifier)
-  /// Use RoomMembers table to look up the profile ID from this subscription ID
+  /// Use RoomSubscriptions table to look up the profile ID from this subscription ID
   TextColumn get senderId => text()();
 
   /// Contact ID of the sender (nullable, for additional context)
@@ -862,7 +862,7 @@ class CallHistory extends Table {
     Profiles,
     Roster,
     Rooms,
-    RoomMembers,
+    RoomSubscriptions,
     RoomEvents,
     Sessions,
     Prekeys,
@@ -892,7 +892,7 @@ class AppDatabase extends _$AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1077,6 +1077,7 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from <= 16) {
         // Migration from v16 to v17: Add download chunks and transfer jobs tables
+        //   (v17 to v18 handled below)
         await m.createTable(downloadChunks);
         await m.createTable(transferJobs);
 
@@ -1104,6 +1105,16 @@ class AppDatabase extends _$AppDatabase {
           CREATE INDEX IF NOT EXISTS idx_transfer_jobs_room_id
           ON transfer_jobs(room_id)
         ''');
+      }
+      if (from <= 17) {
+        // Migration from v17 to v18: Rename room_members → room_subscriptions
+        // and subscription_id → id
+        await customStatement(
+          'ALTER TABLE room_members RENAME TO room_subscriptions',
+        );
+        await customStatement(
+          'ALTER TABLE room_subscriptions RENAME COLUMN subscription_id TO id',
+        );
       }
     },
     beforeOpen: (details) async {

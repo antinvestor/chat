@@ -35,7 +35,7 @@ final sharedRoomsProvider = FutureProvider.family<List<domain.Room>, String>((
 
   // Get rooms where both current user and target profile are members
   final memberRooms = await (db.select(
-    db.roomMembers,
+    db.roomSubscriptions,
   )..where((t) => t.profileId.equals(profileId))).get();
 
   if (memberRooms.isEmpty) {

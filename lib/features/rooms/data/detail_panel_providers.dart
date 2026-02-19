@@ -54,16 +54,16 @@ Stream<List<domain.RoomEvent>> activeMotions(Ref ref, String roomId) {
 /// Provider for room members
 /// Returns list of members in a room with their profile info
 @riverpod
-Future<List<RoomMemberInfo>> roomMembers(Ref ref, String roomId) async {
+Future<List<RoomSubscriptionInfo>> roomMembers(Ref ref, String roomId) async {
   final db = AppDatabase.instance;
 
-  final query = db.select(db.roomMembers)
+  final query = db.select(db.roomSubscriptions)
     ..where((t) => t.roomId.equals(roomId));
 
   final members = await query.get();
 
   // Fetch profile info for each member
-  final memberInfoList = <RoomMemberInfo>[];
+  final memberInfoList = <RoomSubscriptionInfo>[];
 
   for (final member in members) {
     String? name;
@@ -93,8 +93,8 @@ Future<List<RoomMemberInfo>> roomMembers(Ref ref, String roomId) async {
     }
 
     memberInfoList.add(
-      RoomMemberInfo(
-        subscriptionId: member.subscriptionId,
+      RoomSubscriptionInfo(
+        id: member.id,
         profileId: member.profileId,
         contactId: member.contactId,
         name: name ?? 'Unknown',
@@ -157,10 +157,10 @@ domain.RoomEvent _toRoomEvent(RoomEvent row) => domain.RoomEvent(
   localId: row.localId,
 );
 
-/// Room member information for display
-class RoomMemberInfo {
-  RoomMemberInfo({
-    required this.subscriptionId,
+/// Room subscription information for display
+class RoomSubscriptionInfo {
+  RoomSubscriptionInfo({
+    required this.id,
     required this.profileId,
     required this.contactId,
     required this.name,
@@ -168,7 +168,7 @@ class RoomMemberInfo {
     required this.role,
     required this.joinedAt,
   });
-  final String subscriptionId;
+  final String id;
   final String? profileId;
   final String? contactId;
   final String name;
@@ -187,7 +187,7 @@ Future<bool> isGroupChat(Ref ref, String roomId) async {
   // Count members in the room
   final result = await db
       .customSelect(
-        'SELECT COUNT(*) as count FROM room_members WHERE room_id = ?',
+        'SELECT COUNT(*) as count FROM room_subscriptions WHERE room_id = ?',
         variables: [Variable.withString(roomId)],
       )
       .getSingle();

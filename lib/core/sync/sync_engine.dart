@@ -14,8 +14,8 @@ import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/data/message_repository.dart';
 import '../../features/messages/data/read_receipt_repository.dart';
 import '../../features/messages/domain/room_event.dart' as domain;
-import '../../features/rooms/data/room_member_repository.dart';
 import '../../features/rooms/data/room_repository.dart';
+import '../../features/rooms/data/room_subscription_repository.dart';
 import '../../features/rooms/data/room_subscription_service.dart';
 import '../../features/rooms/data/room_sync_manager.dart';
 import '../../features/rooms/data/room_sync_state.dart';
@@ -78,7 +78,7 @@ final syncEngineProvider = FutureProvider<SyncEngine>((ref) async {
     ref.watch(messageRepositoryProvider),
     ref.watch(pendingJobRepositoryProvider),
     authRepo,
-    ref.watch(roomMemberRepositoryProvider),
+    ref.watch(roomSubscriptionRepositoryProvider),
     ref.watch(roomSubscriptionServiceProvider),
     encryptionService,
     ref.watch(readReceiptRepositoryProvider),
@@ -174,7 +174,7 @@ class SyncEngine with WidgetsBindingObserver {
     this._messageRepo,
     this._jobRepo,
     this._authRepository,
-    this._roomMemberRepository,
+    this._roomSubscriptionRepository,
     this._subscriptionService,
     this._encryptionService,
     this._readReceiptRepo,
@@ -190,7 +190,7 @@ class SyncEngine with WidgetsBindingObserver {
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
   final AuthRepository _authRepository;
-  final RoomMemberRepository _roomMemberRepository;
+  final RoomSubscriptionRepository _roomSubscriptionRepository;
   final RoomSubscriptionService _subscriptionService;
   final E2EEncryptionService _encryptionService;
   final ReadReceiptRepository _readReceiptRepo;
@@ -944,7 +944,7 @@ class SyncEngine with WidgetsBindingObserver {
 
     // Extract sender subscription ID directly from server event
     // senderId stores the subscription ID, not profile ID
-    // Profile ID can be looked up via RoomMembers when needed for display
+    // Profile ID can be looked up via RoomSubscriptions when needed for display
     final subscriptionId = event.hasSubscriptionId()
         ? event.subscriptionId
         : '';
@@ -952,7 +952,7 @@ class SyncEngine with WidgetsBindingObserver {
     // Optionally get contact ID for the sender (for additional context)
     String? senderContactId;
     if (subscriptionId.isNotEmpty) {
-      final member = await _roomMemberRepository.getSubscription(
+      final member = await _roomSubscriptionRepository.getSubscription(
         subscriptionId,
       );
       senderContactId = member?.contactId;
@@ -1048,7 +1048,7 @@ class SyncEngine with WidgetsBindingObserver {
   ///
   /// These events contain subscription IDs for room members.
   /// When we receive a moderation event:
-  /// 1. Store all subscription IDs in the RoomMembers table
+  /// 1. Store all subscription IDs in the RoomSubscriptions table
   /// 2. Notify RoomSyncManager to check if we now have current user's subscription
   /// 3. Handle member removals by cleaning up local state
   Future<void> _processModerationEvent(
@@ -1084,8 +1084,8 @@ class SyncEngine with WidgetsBindingObserver {
       if (isRoomCreated || isMemberAdded) {
         // Store all subscription IDs from the event
         for (final subscriptionId in targetSubscriptionIds) {
-          final created = await _roomMemberRepository.createSubscription(
-            subscriptionId: subscriptionId,
+          final created = await _roomSubscriptionRepository.createSubscription(
+            id: subscriptionId,
             roomId: roomId,
             // Note: profileId/contactId not available in moderation event
             // Will be populated when profile info is fetched or from API sync
@@ -1116,7 +1116,7 @@ class SyncEngine with WidgetsBindingObserver {
         // Handle member removal
         for (final subscriptionId in targetSubscriptionIds) {
           // Remove subscription from local database
-          await _roomMemberRepository.removeSubscription(subscriptionId);
+          await _roomSubscriptionRepository.removeSubscription(subscriptionId);
 
           // Notify RoomSyncManager about member removal
           await _roomSyncManager.onMemberRemoved(roomId, subscriptionId);
@@ -1133,8 +1133,8 @@ class SyncEngine with WidgetsBindingObserver {
 
       // Also store the actor's subscription if provided and not empty
       if (actorSubscriptionId.isNotEmpty) {
-        await _roomMemberRepository.createSubscription(
-          subscriptionId: actorSubscriptionId,
+        await _roomSubscriptionRepository.createSubscription(
+          id: actorSubscriptionId,
           roomId: roomId,
         );
       }
@@ -1187,8 +1187,8 @@ class SyncEngine with WidgetsBindingObserver {
         case pb.RoomChangeAction.ROOM_CHANGE_ACTION_CREATED:
           // Store all subscription IDs from the event
           for (final subscriptionId in targetSubscriptionIds) {
-            await _roomMemberRepository.createSubscription(
-              subscriptionId: subscriptionId,
+            await _roomSubscriptionRepository.createSubscription(
+              id: subscriptionId,
               roomId: roomId,
             );
           }
@@ -1239,8 +1239,8 @@ class SyncEngine with WidgetsBindingObserver {
 
         case pb.RoomChangeAction.ROOM_CHANGE_ACTION_MEMBER_ADDED:
           for (final subscriptionId in targetSubscriptionIds) {
-            await _roomMemberRepository.createSubscription(
-              subscriptionId: subscriptionId,
+            await _roomSubscriptionRepository.createSubscription(
+              id: subscriptionId,
               roomId: roomId,
             );
           }
@@ -1251,7 +1251,9 @@ class SyncEngine with WidgetsBindingObserver {
 
         case pb.RoomChangeAction.ROOM_CHANGE_ACTION_MEMBER_REMOVED:
           for (final subscriptionId in targetSubscriptionIds) {
-            await _roomMemberRepository.removeSubscription(subscriptionId);
+            await _roomSubscriptionRepository.removeSubscription(
+              subscriptionId,
+            );
             await _roomSyncManager.onMemberRemoved(roomId, subscriptionId);
           }
 
@@ -1262,8 +1264,8 @@ class SyncEngine with WidgetsBindingObserver {
             final newRole = details['role'] as String?;
             if (newRole != null) {
               for (final subscriptionId in targetSubscriptionIds) {
-                await _roomMemberRepository.updateMemberRole(
-                  subscriptionId: subscriptionId,
+                await _roomSubscriptionRepository.updateMemberRole(
+                  id: subscriptionId,
                   newRole: newRole,
                 );
               }
@@ -1279,8 +1281,8 @@ class SyncEngine with WidgetsBindingObserver {
 
       // Also store the actor's subscription if provided
       if (actorSubscriptionId.isNotEmpty) {
-        await _roomMemberRepository.createSubscription(
-          subscriptionId: actorSubscriptionId,
+        await _roomSubscriptionRepository.createSubscription(
+          id: actorSubscriptionId,
           roomId: roomId,
         );
       }
@@ -1314,7 +1316,7 @@ class SyncEngine with WidgetsBindingObserver {
 
     if (subscriptionId != null) {
       // Look up the profile ID from the subscription
-      final member = await _roomMemberRepository.getSubscription(
+      final member = await _roomSubscriptionRepository.getSubscription(
         subscriptionId,
       );
       if (member != null) {
@@ -2235,11 +2237,12 @@ class SyncEngine with WidgetsBindingObserver {
     if (currentContactId == null) return null;
 
     // First attempt - check local database
-    var subscriptionId = await _roomMemberRepository.getCurrentSubscriptionId(
-      roomId,
-      currentProfileId ?? '', // Empty string for anonymous subscriptions
-      currentContactId,
-    );
+    var subscriptionId = await _roomSubscriptionRepository
+        .getCurrentSubscriptionId(
+          roomId,
+          currentProfileId ?? '', // Empty string for anonymous subscriptions
+          currentContactId,
+        );
 
     if (subscriptionId != null) {
       return subscriptionId;
@@ -2260,11 +2263,12 @@ class SyncEngine with WidgetsBindingObserver {
       try {
         await _syncRoomMembersIfNeeded(roomId, forceSync: retry > 0);
 
-        subscriptionId = await _roomMemberRepository.getCurrentSubscriptionId(
-          roomId,
-          currentProfileId ?? '',
-          currentContactId,
-        );
+        subscriptionId = await _roomSubscriptionRepository
+            .getCurrentSubscriptionId(
+              roomId,
+              currentProfileId ?? '',
+              currentContactId,
+            );
 
         if (subscriptionId != null) {
           AppLogger.info(
@@ -2363,8 +2367,8 @@ class SyncEngine with WidgetsBindingObserver {
         // createSubscription uses current timestamp for simplicity
 
         // Insert or update room member using repository
-        await _roomMemberRepository.createSubscription(
-          subscriptionId: subscriptionId,
+        await _roomSubscriptionRepository.createSubscription(
+          id: subscriptionId,
           roomId: subscription.roomId,
           profileId: profileId,
           contactId: contactId,
@@ -2406,7 +2410,7 @@ class SyncEngine with WidgetsBindingObserver {
   /// Returns true if a replacement was performed.
   Future<bool> _replaceProvisionalSubscription(String roomId) async {
     final provisionalId = 'provisional_$roomId';
-    final provisional = await _roomMemberRepository.getSubscription(
+    final provisional = await _roomSubscriptionRepository.getSubscription(
       provisionalId,
     );
 
@@ -2446,7 +2450,7 @@ class SyncEngine with WidgetsBindingObserver {
     );
 
     // 2. Remove the provisional subscription record
-    await _roomMemberRepository.removeSubscription(provisionalId);
+    await _roomSubscriptionRepository.removeSubscription(provisionalId);
 
     // 3. Mark room as ready with the real subscription
     _roomSyncManager.markReady(roomId, realSubId);
@@ -2546,7 +2550,7 @@ class SyncEngine with WidgetsBindingObserver {
 
     // Use repository to check if this subscription belongs to current profile's contact
     // Pass empty string for profileId if null to handle anonymous subscriptions
-    return _roomMemberRepository.isCurrentUserSubscription(
+    return _roomSubscriptionRepository.isCurrentUserSubscription(
       roomId,
       subscriptionId,
       currentProfileId ?? '', // Empty string for anonymous subscriptions
@@ -2557,16 +2561,16 @@ class SyncEngine with WidgetsBindingObserver {
   /// Update profile ID for an existing subscription
   /// Used when a user authenticates and their profile ID becomes known
   ///
-  /// @param subscriptionId The room subscription to update
+  /// @param id The room subscription to update
   /// @param profileId The profile ID to associate with this subscription
   /// @param contactId Optional contact ID used for this subscription
   /// @return true if update was successful, false if subscription not found
   Future<bool> updateSubscriptionProfile({
-    required String subscriptionId,
+    required String id,
     required String profileId,
     String? contactId,
   }) async => _subscriptionService.updateSubscriptionProfile(
-    subscriptionId: subscriptionId,
+    id: id,
     profileId: profileId,
     contactId: contactId,
   );
@@ -2576,8 +2580,9 @@ class SyncEngine with WidgetsBindingObserver {
   ///
   /// @param roomId Optional room filter
   /// @return List of anonymous subscriptions
-  Future<List<RoomMember>> getAnonymousSubscriptions({String? roomId}) async =>
-      _subscriptionService.getAnonymousSubscriptions(roomId: roomId);
+  Future<List<RoomSubscription>> getAnonymousSubscriptions({
+    String? roomId,
+  }) async => _subscriptionService.getAnonymousSubscriptions(roomId: roomId);
 
   /// Send typing event to server
   ///

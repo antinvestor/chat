@@ -59,7 +59,7 @@ final class RoomSubscriptionServiceProvider
 }
 
 String _$roomSubscriptionServiceHash() =>
-    r'a4131d399bff894e97b638b2ecde52d854e6312c';
+    r'8252050ab218bf8a54d524ca7e7f884996578a4b';
 
 /// Provider for current user's subscription ID for a specific room
 /// Returns the subscription ID or null if not found

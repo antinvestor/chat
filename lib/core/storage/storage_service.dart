@@ -627,7 +627,7 @@ class StorageService {
 
       // Get room members
       final members = await (_database.select(
-        _database.roomMembers,
+        _database.roomSubscriptions,
       )..where((m) => m.roomId.equals(roomId))).get();
 
       // Build export data
@@ -637,7 +637,7 @@ class StorageService {
         'members': members
             .map(
               (m) => {
-                'subscriptionId': m.subscriptionId,
+                'id': m.id,
                 'profileId': m.profileId,
                 'role': m.role,
                 'joinedAt': m.joinedAt,
@@ -727,7 +727,7 @@ class StorageService {
 
       // Delete room members
       await (_database.delete(
-        _database.roomMembers,
+        _database.roomSubscriptions,
       )..where((m) => m.roomId.equals(roomId))).go();
 
       // Delete room

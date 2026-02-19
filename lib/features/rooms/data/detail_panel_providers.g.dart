@@ -111,13 +111,13 @@ final roomMembersProvider = RoomMembersFamily._();
 final class RoomMembersProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<RoomMemberInfo>>,
-          List<RoomMemberInfo>,
-          FutureOr<List<RoomMemberInfo>>
+          AsyncValue<List<RoomSubscriptionInfo>>,
+          List<RoomSubscriptionInfo>,
+          FutureOr<List<RoomSubscriptionInfo>>
         >
     with
-        $FutureModifier<List<RoomMemberInfo>>,
-        $FutureProvider<List<RoomMemberInfo>> {
+        $FutureModifier<List<RoomSubscriptionInfo>>,
+        $FutureProvider<List<RoomSubscriptionInfo>> {
   /// Provider for room members
   /// Returns list of members in a room with their profile info
   RoomMembersProvider._({
@@ -143,12 +143,12 @@ final class RoomMembersProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<RoomMemberInfo>> $createElement(
+  $FutureProviderElement<List<RoomSubscriptionInfo>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<RoomMemberInfo>> create(Ref ref) {
+  FutureOr<List<RoomSubscriptionInfo>> create(Ref ref) {
     final argument = this.argument as String;
     return roomMembers(ref, argument);
   }
@@ -164,13 +164,17 @@ final class RoomMembersProvider
   }
 }
 
-String _$roomMembersHash() => r'09726a2ef36ffdd3e7c12e74b779d9c95f5bac31';
+String _$roomMembersHash() => r'0e2d96752a19857a6de4765486cde0d99e14386e';
 
 /// Provider for room members
 /// Returns list of members in a room with their profile info
 
 final class RoomMembersFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<RoomMemberInfo>>, String> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<List<RoomSubscriptionInfo>>,
+          String
+        > {
   RoomMembersFamily._()
     : super(
         retry: null,
@@ -422,7 +426,7 @@ final class IsGroupChatProvider
   }
 }
 
-String _$isGroupChatHash() => r'fb913e65ca5177d8bfa80da9d9c6a59cd74c069f';
+String _$isGroupChatHash() => r'236472a65a2b28635776526a3d32f3f48bf49d6b';
 
 /// Provider to check if a room is a group chat (more than 2 members)
 ///

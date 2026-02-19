@@ -85,7 +85,7 @@ final class SyncRoomMembersOnEntryProvider
 }
 
 String _$syncRoomMembersOnEntryHash() =>
-    r'053a965cd84e2bd5fec1479f897daa6c805487a8';
+    r'ebf0e09f5f18248d69568fa15e71d0a472d6b7dc';
 
 /// Provider that syncs room members when entering a room
 ///

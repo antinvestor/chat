@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../auth/data/auth_repository.dart';
-import 'room_member_repository.dart';
+import 'room_subscription_repository.dart';
 import 'room_subscription_service.dart';
 import 'room_sync_state.dart';
 
@@ -118,10 +118,10 @@ class RoomSyncRecoveryResult {
 /// 2. SyncEngine when moderation events arrive with subscription IDs
 /// 3. API sync fallback when events don't arrive in time
 class RoomSyncManager {
-  RoomSyncManager(this._authRepository, this._roomMemberRepository);
+  RoomSyncManager(this._authRepository, this._roomSubscriptionRepository);
 
   final AuthRepository _authRepository;
-  final RoomMemberRepository _roomMemberRepository;
+  final RoomSubscriptionRepository _roomSubscriptionRepository;
 
   /// In-memory state tracking per room
   final Map<String, _ValueStream<RoomSyncStatus>> _roomStates = {};
@@ -660,7 +660,7 @@ class RoomSyncManager {
 
     // Check each subscription ID to see if it belongs to current user
     for (final subscriptionId in subscriptionIds) {
-      final member = await _roomMemberRepository.getSubscription(
+      final member = await _roomSubscriptionRepository.getSubscription(
         subscriptionId,
       );
 
@@ -683,7 +683,7 @@ class RoomSyncManager {
 
     if (currentContactId == null) return false;
 
-    return _roomMemberRepository.isCurrentUserSubscription(
+    return _roomSubscriptionRepository.isCurrentUserSubscription(
       roomId,
       subscriptionId,
       currentProfileId ?? '',
@@ -703,7 +703,7 @@ class RoomSyncManager {
 
     // Try with both IDs first
     if (currentContactId != null) {
-      final subscriptionId = await _roomMemberRepository
+      final subscriptionId = await _roomSubscriptionRepository
           .getCurrentSubscriptionId(
             roomId,
             currentProfileId ?? '',
@@ -714,11 +714,11 @@ class RoomSyncManager {
 
     // Try by profileId only if we have one
     if (currentProfileId != null && currentProfileId.isNotEmpty) {
-      final member = await _roomMemberRepository.getMemberByProfileId(
+      final member = await _roomSubscriptionRepository.getMemberByProfileId(
         roomId,
         currentProfileId,
       );
-      if (member != null) return member.subscriptionId;
+      if (member != null) return member.id;
     }
 
     return null;
@@ -753,7 +753,7 @@ class RoomSyncManager {
 /// Provider for RoomSyncManager
 final roomSyncManagerProvider = Provider<RoomSyncManager>((ref) {
   final authRepo = ref.watch(authRepositoryProvider);
-  final memberRepo = ref.watch(roomMemberRepositoryProvider);
+  final memberRepo = ref.watch(roomSubscriptionRepositoryProvider);
 
   final manager = RoomSyncManager(authRepo, memberRepo);
 
