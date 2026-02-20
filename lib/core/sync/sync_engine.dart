@@ -2192,6 +2192,7 @@ class SyncEngine with WidgetsBindingObserver {
         return pb.RoomEventType.ROOM_EVENT_TYPE_MOTION;
       case domain.RoomEventType.vote:
       case domain.RoomEventType.transaction:
+      case domain.RoomEventType.groupConfig:
         // These might not be in protobuf yet, map to MESSAGE for now
         return pb.RoomEventType.ROOM_EVENT_TYPE_MESSAGE;
       case domain.RoomEventType.roomKey:

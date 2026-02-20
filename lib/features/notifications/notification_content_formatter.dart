@@ -115,6 +115,8 @@ class NotificationContentFormatter {
       case RoomEventType.groupCallIce:
       case RoomEventType.groupCallMuteUpdate:
         return 'Group call activity';
+      case RoomEventType.groupConfig:
+        return 'Finance settings updated';
       case RoomEventType.roomKey:
         return 'Security update';
       case RoomEventType.roomChange:
@@ -188,6 +190,9 @@ class NotificationContentFormatter {
 
         case RoomEventType.groupCallEnd:
           return ('Group call ended', null);
+
+        case RoomEventType.groupConfig:
+          return ('Finance settings updated', null);
 
         case RoomEventType.roomChange:
           final body =
