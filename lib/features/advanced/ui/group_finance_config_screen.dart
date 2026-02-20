@@ -177,11 +177,8 @@ class _GroupFinanceConfigScreenState extends State<GroupFinanceConfigScreen> {
   Widget build(BuildContext context) {
     final steps = _buildSteps();
     // Clamp current step to valid range when steps change
-    final clampedStep = _currentStep.clamp(0, steps.length - 1);
-    if (clampedStep != _currentStep) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() => _currentStep = clampedStep);
-      });
+    if (_currentStep >= steps.length) {
+      _currentStep = steps.length - 1;
     }
 
     final isLastStep = _currentStep == steps.length - 1;
@@ -195,8 +192,10 @@ class _GroupFinanceConfigScreenState extends State<GroupFinanceConfigScreen> {
         ),
       ),
       body: Stepper(
+        // Key forces rebuild when step count changes (Stepper asserts fixed length)
+        key: ValueKey(steps.length),
         steps: steps,
-        currentStep: clampedStep,
+        currentStep: _currentStep,
         onStepContinue: _canContinue()
             ? () {
                 if (isLastStep) {
