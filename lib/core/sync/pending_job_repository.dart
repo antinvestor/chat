@@ -102,7 +102,7 @@ class PendingJobRepository {
   // Retry backoff configuration
   static const _initialRetryDelayMs = 1000; // 1 second
   static const _maxRetryDelayMs = 300000; // 5 minutes
-  static const _maxRetries = 5;
+  static const maxRetries = 5;
 
   // Health thresholds
   static const _stuckJobThresholdMs = 30 * 60 * 1000; // 30 minutes
@@ -210,20 +210,25 @@ class PendingJobRepository {
   /// Emits whenever jobs are added, modified, or deleted
   /// Only returns jobs that are ready for processing (nextRetryAt has passed)
   Stream<List<domain.PendingJob>> watchPendingJobs() {
+    // Use a custom expression for current time so the SQL filter is evaluated
+    // at query time, not at stream setup time.
+    const currentTimeMs = CustomExpression<int>(
+      "(strftime('%s', 'now') * 1000)",
+    );
+
     final query = _database.select(_database.pendingJobs)
-      ..where((t) => t.status.equals('pending'))
+      ..where(
+        (t) =>
+            t.status.equals('pending') &
+            (t.nextRetryAt.isNull() |
+                t.nextRetryAt.isSmallerOrEqual(currentTimeMs)),
+      )
       ..orderBy([
         (t) => OrderingTerm.asc(t.priority),
         (t) => OrderingTerm.asc(t.createdAt),
       ]);
 
-    return query.watch().map((results) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      return results
-          .where((row) => row.nextRetryAt == null || row.nextRetryAt! <= now)
-          .map(_rowToJob)
-          .toList();
-    });
+    return query.watch().map((results) => results.map(_rowToJob).toList());
   }
 
   /// Check if there are any pending jobs ready for processing
@@ -299,7 +304,7 @@ class PendingJobRepository {
 
     final newRetryCount = job.retryCount + 1;
 
-    if (newRetryCount >= _maxRetries) {
+    if (newRetryCount >= maxRetries) {
       // Mark as failed instead of deleting - preserves history
       await markJobFailed(
         id,

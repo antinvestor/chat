@@ -803,7 +803,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         const SizedBox(height: 24),
         ElevatedButton.icon(
-          onPressed: () => ref.refresh(messageListProvider(widget.roomId)),
+          onPressed: () =>
+              ref.invalidate(messagesStreamProvider(widget.roomId)),
           icon: const Icon(Icons.refresh),
           label: const Text('Try Again'),
           style: ElevatedButton.styleFrom(

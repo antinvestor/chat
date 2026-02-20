@@ -578,10 +578,24 @@ class MessageSendingService {
         ? JobType.sendMediaMessage
         : JobType.sendMessage;
 
+    // Decode content from JSON string to Map - the job processor expects a Map
+    final Map<String, dynamic> contentMap;
+    try {
+      contentMap = row.content != null
+          ? jsonDecode(row.content!) as Map<String, dynamic>
+          : <String, dynamic>{};
+    } catch (e) {
+      AppLogger.error(
+        'Failed to decode message content for retry',
+        data: {'localId': localId, 'error': e.toString()},
+      );
+      return;
+    }
+
     await _jobRepo.addJob(jobType, {
       'roomId': row.roomId,
       'type': type.toString(),
-      'content': row.content ?? '',
+      'content': contentMap,
       'localId': localId,
       'parentId': row.parentId,
     });

@@ -266,6 +266,9 @@ class AuthService {
         >();
 
     try {
+      // The finally block below guarantees _refreshCompleter is always
+      // completed and nulled, even if a future code change adds an
+      // unhandled exception path.
       final refreshTokenValue = await getRefreshToken();
       if (refreshTokenValue == null) {
         AppLogger.warning('No refresh token available for token refresh');
@@ -424,6 +427,15 @@ class AuthService {
         _refreshCompleter!.complete(transientResult);
         return transientResult;
       }
+    } finally {
+      // Guarantee the completer is completed and cleared so concurrent
+      // waiters never deadlock and subsequent calls create a fresh completer.
+      if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+        _refreshCompleter!.completeError(
+          StateError('Token refresh exited without completing'),
+        );
+      }
+      _refreshCompleter = null;
     }
   }
 

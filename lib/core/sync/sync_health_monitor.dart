@@ -404,9 +404,16 @@ class SyncHealthMonitor {
     return SyncHealthStatus.healthy;
   }
 
+  bool _healthUpdateScheduled = false;
+
   void _emitHealthUpdate() {
-    // Emit health update asynchronously
+    // Debounce: only schedule one microtask at a time to prevent unbounded
+    // DB queries when multiple events fire in a burst.
+    if (_healthUpdateScheduled) return;
+    _healthUpdateScheduled = true;
+
     Future.microtask(() async {
+      _healthUpdateScheduled = false;
       final metrics = await getHealthMetrics();
       if (!_healthController.isClosed) {
         _healthController.add(metrics);

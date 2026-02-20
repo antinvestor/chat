@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:sqlite3/common.dart' show SqliteException;
 
 part 'database.g.dart';
 
@@ -1256,20 +1257,29 @@ class AppDatabase extends _$AppDatabase {
       return [];
     }
 
-    final results = await customSelect(
-      '''
-      SELECT re.*
-      FROM room_events re
-      INNER JOIN room_events_fts fts ON re.id = fts.event_id
-      WHERE room_events_fts MATCH ?
-      ORDER BY rank
-      LIMIT ?
-      ''',
-      variables: [Variable.withString(query), Variable.withInt(limit)],
-      readsFrom: {roomEvents},
-    ).get();
+    // Sanitize the query: wrap in FTS5 phrase quoting to prevent syntax errors
+    // from special characters (", *, ^, NOT, OR, AND, parentheses)
+    final safeQuery = '"${query.trim().replaceAll('"', '""')}"';
 
-    return results.map(_mapQueryRowToRoomEvent).toList();
+    try {
+      final results = await customSelect(
+        '''
+        SELECT re.*
+        FROM room_events re
+        INNER JOIN room_events_fts fts ON re.id = fts.event_id
+        WHERE room_events_fts MATCH ?
+        ORDER BY rank
+        LIMIT ?
+        ''',
+        variables: [Variable.withString(safeQuery), Variable.withInt(limit)],
+        readsFrom: {roomEvents},
+      ).get();
+
+      return results.map(_mapQueryRowToRoomEvent).toList();
+    } on SqliteException {
+      // Guard against any remaining FTS5 syntax edge cases
+      return [];
+    }
   }
 
   /// Search messages within a specific room
@@ -1289,24 +1299,32 @@ class AppDatabase extends _$AppDatabase {
       return [];
     }
 
-    final results = await customSelect(
-      '''
-      SELECT re.*
-      FROM room_events re
-      INNER JOIN room_events_fts fts ON re.id = fts.event_id
-      WHERE fts.room_id = ? AND room_events_fts MATCH ?
-      ORDER BY rank
-      LIMIT ?
-      ''',
-      variables: [
-        Variable.withString(roomId),
-        Variable.withString(query),
-        Variable.withInt(limit),
-      ],
-      readsFrom: {roomEvents},
-    ).get();
+    // Sanitize the query: wrap in FTS5 phrase quoting to prevent syntax errors
+    final safeQuery = '"${query.trim().replaceAll('"', '""')}"';
 
-    return results.map(_mapQueryRowToRoomEvent).toList();
+    try {
+      final results = await customSelect(
+        '''
+        SELECT re.*
+        FROM room_events re
+        INNER JOIN room_events_fts fts ON re.id = fts.event_id
+        WHERE fts.room_id = ? AND room_events_fts MATCH ?
+        ORDER BY rank
+        LIMIT ?
+        ''',
+        variables: [
+          Variable.withString(roomId),
+          Variable.withString(safeQuery),
+          Variable.withInt(limit),
+        ],
+        readsFrom: {roomEvents},
+      ).get();
+
+      return results.map(_mapQueryRowToRoomEvent).toList();
+    } on SqliteException {
+      // Guard against any remaining FTS5 syntax edge cases
+      return [];
+    }
   }
 
   /// Rebuild the FTS index from scratch

@@ -119,6 +119,47 @@ class MessageRepository {
   }
 
   /// Set expiration time for a message (for disappearing messages)
+  /// Update the id and status of a message row identified by its localId.
+  ///
+  /// Used after server acknowledgment to replace the client-generated localId
+  /// with the server-assigned id, avoiding a duplicate row.
+  ///
+  /// Handles two cases:
+  /// 1. Normal: row has id=localId (ack arrived before echo) → update id to serverId
+  /// 2. Race: row has id=serverId already (echo arrived first) → just update status
+  Future<void> updateMessageIdAfterAck(
+    String localId, {
+    required String serverId,
+    required String senderId,
+    required domain.EventStatus status,
+    int? serverTs,
+  }) async {
+    // Case 1: Normal - row still has id=localId (ack arrived first)
+    final rowsUpdated =
+        await (_database.update(_database.roomEvents)
+              ..where((t) => t.id.equals(localId) & t.localId.equals(localId)))
+            .write(
+              RoomEventsCompanion(
+                id: Value(serverId),
+                senderId: Value(senderId),
+                status: Value(status.index),
+                serverTs: serverTs != null
+                    ? Value(serverTs)
+                    : const Value.absent(),
+              ),
+            );
+
+    if (rowsUpdated == 0) {
+      // Case 2: Echo arrived first - row already has id=serverId
+      // Only update status if it would advance (sent is the ack status,
+      // but echo may have already set delivered)
+      final existing = await getEventById(serverId);
+      if (existing != null && existing.status.index < status.index) {
+        await updateMessageStatus(serverId, status);
+      }
+    }
+  }
+
   Future<void> setMessageExpiry(String messageId, int expiresAt) async {
     await (_database.update(_database.roomEvents)
           ..where((t) => t.id.equals(messageId)))
@@ -170,6 +211,13 @@ class MessageRepository {
     await (_database.update(_database.roomEvents)
           ..where((t) => t.id.isIn(messageIds)))
         .write(RoomEventsCompanion(status: Value(status.index)));
+  }
+
+  /// Update the server timestamp for a message (when echo provides it)
+  Future<void> updateServerTimestamp(String messageId, int serverTs) async {
+    await (_database.update(_database.roomEvents)
+          ..where((t) => t.id.equals(messageId)))
+        .write(RoomEventsCompanion(serverTs: Value(serverTs)));
   }
 
   /// Update the content of an existing message (for editing)
@@ -229,6 +277,37 @@ class MessageRepository {
 
     final result = await query.getSingleOrNull();
     return result != null ? _toRoomEvent(result) : null;
+  }
+
+  /// Find an event by its localId column (for race condition handling)
+  /// Returns the event if found, null otherwise
+  Future<domain.RoomEvent?> getEventByLocalId(String localId) async {
+    final query = _database.select(_database.roomEvents)
+      ..where((t) => t.localId.equals(localId));
+
+    final result = await query.getSingleOrNull();
+    return result != null ? _toRoomEvent(result) : null;
+  }
+
+  /// Update the id of an existing message row from localId to serverId.
+  /// Used when the server echo arrives before the ack response.
+  /// This updates the primary key and advances status to delivered.
+  Future<void> updateMessageIdFromEcho(
+    String localId, {
+    required String serverId,
+    required String senderId,
+    int? serverTs,
+  }) async {
+    await (_database.update(
+      _database.roomEvents,
+    )..where((t) => t.id.equals(localId) & t.localId.equals(localId))).write(
+      RoomEventsCompanion(
+        id: Value(serverId),
+        senderId: Value(senderId),
+        status: Value(domain.EventStatus.delivered.index),
+        serverTs: serverTs != null ? Value(serverTs) : const Value.absent(),
+      ),
+    );
   }
 
   Future<List<domain.RoomEvent>> getReactionsForEvent(String eventId) async {

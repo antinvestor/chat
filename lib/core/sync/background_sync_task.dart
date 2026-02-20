@@ -201,6 +201,8 @@ class BackgroundSyncTask {
             stackTrace: stackTrace,
             data: {'jobId': job.id, 'jobType': job.type.toString()},
           );
+          // Increment retry count so failed jobs eventually reach 'failed' status
+          await jobRepo.incrementRetry(job.id, errorMessage: e.toString());
           // Continue with other jobs even if one fails
         }
       }

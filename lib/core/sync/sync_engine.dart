@@ -201,9 +201,10 @@ class SyncEngine with WidgetsBindingObserver {
 
   StreamSubscription? _connectSubscription;
   StreamSubscription<List<domain_job.PendingJob>>? _jobWatchSubscription;
-  bool _isUploading = false;
+  Completer<void>? _uploadLock;
   bool _isConnected = false;
   bool _shouldStop = false; // Flag to stop the download loop
+  bool _isPostConnectionSyncing = false;
   bool _isPaused = false; // Flag to track if paused due to app lifecycle
   int _reconnectAttempts = 0;
   int _authErrorCount = 0; // Track consecutive auth errors
@@ -247,7 +248,6 @@ class SyncEngine with WidgetsBindingObserver {
   // Exponential backoff configuration
   static const _initialBackoffMs = 1000; // 1 second
   static const _maxBackoffMs = 30000; // 30 seconds
-  static const _maxReconnectAttempts = 5;
 
   // Room member sync cache to avoid redundant syncs
   final Map<String, DateTime> _roomMemberSyncCache = {};
@@ -327,8 +327,11 @@ class SyncEngine with WidgetsBindingObserver {
     _jobWatchSubscription = null;
     _isConnected = false;
 
-    // Small delay to ensure loops have exited
-    await Future.delayed(const Duration(milliseconds: 100));
+    // Wait for any in-flight upload to complete instead of using a magic delay
+    final currentUpload = _uploadLock;
+    if (currentUpload != null && !currentUpload.isCompleted) {
+      await currentUpload.future;
+    }
 
     _stopCompleter?.complete();
     _stopCompleter = null;
@@ -531,6 +534,8 @@ class SyncEngine with WidgetsBindingObserver {
               'Max auth errors reached, stopping sync until re-login',
             );
             _connectionStateController.add(SyncConnectionState.disconnected);
+            _connectionLock?.complete();
+            _connectionLock = null;
             return; // Exit the loop - user needs to re-login
           }
 
@@ -566,6 +571,8 @@ class SyncEngine with WidgetsBindingObserver {
                 data: {'error': e.message},
               );
               _connectionStateController.add(SyncConnectionState.disconnected);
+              _connectionLock?.complete();
+              _connectionLock = null;
               return; // Exit the loop - user needs to re-login
             } catch (refreshError) {
               AppLogger.warning(
@@ -964,6 +971,53 @@ class SyncEngine with WidgetsBindingObserver {
         ? domain.RoomEventType.roomChange
         : _mapProtoEventType(event.type);
 
+    // Check if this event already exists locally (e.g. own message echo from server)
+    // If it does and its status is already >= sent, only advance status - never regress.
+    final existingEvent = await _messageRepo.getEventById(event.id);
+    if (existingEvent != null) {
+      // Event already exists by server ID - ack was processed first (normal case)
+      if (existingEvent.status.index >= domain.EventStatus.sent.index) {
+        // Already sent/delivered/read - only advance status, never regress
+        if (existingEvent.status == domain.EventStatus.sent) {
+          // Advance from sent → delivered (server confirmed delivery to stream)
+          await _messageRepo.updateMessageStatus(
+            event.id,
+            domain.EventStatus.delivered,
+          );
+        }
+        // Update serverTs if we didn't have it
+        if (existingEvent.serverTs == null && event.hasSentAt()) {
+          final serverTs =
+              event.sentAt.seconds.toInt() * 1000 +
+              event.sentAt.nanos ~/ 1000000;
+          await _messageRepo.updateServerTimestamp(event.id, serverTs);
+        }
+        return;
+      }
+    } else {
+      // No row with server ID yet - check if there's a pending row with this
+      // event's ID stored as localId (echo arrived before ack response)
+      final pendingByLocalId = await _messageRepo.getEventByLocalId(event.id);
+      if (pendingByLocalId != null &&
+          pendingByLocalId.status == domain.EventStatus.pending) {
+        // Race condition: echo arrived before ack. Update the pending row
+        // to use the server ID and advance to delivered status.
+        final serverTs = event.hasSentAt()
+            ? event.sentAt.seconds.toInt() * 1000 +
+                  event.sentAt.nanos ~/ 1000000
+            : null;
+        await _messageRepo.updateMessageIdFromEcho(
+          pendingByLocalId.id,
+          serverId: event.id,
+          senderId: subscriptionId.isNotEmpty
+              ? subscriptionId
+              : pendingByLocalId.senderId,
+          serverTs: serverTs,
+        );
+        return;
+      }
+    }
+
     final roomEvent = domain.RoomEvent(
       id: event.id,
       roomId: event.roomId,
@@ -1351,10 +1405,11 @@ class SyncEngine with WidgetsBindingObserver {
         },
       );
     } else {
-      // Fall back to delivered status if we can't identify the reader
-      await _messageRepo.updateMessagesStatus(
-        eventIds,
-        domain.EventStatus.delivered,
+      // Cannot identify the reader - log and skip rather than
+      // incorrectly setting delivered status for a read receipt
+      AppLogger.warning(
+        'Cannot process read receipt: reader subscription not found',
+        data: {'subscriptionId': subscriptionId, 'eventCount': eventIds.length},
       );
     }
   }
@@ -1416,11 +1471,11 @@ class SyncEngine with WidgetsBindingObserver {
   /// avoid waiting for the reactive watch stream to fire. If an upload
   /// is already in progress, the jobs will be picked up when it finishes.
   Future<void> triggerUpload() async {
-    if (_isUploading || !_isConnected || _shouldStop) return;
+    if (_uploadLock != null || !_isConnected || _shouldStop) return;
 
-    // Set flag before any await to prevent the watch stream listener from
+    // Acquire lock before any await to prevent the watch stream listener from
     // concurrently processing the same jobs.
-    _isUploading = true;
+    _uploadLock = Completer<void>();
 
     try {
       final jobs = await _jobRepo.getPendingJobs();
@@ -1445,7 +1500,8 @@ class SyncEngine with WidgetsBindingObserver {
         }
       }
     } finally {
-      _isUploading = false;
+      _uploadLock?.complete();
+      _uploadLock = null;
     }
   }
 
@@ -1459,10 +1515,10 @@ class SyncEngine with WidgetsBindingObserver {
     _jobWatchSubscription = _jobRepo.watchPendingJobs().listen(
       (jobs) async {
         // Only process if connected and not already uploading
-        if (_isUploading || !_isConnected || _shouldStop) return;
+        if (_uploadLock != null || !_isConnected || _shouldStop) return;
         if (jobs.isEmpty) return;
 
-        _isUploading = true;
+        _uploadLock = Completer<void>();
         AppLogger.debug(
           'Processing pending jobs',
           data: {'count': jobs.length},
@@ -1492,7 +1548,8 @@ class SyncEngine with WidgetsBindingObserver {
             stackTrace: stackTrace,
           );
         } finally {
-          _isUploading = false;
+          _uploadLock?.complete();
+          _uploadLock = null;
         }
       },
       onError: (Object e, StackTrace stackTrace) {
@@ -1506,9 +1563,14 @@ class SyncEngine with WidgetsBindingObserver {
   }
 
   Future<void> _processJob(domain_job.PendingJob job) async {
-    // Skip jobs that have exceeded retry limit
-    if (job.retryCount >= 5) {
-      await _jobRepo.deleteJob(job.id);
+    // Skip jobs that have exceeded retry limit — mark as failed so they are
+    // visible in the FailedJobsBanner instead of silently disappearing.
+    if (job.retryCount >= PendingJobRepository.maxRetries) {
+      await _jobRepo.markJobFailed(
+        job.id,
+        errorMessage: 'Max retries exceeded',
+        errorCode: 'MAX_RETRIES',
+      );
       return;
     }
 
@@ -1808,12 +1870,17 @@ class SyncEngine with WidgetsBindingObserver {
 
   Future<void> _processSendMessage(domain_job.PendingJob job) async {
     final payload = job.payload;
-    final currentProfileId = await _authRepository.getCurrentProfileId();
+    final roomId = payload['roomId'] as String;
+
+    // Get subscription ID for the room (consistent with UI's isMe detection)
+    final subscriptionId = await getCurrentSubscriptionId(
+      roomId,
+      syncIfMissing: true,
+    );
 
     // Create timestamp
     final now = DateTime.now();
     final timestamp = common_types.Timestamp.fromDateTime(now);
-    // Source is no longer used in new API
 
     // Extract content and type
     final content = payload['content'] as Map<String, dynamic>;
@@ -1850,33 +1917,36 @@ class SyncEngine with WidgetsBindingObserver {
 
     final event = pb.RoomEvent(
       id: payload['localId'] as String? ?? '',
-      roomId: payload['roomId'] as String,
+      roomId: roomId,
+      subscriptionId: subscriptionId ?? '',
       type: protoType,
       sentAt: timestamp,
       payload: pbPayload,
     );
 
+    // Add parentId if this is a reply
+    if (payload['parentId'] != null) {
+      event.parentId = payload['parentId'] as String;
+    }
+
     final request = pb.SendEventRequest(event: [event]);
     final response = await _chatClient.sendEvent(request);
 
-    // Update local message status to sent
+    // Update the existing local row (id=localId) with the server-assigned ID
+    // Use subscriptionId (not profileId) as senderId to match UI's isMe detection
     if (payload['localId'] != null && response.ack.isNotEmpty) {
       final ackEventId = response.ack.first.eventId;
-      // Update the message with server ID
-      final updatedEvent = domain.RoomEvent(
-        id: ackEventId.first,
-        roomId: payload['roomId'] as String,
-        senderId: currentProfileId ?? 'unknown',
-        type: domain.RoomEventType.values.firstWhere(
-          (t) => t.toString() == payload['type'],
-          orElse: () => domain.RoomEventType.text,
-        ),
-        content: payload['content'] as Map<String, dynamic>,
+      final localId = payload['localId'] as String;
+      // Use the same subscriptionId that was used at message creation time
+      // so the UI's isMe check (senderId == currentUserSubscriptionId) stays consistent
+      final senderSubId = subscriptionId ?? payload['localId'] as String;
+      await _messageRepo.updateMessageIdAfterAck(
+        localId,
+        serverId: ackEventId.first,
+        senderId: senderSubId,
         status: domain.EventStatus.sent,
-        createdAt: now.millisecondsSinceEpoch,
-        localId: payload['localId'] as String?,
+        serverTs: now.millisecondsSinceEpoch,
       );
-      await _messageRepo.insertMessage(updatedEvent);
     }
   }
 
@@ -2065,36 +2135,6 @@ class SyncEngine with WidgetsBindingObserver {
         'destinationRoomId': destinationRoomId,
       },
     );
-  }
-
-  // ignore: unused_element
-  void _scheduleReconnect() {
-    if (_reconnectAttempts >= _maxReconnectAttempts) {
-      AppLogger.warning(
-        'Max reconnect attempts reached, stopping reconnection',
-        data: {'maxAttempts': _maxReconnectAttempts},
-      );
-      return;
-    }
-
-    // Calculate backoff delay with exponential increase
-    final backoffMs = (_initialBackoffMs * (1 << _reconnectAttempts)).clamp(
-      _initialBackoffMs,
-      _maxBackoffMs,
-    );
-
-    _reconnectAttempts++;
-
-    AppLogger.info(
-      'Scheduling reconnect',
-      data: {'backoffMs': backoffMs, 'attempt': _reconnectAttempts},
-    );
-
-    Future.delayed(Duration(milliseconds: backoffMs), () {
-      if (!_isConnected) {
-        _startDownloadLoop();
-      }
-    });
   }
 
   // Helper methods for type conversion
@@ -2476,6 +2516,8 @@ class SyncEngine with WidgetsBindingObserver {
   /// This handles rooms that were created offline (still have provisional
   /// subscriptions) or rooms that failed to sync before disconnection.
   Future<void> _performPostConnectionSync() async {
+    if (_isPostConnectionSyncing) return;
+    _isPostConnectionSyncing = true;
     try {
       final rooms = await _roomRepository.getAllRooms();
       var syncedCount = 0;
@@ -2529,6 +2571,8 @@ class SyncEngine with WidgetsBindingObserver {
         error: e,
         stackTrace: stackTrace,
       );
+    } finally {
+      _isPostConnectionSyncing = false;
     }
   }
 
@@ -2761,11 +2805,13 @@ class SyncEngine with WidgetsBindingObserver {
         throw Exception('Failed to send message: stream not connected');
       }
 
-      // Update local message status to sent
-      await _messageRepo.updateMessageStatus(event.id, domain.EventStatus.sent);
+      // Note: Do NOT mark as 'sent' here. This is fire-and-forget over the stream.
+      // The message stays as 'pending' until the server echo arrives via
+      // _processPbRoomEvent, which will advance it to 'delivered'.
+      // This prevents marking lost messages as 'sent'.
 
       AppLogger.debug(
-        'Message sent via live connection',
+        'Message pushed to live connection stream',
         data: {'eventId': event.id, 'roomId': event.roomId},
       );
     } catch (e, stackTrace) {

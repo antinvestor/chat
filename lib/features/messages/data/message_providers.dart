@@ -50,19 +50,16 @@ class MessageList extends _$MessageList {
     // The stream provider will automatically update the UI
     await messageRepo.insertMessage(event);
 
-    // 2. Try to send immediately through live connection
-    try {
-      final syncEngine = await ref.read(syncEngineProvider.future);
-      await syncEngine.sendMessageDirect(event);
-    } catch (e) {
-      // Fallback: Queue job for sync if live connection fails
-      AppLogger.info('Live connection failed, queuing message', error: e);
-      await jobRepo.addJob(JobType.sendMessage, {
-        'roomId': event.roomId,
-        'localId': event.localId,
-        'content': event.content,
-      });
-    }
+    // 2. Always queue through the job system for reliable delivery.
+    // This avoids the double-send risk of trying sendMessageDirect first
+    // and falling back to a job on failure (the server may have received
+    // the direct send even though the client got an error).
+    await jobRepo.addJob(JobType.sendMessage, {
+      'roomId': event.roomId,
+      'type': event.type.toString(),
+      'localId': event.localId,
+      'content': event.content,
+    });
   }
 
   /// Load older messages with proper pagination

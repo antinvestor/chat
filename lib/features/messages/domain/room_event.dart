@@ -91,7 +91,8 @@ abstract class RoomEvent with _$RoomEvent {
     // Required parameters first
     required String id,
     required String roomId,
-    required String senderId, // Profile ID (from ContactLink.profileId)
+    required String
+    senderId, // Subscription ID (room-specific sender identifier)
     required RoomEventType type,
     required Map<String, dynamic> content,
     required int createdAt,

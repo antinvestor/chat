@@ -2,9 +2,6 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../domain/room_event.dart' as domain;
-import 'message_providers.dart';
-
 part 'chat_input_providers.g.dart';
 
 // Riverpod providers for WhatsApp-style chat input architecture
@@ -51,35 +48,3 @@ class TypingNotifier extends _$TypingNotifier {
     });
   }
 }
-
-@riverpod
-Future<void> Function(String) sendMessageProvider(Ref ref) => (text) async {
-  if (text.trim().isEmpty) return;
-
-  // Create message event
-  final message = domain.RoomEvent(
-    id: DateTime.now().millisecondsSinceEpoch.toString(),
-    roomId: '', // Will be set by caller
-    senderId: '', // Will be set by caller
-    type: domain.RoomEventType.text,
-    content: {'text': text.trim()},
-    createdAt: DateTime.now().millisecondsSinceEpoch,
-  );
-
-  // Send via existing message infrastructure
-  final messageRepo = ref.read(messageRepositoryProvider);
-
-  // Optimistic update
-  await messageRepo.insertMessage(message);
-
-  // Network send (simplified for example)
-  try {
-    // Actual network send logic here
-    await messageRepo.updateMessageStatus(message.id, domain.EventStatus.sent);
-  } catch (e) {
-    await messageRepo.updateMessageStatus(
-      message.id,
-      domain.EventStatus.failed,
-    );
-  }
-};

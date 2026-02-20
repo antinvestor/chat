@@ -36,15 +36,20 @@ class KeyManager {
     'curve25519_key': _identityKey,
   };
 
-  // Placeholder encryption/decryption methods
+  // E2EE is not yet implemented — these methods must throw rather than
+  // silently returning unencrypted data disguised as ciphertext.
   Future<String> encrypt(String plaintext, String recipientKey) async {
-    // Note: Olm encryption will be implemented when vodozemac API is stable
-    return base64Encode(utf8.encode(plaintext));
+    throw UnimplementedError(
+      'E2EE encryption is not yet implemented. '
+      'Do not call this method until vodozemac integration is complete.',
+    );
   }
 
   Future<String> decrypt(String ciphertext, String senderKey) async {
-    // Note: Olm decryption will be implemented when vodozemac API is stable
-    return utf8.decode(base64Decode(ciphertext));
+    throw UnimplementedError(
+      'E2EE decryption is not yet implemented. '
+      'Do not call this method until vodozemac integration is complete.',
+    );
   }
 
   Future<String> getDeviceId() async {
