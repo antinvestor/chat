@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
+import '../../advanced/domain/group_finance_config.dart';
+import '../../advanced/services/group_config_service.dart';
+import '../../advanced/ui/group_finance_config_screen.dart';
 import '../../messages/domain/room_event.dart';
 import '../../notifications/mute_service.dart';
 import '../data/detail_panel_providers.dart';
@@ -115,6 +118,14 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
               },
             ),
             ListTile(
+              leading: const Icon(Icons.account_balance_wallet),
+              title: const Text('Finance Settings'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _openFinanceSettings();
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.person_add),
               title: const Text('Add Members'),
               onTap: () {
@@ -185,6 +196,48 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
         ),
       ),
     );
+  }
+
+  Future<void> _openFinanceSettings() async {
+    // Read existing config from room metadata
+    GroupFinanceConfig? existing;
+    try {
+      final room = await ref.read(roomByIdProvider(widget.roomId).future);
+      final configJson = room?.metadata?['financeConfig'];
+      if (configJson is Map<String, dynamic>) {
+        existing = GroupFinanceConfig.fromJson(configJson);
+      }
+    } catch (_) {
+      // No existing config
+    }
+
+    if (!mounted) return;
+    final result = await Navigator.of(context).push<GroupFinanceConfig>(
+      MaterialPageRoute(
+        builder: (_) => GroupFinanceConfigScreen(initialConfig: existing),
+      ),
+    );
+
+    if (result != null && mounted) {
+      try {
+        final service = await ref.read(groupConfigServiceProvider.future);
+        await service.sendGroupConfig(widget.roomId, result);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Finance settings updated')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update finance settings: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   /// Show the mute duration picker dialog

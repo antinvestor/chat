@@ -6,6 +6,8 @@ import 'package:xid/xid.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../advanced/domain/group_finance_config.dart';
+import '../../advanced/ui/group_finance_config_screen.dart';
 import '../../contacts/data/roster_repository.dart';
 import '../../contacts/ui/widgets/contact_avatar.dart';
 import '../data/room_service.dart';
@@ -27,6 +29,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen> {
   final _nameFocusNode = FocusNode();
   late final String _tempRoomId;
   String? _avatarUrl;
+  GroupFinanceConfig? _financeConfig;
   bool _isCreating = false;
 
   @override
@@ -126,6 +129,10 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Financial configuration section
+            _buildFinanceSection(theme),
+            const SizedBox(height: 16),
+
             const Divider(),
             const SizedBox(height: 16),
 
@@ -169,6 +176,58 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen> {
     );
   }
 
+  Widget _buildFinanceSection(ThemeData theme) {
+    return Row(
+      children: [
+        Icon(
+          Icons.account_balance_wallet,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Financial Configuration',
+                style: theme.textTheme.titleSmall,
+              ),
+              if (_financeConfig != null)
+                Text(
+                  _financeConfig!.summary,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
+              else
+                Text(
+                  'Optional \u2014 configure savings rules',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        TextButton(
+          onPressed: _configureFinance,
+          child: Text(_financeConfig != null ? 'Edit' : 'Configure'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _configureFinance() async {
+    final result = await Navigator.of(context).push<GroupFinanceConfig>(
+      MaterialPageRoute(
+        builder: (_) => GroupFinanceConfigScreen(initialConfig: _financeConfig),
+      ),
+    );
+    if (result != null) {
+      setState(() => _financeConfig = result);
+    }
+  }
+
   /// Get the correct contact identifier based on priority:
   /// 1. contactId (if available) - from server
   /// 2. contactDetail (phone/email) - fallback
@@ -202,12 +261,18 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen> {
         },
       );
 
+      final metadata = <String, dynamic>{};
+      if (_avatarUrl != null) metadata['avatarUrl'] = _avatarUrl;
+      if (_financeConfig != null) {
+        metadata['financeConfig'] = _financeConfig!.toJson();
+      }
+
       final room = await roomService.createRoom(
         name: name,
         type: 'group',
         description: description.isNotEmpty ? description : null,
         contactIds: contactIds,
-        metadata: _avatarUrl != null ? {'avatarUrl': _avatarUrl} : null,
+        metadata: metadata.isNotEmpty ? metadata : null,
       );
 
       if (mounted) {

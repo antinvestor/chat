@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../advanced/ui/group_config_bubble.dart';
 import '../../advanced/ui/motion_bubble.dart';
 import '../../advanced/ui/transaction_bubble.dart';
 import '../data/message_forwarding_service.dart';
@@ -593,6 +594,8 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
         return TransactionBubble(event: widget.message, isMe: isMe);
       case RoomEventType.vote:
         return VoteBubble(event: widget.message, isMe: isMe);
+      case RoomEventType.groupConfig:
+        return GroupConfigBubble(event: widget.message);
       case RoomEventType.roomChange:
         return SystemEventBubble(event: widget.message);
       case RoomEventType.roomKey:

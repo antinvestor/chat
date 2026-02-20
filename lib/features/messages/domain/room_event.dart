@@ -40,6 +40,7 @@ enum RoomEventType {
   motion,
   vote,
   transaction,
+  groupConfig,
 
   /// Room key sharing for E2EE session keys
   roomKey,
