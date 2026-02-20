@@ -34,7 +34,7 @@ class ApiConfig {
   // OAuth2 configuration (configurable via --dart-define)
   static const String oauth2IssuerUrl = String.fromEnvironment(
     'OAUTH2_ISSUER_URL',
-    defaultValue: 'https://oauth2.antinvestor.com',
+    defaultValue: 'https://oauth2.stawi.org',
   );
   static const String oauth2ClientId = String.fromEnvironment(
     'OAUTH2_CLIENT_ID',

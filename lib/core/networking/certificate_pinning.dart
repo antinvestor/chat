@@ -74,7 +74,7 @@ class CertificatePinning {
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
     // OAuth2 Provider - REPLACE WITH ACTUAL HASHES
-    'oauth2.antinvestor.com': [
+    'oauth2.stawi.org': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],

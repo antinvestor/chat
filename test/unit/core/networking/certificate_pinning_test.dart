@@ -19,7 +19,7 @@ void main() {
         expect(hosts, contains('devices.antinvestor.com'));
         expect(hosts, contains('files.antinvestor.com'));
         expect(hosts, contains('profile.antinvestor.com'));
-        expect(hosts, contains('oauth2.antinvestor.com'));
+        expect(hosts, contains('oauth2.stawi.org'));
       });
     });
 
