@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// WhatsApp-style date header pill centered between messages.
 class DateHeader extends StatelessWidget {
   const DateHeader({required this.timestamp, super.key});
   final int timestamp;
@@ -7,6 +8,7 @@ class DateHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -21,7 +23,6 @@ class DateHeader extends StatelessWidget {
       if (messageDate == yesterday) {
         dateText = 'Yesterday';
       } else {
-        // This week - show day name
         final difference = today.difference(messageDate);
         if (difference.inDays < 7) {
           const days = [
@@ -35,41 +36,36 @@ class DateHeader extends StatelessWidget {
           ];
           dateText = days[date.weekday - 1];
         } else {
-          // Older - show date
           dateText = '${date.day}/${date.month}/${date.year}';
         }
       }
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 1,
-              color: theme.colorScheme.outline.withValues(alpha: 0.3),
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF1F2C34).withValues(alpha: 0.9)
+              : Colors.white.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
+          ],
+        ),
+        child: Text(
+          dateText,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: isDark ? const Color(0xFF8696A0) : const Color(0xFF667781),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              dateText,
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              height: 1,
-              color: theme.colorScheme.outline.withValues(alpha: 0.3),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

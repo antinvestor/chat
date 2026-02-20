@@ -568,7 +568,7 @@ void main() {
           home: Builder(
             builder: (context) {
               final color = AppTheme.getMessageBubbleColor(context, true);
-              expect(color, AppTheme.primaryGreen);
+              expect(color, AppTheme.sentBubbleLight);
               return const SizedBox();
             },
           ),

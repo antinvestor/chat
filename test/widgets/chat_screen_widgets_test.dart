@@ -447,7 +447,9 @@ void main() {
       expect(find.text(expectedFormat), findsOneWidget);
     });
 
-    testWidgets('has divider lines on both sides', (WidgetTester tester) async {
+    testWidgets('renders as centered pill with decoration', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -456,12 +458,12 @@ void main() {
         ),
       );
 
-      // Should have a Row with Expanded containers for dividers
-      final row = find.byType(Row).first;
-      expect(row, findsOneWidget);
+      // Should be centered
+      expect(find.byType(Center), findsOneWidget);
 
-      // Should have Expanded widgets for the divider lines
-      expect(find.byType(Expanded), findsAtLeast(2));
+      // Should have a decorated Container (pill shape)
+      final container = tester.widget<Container>(find.byType(Container).first);
+      expect(container.decoration, isNotNull);
     });
   });
 

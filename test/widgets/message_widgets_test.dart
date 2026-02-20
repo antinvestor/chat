@@ -704,7 +704,7 @@ void main() {
   });
 
   group('MessageBubble Widget - Avatar Display', () {
-    testWidgets('shows avatar for received messages', (
+    testWidgets('shows avatar for received messages in group chats', (
       WidgetTester tester,
     ) async {
       final message = RoomEvent(
@@ -718,14 +718,20 @@ void main() {
 
       await tester.pumpWidgetWithMocks(
         MaterialApp(
-          home: Scaffold(body: MessageBubble(message: message, isMe: false)),
+          home: Scaffold(
+            body: MessageBubble(
+              message: message,
+              isMe: false,
+              isGroupChat: true,
+            ),
+          ),
         ),
       );
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Should show CircleAvatar for received messages
+      // Should show CircleAvatar for received messages in group chats
       expect(find.byType(CircleAvatar), findsOneWidget);
     });
 

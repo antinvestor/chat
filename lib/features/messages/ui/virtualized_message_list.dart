@@ -73,6 +73,7 @@ class VirtualizedMessageList extends ConsumerStatefulWidget {
     required this.onDeleteMessage,
     super.key,
     this.currentUserSubscriptionId,
+    this.isGroupChat = false,
     this.config = const VirtualizedMessageListConfig(),
     this.onLoadMore,
     this.isLoadingMore = false,
@@ -88,6 +89,9 @@ class VirtualizedMessageList extends ConsumerStatefulWidget {
   /// Used to determine if a message is from the current user (isMine)
   /// Pass this from parent to avoid async race conditions
   final String? currentUserSubscriptionId;
+
+  /// Whether this is a group chat (enables sender names, avatars)
+  final bool isGroupChat;
   final VirtualizedMessageListConfig config;
   final Future<void> Function()? onLoadMore;
   final bool isLoadingMore;
@@ -357,6 +361,7 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
       key: ValueKey(message.id),
       message: message,
       currentUserSubscriptionId: widget.currentUserSubscriptionId,
+      isGroupChat: widget.isGroupChat,
       showDateHeader: groupingInfo.showDateHeader,
       shouldGroupWithPrevious: groupingInfo.shouldGroupWithPrevious,
       removeTail: groupingInfo.removeTail,
@@ -475,6 +480,7 @@ class _OptimizedMessageItem extends ConsumerStatefulWidget {
     required this.onDeleteMessage,
     super.key,
     this.currentUserSubscriptionId,
+    this.isGroupChat = false,
     this.enableKeepAlive = true,
     this.onSizeChanged,
     this.onForwardMessage,
@@ -484,6 +490,9 @@ class _OptimizedMessageItem extends ConsumerStatefulWidget {
 
   /// Current user's subscription ID - passed from parent to avoid async issues
   final String? currentUserSubscriptionId;
+
+  /// Whether this is a group chat
+  final bool isGroupChat;
   final bool showDateHeader;
   final bool shouldGroupWithPrevious;
   final bool removeTail;
@@ -602,6 +611,7 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
           isMe: isMe,
           shouldGroupWithPrevious: widget.shouldGroupWithPrevious,
           removeTail: widget.removeTail,
+          isGroupChat: widget.isGroupChat,
           onReply: widget.onReplyToMessage,
           onRetry: widget.message.status == EventStatus.failed
               ? () => widget.onRetryMessage(widget.message)

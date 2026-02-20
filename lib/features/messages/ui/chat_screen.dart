@@ -430,8 +430,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF121212) // Optimized dark background
-                      : Theme.of(context).colorScheme.surface,
+                      ? AppTheme.chatBackgroundDark
+                      : AppTheme.chatBackgroundLight,
                   image: _isEncryptionEnabled
                       ? null
                       : DecorationImage(
@@ -612,10 +612,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         icon: Icon(
           _isEncryptionEnabled ? Icons.lock : Icons.lock_open,
           color: _isEncryptionEnabled ? Colors.green : null,
+          size: 20,
         ),
         onPressed: _toggleEncryption,
       ),
-      IconButton(icon: const Icon(Icons.video_call), onPressed: _startCall),
+      IconButton(
+        icon: const Icon(Icons.videocam_outlined),
+        onPressed: _startCall,
+      ),
+      IconButton(icon: const Icon(Icons.phone_outlined), onPressed: _startCall),
     ],
   );
 
@@ -633,12 +638,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       currentUserSubscriptionIdProvider(widget.roomId),
     );
 
+    // Determine if this is a group chat for sender names/avatars
+    final roomAsync = ref.watch(roomByIdProvider(widget.roomId));
+    final isGroupChat = roomAsync.when(
+      data: (room) => room?.type == 'group',
+      loading: () => false,
+      error: (_, _) => false,
+    );
+
     // Use the optimized VirtualizedMessageList for better performance
     // with large message lists (10,000+ messages)
     return VirtualizedMessageList(
       roomId: widget.roomId,
       messages: messages,
       currentUserSubscriptionId: currentSubscriptionIdAsync.value,
+      isGroupChat: isGroupChat,
       scrollController: _scrollController,
       isLoadingMore: _isLoadingMore,
       hasMoreMessages: _hasMoreMessages,

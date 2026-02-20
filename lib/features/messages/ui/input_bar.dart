@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../rooms/data/room_providers.dart';
 import '../../rooms/data/room_sync_state.dart';
 import '../data/typing_provider.dart';
@@ -463,10 +464,10 @@ class _InputBarState extends ConsumerState<InputBar>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Attachment button
+                // Emoji button
                 _buildIconButton(
-                  icon: Icons.attach_file,
-                  onTap: widget.onAttachment,
+                  icon: Icons.emoji_emotions_outlined,
+                  onTap: () {}, // Emoji picker placeholder
                   theme: theme,
                 ),
                 // Text field
@@ -510,6 +511,12 @@ class _InputBarState extends ConsumerState<InputBar>
                       color: Colors.green.shade600,
                     ),
                   ),
+                // Attachment button
+                _buildIconButton(
+                  icon: Icons.attach_file,
+                  onTap: widget.onAttachment,
+                  theme: theme,
+                ),
                 // Camera button (only when no text)
                 if (!_hasText)
                   _buildIconButton(
@@ -553,12 +560,14 @@ class _InputBarState extends ConsumerState<InputBar>
     bool isRecording = false,
     bool canSend = true,
   }) {
-    final primaryColor = theme.colorScheme.primary;
     final showSend = _hasText || isRecording;
 
     // Determine if actions are enabled
     final sendEnabled = canSend && showSend;
     final micEnabled = canSend && !showSend;
+
+    // Green for both send and mic states (WhatsApp style)
+    final buttonColor = canSend ? AppTheme.brightGreen : Colors.grey.shade400;
 
     return GestureDetector(
       onTap: sendEnabled
@@ -570,31 +579,23 @@ class _InputBarState extends ConsumerState<InputBar>
         duration: const Duration(milliseconds: 200),
         width: 44,
         height: 44,
-        decoration: BoxDecoration(
-          // Grey out the button when sending is disabled
-          color: showSend
-              ? (canSend ? primaryColor : Colors.grey.shade400)
-              : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: buttonColor, shape: BoxShape.circle),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           transitionBuilder: (child, animation) =>
               ScaleTransition(scale: animation, child: child),
           child: showSend
-              ? Icon(
-                  isRecording ? Icons.send : Icons.send,
-                  key: const ValueKey('send'),
+              ? const Icon(
+                  Icons.send,
+                  key: ValueKey('send'),
                   size: 20,
-                  color: canSend ? Colors.white : Colors.grey.shade200,
+                  color: Colors.white,
                 )
-              : Icon(
+              : const Icon(
                   Icons.mic,
-                  key: const ValueKey('mic'),
+                  key: ValueKey('mic'),
                   size: 22,
-                  color: canSend
-                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: Colors.white,
                 ),
         ),
       ),

@@ -16,6 +16,15 @@ part 'message_providers.g.dart';
 MessageRepository messageRepository(Ref ref) =>
     MessageRepository(AppDatabase.instance);
 
+/// Fetch a single parent message by event ID (for reply previews).
+final parentMessageProvider = FutureProvider.family<domain.RoomEvent?, String>((
+  ref,
+  eventId,
+) {
+  final repo = ref.read(messageRepositoryProvider);
+  return repo.getEventById(eventId);
+});
+
 /// Reactive stream provider for messages - provides instant UI updates
 /// when messages are added, updated, or deleted from the local database
 final messagesStreamProvider =
