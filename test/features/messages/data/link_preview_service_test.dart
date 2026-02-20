@@ -104,7 +104,10 @@ Last line
       late LinkPreviewService service;
 
       setUp(() {
-        service = LinkPreviewService(() async => 'test-token');
+        service = LinkPreviewService(
+          () async => 'test-token',
+          () => throw UnimplementedError('No files client in test'),
+        );
       });
 
       test('clearCache removes all cached entries', () {

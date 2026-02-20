@@ -1,19 +1,17 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/files/mxc_upload_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../domain/upload_progress.dart';
-import 'file_upload_service.dart' show UploadResult;
-import 'progressive_upload_service.dart';
 
 part 'upload_progress_provider.g.dart';
 
 /// Manages upload progress state for multiple concurrent uploads
 ///
-/// Provides methods to start, cancel, retry, and track uploads.
-/// Exposes a stream of progress updates for UI binding.
+/// Provides methods to start, cancel, retry, and track uploads
+/// using [MxcUploadService] for proto-based streaming uploads.
 ///
 /// Example:
 /// ```dart
@@ -22,31 +20,15 @@ part 'upload_progress_provider.g.dart';
 ///
 /// // Start an upload
 /// ref.read(uploadProgressProvider.notifier).startUpload(file, 'msg-123');
-///
-/// // Cancel an upload
-/// ref.read(uploadProgressProvider.notifier).cancelUpload('msg-123');
 /// ```
 @riverpod
 class UploadProgressNotifier extends _$UploadProgressNotifier {
-  StreamSubscription<UploadProgress>? _subscription;
-
   @override
   Map<String, UploadProgress> build() {
-    final uploadService = ref.watch(progressiveUploadServiceProvider);
-
-    // Listen to progress updates from the service
-    _subscription?.cancel();
-    _subscription = uploadService.progressStream.listen(_onProgressUpdate);
-
-    ref.onDispose(() {
-      _subscription?.cancel();
-    });
-
     return {};
   }
 
-  ProgressiveUploadService get _uploadService =>
-      ref.read(progressiveUploadServiceProvider);
+  MxcUploadService get _uploadService => ref.read(mxcUploadServiceProvider);
 
   /// Start a new upload
   ///
@@ -55,8 +37,8 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
   /// - [localId]: Local message ID for tracking
   /// - [mimeType]: Optional MIME type
   ///
-  /// Returns [UploadResult] when complete
-  Future<UploadResult> startUpload(
+  /// Returns [MxcUploadResult] when complete
+  Future<MxcUploadResult> startUpload(
     File file, {
     required String localId,
     String? mimeType,
@@ -79,28 +61,50 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
       ),
     };
 
-    // Start the upload
-    final result = await _uploadService.uploadFile(
-      file,
-      localId: localId,
-      mimeType: mimeType,
-    );
-
-    return result;
-  }
-
-  /// Cancel an active upload
-  ///
-  /// Returns true if the upload was successfully cancelled
-  bool cancelUpload(String localId) {
-    final success = _uploadService.cancelUpload(localId);
-    if (success) {
-      AppLogger.info(
-        'Upload cancelled via provider',
-        data: {'localId': localId},
+    try {
+      // Start the upload with progress tracking
+      final result = await _uploadService.uploadFile(
+        file,
+        mimeType: mimeType,
+        onProgress: (progress) {
+          final uploadedBytes = (progress * fileSize).toInt();
+          state = {
+            ...state,
+            localId: UploadProgress.uploading(
+              localId: localId,
+              progress: progress,
+              fileName: fileName,
+              totalBytes: fileSize,
+              uploadedBytes: uploadedBytes,
+            ),
+          };
+        },
       );
+
+      // Update progress to completed
+      state = {
+        ...state,
+        localId: UploadProgress.completed(
+          localId: localId,
+          fileName: fileName,
+          totalBytes: fileSize,
+        ),
+      };
+
+      return result;
+    } catch (e) {
+      // Update progress to failed
+      state = {
+        ...state,
+        localId: UploadProgress.failed(
+          localId: localId,
+          error: e.toString(),
+          fileName: fileName,
+          totalBytes: fileSize,
+        ),
+      };
+      rethrow;
     }
-    return success;
   }
 
   /// Retry a failed upload
@@ -110,8 +114,8 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
   /// - [localId]: Local message ID
   /// - [mimeType]: Optional MIME type
   ///
-  /// Returns [UploadResult] when complete
-  Future<UploadResult> retryUpload(
+  /// Returns [MxcUploadResult] when complete
+  Future<MxcUploadResult> retryUpload(
     File file, {
     required String localId,
     String? mimeType,
@@ -130,39 +134,35 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
       };
     }
 
-    return _uploadService.retryUpload(
-      file,
-      localId: localId,
-      mimeType: mimeType,
-    );
+    return startUpload(file, localId: localId, mimeType: mimeType);
   }
 
-  /// Pause an active upload (for resumable uploads)
-  bool pauseUpload(String localId) {
-    final success = _uploadService.pauseUpload(localId);
-    if (success) {
-      AppLogger.info('Upload paused via provider', data: {'localId': localId});
+  /// Cancel an active upload
+  ///
+  /// Marks the upload as cancelled in the progress state.
+  /// Note: The underlying proto stream cannot be cancelled mid-transfer,
+  /// but the state is updated so the UI reflects the cancellation.
+  bool cancelUpload(String localId) {
+    final progress = state[localId];
+    if (progress != null && progress.isInProgress) {
+      state = {
+        ...state,
+        localId: progress.copyWith(
+          state: UploadState.cancelled,
+          completedAt: DateTime.now().millisecondsSinceEpoch,
+        ),
+      };
+      AppLogger.info(
+        'Upload cancelled via provider',
+        data: {'localId': localId},
+      );
+      return true;
     }
-    return success;
-  }
-
-  /// Resume a paused upload
-  Future<UploadResult> resumeUpload(
-    File file, {
-    required String localId,
-    String? mimeType,
-  }) async {
-    AppLogger.info('Resuming upload via provider', data: {'localId': localId});
-    return _uploadService.resumeUpload(
-      file,
-      localId: localId,
-      mimeType: mimeType,
-    );
+    return false;
   }
 
   /// Clear progress for a completed upload
   void clearProgress(String localId) {
-    _uploadService.clearProgress(localId);
     state = Map.from(state)..remove(localId);
   }
 
@@ -172,8 +172,6 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
     for (final entry in state.entries) {
       if (!entry.value.isDone) {
         activeUploads[entry.key] = entry.value;
-      } else {
-        _uploadService.clearProgress(entry.key);
       }
     }
     state = activeUploads;
@@ -187,11 +185,6 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
 
   /// Get count of active uploads
   int get activeUploadCount => state.values.where((p) => p.isInProgress).length;
-
-  /// Handle progress updates from the service
-  void _onProgressUpdate(UploadProgress progress) {
-    state = {...state, progress.localId: progress};
-  }
 }
 
 /// Provider for a specific upload's progress
@@ -244,13 +237,4 @@ double totalUploadProgress(Ref ref) {
 
   if (totalBytes == 0) return 0;
   return uploadedBytesTotal / totalBytes;
-}
-
-/// Stream provider for real-time progress updates
-///
-/// Use when you need a stream of all progress events
-@riverpod
-Stream<UploadProgress> uploadProgressStream(Ref ref) {
-  final uploadService = ref.watch(progressiveUploadServiceProvider);
-  return uploadService.progressStream;
 }

@@ -467,56 +467,7 @@ final class TotalDownloadProgressProvider
 String _$totalDownloadProgressHash() =>
     r'c027c028cd0e825c2cf95e32433547a639d61d54';
 
-/// Stream provider for real-time download progress updates
-///
-/// Use when you need a stream of all progress events
-
-@ProviderFor(downloadProgressStream)
-final downloadProgressStreamProvider = DownloadProgressStreamProvider._();
-
-/// Stream provider for real-time download progress updates
-///
-/// Use when you need a stream of all progress events
-
-final class DownloadProgressStreamProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<DownloadProgress>,
-          DownloadProgress,
-          Stream<DownloadProgress>
-        >
-    with $FutureModifier<DownloadProgress>, $StreamProvider<DownloadProgress> {
-  /// Stream provider for real-time download progress updates
-  ///
-  /// Use when you need a stream of all progress events
-  DownloadProgressStreamProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'downloadProgressStreamProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$downloadProgressStreamHash();
-
-  @$internal
-  @override
-  $StreamProviderElement<DownloadProgress> $createElement(
-    $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
-
-  @override
-  Stream<DownloadProgress> create(Ref ref) {
-    return downloadProgressStream(ref);
-  }
-}
-
-String _$downloadProgressStreamHash() =>
-    r'b596fffaac5965bfbd35de0f31fc4e0fcf4489ea';
+// downloadProgressStream provider removed (was using deprecated ProgressiveDownloadService)
 
 /// Provider for TransferQueueService
 

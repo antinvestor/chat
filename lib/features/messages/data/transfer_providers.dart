@@ -1,15 +1,13 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/files/content_resolver.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/sync/transfer_job_repository.dart';
 import '../../notifications/transfer_notification_service.dart';
 import '../domain/download_progress.dart';
 import '../domain/upload_progress.dart';
-import 'progressive_download_service.dart';
-import 'progressive_upload_service.dart';
 import 'upload_progress_provider.dart';
 
 part 'transfer_providers.g.dart';
@@ -20,8 +18,7 @@ part 'transfer_providers.g.dart';
 
 /// Manages download progress state for multiple concurrent downloads
 ///
-/// Provides methods to start, cancel, retry, and track downloads.
-/// Exposes a stream of progress updates for UI binding.
+/// Uses [ContentResolver] for downloading files via MXC or legacy URLs.
 ///
 /// Example:
 /// ```dart
@@ -30,50 +27,34 @@ part 'transfer_providers.g.dart';
 ///
 /// // Start a download
 /// ref.read(downloadProgressProvider.notifier).startDownload(
-///   fileUrl: 'https://example.com/file.pdf',
+///   fileUrl: 'mxc://server/media_id',
 ///   downloadId: 'dl-123',
 /// );
-///
-/// // Cancel a download
-/// ref.read(downloadProgressProvider.notifier).cancelDownload('dl-123');
 /// ```
 @riverpod
 class DownloadProgressNotifier extends _$DownloadProgressNotifier {
-  StreamSubscription<DownloadProgress>? _subscription;
-
   @override
   Map<String, DownloadProgress> build() {
-    final downloadService = ref.watch(progressiveDownloadServiceProvider);
-
-    // Listen to progress updates from the service
-    _subscription?.cancel();
-    _subscription = downloadService.progressStream.listen(_onProgressUpdate);
-
-    ref.onDispose(() {
-      _subscription?.cancel();
-    });
-
     return {};
   }
 
-  ProgressiveDownloadService get _downloadService =>
-      ref.read(progressiveDownloadServiceProvider);
+  ContentResolver get _resolver => ref.read(contentResolverProvider);
 
   /// Start a new download
   ///
   /// Parameters:
-  /// - [fileUrl]: URL of the file to download
+  /// - [fileUrl]: URL of the file to download (MXC URI or HTTPS URL)
   /// - [downloadId]: Unique download ID for tracking
   /// - [fileName]: Optional custom file name
-  /// - [destinationPath]: Optional custom destination path
+  /// - [destinationPath]: Destination path to save the file
   /// - [roomId]: Optional room ID for context
   ///
-  /// Returns [DownloadResult] when complete
-  Future<DownloadResult> startDownload({
+  /// Returns [File] on success, null on failure
+  Future<File?> startDownload({
     required String fileUrl,
     required String downloadId,
+    required String destinationPath,
     String? fileName,
-    String? destinationPath,
     String? roomId,
   }) async {
     AppLogger.info(
@@ -81,54 +62,123 @@ class DownloadProgressNotifier extends _$DownloadProgressNotifier {
       data: {'downloadId': downloadId, 'fileUrl': fileUrl},
     );
 
-    // Initialize progress state
+    // Extract file name from URL if not provided
     final extractedFileName =
         fileName ?? fileUrl.split('/').last.split('?').first;
 
+    // Initialize progress state
     state = {
       ...state,
       downloadId: DownloadProgress.pending(
         downloadId: downloadId,
         fileName: extractedFileName,
         fileUrl: fileUrl,
+        localPath: destinationPath,
         roomId: roomId,
       ),
     };
 
-    // Start the download
-    final result = await _downloadService.downloadFile(
-      fileUrl: fileUrl,
-      downloadId: downloadId,
-      fileName: fileName,
-      destinationPath: destinationPath,
-      roomId: roomId,
-    );
+    try {
+      // Update to downloading state
+      state = {
+        ...state,
+        downloadId: DownloadProgress.downloading(
+          downloadId: downloadId,
+          progress: 0,
+          fileName: extractedFileName,
+          fileUrl: fileUrl,
+          localPath: destinationPath,
+          roomId: roomId,
+        ),
+      };
 
-    return result;
+      // Use ContentResolver for the download
+      final content = <String, dynamic>{'url': fileUrl};
+      final file = await _resolver.resolveFileDownload(
+        content,
+        destinationPath,
+      );
+
+      if (file != null) {
+        final fileSize = await file.length();
+        state = {
+          ...state,
+          downloadId: DownloadProgress.completed(
+            downloadId: downloadId,
+            fileName: extractedFileName,
+            fileUrl: fileUrl,
+            localPath: destinationPath,
+            totalBytes: fileSize,
+            roomId: roomId,
+          ),
+        };
+
+        AppLogger.info(
+          'Download completed',
+          data: {'downloadId': downloadId, 'fileName': extractedFileName},
+        );
+        return file;
+      } else {
+        state = {
+          ...state,
+          downloadId: DownloadProgress.failed(
+            downloadId: downloadId,
+            error: 'Download returned null',
+            fileName: extractedFileName,
+            fileUrl: fileUrl,
+            localPath: destinationPath,
+          ),
+        };
+        return null;
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Download failed',
+        error: e,
+        stackTrace: stackTrace,
+        data: {'downloadId': downloadId},
+      );
+
+      state = {
+        ...state,
+        downloadId: DownloadProgress.failed(
+          downloadId: downloadId,
+          error: e.toString(),
+          fileName: extractedFileName,
+          fileUrl: fileUrl,
+          localPath: destinationPath,
+        ),
+      };
+      return null;
+    }
   }
 
   /// Cancel an active download
-  ///
-  /// Returns true if the download was successfully cancelled
   bool cancelDownload(String downloadId) {
-    final success = _downloadService.cancelDownload(downloadId);
-    if (success) {
+    final progress = state[downloadId];
+    if (progress != null && progress.isInProgress) {
+      state = {
+        ...state,
+        downloadId: progress.copyWith(
+          state: DownloadState.cancelled,
+          completedAt: DateTime.now().millisecondsSinceEpoch,
+        ),
+      };
       AppLogger.info(
         'Download cancelled via provider',
         data: {'downloadId': downloadId},
       );
+      return true;
     }
-    return success;
+    return false;
   }
 
   /// Retry a failed download
-  ///
-  /// Returns [DownloadResult] when complete
-  Future<DownloadResult> retryDownload({
+  Future<File?> retryDownload({
     required String fileUrl,
     required String downloadId,
+    required String destinationPath,
     String? fileName,
-    String? destinationPath,
     String? roomId,
   }) async {
     AppLogger.info(
@@ -148,51 +198,17 @@ class DownloadProgressNotifier extends _$DownloadProgressNotifier {
       };
     }
 
-    return _downloadService.retryDownload(
+    return startDownload(
       fileUrl: fileUrl,
       downloadId: downloadId,
-      fileName: fileName,
       destinationPath: destinationPath,
-      roomId: roomId,
-    );
-  }
-
-  /// Pause an active download
-  bool pauseDownload(String downloadId) {
-    final success = _downloadService.pauseDownload(downloadId);
-    if (success) {
-      AppLogger.info(
-        'Download paused via provider',
-        data: {'downloadId': downloadId},
-      );
-    }
-    return success;
-  }
-
-  /// Resume a paused download
-  Future<DownloadResult> resumeDownload({
-    required String fileUrl,
-    required String downloadId,
-    String? fileName,
-    String? destinationPath,
-    String? roomId,
-  }) async {
-    AppLogger.info(
-      'Resuming download via provider',
-      data: {'downloadId': downloadId},
-    );
-    return _downloadService.resumeDownload(
-      fileUrl: fileUrl,
-      downloadId: downloadId,
       fileName: fileName,
-      destinationPath: destinationPath,
       roomId: roomId,
     );
   }
 
   /// Clear progress for a completed download
   void clearProgress(String downloadId) {
-    _downloadService.clearProgress(downloadId);
     state = Map.from(state)..remove(downloadId);
   }
 
@@ -202,8 +218,6 @@ class DownloadProgressNotifier extends _$DownloadProgressNotifier {
     for (final entry in state.entries) {
       if (!entry.value.isDone) {
         activeDownloads[entry.key] = entry.value;
-      } else {
-        _downloadService.clearProgress(entry.key);
       }
     }
     state = activeDownloads;
@@ -218,11 +232,6 @@ class DownloadProgressNotifier extends _$DownloadProgressNotifier {
   /// Get count of active downloads
   int get activeDownloadCount =>
       state.values.where((p) => p.isInProgress).length;
-
-  /// Handle progress updates from the service
-  void _onProgressUpdate(DownloadProgress progress) {
-    state = {...state, progress.downloadId: progress};
-  }
 }
 
 // ============================================================================
@@ -230,14 +239,6 @@ class DownloadProgressNotifier extends _$DownloadProgressNotifier {
 // ============================================================================
 
 /// Provider for a specific download's progress
-///
-/// Example:
-/// ```dart
-/// final progress = ref.watch(singleDownloadProgressProvider('dl-123'));
-/// if (progress != null && progress.isInProgress) {
-///   // Show progress indicator
-/// }
-/// ```
 @riverpod
 DownloadProgress? singleDownloadProgress(Ref ref, String downloadId) {
   final allDownloads = ref.watch(downloadProgressProvider);
@@ -283,15 +284,6 @@ double totalDownloadProgress(Ref ref) {
   return downloadedBytesTotal / totalBytes;
 }
 
-/// Stream provider for real-time download progress updates
-///
-/// Use when you need a stream of all progress events
-@riverpod
-Stream<DownloadProgress> downloadProgressStream(Ref ref) {
-  final downloadService = ref.watch(progressiveDownloadServiceProvider);
-  return downloadService.progressStream;
-}
-
 // ============================================================================
 // Transfer Queue Service
 // ============================================================================
@@ -299,27 +291,7 @@ Stream<DownloadProgress> downloadProgressStream(Ref ref) {
 /// Service for managing the unified transfer queue for uploads and downloads
 ///
 /// Coordinates transfer jobs, prioritizes uploads over downloads,
-/// and handles notifications for transfer progress. This is a non-Riverpod
-/// service wrapper around TransferJobRepository.
-///
-/// Example:
-/// ```dart
-/// final queue = ref.read(transferQueueServiceProvider);
-///
-/// // Queue an upload
-/// await queue.queueUpload(
-///   file: File('/path/to/file.jpg'),
-///   localId: 'msg-123',
-///   roomId: 'room-456',
-/// );
-///
-/// // Queue a download
-/// await queue.queueDownload(
-///   fileUrl: 'https://example.com/file.pdf',
-///   downloadId: 'dl-789',
-///   roomId: 'room-456',
-/// );
-/// ```
+/// and handles notifications for transfer progress.
 class TransferQueueService {
   TransferQueueService(this._repository);
 
@@ -499,12 +471,12 @@ double overallTransferProgress(Ref ref) {
 
 /// Provider that automatically shows/updates transfer notifications
 ///
-/// This provider listens to upload and download progress streams
+/// This provider watches upload and download progress state notifiers
 /// and shows appropriate notifications.
 @riverpod
 class TransferNotifications extends _$TransferNotifications {
-  StreamSubscription<UploadProgress>? _uploadSubscription;
-  StreamSubscription<DownloadProgress>? _downloadSubscription;
+  Map<String, UploadProgress> _prevUploads = {};
+  Map<String, DownloadProgress> _prevDownloads = {};
 
   @override
   bool build() {
@@ -515,24 +487,30 @@ class TransferNotifications extends _$TransferNotifications {
       notificationService.initialize(onAction: _handleNotificationAction);
     }
 
-    // Listen to upload progress
-    final uploadService = ref.watch(progressiveUploadServiceProvider);
-    _uploadSubscription?.cancel();
-    _uploadSubscription = uploadService.progressStream.listen(
-      (progress) => _handleUploadProgress(progress, notificationService),
-    );
+    // Watch upload and download progress for changes
+    final uploads = ref.watch(uploadProgressProvider);
+    final downloads = ref.watch(downloadProgressProvider);
 
-    // Listen to download progress
-    final downloadService = ref.watch(progressiveDownloadServiceProvider);
-    _downloadSubscription?.cancel();
-    _downloadSubscription = downloadService.progressStream.listen(
-      (progress) => _handleDownloadProgress(progress, notificationService),
-    );
+    // Process upload state changes
+    for (final entry in uploads.entries) {
+      final prev = _prevUploads[entry.key];
+      if (prev?.state != entry.value.state ||
+          prev?.progress != entry.value.progress) {
+        _handleUploadProgress(entry.value, notificationService);
+      }
+    }
 
-    ref.onDispose(() {
-      _uploadSubscription?.cancel();
-      _downloadSubscription?.cancel();
-    });
+    // Process download state changes
+    for (final entry in downloads.entries) {
+      final prev = _prevDownloads[entry.key];
+      if (prev?.state != entry.value.state ||
+          prev?.progress != entry.value.progress) {
+        _handleDownloadProgress(entry.value, notificationService);
+      }
+    }
+
+    _prevUploads = Map.of(uploads);
+    _prevDownloads = Map.of(downloads);
 
     return true;
   }
@@ -618,21 +596,14 @@ class TransferNotifications extends _$TransferNotifications {
       case TransferNotificationActions.cancelDownload:
         ref.read(downloadProgressProvider.notifier).cancelDownload(transferId);
       case TransferNotificationActions.openFile:
-        // Handle open file action - could navigate to file or open externally
         AppLogger.info('Open file requested', data: {'path': transferId});
     }
   }
 }
 
 /// Provider to activate transfer notifications
-///
-/// Use this at app startup to enable automatic transfer notifications:
-/// ```dart
-/// ref.watch(transferNotificationsActiveProvider);
-/// ```
 @riverpod
 bool transferNotificationsActive(Ref ref) {
-  // Just watching this provider activates the TransferNotifications provider
   ref.watch(transferNotificationsProvider);
   return true;
 }

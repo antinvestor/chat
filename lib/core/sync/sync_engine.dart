@@ -1581,7 +1581,7 @@ class SyncEngine with WidgetsBindingObserver {
           await _processSendMessage(job);
           break;
         case domain_job.JobType.uploadFile:
-          // File uploads are handled by FileUploadService before queuing
+          // File uploads are handled by MxcUploadService before queuing
           break;
         case domain_job.JobType.createRoom:
           await _processCreateRoom(job);

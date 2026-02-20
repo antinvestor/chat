@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/files/content_resolver.dart';
 import '../../../features/contacts/data/roster_repository.dart';
 import '../../../features/rooms/data/room_subscription_service.dart';
 import '../data/link_preview_service.dart';
@@ -472,25 +473,13 @@ class MessageBubble extends ConsumerWidget {
                         ),
                     ],
                   )
-                : url != null
-                ? Image.network(
-                    url,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return _buildMediaPlaceholder(Icons.image);
-                    },
-                    errorBuilder: (_, _, _) =>
-                        _buildMediaPlaceholder(Icons.broken_image),
-                  )
-                : localPath != null
-                ? Image.file(
-                    File(localPath),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        _buildMediaPlaceholder(Icons.image),
-                  )
-                : _buildMediaPlaceholder(Icons.image),
+                : _ResolvedMediaImage(
+                    content: message.content,
+                    url: url,
+                    localPath: localPath,
+                    placeholderIcon: Icons.image,
+                    errorIcon: Icons.broken_image,
+                  ),
           ),
         ),
         // Show progress bar below image during upload
@@ -561,15 +550,14 @@ class MessageBubble extends ConsumerWidget {
                       errorBuilder: (_, _, _) =>
                           _buildMediaPlaceholder(Icons.videocam),
                     )
-                  else if (thumbnailUrl != null)
-                    Image.network(
-                      thumbnailUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          _buildMediaPlaceholder(Icons.videocam),
-                    )
                   else
-                    _buildMediaPlaceholder(Icons.videocam),
+                    _ResolvedMediaImage(
+                      content: message.content,
+                      url: thumbnailUrl,
+                      placeholderIcon: Icons.videocam,
+                      errorIcon: Icons.videocam,
+                      useThumbnail: true,
+                    ),
                   // Upload progress or play button
                   if (isUploading || hasActiveUpload)
                     if (localId != null && uploadProgress != null)
@@ -737,6 +725,7 @@ class MessageBubble extends ConsumerWidget {
     final fileName = message.content['fileName'] as String? ?? 'File';
     final fileSize = message.content['fileSize'] as int?;
     final url = message.content['url'] as String?;
+    final localPath = message.content['localPath'] as String?;
     final isUploading = message.content['uploading'] == true;
     final localId = message.localId;
 
@@ -749,9 +738,12 @@ class MessageBubble extends ConsumerWidget {
         (uploadProgress.isInProgress ||
             uploadProgress.state == UploadState.pending);
 
+    final canOpen =
+        !isUploading && !hasActiveUpload && (url != null || localPath != null);
+
     return GestureDetector(
-      onTap: url != null && !isUploading && !hasActiveUpload
-          ? () => _openUrl(url)
+      onTap: canOpen
+          ? () => _downloadAndOpenFile(context, ref, message.content, fileName)
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -870,6 +862,53 @@ class MessageBubble extends ConsumerWidget {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// Download a file via ContentResolver and open it.
+  ///
+  /// For MXC URIs, downloads to a temporary path then opens.
+  /// For local files, opens directly. For HTTPS URLs, uses launchUrl.
+  Future<void> _downloadAndOpenFile(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> content,
+    String fileName,
+  ) async {
+    // Check for local file first
+    final localPath = content['localPath'] as String?;
+    if (localPath != null) {
+      final localFile = File(localPath);
+      if (localFile.existsSync()) {
+        final uri = Uri.file(localPath);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+        return;
+      }
+    }
+
+    // Check if it's an MXC content (needs download)
+    if (ContentResolver.isMxcContent(content)) {
+      // Download to temp directory
+      final tempDir = await Directory.systemTemp.createTemp('chat_download_');
+      final destPath = '${tempDir.path}/$fileName';
+
+      final resolver = ref.read(contentResolverProvider);
+      final file = await resolver.resolveFileDownload(content, destPath);
+      if (file != null) {
+        final uri = Uri.file(file.path);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      }
+      return;
+    }
+
+    // Legacy HTTPS URL
+    final url = content['url'] as String?;
+    if (url != null && url.startsWith('http')) {
+      await _openUrl(url);
     }
   }
 
@@ -1260,4 +1299,83 @@ class MessageBubble extends ConsumerWidget {
 
     return '${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
+}
+
+/// Internal widget that resolves media content from both MXC URIs and legacy
+/// HTTPS URLs. Falls back to local file or placeholder.
+class _ResolvedMediaImage extends ConsumerWidget {
+  const _ResolvedMediaImage({
+    required this.content,
+    required this.placeholderIcon,
+    required this.errorIcon,
+    this.url,
+    this.localPath,
+    this.useThumbnail = false,
+  });
+
+  final Map<String, dynamic> content;
+  final String? url;
+  final String? localPath;
+  final IconData placeholderIcon;
+  final IconData errorIcon;
+  final bool useThumbnail;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Check if content uses MXC format
+    if (ContentResolver.isMxcContent(content)) {
+      final resolver = ref.watch(contentResolverProvider);
+      final future = useThumbnail
+          ? resolver.resolveVideoThumbnail(content)
+          : resolver.resolveImageUrl(content, width: 250, height: 200);
+
+      return FutureBuilder<dynamic>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _buildPlaceholder(placeholderIcon);
+          }
+          if (snapshot.hasData && snapshot.data != null) {
+            return Image.memory(
+              snapshot.data!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _buildPlaceholder(errorIcon),
+            );
+          }
+          return _buildPlaceholder(errorIcon);
+        },
+      );
+    }
+
+    // Legacy HTTPS URL
+    if (url != null) {
+      return Image.network(
+        url!,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return _buildPlaceholder(placeholderIcon);
+        },
+        errorBuilder: (_, _, _) => _buildPlaceholder(errorIcon),
+      );
+    }
+
+    // Local file fallback
+    if (localPath != null) {
+      return Image.file(
+        File(localPath!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _buildPlaceholder(placeholderIcon),
+      );
+    }
+
+    return _buildPlaceholder(placeholderIcon);
+  }
+
+  Widget _buildPlaceholder(IconData icon) => Container(
+    width: 150,
+    height: 100,
+    color: Colors.grey.shade300,
+    child: Icon(icon, size: 40, color: Colors.grey.shade600),
+  );
 }

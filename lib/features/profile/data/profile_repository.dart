@@ -7,10 +7,10 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/database.dart';
+import '../../../core/files/mxc_upload_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
 import '../../auth/data/user_info_provider.dart';
-import '../../messages/data/file_upload_service.dart';
 import '../domain/user_status.dart';
 
 /// Contact type enum for phone/email management
@@ -220,7 +220,7 @@ class ProfileRepository {
   Future<ProfileUpdateResult> updateProfilePhoto(File imageFile) async {
     try {
       final profileClient = await _ref.read(profileClientProvider.future);
-      final uploadService = _ref.read(fileUploadServiceProvider);
+      final uploadService = _ref.read(mxcUploadServiceProvider);
       final userInfo = await _ref.read(userInfoProvider.future);
 
       if (userInfo?.id == null) {
@@ -228,14 +228,11 @@ class ProfileRepository {
       }
 
       // Upload the image first
-      final uploadResult = await uploadService.uploadImage(imageFile);
-      if (!uploadResult.isSuccess) {
-        return ProfileUpdateResult.failure(
-          uploadResult.errorMessage ?? 'Failed to upload image',
-        );
-      }
-
-      final avatarUrl = uploadResult.fileUrl!;
+      final uploadResult = await uploadService.uploadFile(
+        imageFile,
+        mimeType: 'image/jpeg',
+      );
+      final avatarUrl = uploadResult.contentUri;
 
       // Update profile with new avatar URL
       final properties = common.Struct()

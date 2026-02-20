@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/files/mxc_upload_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../messages/data/file_upload_service.dart';
 
 /// A widget for picking and uploading group avatars
 ///
@@ -121,8 +121,8 @@ class _GroupAvatarPickerState extends ConsumerState<GroupAvatarPicker> {
       });
 
       // Upload the image
-      final fileUploadService = ref.read(fileUploadServiceProvider);
-      final result = await fileUploadService.uploadFile(
+      final uploadService = ref.read(mxcUploadServiceProvider);
+      final result = await uploadService.uploadFile(
         File(pickedFile.path),
         mimeType: 'image/jpeg',
         onProgress: (progress) {
@@ -132,30 +132,11 @@ class _GroupAvatarPickerState extends ConsumerState<GroupAvatarPicker> {
         },
       );
 
-      if (result.isSuccess) {
-        widget.onAvatarChanged(result.fileUrl);
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Group photo updated')));
-        }
-      } else {
-        AppLogger.error(
-          'Avatar upload failed',
-          data: {'error': result.errorMessage},
-        );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to upload photo: ${result.errorMessage}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          // Revert to previous state
-          setState(() {
-            _localImagePath = null;
-          });
-        }
+      widget.onAvatarChanged(result.contentUri);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Group photo updated')));
       }
     } catch (e, stackTrace) {
       AppLogger.error('Image picker error', error: e, stackTrace: stackTrace);

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:antinvestor_api_files/antinvestor_api_files.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html_unescape/html_unescape.dart';
@@ -14,11 +15,14 @@ import '../domain/link_preview.dart';
 /// Service for fetching OpenGraph link previews
 ///
 /// Fetches metadata from URLs to display rich previews in messages.
+/// Uses the proto [FilesServiceClient.getUrlPreview] API as the primary
+/// source, with fallback to direct HTTP OG tag parsing.
 /// Supports caching, timeout handling, and graceful degradation.
 class LinkPreviewService {
-  LinkPreviewService(this._getAccessToken);
+  LinkPreviewService(this._getAccessToken, this._getFilesClient);
 
   final Future<String?> Function() _getAccessToken;
+  final Future<FilesServiceClient> Function() _getFilesClient;
 
   /// In-memory cache for link previews (FIFO eviction with TTL)
   final Map<String, _CachedPreview> _cache = {};
@@ -100,28 +104,82 @@ class LinkPreviewService {
   }
 
   Future<LinkPreview?> _fetchFromServer(String url) async {
-    final token = await _getAccessToken();
+    // Try proto API first
+    try {
+      final client = await _getFilesClient();
+      final response = await client.getUrlPreview(
+        GetUrlPreviewRequest(url: url),
+      );
 
-    // Use files service for URL preview endpoint
-    final uri = Uri.parse(
-      '${ApiConfig.filesBaseUrl}/v1/preview',
-    ).replace(queryParameters: {'url': url});
-
-    final response = await http.get(
-      uri,
-      headers: {
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      return LinkPreview.fromJson(json);
+      final preview = _parseProtoResponse(url, response);
+      if (preview != null) return preview;
+    } catch (e) {
+      AppLogger.debug(
+        'Proto URL preview failed, trying fallback',
+        data: {'url': url, 'error': '$e'},
+      );
     }
 
-    // Fallback: Try to fetch directly and parse OpenGraph tags
+    // Fallback: legacy HTTP endpoint
+    try {
+      final token = await _getAccessToken();
+      final uri = Uri.parse(
+        '${ApiConfig.filesBaseUrl}/v1/preview',
+      ).replace(queryParameters: {'url': url});
+
+      final response = await http.get(
+        uri,
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return LinkPreview.fromJson(json);
+      }
+    } catch (e) {
+      AppLogger.debug('Legacy URL preview failed', data: {'url': url});
+    }
+
+    // Final fallback: direct OG tag parsing
     return _fetchDirectly(url);
+  }
+
+  /// Parse proto [GetUrlPreviewResponse] into a [LinkPreview].
+  LinkPreview? _parseProtoResponse(String url, GetUrlPreviewResponse response) {
+    final ogData = response.hasOgData() ? response.ogData : null;
+    if (ogData == null) return null;
+
+    // Extract OG fields from the protobuf Struct
+    final fields = ogData.fields;
+
+    String? getString(String key) {
+      final value = fields[key];
+      if (value == null) return null;
+      if (value.hasStringValue()) return value.stringValue;
+      return null;
+    }
+
+    final title = getString('og:title') ?? getString('title');
+    if (title == null || title.isEmpty) return null;
+
+    final imageUrl = response.hasOgImage() && response.ogImage.isNotEmpty
+        ? response.ogImage
+        : getString('og:image');
+
+    final baseUri = Uri.parse(url);
+
+    return LinkPreview(
+      url: url,
+      title: title,
+      description: getString('og:description') ?? getString('description'),
+      imageUrl: imageUrl,
+      siteName: getString('og:site_name') ?? baseUri.host,
+      favicon: getString('favicon'),
+    );
   }
 
   /// Fallback method to fetch OpenGraph tags directly from the URL
@@ -269,7 +327,10 @@ class _CachedPreview {
 // Provider
 final linkPreviewServiceProvider = Provider<LinkPreviewService>((ref) {
   final tokenManager = ref.watch(tokenManagerProvider);
-  return LinkPreviewService(() async => tokenManager.accessToken);
+  return LinkPreviewService(
+    () async => tokenManager.accessToken,
+    () => ref.read(filesServiceClientProvider.future),
+  );
 });
 
 /// Provider to fetch link preview for a specific URL

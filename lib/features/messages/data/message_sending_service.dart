@@ -9,6 +9,8 @@ import '../../../core/auth/auth_context.dart';
 import '../../../core/crypto/e2e_encryption_service.dart';
 import '../../../core/crypto/key_exchange_service.dart';
 import '../../../core/db/database.dart';
+import '../../../core/files/files_config_service.dart';
+import '../../../core/files/mxc_upload_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/media/media_compression_service.dart';
 import '../../../core/media/thumbnail_service.dart';
@@ -16,7 +18,6 @@ import '../../../core/sync/pending_job.dart';
 import '../../../core/sync/pending_job_repository.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../domain/room_event.dart' as domain;
-import 'file_upload_service.dart';
 import 'message_providers.dart';
 import 'message_repository.dart';
 
@@ -31,19 +32,21 @@ class MessageSendingService {
   MessageSendingService(
     this._messageRepo,
     this._jobRepo,
-    this._fileUploadService,
     this._encryptionService,
     this._compressionService,
     this._thumbnailService,
     this._getSubscriptionIdForRoom,
+    this._mxcUploadService,
+    this._filesConfigService,
   );
 
   final MessageRepository _messageRepo;
   final PendingJobRepository _jobRepo;
-  final FileUploadService _fileUploadService;
   final E2EEncryptionService _encryptionService;
   final MediaCompressionService _compressionService;
   final ThumbnailService _thumbnailService;
+  final MxcUploadService _mxcUploadService;
+  final FilesConfigService _filesConfigService;
 
   /// Callback to get current user's subscription ID for a room
   /// Returns the subscription ID or throws if not found
@@ -296,6 +299,10 @@ class MessageSendingService {
   );
 
   /// Internal method for sending media messages
+  ///
+  /// Uses [MxcUploadService] for streaming uploads via proto API.
+  /// The content map includes both new MXC fields and legacy `url` field
+  /// for backward compatibility.
   Future<domain.RoomEvent> _sendMediaMessage({
     required String roomId,
     required File file,
@@ -346,49 +353,62 @@ class MessageSendingService {
     // Save locally first (shows as pending with local file and thumbnail)
     await _messageRepo.insertMessage(event);
 
-    // Upload thumbnail first (if generated)
-    String? uploadedThumbnailUrl;
-    if (thumbnailResult != null) {
-      AppLogger.debug(
-        'Uploading thumbnail',
-        data: {'size': thumbnailResult.size},
-      );
-      final thumbUploadResult = await _fileUploadService.uploadFile(
-        thumbnailResult.file,
-      );
-      if (thumbUploadResult.isSuccess) {
-        uploadedThumbnailUrl = thumbUploadResult.fileUrl;
-        AppLogger.debug(
-          'Thumbnail uploaded',
-          data: {'url': uploadedThumbnailUrl},
+    try {
+      // Validate file size before starting upload
+      final maxSize = await _filesConfigService.getMaxUploadSize();
+      if (fileSize > maxSize) {
+        throw StateError(
+          'File size ($fileSize bytes) exceeds maximum ($maxSize bytes)',
         );
       }
-    }
 
-    // Upload main file
-    AppLogger.info(
-      'Uploading media file',
-      data: {'fileName': fileName, 'size': fileSize},
-    );
+      // Upload thumbnail first via MXC (if generated)
+      String? thumbnailContentUri;
+      if (thumbnailResult != null) {
+        AppLogger.debug(
+          'Uploading thumbnail via MXC',
+          data: {'size': thumbnailResult.size},
+        );
+        try {
+          final thumbBytes = await thumbnailResult.file.readAsBytes();
+          final thumbResult = await _mxcUploadService.uploadThumbnail(
+            thumbBytes,
+            'image/jpeg',
+          );
+          thumbnailContentUri = thumbResult.contentUri;
+        } catch (e) {
+          AppLogger.warning(
+            'Thumbnail upload failed, continuing without',
+            data: {'error': e.toString()},
+          );
+        }
+      }
 
-    final uploadResult = await _fileUploadService.uploadFile(
-      file,
-      onProgress: onProgress,
-    );
+      // Upload main file via MXC streaming
+      AppLogger.info(
+        'Uploading media file via MXC',
+        data: {'fileName': fileName, 'size': fileSize},
+      );
 
-    if (uploadResult.isSuccess) {
-      // Prefer client-uploaded thumbnail, fall back to server-generated
-      final finalThumbnailUrl =
-          uploadedThumbnailUrl ?? uploadResult.thumbnailUrl;
+      final uploadResult = await _mxcUploadService.uploadFile(
+        file,
+        onProgress: onProgress,
+      );
 
-      // Update content with server URL
+      // Build content with both MXC and legacy fields
       content = {
-        'url': uploadResult.fileUrl,
-        'fileId': uploadResult.fileId,
+        // New MXC fields
+        'contentUri': uploadResult.contentUri,
+        'mediaId': uploadResult.mediaId,
+        'serverName': uploadResult.serverName,
+        // Legacy field for backward compatibility
+        'url': uploadResult.contentUri,
         'fileName': fileName,
         'fileSize': fileSize,
-        'mimeType': uploadResult.mimeType,
-        if (finalThumbnailUrl != null) 'thumbnailUrl': finalThumbnailUrl,
+        'mimeType': _detectMimeType(fileName),
+        if (thumbnailContentUri != null)
+          'thumbnailContentUri': thumbnailContentUri,
+        if (thumbnailContentUri != null) 'thumbnailUrl': thumbnailContentUri,
         if (caption != null) 'caption': caption,
         ...?extraContent,
       };
@@ -429,23 +449,87 @@ class MessageSendingService {
 
       AppLogger.info(
         'Media message queued',
-        data: {'localId': localId, 'fileUrl': uploadResult.fileUrl},
+        data: {'localId': localId, 'contentUri': uploadResult.contentUri},
       );
       return updatedEvent;
-    } else {
+    } catch (e, stackTrace) {
       // Mark as failed
+      AppLogger.error('Media upload failed', error: e, stackTrace: stackTrace);
+
       final failedEvent = event.copyWith(
         status: domain.EventStatus.failed,
-        content: {...content, 'error': uploadResult.errorMessage},
+        content: {...content, 'error': e.toString()},
       );
       await _messageRepo.insertMessage(failedEvent);
-
-      AppLogger.error(
-        'Media upload failed',
-        data: {'error': uploadResult.errorMessage},
-      );
       return failedEvent;
     }
+  }
+
+  /// Detect MIME type from file extension.
+  String _detectMimeType(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    return switch (ext) {
+      // Images
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'gif' => 'image/gif',
+      'webp' => 'image/webp',
+      'heic' || 'heif' => 'image/heic',
+      'svg' => 'image/svg+xml',
+      'bmp' => 'image/bmp',
+      'ico' => 'image/x-icon',
+      'tiff' || 'tif' => 'image/tiff',
+      // Videos
+      'mp4' => 'video/mp4',
+      'mov' => 'video/quicktime',
+      'avi' => 'video/x-msvideo',
+      'webm' => 'video/webm',
+      'mkv' => 'video/x-matroska',
+      'flv' => 'video/x-flv',
+      '3gp' => 'video/3gpp',
+      // Audio
+      'mp3' => 'audio/mpeg',
+      'wav' => 'audio/wav',
+      'ogg' => 'audio/ogg',
+      'm4a' => 'audio/mp4',
+      'aac' => 'audio/aac',
+      'flac' => 'audio/flac',
+      'wma' => 'audio/x-ms-wma',
+      // Documents
+      'pdf' => 'application/pdf',
+      'doc' => 'application/msword',
+      'docx' =>
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls' => 'application/vnd.ms-excel',
+      'xlsx' =>
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt' => 'application/vnd.ms-powerpoint',
+      'pptx' =>
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'txt' => 'text/plain',
+      'csv' => 'text/csv',
+      'rtf' => 'application/rtf',
+      'html' || 'htm' => 'text/html',
+      'xml' => 'application/xml',
+      'json' => 'application/json',
+      'yaml' || 'yml' => 'application/x-yaml',
+      'md' || 'markdown' => 'text/markdown',
+      // Archives
+      'zip' => 'application/zip',
+      'tar' => 'application/x-tar',
+      'gz' || 'gzip' => 'application/gzip',
+      'bz2' => 'application/x-bzip2',
+      'xz' => 'application/x-xz',
+      '7z' => 'application/x-7z-compressed',
+      'rar' => 'application/vnd.rar',
+      'tar.gz' || 'tgz' => 'application/gzip',
+      // Misc
+      'apk' => 'application/vnd.android.package-archive',
+      'dmg' => 'application/x-apple-diskimage',
+      'exe' => 'application/x-msdownload',
+      'deb' => 'application/x-debian-package',
+      _ => 'application/octet-stream',
+    };
   }
 
   /// Send a reaction to a message
@@ -830,16 +914,16 @@ class MessageSendingService {
 final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
   final messageRepo = ref.watch(messageRepositoryProvider);
   final jobRepo = ref.watch(pendingJobRepositoryProvider);
-  final fileUploadService = ref.watch(fileUploadServiceProvider);
   final encryptionService = ref.watch(e2eEncryptionServiceProvider);
   final compressionService = ref.watch(mediaCompressionServiceProvider);
   final thumbnailService = ref.watch(thumbnailServiceProvider);
   final authContextService = ref.watch(authContextServiceProvider);
+  final mxcUploadService = ref.watch(mxcUploadServiceProvider);
+  final filesConfigService = ref.watch(filesConfigServiceProvider);
 
   return MessageSendingService(
     messageRepo,
     jobRepo,
-    fileUploadService,
     encryptionService,
     compressionService,
     thumbnailService,
@@ -847,5 +931,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
       // Use AuthContextService for atomic auth state and automatic sync
       return authContextService.requireSubscriptionIdForRoom(roomId);
     },
+    mxcUploadService,
+    filesConfigService,
   );
 });
