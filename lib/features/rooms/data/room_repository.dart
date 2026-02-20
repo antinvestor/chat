@@ -32,7 +32,9 @@ class RoomRepository {
     return results.map(_toRoom).toList();
   }
 
-  Future<List<RoomWithLastMessage>> getRoomsWithLastMessage() async {
+  Future<List<RoomWithLastMessage>> getRoomsWithLastMessage({
+    String? currentProfileId,
+  }) async {
     final query = _database.customSelect(
       '''
       SELECT
@@ -43,12 +45,24 @@ class RoomRepository {
         r.muted_until,
         e.content as last_message_content,
         e.created_at as last_message_timestamp,
-        e.sender_id as last_message_sender_id
+        e.sender_id as last_message_sender_id,
+        CASE
+          WHEN rs.profile_id = ? THEN 'You'
+          ELSE COALESCE(ro.display_name, ro.contact_detail)
+        END as last_message_sender_name
       FROM rooms r
       LEFT JOIN room_events e ON r.last_event_id = e.id
+      LEFT JOIN room_subscriptions rs ON e.sender_id = rs.id
+      LEFT JOIN roster ro ON rs.profile_id = ro.profile_id
       ORDER BY COALESCE(e.created_at, 0) DESC
     ''',
-      readsFrom: {_database.rooms, _database.roomEvents},
+      variables: [Variable<String>(currentProfileId ?? '')],
+      readsFrom: {
+        _database.rooms,
+        _database.roomEvents,
+        _database.roomSubscriptions,
+        _database.roster,
+      },
     );
 
     final results = await query.get();
@@ -69,6 +83,7 @@ class RoomRepository {
         lastMessageText: lastMessageText,
         lastMessageTimestamp: row.read<int?>('last_message_timestamp'),
         lastMessageSenderId: row.read<String?>('last_message_sender_id'),
+        lastMessageSenderName: row.read<String?>('last_message_sender_name'),
         mutedUntil: row.read<int?>('muted_until'),
       );
     }).toList();

@@ -1246,20 +1246,38 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// Parameters:
   /// - [query]: The search query (supports FTS5 syntax)
-  /// - [limit]: Maximum number of results (default 50)
+  /// - `limit`: Maximum number of results (default 50)
   ///
   /// Example:
   /// ```dart
   /// final results = await db.searchMessages('hello world', limit: 20);
   /// ```
+  /// Sanitize a search query for safe FTS5 usage.
+  ///
+  /// Each word is individually quoted to prevent FTS5 syntax injection
+  /// while allowing multi-word queries to match documents containing
+  /// all words (implicit AND). For example, 'quick fox' becomes
+  /// '"quick" "fox"' which matches documents containing both words.
+  static String _sanitizeFtsQuery(String query) {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return '';
+
+    // Split into words and quote each one individually.
+    // This prevents FTS5 syntax injection (", *, ^, NOT, OR, AND, parens)
+    // while supporting multi-word search (each quoted word is AND-ed).
+    return trimmed
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .map((word) => '"${word.replaceAll('"', '""')}"')
+        .join(' ');
+  }
+
   Future<List<RoomEvent>> searchMessages(String query, {int limit = 50}) async {
     if (query.trim().isEmpty) {
       return [];
     }
 
-    // Sanitize the query: wrap in FTS5 phrase quoting to prevent syntax errors
-    // from special characters (", *, ^, NOT, OR, AND, parentheses)
-    final safeQuery = '"${query.trim().replaceAll('"', '""')}"';
+    final safeQuery = _sanitizeFtsQuery(query);
 
     try {
       final results = await customSelect(
@@ -1299,8 +1317,7 @@ class AppDatabase extends _$AppDatabase {
       return [];
     }
 
-    // Sanitize the query: wrap in FTS5 phrase quoting to prevent syntax errors
-    final safeQuery = '"${query.trim().replaceAll('"', '""')}"';
+    final safeQuery = _sanitizeFtsQuery(query);
 
     try {
       final results = await customSelect(

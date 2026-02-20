@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../data/room_providers.dart';
 import '../data/room_search_providers.dart';
 
 /// Search bar widget for filtering rooms
@@ -60,19 +61,31 @@ class _RoomSearchBarState extends ConsumerState<RoomSearchBar> {
     final theme = Theme.of(context);
     final searchState = ref.watch(roomSearchProvider);
 
+    // Compute total unread count for the "Unread" chip label
+    final roomsAsync = ref.watch(roomListWithMessagesProvider);
+    final totalUnread =
+        roomsAsync.whenOrNull(
+          data: (rooms) =>
+              rooms.fold<int>(0, (sum, room) => sum + room.unreadCount),
+        ) ??
+        0;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Search field
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: TextField(
             controller: _searchController,
             focusNode: _focusNode,
             onChanged: _onSearchChanged,
             decoration: InputDecoration(
-              hintText: 'Search chats...',
-              prefixIcon: const Icon(Icons.search),
+              hintText: 'Search or start new chat...',
+              prefixIcon: Icon(
+                Icons.search,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               suffixIcon: searchState.hasActiveSearch
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -83,12 +96,20 @@ class _RoomSearchBarState extends ConsumerState<RoomSearchBar> {
               filled: true,
               fillColor: theme.colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 12,
+                vertical: 8,
               ),
             ),
           ),
@@ -102,28 +123,24 @@ class _RoomSearchBarState extends ConsumerState<RoomSearchBar> {
             children: [
               _FilterChip(
                 label: 'All',
-                icon: Icons.forum_outlined,
                 isSelected: searchState.filterType == RoomFilterType.all,
                 onSelected: () => _onFilterSelected(RoomFilterType.all),
               ),
               const SizedBox(width: 8),
               _FilterChip(
                 label: 'Groups',
-                icon: Icons.group_outlined,
                 isSelected: searchState.filterType == RoomFilterType.groups,
                 onSelected: () => _onFilterSelected(RoomFilterType.groups),
               ),
               const SizedBox(width: 8),
               _FilterChip(
                 label: 'Direct',
-                icon: Icons.person_outline,
                 isSelected: searchState.filterType == RoomFilterType.direct,
                 onSelected: () => _onFilterSelected(RoomFilterType.direct),
               ),
               const SizedBox(width: 8),
               _FilterChip(
-                label: 'Unread',
-                icon: Icons.mark_chat_unread_outlined,
+                label: totalUnread > 0 ? 'Unread $totalUnread' : 'Unread',
                 isSelected: searchState.filterType == RoomFilterType.unread,
                 onSelected: () => _onFilterSelected(RoomFilterType.unread),
               ),
@@ -135,17 +152,15 @@ class _RoomSearchBarState extends ConsumerState<RoomSearchBar> {
   }
 }
 
-/// Individual filter chip widget
+/// Individual filter chip widget — text-only, pill-shaped
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
-    required this.icon,
     required this.isSelected,
     required this.onSelected,
   });
 
   final String label;
-  final IconData icon;
   final bool isSelected;
   final VoidCallback onSelected;
 
@@ -154,41 +169,27 @@ class _FilterChip extends StatelessWidget {
     final theme = Theme.of(context);
 
     return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: isSelected
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 4),
-          Text(label),
-        ],
-      ),
+      label: Text(label),
       selected: isSelected,
       onSelected: (_) => onSelected(),
-      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+      backgroundColor: Colors.transparent,
       selectedColor: AppTheme.primaryGreen,
       labelStyle: TextStyle(
-        color: isSelected
-            ? theme.colorScheme.onPrimary
-            : theme.colorScheme.onSurfaceVariant,
+        color: isSelected ? Colors.white : theme.colorScheme.onSurfaceVariant,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        fontSize: 13,
       ),
-      checkmarkColor: theme.colorScheme.onPrimary,
+      checkmarkColor: Colors.white,
       showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      shape: StadiumBorder(
         side: BorderSide(
           color: isSelected
               ? AppTheme.primaryGreen
               : theme.colorScheme.outlineVariant,
         ),
       ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

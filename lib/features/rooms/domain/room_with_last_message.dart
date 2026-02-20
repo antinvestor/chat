@@ -12,6 +12,7 @@ abstract class RoomWithLastMessage with _$RoomWithLastMessage {
     String? lastMessageText,
     int? lastMessageTimestamp,
     String? lastMessageSenderId,
+    String? lastMessageSenderName,
     bool? isTyping,
 
     /// Draft message text if the user has an unsent message

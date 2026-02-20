@@ -35,7 +35,6 @@ class RoomListScreen extends ConsumerStatefulWidget {
 class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   String? _selectedRoomId;
   String? _selectedRoomName;
-  bool _isSearchExpanded = false;
   bool _isMultiSelectMode = false;
   final Set<String> _selectedRoomIds = <String>{};
 
@@ -331,16 +330,6 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     }
   }
 
-  void _toggleSearchExpanded() {
-    setState(() {
-      _isSearchExpanded = !_isSearchExpanded;
-      if (!_isSearchExpanded) {
-        // Clear search when collapsing
-        ref.read(roomSearchProvider.notifier).clearAll();
-      }
-    });
-  }
-
   void _clearSearch() {
     ref.read(roomSearchProvider.notifier).clearAll();
   }
@@ -387,32 +376,28 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
   ) => Scaffold(
     body: CustomScrollView(
       slivers: [
-        // Floating app bar that hides on scroll
+        // Seamless app bar — matches scaffold background
         SliverAppBar(
-          floating: true,
-          snap: true,
           pinned: true,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          scrolledUnderElevation: 0,
+          elevation: 0,
+          centerTitle: false,
           title: Text(
             'Chats',
-            style: AppTheme.headerText.copyWith(
-              color: Theme.of(context).appBarTheme.foregroundColor,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           actions: [
-            // Search toggle button
-            IconButton(
-              icon: Icon(
-                _isSearchExpanded ? Icons.close : Icons.search,
-                color: Theme.of(context).appBarTheme.foregroundColor,
-              ),
-              onPressed: _toggleSearchExpanded,
-              tooltip: _isSearchExpanded ? 'Close search' : 'Search',
-            ),
             // More options menu
             PopupMenuButton<String>(
               icon: Icon(
                 Icons.more_vert,
-                color: Theme.of(context).appBarTheme.foregroundColor,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               onSelected: _handleMenuAction,
               itemBuilder: (context) => [
@@ -433,8 +418,8 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
           ],
         ),
 
-        // Search bar (expanded)
-        if (_isSearchExpanded) const SliverToBoxAdapter(child: RoomSearchBar()),
+        // Always-visible search bar and filter chips
+        const SliverToBoxAdapter(child: RoomSearchBar()),
 
         // Call banner
         const SliverToBoxAdapter(child: IncomingCallBanner()),
@@ -650,14 +635,19 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     RoomSearchState searchState,
   ) => Scaffold(
     appBar: AppBar(
-      title: const Text('Chats'),
-      actions: [
-        IconButton(
-          icon: Icon(_isSearchExpanded ? Icons.close : Icons.search),
-          onPressed: _toggleSearchExpanded,
-          tooltip: _isSearchExpanded ? 'Close search' : 'Search',
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
+      scrolledUnderElevation: 0,
+      elevation: 0,
+      centerTitle: false,
+      title: Text(
+        'Chats',
+        style: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
-      ],
+      ),
     ),
     drawer: const AppDrawer(),
     floatingActionButton: FloatingActionButton(
@@ -667,8 +657,8 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     ),
     body: Column(
       children: [
-        // Search bar (expanded)
-        if (_isSearchExpanded) const RoomSearchBar(),
+        // Always-visible search bar and filter chips
+        const RoomSearchBar(),
         // Room list
         Expanded(
           child: _buildRoomList(

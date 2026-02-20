@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/auth/auth_context.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../messages/data/draft_repository.dart';
 import '../domain/room.dart' as domain;
@@ -210,8 +211,14 @@ class RoomListWithMessages extends _$RoomListWithMessages {
     final repo = ref.watch(roomRepositoryProvider);
     final draftRepo = ref.watch(draftRepositoryProvider);
 
+    // Get current profile ID for sender name resolution
+    final authContext = await ref.watch(currentAuthContextProvider.future);
+    final currentProfileId = authContext?.profileId;
+
     // Get rooms and drafts
-    final rooms = await repo.getRoomsWithLastMessage();
+    final rooms = await repo.getRoomsWithLastMessage(
+      currentProfileId: currentProfileId,
+    );
     final draftsMap = await draftRepo.getDraftsMap();
 
     // Merge draft info into rooms
@@ -227,7 +234,13 @@ class RoomListWithMessages extends _$RoomListWithMessages {
       final repo = ref.read(roomRepositoryProvider);
       final draftRepo = ref.read(draftRepositoryProvider);
 
-      final rooms = await repo.getRoomsWithLastMessage();
+      // Get current profile ID for sender name resolution
+      final authContext = await ref.read(currentAuthContextProvider.future);
+      final currentProfileId = authContext?.profileId;
+
+      final rooms = await repo.getRoomsWithLastMessage(
+        currentProfileId: currentProfileId,
+      );
       final draftsMap = await draftRepo.getDraftsMap();
 
       return rooms.map((room) {

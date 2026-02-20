@@ -2,12 +2,26 @@ import 'package:flutter/material.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../widgets/draft_indicator.dart';
+import '../../../widgets/last_message_preview.dart';
+import '../../../widgets/relative_timestamp.dart';
+import '../../../widgets/room_avatar.dart';
+import '../../../widgets/typing_indicator.dart';
+import '../../../widgets/unread_count_badge.dart';
 import '../domain/room_with_last_message.dart';
 
+/// Room list tile for tablet/desktop layouts.
+///
+/// Similar to `ChatListItem` but with additional features like
+/// draft indicators, muted icon, and room details navigation on avatar tap.
 class RoomListTile extends StatelessWidget {
   const RoomListTile({required this.room, required this.onTap, super.key});
+
   final RoomWithLastMessage room;
   final VoidCallback onTap;
+
+  bool get _isGroup => room.type == 'group';
+  bool get _hasUnread => room.unreadCount > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +29,7 @@ class RoomListTile extends StatelessWidget {
 
     return Semantics(
       label: 'Chat with ${room.name}',
-      value: room.unreadCount > 0
-          ? '${room.unreadCount} unread messages'
-          : null,
+      value: _hasUnread ? '${room.unreadCount} unread messages' : null,
       button: true,
       child: Material(
         color: Colors.transparent,
@@ -29,31 +41,13 @@ class RoomListTile extends StatelessWidget {
             padding: const EdgeInsets.all(AppTheme.standardMargin),
             child: Row(
               children: [
-                // Avatar
-                GestureDetector(
-                  onTap: () {
-                    // Navigate to room details when avatar is tapped with smooth animation
-                    context.navigateToRoomDetails(
-                      roomId: room.id,
-                      roomName: room.name,
-                    );
-                  },
-                  child: Container(
-                    width: AppTheme.minTouchTarget,
-                    height: AppTheme.minTouchTarget,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primaryGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        room.name[0].toUpperCase(),
-                        style: AppTheme.headerText.copyWith(
-                          fontSize: 20,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                // Avatar — tapping navigates to room details
+                RoomAvatar(
+                  name: room.name,
+                  size: AppTheme.minTouchTarget,
+                  onTap: () => context.navigateToRoomDetails(
+                    roomId: room.id,
+                    roomName: room.name,
                   ),
                 ),
 
@@ -74,7 +68,7 @@ class RoomListTile extends StatelessWidget {
                                   child: Text(
                                     room.name,
                                     style: AppTheme.bodyText.copyWith(
-                                      fontWeight: room.unreadCount > 0
+                                      fontWeight: _hasUnread
                                           ? FontWeight.w600
                                           : FontWeight.w500,
                                       color: theme.colorScheme.onSurface,
@@ -95,100 +89,34 @@ class RoomListTile extends StatelessWidget {
                               ],
                             ),
                           ),
-                          if (room.lastMessageTimestamp != null)
+                          if (room.lastMessageTimestamp != null) ...[
                             const SizedBox(width: AppTheme.elementGap),
-                          if (room.lastMessageTimestamp != null)
-                            Text(
-                              _formatTimestamp(room.lastMessageTimestamp!),
-                              style: AppTheme.metadataText.copyWith(
-                                color: room.unreadCount > 0
-                                    ? AppTheme.primaryGreen
-                                    : theme.colorScheme.onSurfaceVariant,
-                              ),
+                            RelativeTimestamp(
+                              timestamp: room.lastMessageTimestamp!,
+                              hasUnread: _hasUnread,
                             ),
+                          ],
                         ],
                       ),
 
-                      // Draft indicator or last message
-                      if (room.hasDraft)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: AppTheme.elementGap,
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                'Draft: ',
-                                style: AppTheme.bodyText.copyWith(
-                                  fontSize: 14,
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  room.draftText!,
-                                  style: AppTheme.bodyText.copyWith(
-                                    fontSize: 14,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else if (room.lastMessageText != null)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: AppTheme.elementGap,
-                          ),
-                          child: Text(
-                            room.lastMessageText!,
-                            style: AppTheme.bodyText.copyWith(
-                              fontSize: 14,
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: room.unreadCount > 0
-                                  ? FontWeight.w500
-                                  : FontWeight.normal,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                      // Typing indicator, draft, or last message
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: AppTheme.elementGap,
                         ),
+                        child: _buildSubtitle(),
+                      ),
                     ],
                   ),
                 ),
 
                 // Unread count badge
-                if (room.unreadCount > 0)
+                if (_hasUnread)
                   Padding(
                     padding: const EdgeInsets.only(left: AppTheme.elementGap),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.elementGap,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: AppTheme.minTouchTarget / 2,
-                        minHeight: AppTheme.minTouchTarget / 2,
-                      ),
-                      child: Text(
-                        room.unreadCount > 99
-                            ? '99+'
-                            : room.unreadCount.toString(),
-                        style: AppTheme.metadataText.copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    child: UnreadCountBadge(
+                      count: room.unreadCount,
+                      shape: UnreadBadgeShape.rounded,
                     ),
                   ),
               ],
@@ -199,38 +127,29 @@ class RoomListTile extends StatelessWidget {
     );
   }
 
-  String _formatTimestamp(int timestamp) {
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    // Today - show time
-    if (date.day == now.day &&
-        date.month == now.month &&
-        date.year == now.year) {
-      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  /// Build the subtitle line: typing > draft > last message.
+  Widget _buildSubtitle() {
+    if (room.isTyping ?? false) {
+      return TypingIndicator(
+        senderName: room.lastMessageSenderName,
+        isGroup: _isGroup,
+      );
     }
 
-    // Yesterday
-    final yesterday = now.subtract(const Duration(days: 1));
-    if (date.day == yesterday.day &&
-        date.month == yesterday.month &&
-        date.year == yesterday.year) {
-      return 'Yesterday';
+    if (room.hasDraft) {
+      return DraftIndicator(draftText: room.draftText!);
     }
 
-    // This week - show day name
-    if (difference.inDays < 7) {
-      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      return days[date.weekday - 1];
+    if (room.lastMessageText != null) {
+      return LastMessagePreview(
+        messageText: room.lastMessageText ?? '',
+        senderName: room.lastMessageSenderName,
+        isGroup: _isGroup,
+        hasUnread: _hasUnread,
+        maxLines: 2,
+      );
     }
 
-    // This year - show date without year
-    if (date.year == now.year) {
-      return '${date.day}/${date.month}';
-    }
-
-    // Older - show full date
-    return '${date.day}/${date.month}/${date.year}';
+    return const SizedBox.shrink();
   }
 }
