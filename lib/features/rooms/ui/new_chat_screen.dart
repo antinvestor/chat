@@ -6,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../contacts/data/roster_repository.dart';
 import '../../contacts/services/contact_service.dart';
 import '../../contacts/ui/contact_permission_view.dart';
+import '../../contacts/ui/widgets/contact_avatar.dart';
 import '../data/room_service.dart';
+import 'group_details_screen.dart';
 
 class NewChatScreen extends ConsumerStatefulWidget {
   const NewChatScreen({super.key});
@@ -21,12 +24,14 @@ class NewChatScreen extends ConsumerStatefulWidget {
 class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   final _searchController = TextEditingController();
   final _selectedContacts = <RosterEntry>{};
+  final _scrollController = ScrollController();
   String _searchQuery = '';
   bool _isCreatingRoom = false;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -37,24 +42,22 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Chat'),
+        title: const Text('New chat'),
         actions: [
-          // Create room button - only show when permission granted and contacts selected
-          if (_selectedContacts.isNotEmpty)
+          // Show "Chat" button only when exactly 1 contact selected
+          if (_selectedContacts.length == 1)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilledButton.icon(
-                onPressed: _isCreatingRoom ? null : _createRoom,
+                onPressed: _isCreatingRoom ? null : _createDirectChat,
                 icon: _isCreatingRoom
                     ? const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.check, size: 18),
-                label: Text(
-                  _selectedContacts.length == 1 ? 'Chat' : 'Create Group',
-                ),
+                    : const Icon(Icons.chat, size: 18),
+                label: const Text('Chat'),
               ),
             ),
         ],
@@ -65,12 +68,10 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             return ContactPermissionView(
               onPermissionGranted: () async {
                 ref.invalidate(contactPermissionGrantedProvider);
-                // Phase 1: Read device contacts locally (~200ms)
                 final rosterRepo = await ref.read(
                   rosterRepositoryProvider.future,
                 );
                 await rosterRepo.syncContactsLocal();
-                // Phase 2: Server sync in background (stream auto-updates)
                 unawaited(rosterRepo.syncContactsToServer());
               },
             );
@@ -93,6 +94,16 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           ),
         ),
       ),
+      // "Create group" FAB — visible when 2+ contacts selected
+      floatingActionButton: _selectedContacts.length >= 2
+          ? FloatingActionButton.extended(
+              onPressed: _navigateToGroupDetails,
+              backgroundColor: AppTheme.brightGreen,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.group_add),
+              label: const Text('Create group'),
+            )
+          : null,
     );
   }
 
@@ -101,78 +112,10 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
     return Column(
       children: [
-        // Search bar
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search contacts...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
-            ),
-            onChanged: (value) {
-              setState(() => _searchQuery = value.toLowerCase());
-            },
-          ),
-        ),
+        // "To:" chip bar with search
+        _buildToChipBar(theme),
 
-        // Selected contacts chips
-        if (_selectedContacts.isNotEmpty) ...[
-          SizedBox(
-            height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _selectedContacts.length,
-              itemBuilder: (context, index) {
-                final contact = _selectedContacts.elementAt(index);
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Chip(
-                    avatar: CircleAvatar(
-                      backgroundColor: theme.colorScheme.primary,
-                      child: Text(
-                        _getInitials(
-                          contact.displayName ?? contact.contactDetail,
-                        ),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onPrimary,
-                        ),
-                      ),
-                    ),
-                    label: Text(contact.displayName ?? contact.contactDetail),
-                    deleteIcon: const Icon(Icons.close, size: 18),
-                    onDeleted: () {
-                      setState(() => _selectedContacts.remove(contact));
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Divider(height: 1),
-        ],
+        const Divider(height: 1),
 
         // Contact list
         Expanded(
@@ -206,91 +149,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                 );
               }
 
-              return ListView.builder(
-                itemCount: filteredContacts.length,
-                itemBuilder: (context, index) {
-                  final contact = filteredContacts[index];
-                  final isSelected = _selectedContacts.contains(contact);
-
-                  return ListTile(
-                    leading: Stack(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: isSelected
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.primaryContainer,
-                          child: isSelected
-                              ? Icon(
-                                  Icons.check,
-                                  color: theme.colorScheme.onPrimary,
-                                )
-                              : Text(
-                                  _getInitials(
-                                    contact.displayName ??
-                                        contact.contactDetail,
-                                  ),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.onPrimaryContainer,
-                                  ),
-                                ),
-                        ),
-                        if (contact.isVerified)
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.surface,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.verified,
-                                size: 14,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    title: Text(
-                      contact.displayName ?? contact.contactDetail,
-                      style: TextStyle(
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    subtitle: contact.displayName != null
-                        ? Text(
-                            contact.contactDetail,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.outline,
-                            ),
-                          )
-                        : null,
-                    trailing: isSelected
-                        ? Icon(
-                            Icons.check_circle,
-                            color: theme.colorScheme.primary,
-                          )
-                        : null,
-                    selected: isSelected,
-                    selectedTileColor: theme.colorScheme.primaryContainer
-                        .withValues(alpha: 0.3),
-                    onTap: () {
-                      setState(() {
-                        if (isSelected) {
-                          _selectedContacts.remove(contact);
-                        } else {
-                          _selectedContacts.add(contact);
-                        }
-                      });
-                    },
-                  );
-                },
-              );
+              return _buildContactList(filteredContacts, theme);
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => Center(
@@ -318,6 +177,225 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// "To:" chip bar with selected contact chips and inline search
+  Widget _buildToChipBar(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'To:',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              controller: _scrollController,
+              child: Row(
+                children: [
+                  // Selected contact chips
+                  ..._selectedContacts.map(
+                    (contact) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: _buildContactChip(contact, theme),
+                    ),
+                  ),
+                  // Inline search field
+                  SizedBox(
+                    width: 150,
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: 'Search...',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      style: theme.textTheme.bodyMedium,
+                      onChanged: (value) {
+                        setState(() => _searchQuery = value.toLowerCase());
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.clear, size: 18),
+              onPressed: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              constraints: const BoxConstraints(),
+              padding: EdgeInsets.zero,
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Individual contact chip with small avatar
+  Widget _buildContactChip(RosterEntry contact, ThemeData theme) {
+    final name = contact.displayName ?? contact.contactDetail;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedContacts.remove(contact)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ContactAvatar(displayName: name, radius: 10),
+            const SizedBox(width: 6),
+            Text(
+              name,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Contact list with section headers and trailing check indicators
+  Widget _buildContactList(List<RosterEntry> contacts, ThemeData theme) {
+    // Split into verified (on app) and unverified
+    final onApp = contacts.where((c) => c.isVerified).toList();
+    final other = contacts.where((c) => !c.isVerified).toList();
+
+    return ListView(
+      children: [
+        if (onApp.isNotEmpty) ...[
+          _buildSectionHeader('Contacts on App', theme),
+          ...onApp.map((c) => _buildContactTile(c, theme)),
+        ],
+        if (other.isNotEmpty) ...[
+          _buildSectionHeader('Other contacts', theme),
+          ...other.map((c) => _buildContactTile(c, theme)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        title,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: AppTheme.primaryGreen,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactTile(RosterEntry contact, ThemeData theme) {
+    final isSelected = _selectedContacts.contains(contact);
+    final name = contact.displayName ?? contact.contactDetail;
+
+    return ListTile(
+      leading: Stack(
+        children: [
+          ContactAvatar(displayName: name),
+          if (contact.isVerified)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.verified,
+                  size: 14,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+        ],
+      ),
+      title: Text(
+        name,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      subtitle: contact.displayName != null
+          ? Text(
+              contact.contactDetail,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            )
+          : null,
+      trailing: _buildSelectionIndicator(isSelected, theme),
+      onTap: () {
+        setState(() {
+          if (isSelected) {
+            _selectedContacts.remove(contact);
+          } else {
+            _selectedContacts.add(contact);
+          }
+        });
+        // Scroll chip bar to end after adding
+        if (!isSelected) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+      },
+    );
+  }
+
+  /// Green filled circle with checkmark when selected, grey outline when not
+  Widget _buildSelectionIndicator(bool isSelected, ThemeData theme) {
+    if (isSelected) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppTheme.primaryGreen,
+        ),
+        child: const Icon(Icons.check, color: Colors.white, size: 18),
+      );
+    }
+
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: theme.colorScheme.outline, width: 1.5),
+      ),
     );
   }
 
@@ -370,23 +448,12 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     }).toList();
   }
 
-  String _getInitials(String name) {
-    if (name.isEmpty) return '?';
-    final parts = name.split(' ');
-    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
-  }
-
   Future<void> _syncContacts() async {
-    // Phase 1: Read device contacts locally (~200ms)
     final rosterRepo = await ref.read(rosterRepositoryProvider.future);
 
     if (!mounted) return;
 
     await rosterRepo.syncContactsLocal();
-    // Phase 2: Server sync in background (stream auto-updates)
     unawaited(rosterRepo.syncContactsToServer());
   }
 
@@ -394,56 +461,49 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   /// 1. contactId (if available) - from server
   /// 2. contactDetail (phone/email) - fallback
   String _getContactIdentifier(RosterEntry contact) {
-    // Priority 1: Use contactId if available (from server)
     if (contact.contactId != null && contact.contactId!.isNotEmpty) {
       return contact.contactId!;
     }
-    // Priority 2: Use contactDetail (phone/email)
     return contact.contactDetail;
   }
 
-  Future<void> _createRoom() async {
-    if (_selectedContacts.isEmpty) return;
+  void _navigateToGroupDetails() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            GroupDetailsScreen(selectedContacts: _selectedContacts.toList()),
+      ),
+    );
+  }
+
+  Future<void> _createDirectChat() async {
+    if (_selectedContacts.length != 1) return;
 
     setState(() => _isCreatingRoom = true);
 
     try {
       final roomService = await ref.read(roomServiceProvider.future);
-
-      // Get all contact identifiers using priority logic - server will handle routing
-      final contactIds = _selectedContacts.map(_getContactIdentifier).toList();
-
-      // Generate room name
-      final roomName = _selectedContacts.length == 1
-          ? (_selectedContacts.first.displayName ??
-                _selectedContacts.first.contactDetail)
-          : '${_selectedContacts.map((c) => c.displayName ?? c.contactDetail).take(3).join(', ')}${_selectedContacts.length > 3 ? '...' : ''}';
-
-      final roomType = _selectedContacts.length == 1 ? 'direct' : 'group';
+      final contact = _selectedContacts.first;
+      final contactIds = [_getContactIdentifier(contact)];
+      final roomName = contact.displayName ?? contact.contactDetail;
 
       AppLogger.info(
-        '[NewChat] Creating room',
-        data: {
-          'name': roomName,
-          'type': roomType,
-          'memberCount': contactIds.length,
-        },
+        '[NewChat] Creating direct chat',
+        data: {'name': roomName, 'type': 'direct'},
       );
 
-      // Create room - server handles member routing and billing
       final room = await roomService.createRoom(
         name: roomName,
-        type: roomType,
+        type: 'direct',
         contactIds: contactIds,
       );
 
       if (mounted) {
-        // Navigate to the new chat room
         context.go('/chat/${room.id}?name=${Uri.encodeComponent(room.name)}');
       }
     } catch (e, stackTrace) {
       AppLogger.error(
-        '[NewChat] Failed to create room',
+        '[NewChat] Failed to create direct chat',
         error: e,
         stackTrace: stackTrace,
       );
