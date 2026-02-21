@@ -32,9 +32,9 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  antinvestor_api_chat: ^1.53.1
+  antinvestor_api_chat: ^1.53.4
   antinvestor_api_common: ^1.52.0
-  antinvestor_api_device: ^1.52.1
+  antinvestor_api_device: ^1.53.13
   antinvestor_api_files: ^1.52.1
   antinvestor_api_profile: ^1.52.1
   app_badge_plus: ^1.2.6
@@ -69,7 +69,7 @@ dependencies:
   http: ^1.6.0
   image_picker: ^1.1.2
   intl: ^0.20.2
-  json_annotation: ^4.10.0
+  json_annotation: ^4.11.0
   local_auth: ^3.0.0
   logger: ^2.5.0
   openid_client: ^0.4.9+1
@@ -81,7 +81,7 @@ dependencies:
   qr_flutter: ^4.1.0
   record: ^6.2.0
   riverpod_annotation: ^4.0.0
-  sentry_flutter: ^9.13.0
+  sentry_flutter: ^9.14.0
   share_plus: ^12.0.1
   shared_preferences: ^2.4.0
   sim_card_code: ^0.1.0
