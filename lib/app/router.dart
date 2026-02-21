@@ -25,6 +25,7 @@ import '../features/settings/ui/privacy_settings_screen.dart';
 import '../features/settings/ui/security_settings_screen.dart';
 import '../features/settings/ui/settings_screen.dart';
 import '../features/settings/ui/storage_settings_screen.dart';
+import '../features/settings/ui/theme_settings_screen.dart';
 import '../features/settings/ui/two_factor_setup_screen.dart';
 
 part 'router.g.dart';
@@ -119,6 +120,10 @@ GoRouter router(Ref ref) {
         builder: (context, state) => const TwoFactorSetupScreen(),
       ),
       GoRoute(
+        path: '/settings/theme',
+        builder: (context, state) => const ThemeSettingsScreen(),
+      ),
+      GoRoute(
         path: '/chat/:roomId',
         builder: (context, state) {
           final roomId = state.pathParameters['roomId']!;
@@ -144,15 +149,15 @@ GoRouter router(Ref ref) {
         },
       ),
       GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const ProfileEditScreen(),
+      ),
+      GoRoute(
         path: '/profile/:profileId',
         builder: (context, state) {
           final profileId = state.pathParameters['profileId']!;
           return ProfileScreen(profileId: profileId);
         },
-      ),
-      GoRoute(
-        path: '/profile/edit',
-        builder: (context, state) => const ProfileEditScreen(),
       ),
       GoRoute(
         path: '/messages/starred',

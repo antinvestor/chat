@@ -14,21 +14,18 @@ void main() {
         final hosts = certificatePinning.pinnedHosts;
 
         expect(hosts, isNotEmpty);
-        expect(hosts, contains('chat.antinvestor.com'));
-        expect(hosts, contains('gateway.antinvestor.com'));
-        expect(hosts, contains('devices.antinvestor.com'));
-        expect(hosts, contains('files.antinvestor.com'));
-        expect(hosts, contains('profile.antinvestor.com'));
+        expect(hosts, contains('chat.stawi.im'));
+        expect(hosts, contains('gateway.stawi.im'));
+        expect(hosts, contains('devices.stawi.dev'));
+        expect(hosts, contains('files.stawi.dev'));
+        expect(hosts, contains('profile.stawi.dev'));
         expect(hosts, contains('oauth2.stawi.org'));
       });
     });
 
     group('hasPinsConfigured', () {
       test('returns true for configured host', () {
-        expect(
-          certificatePinning.hasPinsConfigured('chat.antinvestor.com'),
-          isTrue,
-        );
+        expect(certificatePinning.hasPinsConfigured('chat.stawi.im'), isTrue);
       });
 
       test('returns false for unconfigured host', () {

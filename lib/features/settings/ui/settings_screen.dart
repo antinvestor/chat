@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
@@ -75,6 +75,13 @@ class SettingsScreen extends ConsumerWidget {
                   title: 'Storage',
                   subtitle: 'Network usage, storage management',
                   onTap: () => context.navigateToStorageSettings(),
+                ),
+                _buildSettingsItem(
+                  context,
+                  icon: Icons.palette_outlined,
+                  title: 'Appearance',
+                  subtitle: 'Theme, dark mode, accent color',
+                  onTap: () => context.go('/settings/theme'),
                 ),
               ],
             ),

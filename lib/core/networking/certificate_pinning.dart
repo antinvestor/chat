@@ -32,7 +32,7 @@ final certificatePinningProvider = Provider<CertificatePinning>(
 ///
 /// ```bash
 /// # Get certificate and generate SHA-256 hash:
-/// openssl s_client -connect chat.antinvestor.com:443 -servername chat.antinvestor.com \
+/// openssl s_client -connect chat.stawi.im:443 -servername chat.stawi.im \
 ///   </dev/null 2>/dev/null | openssl x509 -outform DER | openssl sha256 -binary | base64
 /// ```
 ///
@@ -46,30 +46,30 @@ class CertificatePinning {
   /// **WARNING**: These are placeholder values. Replace with actual certificate
   /// hashes before deploying to production. See class documentation for instructions.
   final Map<String, List<String>> _pinnedHashes = {
-    // Chat API - REPLACE WITH ACTUAL HASHES
-    'chat.antinvestor.com': [
+    // Chat (drone) API - REPLACE WITH ACTUAL HASHES
+    'chat.stawi.im': [
       // Primary certificate pin (current) - PLACEHOLDER
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       // Backup pin (next certificate) - PLACEHOLDER
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
     // Gateway API - REPLACE WITH ACTUAL HASHES
-    'gateway.antinvestor.com': [
+    'gateway.stawi.im': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
     // Device API - REPLACE WITH ACTUAL HASHES
-    'devices.antinvestor.com': [
+    'devices.stawi.dev': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
     // Files API - REPLACE WITH ACTUAL HASHES
-    'files.antinvestor.com': [
+    'files.stawi.dev': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],
     // Profile API - REPLACE WITH ACTUAL HASHES
-    'profile.antinvestor.com': [
+    'profile.stawi.dev': [
       'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
       'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
     ],

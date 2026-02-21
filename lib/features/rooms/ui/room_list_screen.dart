@@ -14,9 +14,11 @@ import '../../../widgets/error_banner.dart';
 import '../../../widgets/skeleton_loader.dart';
 import '../../calls/ui/incoming_call_banner.dart';
 import '../../messages/ui/chat_screen.dart';
+import '../../notifications/mute_service.dart';
 import '../data/room_providers.dart';
 import '../data/room_search_providers.dart';
 import '../data/room_service.dart';
+import '../domain/room.dart';
 import '../domain/room_with_last_message.dart';
 import 'chat_list_item.dart';
 import 'new_chat_screen.dart';
@@ -143,190 +145,96 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
     );
   }
 
-  void _performArchiveAction(RoomWithLastMessage room) {
-    // Simulate archive action - in real implementation, this would call repository
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Chat archived successfully'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _showMoreOptions(RoomWithLastMessage room) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
+  Future<void> _performArchiveAction(RoomWithLastMessage room) async {
+    try {
+      await ref
+          .read(roomListProvider.notifier)
+          .updateRoom(roomId: room.id, metadata: {'archived': true});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${room.name} archived'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                await ref
+                    .read(roomListProvider.notifier)
+                    .updateRoom(roomId: room.id, metadata: {'archived': false});
+              },
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'More Options',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildMoreOption(
-                    icon: Icons.info_outline,
-                    title: 'View Info',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _showRoomInfo(room);
-                    },
-                  ),
-                  _buildMoreOption(
-                    icon: Icons.notifications_off,
-                    title: 'Mute Notifications',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _toggleMute(room);
-                    },
-                  ),
-                  _buildMoreOption(
-                    icon: Icons.push_pin,
-                    title: 'Pin Chat',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _togglePin(room);
-                    },
-                  ),
-                  _buildMoreOption(
-                    icon: Icons.delete_outline,
-                    title: 'Delete Chat',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _showDeleteConfirmation(room);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMoreOption({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) => ListTile(
-    leading: Icon(icon, color: Colors.grey[600]),
-    title: Text(title),
-    onTap: onTap,
-  );
-
-  void _showRoomInfo(RoomWithLastMessage room) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(room.name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Last message: ${room.lastMessageText ?? 'No messages'}'),
-            const SizedBox(height: 8),
-            Text(
-              'Created: ${_formatDate(DateTime.fromMillisecondsSinceEpoch(room.lastMessageTimestamp ?? 0))}',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
           ),
-        ],
-      ),
-    );
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to archive: $e')));
+      }
+    }
   }
 
-  void _toggleMute(RoomWithLastMessage room) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Notifications ${room.isTyping ?? false ? 'unmuted' : 'muted'} for ${room.name}',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _togglePin(RoomWithLastMessage room) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${room.isTyping ?? false ? 'Unpinned' : 'Pinned'} ${room.name}',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _showDeleteConfirmation(RoomWithLastMessage room) {
-    showDialog(
+  Future<void> _deleteSelectedRooms() async {
+    final count = _selectedRoomIds.length;
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Chat'),
-        content: const Text(
-          'Are you sure you want to delete this chat? This action cannot be undone.',
+        title: const Text('Delete Chats'),
+        content: Text(
+          'Are you sure you want to delete $count chat${count == 1 ? '' : 's'}? This action cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Chat deleted'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+    if (confirmed ?? false) {
+      for (final roomId in _selectedRoomIds.toList()) {
+        await ref.read(roomListProvider.notifier).deleteRoom(roomId);
+      }
+      _toggleMultiSelectMode();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted $count chat${count == 1 ? '' : 's'}'),
+          ),
+        );
+      }
+    }
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+  Future<void> _markSelectedAsRead() async {
+    final roomRepo = ref.read(roomRepositoryProvider);
+    for (final roomId in _selectedRoomIds) {
+      await roomRepo.updateUnreadCount(roomId, 0);
+    }
+    ref.read(roomListWithMessagesProvider.notifier).refresh();
+    _toggleMultiSelectMode();
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Marked as read')));
+    }
+  }
 
-    if (difference.inDays > 0) {
-      return '${date.day}/${date.month}/${date.year}';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
+  Future<void> _muteSelectedRooms() async {
+    final muteService = ref.read(muteServiceProvider);
+    for (final roomId in _selectedRoomIds) {
+      await muteService.muteRoom(roomId, MuteDuration.forever);
+    }
+    ref.invalidate(roomListWithMessagesProvider);
+    _toggleMultiSelectMode();
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Muted selected chats')));
     }
   }
 
@@ -379,43 +287,79 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
         // Seamless app bar — matches scaffold background
         SliverAppBar(
           pinned: true,
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          backgroundColor: _isMultiSelectMode
+              ? AppTheme.primaryGreen
+              : Theme.of(context).scaffoldBackgroundColor,
+          foregroundColor: _isMultiSelectMode
+              ? Colors.white
+              : Theme.of(context).colorScheme.onSurface,
           scrolledUnderElevation: 0,
           elevation: 0,
           centerTitle: false,
-          title: Text(
-            'Chats',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          actions: [
-            // More options menu
-            PopupMenuButton<String>(
-              icon: Icon(
-                Icons.more_vert,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              onSelected: _handleMenuAction,
-              itemBuilder: (context) => [
-                const PopupMenuItem<String>(
-                  value: 'settings',
-                  child: Text('Settings'),
+          leading: _isMultiSelectMode
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _toggleMultiSelectMode,
+                )
+              : null,
+          title: _isMultiSelectMode
+              ? Text('${_selectedRoomIds.length} selected')
+              : Text(
+                  'Chats',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-                const PopupMenuItem<String>(
-                  value: 'select_multiple',
-                  child: Text('Select Multiple'),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'mark_all_read',
-                  child: Text('Mark All Read'),
-                ),
-              ],
-            ),
-          ],
+          actions: _isMultiSelectMode
+              ? [
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Delete selected',
+                    onPressed: _selectedRoomIds.isEmpty
+                        ? null
+                        : _deleteSelectedRooms,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.mark_email_read_outlined),
+                    tooltip: 'Mark as read',
+                    onPressed: _selectedRoomIds.isEmpty
+                        ? null
+                        : _markSelectedAsRead,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.notifications_off_outlined),
+                    tooltip: 'Mute selected',
+                    onPressed: _selectedRoomIds.isEmpty
+                        ? null
+                        : _muteSelectedRooms,
+                  ),
+                ]
+              : [
+                  // More options menu
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onSelected: _handleMenuAction,
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'settings',
+                        child: Text('Settings'),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'select_multiple',
+                        child: Text('Select Multiple'),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'mark_all_read',
+                        child: Text('Mark All Read'),
+                      ),
+                    ],
+                  ),
+                ],
         ),
 
         // Always-visible search bar and filter chips
@@ -482,22 +426,15 @@ class _RoomListScreenState extends ConsumerState<RoomListScreen> {
               direction: DismissDirection.endToStart,
               background: Container(
                 color: Colors.blue,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.only(left: 20),
-                child: const Icon(Icons.archive, color: Colors.white),
-              ),
-              secondaryBackground: Container(
-                color: Colors.grey,
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.only(right: 20),
-                child: const Icon(Icons.more_horiz, color: Colors.white),
+                child: const Icon(Icons.archive, color: Colors.white),
               ),
-              onDismissed: (direction) {
+              confirmDismiss: (direction) async {
                 if (direction == DismissDirection.endToStart) {
                   _archiveRoom(room);
-                } else if (direction == DismissDirection.startToEnd) {
-                  _showMoreOptions(room);
                 }
+                return false; // Don't remove from list; archive handles it
               },
               child: RepaintBoundary(
                 key: ValueKey(room.id),

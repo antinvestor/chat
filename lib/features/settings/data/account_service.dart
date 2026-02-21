@@ -175,8 +175,16 @@ class AccountService {
         return devices;
       }
 
-      // Return mock data for development/testing
-      return _getMockDevices(currentDeviceId);
+      // API returned empty/error - return just the current device
+      return [
+        LinkedDevice(
+          id: currentDeviceId,
+          name: 'This Device',
+          platform: 'Unknown',
+          lastActiveAt: DateTime.now(),
+          isCurrent: true,
+        ),
+      ];
     } catch (e, stackTrace) {
       AppLogger.error(
         '[AccountService] Failed to get linked devices',
@@ -185,18 +193,6 @@ class AccountService {
       );
       rethrow;
     }
-  }
-
-  List<LinkedDevice> _getMockDevices(String currentDeviceId) {
-    return [
-      LinkedDevice(
-        id: currentDeviceId,
-        name: 'This Device',
-        platform: 'Android',
-        lastActiveAt: DateTime.now(),
-        isCurrent: true,
-      ),
-    ];
   }
 
   /// Remove a linked device (logout from that device)

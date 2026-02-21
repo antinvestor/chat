@@ -3,12 +3,16 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/db/database.dart';
 import '../../../core/navigation/navigation_helper.dart';
+import '../../calls/services/call_manager.dart';
+import '../../calls/ui/call_screen.dart';
 import '../../contacts/services/block_service.dart';
 import '../../contacts/services/report_service.dart';
 import '../../rooms/data/room_providers.dart';
+import '../../rooms/data/room_service.dart';
 import '../data/profile_providers.dart';
 
 /// Profile details screen showing user information
@@ -207,13 +211,13 @@ class ProfileScreen extends ConsumerWidget {
                     context,
                     icon: Icons.call,
                     label: 'Call',
-                    onTap: () => _startCall(context, profile),
+                    onTap: () => _startCall(context, profile, ref: ref),
                   ),
                   _buildActionButton(
                     context,
                     icon: Icons.videocam,
                     label: 'Video',
-                    onTap: () => _startVideoCall(context, profile),
+                    onTap: () => _startVideoCall(context, profile, ref: ref),
                   ),
                 ],
               ),
@@ -434,8 +438,11 @@ class ProfileScreen extends ConsumerWidget {
               title: const Text('Share Contact'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Share contact coming soon')),
+                SharePlus.instance.share(
+                  ShareParams(
+                    text:
+                        'Check out this contact on Stawi: https://stawi.org/profile/$profileId',
+                  ),
                 );
               },
             ),
@@ -588,6 +595,7 @@ class ProfileScreen extends ConsumerWidget {
 
   void _showReportDialog(BuildContext context, WidgetRef ref) {
     ReportReason? selectedReason;
+    var alsoBlock = false;
     final detailsController = TextEditingController();
 
     showDialog(
@@ -629,7 +637,11 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Checkbox(value: false, onChanged: null),
+                    Checkbox(
+                      value: alsoBlock,
+                      onChanged: (value) =>
+                          setState(() => alsoBlock = value ?? false),
+                    ),
                     Expanded(
                       child: Text(
                         'Also block this user',
@@ -662,6 +674,12 @@ class ProfileScreen extends ConsumerWidget {
                             ? null
                             : detailsController.text,
                       );
+                      if (alsoBlock) {
+                        final blockService = await ref.read(
+                          blockServiceProvider.future,
+                        );
+                        await blockService.blockUser(profileId);
+                      }
                     },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Submit Report'),
@@ -749,16 +767,66 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  void _startCall(BuildContext context, Profile profile) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Calling ${profile.name ?? "user"}...')),
-    );
+  Future<void> _startCall(
+    BuildContext context,
+    Profile profile, {
+    required WidgetRef ref,
+  }) async {
+    try {
+      final service = await ref.read(roomServiceProvider.future);
+      final room = await service.findOrCreateDirectRoom(
+        profileId: profile.id,
+        contactId: profile.id,
+        displayName: profile.name,
+      );
+      final callManager = await ref.read(callManagerProvider.future);
+      await callManager.startCall(room.id);
+      if (context.mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                CallScreen(roomId: room.id, roomName: profile.name ?? 'Call'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to start call: $e')));
+      }
+    }
   }
 
-  void _startVideoCall(BuildContext context, Profile profile) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Video calling ${profile.name ?? "user"}...')),
-    );
+  Future<void> _startVideoCall(
+    BuildContext context,
+    Profile profile, {
+    required WidgetRef ref,
+  }) async {
+    try {
+      final service = await ref.read(roomServiceProvider.future);
+      final room = await service.findOrCreateDirectRoom(
+        profileId: profile.id,
+        contactId: profile.id,
+        displayName: profile.name,
+      );
+      final callManager = await ref.read(callManagerProvider.future);
+      await callManager.startCall(room.id);
+      if (context.mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                CallScreen(roomId: room.id, roomName: profile.name ?? 'Call'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start video call: $e')),
+        );
+      }
+    }
   }
 
   String? _getMetadataValue(Profile profile, String key) {

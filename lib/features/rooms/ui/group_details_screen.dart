@@ -7,6 +7,7 @@ import 'package:xid/xid.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../advanced/domain/group_finance_config.dart';
+import '../../advanced/services/group_config_service.dart';
 import '../../advanced/ui/group_finance_config_screen.dart';
 import '../../contacts/data/roster_repository.dart';
 import '../../contacts/ui/widgets/contact_avatar.dart';
@@ -274,6 +275,21 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen> {
         contactIds: contactIds,
         metadata: metadata.isNotEmpty ? metadata : null,
       );
+
+      // Send finance config as a room event so members can see it
+      if (_financeConfig != null) {
+        try {
+          final configService = await ref.read(
+            groupConfigServiceProvider.future,
+          );
+          await configService.sendGroupConfig(room.id, _financeConfig!);
+        } catch (e) {
+          AppLogger.warning(
+            '[GroupDetails] Failed to send finance config event',
+            error: e,
+          );
+        }
+      }
 
       if (mounted) {
         // Pop both screens (GroupDetailsScreen + NewChatScreen) and go to chat

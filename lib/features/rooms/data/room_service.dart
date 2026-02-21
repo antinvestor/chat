@@ -137,6 +137,35 @@ class RoomService {
     return room;
   }
 
+  /// Find an existing direct room with a profile, or create a new one
+  ///
+  /// Searches local subscriptions for a room where the target profile
+  /// is a member and the room type is 'direct'. If none found, creates one.
+  Future<domain.Room> findOrCreateDirectRoom({
+    required String profileId,
+    required String contactId,
+    String? displayName,
+  }) async {
+    // Search for existing direct rooms with this profile
+    final profileSubs = await _memberRepo.getProfileSubscriptions(profileId);
+    for (final sub in profileSubs) {
+      final room = await _roomRepo.getRoomById(sub.roomId);
+      if (room != null && room.type == 'direct') {
+        // Check that the room isn't marked as left
+        if (room.metadata?['left'] != true) {
+          return room;
+        }
+      }
+    }
+
+    // No existing direct room found, create one
+    return createRoom(
+      name: displayName ?? 'Direct Message',
+      type: 'direct',
+      contactIds: [contactId],
+    );
+  }
+
   /// Update an existing room
   /// Saves locally first, then queues for server sync
   /// Logs changes as system messages when logChanges is true

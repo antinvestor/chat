@@ -8,7 +8,11 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:share_plus/share_plus.dart';
+
+import '../../../core/logging/app_logger.dart';
 import '../../../widgets/empty_state.dart';
+import '../../rooms/data/room_service.dart';
 import '../data/contact_search_provider.dart';
 import '../data/contact_sync_repository.dart';
 import '../services/contact_service.dart';
@@ -405,11 +409,28 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     );
   }
 
-  void _onContactTap(RosterEntry entry) {
-    if (entry.profileId != null) {
-      // Navigate to chat with this profile
+  Future<void> _onContactTap(RosterEntry entry) async {
+    if (entry.profileId != null && entry.contactId != null) {
+      // Find or create a direct room with this profile
       final name = entry.displayName ?? entry.contactDetail;
-      context.go('/chat/${entry.profileId}?name=${Uri.encodeComponent(name)}');
+      try {
+        final service = await ref.read(roomServiceProvider.future);
+        final room = await service.findOrCreateDirectRoom(
+          profileId: entry.profileId!,
+          contactId: entry.contactId!,
+          displayName: name,
+        );
+        if (mounted) {
+          context.go('/chat/${room.id}?name=${Uri.encodeComponent(name)}');
+        }
+      } catch (e) {
+        AppLogger.error('Failed to open chat', error: e);
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to open chat: $e')));
+        }
+      }
     } else {
       // Show options for off-platform contact
       _showContactOptions(entry);
@@ -417,8 +438,6 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
   }
 
   void _showContactOptions(RosterEntry entry) {
-    final name = entry.displayName ?? entry.contactDetail;
-
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -430,18 +449,58 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
               title: const Text('Invite to App'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Invite sent to $name')));
+                SharePlus.instance.share(
+                  ShareParams(
+                    text:
+                        'Join me on Stawi! Download the app: https://stawi.org/invite',
+                  ),
+                );
               },
             ),
             ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('View Details'),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                if (entry.profileId != null && entry.profileId!.isNotEmpty) {
+                  context.go('/profile/${entry.profileId}');
+                } else {
+                  _showContactDetailDialog(entry);
+                }
+              },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showContactDetailDialog(RosterEntry entry) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(entry.displayName ?? 'Contact'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Contact: ${entry.contactDetail}'),
+            const SizedBox(height: 4),
+            Text(
+              'Type: ${entry.contactType == RosterContactType.email ? 'Email' : 'Phone'}',
+            ),
+            if (entry.isVerified) ...[
+              const SizedBox(height: 4),
+              const Text('Verified', style: TextStyle(color: Colors.green)),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -832,16 +891,39 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
     );
   }
 
-  void _startChatWithProfile(ProfileWithContacts profileWithContacts) {
-    // Navigate to create/open chat with this profile
+  Future<void> _startChatWithProfile(
+    ProfileWithContacts profileWithContacts,
+  ) async {
     final profileId = profileWithContacts.profile.id;
     final name = profileWithContacts.displayName;
-    context.go('/chat/$profileId?name=${Uri.encodeComponent(name)}');
+    final contactId = profileWithContacts.primaryContact?.contactId;
+    if (contactId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot start chat: no contact ID')),
+      );
+      return;
+    }
+    try {
+      final service = await ref.read(roomServiceProvider.future);
+      final room = await service.findOrCreateDirectRoom(
+        profileId: profileId,
+        contactId: contactId,
+        displayName: name,
+      );
+      if (mounted) {
+        context.go('/chat/${room.id}?name=${Uri.encodeComponent(name)}');
+      }
+    } catch (e) {
+      AppLogger.error('Failed to open chat', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to open chat: $e')));
+      }
+    }
   }
 
   void _showDeviceContactOptions(Contact contact) {
-    final name = contact.displayName;
-
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -853,18 +935,57 @@ class _ContactsScreenState extends ConsumerState<ContactsScreen>
               title: const Text('Invite to App'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Invite sent to $name')));
+                SharePlus.instance.share(
+                  ShareParams(
+                    text:
+                        'Join me on Stawi! Download the app: https://stawi.org/invite',
+                  ),
+                );
               },
             ),
             ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('View Details'),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeviceContactDetailDialog(contact);
+              },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDeviceContactDetailDialog(Contact contact) {
+    final phones = contact.phones.map((p) => p.number).join(', ');
+    final emails = contact.emails.map((e) => e.address).join(', ');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(contact.displayName),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (phones.isNotEmpty) ...[
+              Text('Phone: $phones'),
+              const SizedBox(height: 4),
+            ],
+            if (emails.isNotEmpty) ...[
+              Text('Email: $emails'),
+              const SizedBox(height: 4),
+            ],
+            if (contact.organizations.isNotEmpty)
+              Text('Organization: ${contact.organizations.first.company}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }

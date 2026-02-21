@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
+import '../../../core/db/database.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/settings_providers.dart';
@@ -178,27 +181,87 @@ class _StorageSettingsScreenState extends ConsumerState<StorageSettingsScreen> {
   void _showStorageManagementDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Storage Management'),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Storage management features coming soon:'),
-            SizedBox(height: 16),
-            Text('• Clear old media files'),
-            Text('• Delete old conversations'),
-            Text('• Optimize database'),
+            ListTile(
+              leading: const Icon(Icons.image),
+              title: const Text('Clear old media'),
+              subtitle: const Text('Remove cached media files'),
+              onTap: () async {
+                Navigator.of(dialogContext).pop();
+                await _clearOldMedia();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.storage),
+              title: const Text('Optimize database'),
+              subtitle: const Text('Reclaim unused space'),
+              onTap: () async {
+                Navigator.of(dialogContext).pop();
+                await _optimizeDatabase();
+              },
+            ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _clearOldMedia() async {
+    try {
+      final dir = await getApplicationCacheDirectory();
+      var deletedCount = 0;
+      if (dir.existsSync()) {
+        final cutoff = DateTime.now().subtract(const Duration(days: 30));
+        for (final file in dir.listSync(recursive: true)) {
+          if (file is File) {
+            final stat = file.statSync();
+            if (stat.modified.isBefore(cutoff)) {
+              file.deleteSync();
+              deletedCount++;
+            }
+          }
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cleared $deletedCount old media files')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to clear media: $e')));
+      }
+    }
+  }
+
+  Future<void> _optimizeDatabase() async {
+    try {
+      await AppDatabase.instance.customStatement('VACUUM');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Database optimized')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to optimize database: $e')),
+        );
+      }
+    }
   }
 
   String _formatBytes(int bytes) {

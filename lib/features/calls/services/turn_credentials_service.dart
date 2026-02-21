@@ -3,13 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
+import '../../../core/storage/key_manager.dart';
 
 /// Provider for TURN credentials service
 final turnCredentialsServiceProvider = FutureProvider<TurnCredentialsService>((
   ref,
 ) async {
   final deviceClient = await ref.watch(deviceServiceClientProvider.future);
-  return TurnCredentialsService(deviceClient);
+  final keyManager = ref.watch(keyManagerProvider);
+  return TurnCredentialsService(deviceClient, keyManager);
 });
 
 /// Cached TURN server credentials
@@ -46,10 +48,10 @@ class TurnCredentials {
 /// - Credential refresh before expiry
 /// - Fallback to STUN if TURN unavailable
 class TurnCredentialsService {
-  TurnCredentialsService(this._deviceClient);
+  TurnCredentialsService(this._deviceClient, this._keyManager);
 
-  // ignore: unused_field - Will be used when Device API supports TURN credentials
   final DeviceServiceClient _deviceClient;
+  final KeyManager _keyManager;
 
   /// Cached TURN credentials
   List<TurnCredentials>? _cachedCredentials;
@@ -153,30 +155,35 @@ class TurnCredentialsService {
 
   /// Fetch TURN credentials from the backend
   ///
-  /// This calls the Device API to get temporary TURN credentials.
-  /// The backend generates short-lived credentials for security.
+  /// Calls the Device API to get temporary TURN credentials.
+  /// The backend generates short-lived HMAC-based credentials (RFC 5766).
   Future<List<TurnCredentials>> _fetchTurnCredentials() async {
     try {
-      // For now, use static credentials until the API endpoint is implemented
-      // TODO(antinvestor): Implement actual API call when Device API supports TURN credentials
-      //
-      // The implementation would look like:
-      // final request = GetTurnCredentialsRequest();
-      // final response = await _deviceClient.getTurnCredentials(request);
-      //
-      // return response.servers.map((server) => TurnCredentials(
-      //   url: server.url,
-      //   username: server.username,
-      //   credential: server.credential,
-      //   expiresAt: DateTime.fromMillisecondsSinceEpoch(server.expiresAt * 1000),
-      // )).toList();
+      final deviceId = await _keyManager.getDeviceId();
+      final request = GetTurnCredentialsRequest(deviceId: deviceId);
+      final response = await _deviceClient.getTurnCredentials(request);
 
-      // Placeholder: Return empty list (STUN-only mode)
-      // Remove this when API is implemented
-      AppLogger.debug(
-        'TURN credentials API not yet implemented, using STUN only',
+      final credentials = response.servers.map((server) {
+        final expiresAtSeconds = server.expiresAt.toInt();
+        return TurnCredentials(
+          url: server.url,
+          username: server.username.isNotEmpty ? server.username : null,
+          credential: server.credential.isNotEmpty ? server.credential : null,
+          expiresAt: DateTime.fromMillisecondsSinceEpoch(
+            expiresAtSeconds * 1000,
+          ),
+        );
+      }).toList();
+
+      AppLogger.info(
+        'Fetched TURN credentials from API',
+        data: {
+          'serverCount': credentials.length,
+          'ttlSeconds': response.ttlSeconds,
+        },
       );
-      return [];
+
+      return credentials;
     } catch (e, stackTrace) {
       AppLogger.error(
         'Error fetching TURN credentials from API',

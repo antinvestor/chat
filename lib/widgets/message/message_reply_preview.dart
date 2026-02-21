@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../features/contacts/data/roster_repository.dart';
 import '../../features/messages/data/message_providers.dart';
 import '../../features/messages/domain/room_event.dart';
+import '../../features/rooms/data/room_subscription_service.dart';
 
 /// Quoted parent message preview with colored left bar (WhatsApp reply style).
 ///
@@ -33,6 +35,35 @@ class MessageReplyPreview extends ConsumerWidget {
     );
   }
 
+  String _resolveSenderName(WidgetRef ref, String senderId) {
+    final profileIdAsync = ref.watch(
+      profileIdFromSubscriptionProvider(senderId),
+    );
+    final profilesAsync = ref.watch(profilesWithContactsStreamProvider);
+
+    final profileId = profileIdAsync.when(
+      data: (id) => id,
+      loading: () => null,
+      error: (_, _) => null,
+    );
+
+    return profilesAsync.when(
+      data: (profiles) {
+        if (profileId != null) {
+          final senderProfile = profiles
+              .where((p) => p.profile.id == profileId)
+              .firstOrNull;
+          if (senderProfile != null) {
+            return senderProfile.displayName;
+          }
+        }
+        return senderId;
+      },
+      loading: () => senderId,
+      error: (_, _) => senderId,
+    );
+  }
+
   Widget _buildPreview(BuildContext context, RoomEvent parent, bool isDark) {
     final barColor = AppTheme.getSenderNameColor(parent.senderId);
     final bgColor = isDark
@@ -53,15 +84,20 @@ class MessageReplyPreview extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            parent.senderId,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: barColor,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Consumer(
+            builder: (context, ref, _) {
+              final senderName = _resolveSenderName(ref, parent.senderId);
+              return Text(
+                senderName,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: barColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              );
+            },
           ),
           const SizedBox(height: 2),
           Text(

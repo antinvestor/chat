@@ -4,7 +4,7 @@
 /// and load balancing. Endpoints can be overridden at build time via
 /// `--dart-define`, e.g.:
 /// ```
-/// flutter build web --dart-define=CHAT_URL=https://chat-staging.antinvestor.com
+/// flutter build web --dart-define=CHAT_URL=https://chat.stawi.im
 /// ```
 class ApiConfig {
   const ApiConfig._();
@@ -12,23 +12,23 @@ class ApiConfig {
   // Service endpoints (configurable via --dart-define)
   static const String chatBaseUrl = String.fromEnvironment(
     'CHAT_URL',
-    defaultValue: 'https://chat.antinvestor.com',
+    defaultValue: 'https://chat.stawi.im',
   );
   static const String gatewayBaseUrl = String.fromEnvironment(
     'GATEWAY_URL',
-    defaultValue: 'https://gateway.antinvestor.com',
+    defaultValue: 'https://gateway.stawi.im',
   );
   static const String devicesBaseUrl = String.fromEnvironment(
     'DEVICES_URL',
-    defaultValue: 'https://devices.antinvestor.com',
+    defaultValue: 'https://devices.stawi.dev',
   );
   static const String filesBaseUrl = String.fromEnvironment(
     'FILES_URL',
-    defaultValue: 'https://files.antinvestor.com',
+    defaultValue: 'https://files.stawi.dev',
   );
   static const String profileBaseUrl = String.fromEnvironment(
     'PROFILE_URL',
-    defaultValue: 'https://profile.antinvestor.com',
+    defaultValue: 'https://profile.stawi.dev',
   );
 
   // OAuth2 configuration (configurable via --dart-define)

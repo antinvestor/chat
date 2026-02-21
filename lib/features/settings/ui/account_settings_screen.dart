@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
@@ -551,15 +552,20 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              // TODO(settings): Implement password change
+            onPressed: () async {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Password change will be available soon'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+              final uri = Uri.parse('https://stawi.org/account/password');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open password change page'),
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Update Password'),
           ),

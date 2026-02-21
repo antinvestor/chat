@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/responsive/responsive_layout.dart';
+import '../../messages/ui/chat_screen.dart';
 import 'room_detail_panel.dart';
 
 /// Room detail screen showing full room information
@@ -48,87 +49,10 @@ class RoomDetailScreen extends StatelessWidget {
     body: RoomDetailPanel(roomId: roomId, roomName: roomName),
   );
 
-  /// Tablet layout: Room details with room list
+  /// Tablet layout: Chat alongside room details
   Widget _buildTabletLayout(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(roomName),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          // Navigate back using navigation helper
-          context.navigateBack();
-        },
-        tooltip: 'Back',
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.chat),
-          onPressed: () {
-            // Navigate to chat screen using navigation helper
-            context.navigateToChat(roomId: roomId, roomName: roomName);
-          },
-          tooltip: 'Open chat',
-        ),
-      ],
-    ),
     body: Row(
       children: [
-        // Room list panel (smaller)
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(color: Theme.of(context).dividerColor),
-              ),
-            ),
-            child: _buildCompactRoomList(context),
-          ),
-        ),
-        // Room detail panel
-        Expanded(
-          flex: 2,
-          child: RoomDetailPanel(roomId: roomId, roomName: roomName),
-        ),
-      ],
-    ),
-  );
-
-  /// Desktop layout: Room details with room list and chat
-  Widget _buildDesktopLayout(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(roomName),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          // Navigate back using navigation helper
-          context.navigateBack();
-        },
-        tooltip: 'Back',
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.chat),
-          onPressed: () {
-            // Navigate to chat screen using navigation helper
-            context.navigateToChat(roomId: roomId, roomName: roomName);
-          },
-          tooltip: 'Open chat',
-        ),
-      ],
-    ),
-    body: Row(
-      children: [
-        // Room list panel (smaller)
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(color: Theme.of(context).dividerColor),
-              ),
-            ),
-            child: _buildCompactRoomList(context),
-          ),
-        ),
         // Chat panel
         Expanded(
           child: Container(
@@ -137,30 +61,39 @@ class RoomDetailScreen extends StatelessWidget {
                 right: BorderSide(color: Theme.of(context).dividerColor),
               ),
             ),
-            child: _buildChatPanel(context),
+            child: ChatScreen(roomId: roomId, roomName: roomName),
           ),
         ),
         // Room detail panel
         Expanded(
-          flex: 2,
           child: RoomDetailPanel(roomId: roomId, roomName: roomName),
         ),
       ],
     ),
   );
 
-  /// Compact room list for side panel
-  Widget _buildCompactRoomList(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surfaceContainer,
+  /// Desktop layout: Chat alongside room details (wider detail panel)
+  Widget _buildDesktopLayout(BuildContext context) => Scaffold(
+    body: Row(
+      children: [
+        // Chat panel
+        Expanded(
+          flex: 2,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(color: Theme.of(context).dividerColor),
+              ),
+            ),
+            child: ChatScreen(roomId: roomId, roomName: roomName),
+          ),
+        ),
+        // Room detail panel
+        Expanded(
+          flex: 3,
+          child: RoomDetailPanel(roomId: roomId, roomName: roomName),
+        ),
+      ],
     ),
-    child: const Center(child: Text('Room list placeholder')),
-  );
-
-  /// Chat panel for desktop layout
-  Widget _buildChatPanel(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    child: const Center(child: Text('Chat placeholder')),
   );
 }

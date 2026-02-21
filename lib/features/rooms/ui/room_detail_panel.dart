@@ -10,6 +10,7 @@ import '../../messages/domain/room_event.dart';
 import '../../notifications/mute_service.dart';
 import '../data/detail_panel_providers.dart';
 import '../data/room_providers.dart';
+import '../data/room_service.dart';
 import '../domain/room.dart';
 import 'member_action_sheet.dart';
 
@@ -130,13 +131,7 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
               title: const Text('Add Members'),
               onTap: () {
                 Navigator.pop(sheetContext);
-                // Navigate to add members screen
                 context.navigateToContactSelection();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Add members functionality coming soon'),
-                  ),
-                );
               },
             ),
             // Mute/Unmute option
@@ -407,15 +402,31 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
         // Room info section
         _buildSectionHeader('Room Information'),
         const SizedBox(height: 8),
-        _buildInfoTile(
-          icon: Icons.group,
-          title: 'Room Type',
-          subtitle: 'Group Chat',
-        ),
-        _buildInfoTile(
-          icon: Icons.lock,
-          title: 'Encryption',
-          subtitle: 'End-to-end encrypted',
+        Consumer(
+          builder: (context, ref, _) {
+            final roomAsync = ref.watch(roomByIdProvider(widget.roomId));
+            final roomType = roomAsync.when(
+              data: (room) {
+                switch (room?.type) {
+                  case 'direct':
+                    return 'Direct Message';
+                  case 'group':
+                    return 'Group Chat';
+                  case 'channel':
+                    return 'Channel';
+                  default:
+                    return room?.type ?? 'Chat';
+                }
+              },
+              loading: () => 'Loading...',
+              error: (_, _) => 'Unknown',
+            );
+            return _buildInfoTile(
+              icon: Icons.group,
+              title: 'Room Type',
+              subtitle: roomType,
+            );
+          },
         ),
         const SizedBox(height: 24),
 
@@ -823,6 +834,14 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
     }
   }
 
+  String _formatDateFromValue(value) {
+    if (value is DateTime) return _formatDate(value);
+    if (value is int) {
+      return _formatDate(DateTime.fromMillisecondsSinceEpoch(value));
+    }
+    return 'N/A';
+  }
+
   Future<void> _leaveRoom(BuildContext context, WidgetRef ref) async {
     try {
       // Show loading indicator
@@ -830,9 +849,9 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
         context,
       ).showSnackBar(const SnackBar(content: Text('Leaving room...')));
 
-      // Implement leave room logic
-      final roomListNotifier = ref.read(roomListProvider.notifier);
-      await roomListNotifier.deleteRoom(widget.roomId);
+      // Leave room (marks as left locally, queues for server sync)
+      final service = await ref.read(roomServiceProvider.future);
+      await service.leaveRoom(widget.roomId);
 
       // Navigate back to room list
       if (context.mounted) {
@@ -863,10 +882,10 @@ class _RoomDetailPanelState extends ConsumerState<RoomDetailPanel>
             const SizedBox(height: 8),
             Text('Description: ${motion['description'] ?? 'N/A'}'),
             const SizedBox(height: 8),
-            Text('Created: ${_formatDate(motion['createdAt'])}'),
+            Text('Created: ${_formatDateFromValue(motion['createdAt'])}'),
             if (motion['deadline'] != null) ...[
               const SizedBox(height: 8),
-              Text('Deadline: ${_formatDate(motion['deadline'])}'),
+              Text('Deadline: ${_formatDateFromValue(motion['deadline'])}'),
             ],
           ],
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
@@ -337,7 +338,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
         ),
         const SizedBox(height: 16),
 
-        // QR Code placeholder
+        // QR Code
         Center(
           child: Container(
             width: 200,
@@ -347,25 +348,18 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: theme.dividerColor),
             ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.qr_code_2,
-                    size: 120,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'QR Code',
-                    style: theme.textTheme.bodySmall?.copyWith(
+            child: _setupData != null
+                ? QrImageView(
+                    data: _setupData!.qrCodeUrl,
+                    size: 180,
+                  )
+                : Center(
+                    child: Icon(
+                      Icons.qr_code_2,
+                      size: 120,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ],
-              ),
-            ),
           ),
         ),
 

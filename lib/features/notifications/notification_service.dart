@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/networking/client.dart';
 import '../../core/storage/key_manager.dart';
+import '../settings/data/settings_providers.dart';
 import 'mute_service.dart';
 import 'notification_grouping_service.dart';
 
@@ -277,6 +278,27 @@ class NotificationService {
         'Notification suppressed - room is muted',
         data: {'roomId': roomId, 'roomName': roomName},
       );
+      return;
+    }
+
+    // Check global notification settings
+    final settingsAsync = _ref.read(settingsProvider);
+    final settings = settingsAsync.value ?? {};
+    final messageNotificationsEnabled =
+        settings['message_notifications'] ?? true;
+    final groupNotificationsEnabled = settings['group_notifications'] ?? true;
+
+    if (!messageNotificationsEnabled) {
+      AppLogger.debug(
+        'Notification suppressed - message notifications disabled',
+      );
+      return;
+    }
+
+    // Suppress group notifications if the setting is off and this is a group room
+    final roomType = message.data['roomType'] as String?;
+    if (!groupNotificationsEnabled && roomType == 'group') {
+      AppLogger.debug('Notification suppressed - group notifications disabled');
       return;
     }
 

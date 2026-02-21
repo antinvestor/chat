@@ -528,9 +528,9 @@ class AnalyticsService {
         return;
       }
 
-      // TODO(analytics): Send events to backend analytics service
-      // In production, this would send to your analytics backend:
-      // await _sendEventsToBackend(eventsToSend);
+      // Analytics events are currently local-only. Events are stored and
+      // marked as synced without transmission. When a backend analytics
+      // endpoint is available, add HTTP POST here to send eventsToSend.
 
       // Mark events as synced in the repository
       final eventIds = eventsToSend.map((e) => e.id).toList();

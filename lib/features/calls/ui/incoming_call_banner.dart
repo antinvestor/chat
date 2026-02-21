@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/call_manager.dart';
+import 'call_screen.dart';
 
 class IncomingCallBanner extends ConsumerWidget {
   const IncomingCallBanner({super.key});
@@ -38,7 +39,7 @@ class IncomingCallBanner extends ConsumerWidget {
                               style: Theme.of(context).textTheme.labelMedium,
                             ),
                             Text(
-                              'Unknown Caller', // Note: Caller name will be displayed when contact integration is implemented
+                              callManager.callerSenderId ?? 'Unknown Caller',
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ],
@@ -58,16 +59,18 @@ class IncomingCallBanner extends ConsumerWidget {
                       IconButton.filled(
                         onPressed: () {
                           callManager.answerCall();
-                          // Navigate to call screen
-                          // Note: Navigation should ideally be handled by a router listener
-                          // but for now we'll push directly
-                          // We need room ID for CallScreen, which CallManager has
-                          // but it's private. We should expose it or pass it in event.
-                          // For MVP, we'll assume CallManager handles state and we just show UI.
-                          // Actually, we need to navigate.
-                          // Let's assume we are already on a screen that can navigate.
-                          // But we don't have context here easily if this is a global overlay.
-                          // If this widget is placed in the main scaffold, we can use context.
+                          final roomId = callManager.currentRoomId;
+                          if (roomId != null) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => CallScreen(
+                                  roomId: roomId,
+                                  roomName:
+                                      callManager.callerSenderId ?? 'Call',
+                                ),
+                              ),
+                            );
+                          }
                         },
                         style: IconButton.styleFrom(
                           backgroundColor: Colors.green,

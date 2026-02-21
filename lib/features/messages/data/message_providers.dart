@@ -21,7 +21,7 @@ final parentMessageProvider = FutureProvider.family<domain.RoomEvent?, String>((
   ref,
   eventId,
 ) {
-  final repo = ref.read(messageRepositoryProvider);
+  final repo = ref.watch(messageRepositoryProvider);
   return repo.getEventById(eventId);
 });
 

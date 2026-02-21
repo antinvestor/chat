@@ -7,8 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:xid/xid.dart';
-
 import '../../../core/logging/app_logger.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/sync/sync_engine.dart';
@@ -48,6 +46,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _replyingToText;
   bool _showScrollToBottom = false;
   int _newMessageCount = 0;
+  int _previousMessageCount = 0;
 
   // Pagination state for virtualized list
   bool _isLoadingMore = false;
@@ -629,6 +628,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return _buildEmptyState();
     }
 
+    // Track new messages arriving while scrolled up
+    if (messages.length > _previousMessageCount && _showScrollToBottom) {
+      final newCount = messages.length - _previousMessageCount;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _newMessageCount += newCount);
+      });
+    }
+    _previousMessageCount = messages.length;
+
     // Send read receipts for messages being viewed
     _sendReadReceipts(messages);
 
@@ -874,28 +882,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _sendAudioMessage(VoiceRecordingResult recording) async {
     try {
-      // Create audio message event
-      final event = RoomEvent(
-        id: Xid().toString(),
+      final messagingService = ref.read(messageSendingServiceProvider);
+      await messagingService.sendAudioMessage(
         roomId: widget.roomId,
-        senderId: '', // Will be set by the provider
-        type: RoomEventType.audio,
-        content: {
-          'path': recording.path,
-          'duration': recording.duration.inSeconds,
-          'size': recording.sizeBytes,
-          'mimeType': recording.mimeType,
-          'fileName': recording.fileName,
-        },
-        createdAt: DateTime.now().millisecondsSinceEpoch,
-        localId: Xid().toString(),
+        audioFile: File(recording.path),
+        durationMs: recording.duration.inMilliseconds,
       );
-
-      // Send the message through the provider
-      // Note: The actual file upload will be handled by the file upload service
-      await ref
-          .read(messageListProvider(widget.roomId).notifier)
-          .sendMessage(event);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

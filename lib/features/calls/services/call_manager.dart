@@ -44,6 +44,7 @@ class CallManager {
   MediaStream? _localStream;
   MediaStream? _remoteStream;
   String? _currentRoomId;
+  String? get currentRoomId => _currentRoomId;
   CallQualityService? _qualityService;
 
   // Reconnection handling
@@ -57,6 +58,8 @@ class CallManager {
   bool _isMicMuted = false;
   bool _isCameraOff = false;
   bool _isVideoDisabledByQuality = false;
+  String? _callerSenderId;
+  String? get callerSenderId => _callerSenderId;
 
   final _callStateController = StreamController<CallState>.broadcast();
   Stream<CallState> get callStateStream => _callStateController.stream;
@@ -201,6 +204,7 @@ class CallManager {
     _remoteStream = null;
     _remoteStreamController.add(null);
     _currentRoomId = null;
+    _callerSenderId = null;
     _isMicMuted = false;
     _isCameraOff = false;
     _isVideoDisabledByQuality = false;
@@ -497,6 +501,7 @@ class CallManager {
     }
 
     _currentRoomId = event.roomId;
+    _callerSenderId = event.senderId;
     _setState(CallState.incoming);
 
     await _initPeerConnection();

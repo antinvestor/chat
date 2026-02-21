@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'settings_providers.g.dart';
@@ -106,8 +107,16 @@ class CacheManager extends _$CacheManager {
   }
 
   Future<void> clearCache() async {
-    // Implement cache clearing logic
-    // This would typically involve clearing image cache, temp files, etc.
+    try {
+      final cacheDir = await getApplicationCacheDirectory();
+      if (cacheDir.existsSync()) {
+        await cacheDir.delete(recursive: true);
+        await cacheDir.create();
+      }
+    } catch (_) {
+      // Ignore errors during cache clearing
+    }
+    // Recalculate cache size
     state = const AsyncValue.data(0);
   }
 }

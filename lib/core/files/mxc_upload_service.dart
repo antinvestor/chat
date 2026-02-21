@@ -22,7 +22,7 @@ class MxcUploadResult {
     required this.serverName,
   });
 
-  /// The full MXC URI (e.g. `mxc://files.antinvestor.com/abc123`).
+  /// The full MXC URI (e.g. `mxc://files.stawi.dev/abc123`).
   final String contentUri;
 
   /// The media ID component.

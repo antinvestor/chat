@@ -35,7 +35,7 @@ class MxcUri {
     return MxcUri._(serverName: serverName, mediaId: mediaId);
   }
 
-  /// The server name component (e.g., "files.antinvestor.com")
+  /// The server name component (e.g., "files.stawi.dev")
   final String serverName;
 
   /// The media ID component

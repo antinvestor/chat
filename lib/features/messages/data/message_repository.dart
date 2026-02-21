@@ -542,5 +542,7 @@ class MessageRepository {
     expiresAt: row.expiresAt,
     starred: row.starred,
     starredAt: row.starredAt,
+    retryCount: row.retryCount,
+    errorMessage: row.errorMessage,
   );
 }

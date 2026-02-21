@@ -181,12 +181,32 @@ class MemberActionSheet extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.chat),
             title: const Text('Send Message'),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              // Navigate to direct message with this user
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Direct messaging coming soon')),
-              );
+              if (member.profileId != null && member.contactId != null) {
+                try {
+                  final roomService = await ref.read(
+                    roomServiceProvider.future,
+                  );
+                  final room = await roomService.findOrCreateDirectRoom(
+                    profileId: member.profileId!,
+                    contactId: member.contactId!,
+                    displayName: member.name,
+                  );
+                  if (context.mounted) {
+                    context.navigateToChat(
+                      roomId: room.id,
+                      roomName: member.name,
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to open chat: $e')),
+                    );
+                  }
+                }
+              }
             },
           ),
 
@@ -417,10 +437,21 @@ class MemberActionSheet extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // Navigate back and trigger leave
-              context.navigateBack('/');
+              try {
+                final roomService = await ref.read(roomServiceProvider.future);
+                await roomService.leaveRoom(roomId);
+                if (context.mounted) {
+                  context.navigateBack('/');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to leave group: $e')),
+                  );
+                }
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Leave'),

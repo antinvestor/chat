@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../contacts/data/roster_repository.dart';
 import '../../rooms/domain/room_with_last_message.dart';
@@ -542,8 +543,6 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen>
   }
 
   void _showContactOptions(BuildContext context, RosterEntry contact) {
-    final name = contact.displayName ?? contact.contactDetail;
-
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -555,9 +554,12 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen>
               title: const Text('Invite to App'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Invite sent to $name')));
+                SharePlus.instance.share(
+                  ShareParams(
+                    text:
+                        'Join me on Stawi! Download the app: https://stawi.org/invite',
+                  ),
+                );
               },
             ),
             ListTile(

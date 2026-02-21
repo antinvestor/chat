@@ -38,18 +38,20 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     super.dispose();
   }
 
-  void _toggleMic() {
+  Future<void> _toggleMic() async {
+    final callManager = await ref.read(callManagerProvider.future);
+    callManager.toggleMic();
     setState(() {
       _isMicMuted = !_isMicMuted;
     });
-    // Note: Mute logic will be implemented in CallManager
   }
 
-  void _toggleCamera() {
+  Future<void> _toggleCamera() async {
+    final callManager = await ref.read(callManagerProvider.future);
+    callManager.toggleCamera();
     setState(() {
       _isCameraOff = !_isCameraOff;
     });
-    // Note: Camera toggle logic will be implemented in CallManager
   }
 
   Future<void> _endCall() async {

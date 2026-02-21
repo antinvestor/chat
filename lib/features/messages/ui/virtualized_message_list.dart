@@ -605,9 +605,19 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
       case RoomEventType.callAnswer:
       case RoomEventType.callIce:
       case RoomEventType.callEnd:
+      case RoomEventType.groupCallOffer:
+      case RoomEventType.groupCallAnswer:
+      case RoomEventType.groupCallIce:
+      case RoomEventType.groupCallMuteUpdate:
         // Call signaling events are handled by SignalingService
         // and should not appear in the message list
         return const SizedBox.shrink();
+      case RoomEventType.groupCallStart:
+      case RoomEventType.groupCallJoin:
+      case RoomEventType.groupCallLeave:
+      case RoomEventType.groupCallEnd:
+        // Group call lifecycle events shown as system messages
+        return SystemEventBubble(event: widget.message);
       default:
         return MessageBubble(
           message: widget.message,
