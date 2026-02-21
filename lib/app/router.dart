@@ -9,8 +9,10 @@ import '../features/calls/ui/call_history_screen.dart';
 import '../features/contacts/ui/contacts_screen.dart';
 import '../features/messages/ui/chat_screen.dart';
 import '../features/messages/ui/starred_messages_screen.dart';
+import '../features/onboarding/data/onboarding_repository.dart';
 import '../features/profile/ui/profile_edit_screen.dart';
 import '../features/profile/ui/profile_screen.dart';
+import '../features/profile/ui/profile_setup_screen.dart';
 import '../features/rooms/ui/group_settings_screen.dart';
 import '../features/rooms/ui/room_detail_screen.dart';
 import '../features/rooms/ui/room_list_screen.dart';
@@ -47,6 +49,7 @@ AuthChangeNotifier authChangeNotifier(Ref ref) => AuthChangeNotifier(ref);
 @riverpod
 GoRouter router(Ref ref) {
   final authRepository = ref.watch(authRepositoryProvider);
+  final onboardingRepo = ref.watch(onboardingRepositoryProvider);
   final authChangeNotifier = ref.watch(authChangeProvider);
 
   return GoRouter(
@@ -54,7 +57,9 @@ GoRouter router(Ref ref) {
     refreshListenable: authChangeNotifier,
     redirect: (context, state) async {
       final isLoggedIn = await authRepository.isLoggedIn();
-      final isLoginRoute = state.matchedLocation == '/login';
+      final location = state.matchedLocation;
+      final isLoginRoute = location == '/login';
+      final isSetupRoute = location == '/profile/setup';
 
       // If not logged in and not on login page, redirect to login
       if (!isLoggedIn && !isLoginRoute) {
@@ -66,11 +71,23 @@ GoRouter router(Ref ref) {
         return '/';
       }
 
+      // If logged in, check if profile setup is complete
+      if (isLoggedIn && !isSetupRoute && !isLoginRoute) {
+        final setupComplete = await onboardingRepo.isProfileSetupComplete();
+        if (!setupComplete) {
+          return '/profile/setup';
+        }
+      }
+
       return null; // No redirect needed
     },
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/', builder: (context, state) => const RoomListScreen()),
+      GoRoute(
+        path: '/profile/setup',
+        builder: (context, state) => const ProfileSetupScreen(),
+      ),
       GoRoute(
         path: '/contacts/select',
         builder: (context, state) => const ContactsScreen(),
