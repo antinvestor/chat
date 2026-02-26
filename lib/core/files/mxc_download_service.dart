@@ -11,10 +11,10 @@ import 'mxc_uri.dart';
 
 /// Metadata about downloaded content.
 class ContentMetadata {
-  const ContentMetadata({required this.contentType, required this.filename});
+  const ContentMetadata({this.contentType, this.filename});
 
-  final String contentType;
-  final String filename;
+  final String? contentType;
+  final String? filename;
 }
 
 /// Service for downloading files and thumbnails via the proto
@@ -43,7 +43,7 @@ class MxcDownloadService {
     try {
       final client = await _getClient();
       final response = await client.getContent(
-        GetContentRequest(serverName: uri.serverName, mediaId: uri.mediaId),
+        GetContentRequest(mediaId: uri.mediaId),
       );
 
       final bytes = Uint8List.fromList(response.content);
@@ -86,7 +86,7 @@ class MxcDownloadService {
     try {
       final client = await _getClient();
       final response = await client.getContent(
-        GetContentRequest(serverName: uri.serverName, mediaId: uri.mediaId),
+        GetContentRequest(mediaId: uri.mediaId),
       );
 
       final file = File(destPath);
@@ -137,7 +137,6 @@ class MxcDownloadService {
       final client = await _getClient();
       final response = await client.getContentThumbnail(
         GetContentThumbnailRequest(
-          serverName: uri.serverName,
           mediaId: uri.mediaId,
           width: width,
           height: height,
@@ -177,12 +176,13 @@ class MxcDownloadService {
       final client = await _getClient();
       // We use getContent but only need the metadata fields
       final response = await client.getContent(
-        GetContentRequest(serverName: uri.serverName, mediaId: uri.mediaId),
+        GetContentRequest(mediaId: uri.mediaId),
       );
 
+      final metadata = response.metadata;
       return ContentMetadata(
-        contentType: response.contentType,
-        filename: response.filename,
+        contentType: metadata.contentType,
+        filename: metadata.filename,
       );
     } catch (e, stackTrace) {
       AppLogger.error(

@@ -3,13 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/cache/image_cache_service.dart';
-import '../core/files/content_resolver.dart';
-import '../core/files/mxc_uri.dart';
 
 /// A cached image widget for media content (message images, video thumbnails).
 ///
 /// Uses the media thumbnail cache manager for efficient caching.
-/// Supports both HTTPS URLs and MXC URIs (`mxc://...`).
 /// Provides loading and error states with customizable placeholders.
 class CachedMediaImage extends ConsumerWidget {
   const CachedMediaImage({
@@ -26,7 +23,7 @@ class CachedMediaImage extends ConsumerWidget {
     this.onLoaded,
   });
 
-  /// The URL of the image (HTTPS URL or MXC URI)
+  /// The URL of the image (HTTPS URL)
   final String imageUrl;
 
   /// Width constraint for the image
@@ -58,62 +55,7 @@ class CachedMediaImage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Handle MXC URIs by downloading via the download service
-    if (MxcUri.isMxcUri(imageUrl)) {
-      return _buildMxcImage(context, ref);
-    }
-
     return _buildCachedNetworkImage(context);
-  }
-
-  /// Build image from MXC URI using ContentResolver/MxcDownloadService.
-  Widget _buildMxcImage(BuildContext context, WidgetRef ref) {
-    final resolver = ref.watch(contentResolverProvider);
-    final content = <String, dynamic>{'url': imageUrl};
-
-    // Request thumbnail dimensions based on widget size
-    final thumbWidth = width?.toInt() ?? 256;
-    final thumbHeight = height?.toInt() ?? 256;
-
-    return FutureBuilder<dynamic>(
-      future: resolver.resolveImageUrl(
-        content,
-        width: thumbWidth,
-        height: thumbHeight,
-      ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return placeholder ?? _buildPlaceholder(context, showProgress);
-        }
-
-        if (snapshot.hasError || snapshot.data == null) {
-          return errorWidget ?? _buildErrorWidget(context);
-        }
-
-        // Call onLoaded
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          onLoaded?.call();
-        });
-
-        Widget image = Image.memory(
-          snapshot.data!,
-          width: width,
-          height: height,
-          fit: fit,
-          errorBuilder: (_, _, _) => errorWidget ?? _buildErrorWidget(context),
-        );
-
-        if (borderRadius != null) {
-          image = ClipRRect(borderRadius: borderRadius!, child: image);
-        }
-
-        if (onTap != null) {
-          return GestureDetector(onTap: onTap, child: image);
-        }
-
-        return image;
-      },
-    );
   }
 
   /// Build image from HTTPS URL using CachedNetworkImage.

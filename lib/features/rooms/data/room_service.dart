@@ -348,10 +348,24 @@ class RoomService {
     required String roomId,
     required List<String> profileIds,
   }) async {
+    final subscriptionIds = <String>[];
+    for (final profileId in profileIds) {
+      final member = await _memberRepo.getMemberByProfileId(roomId, profileId);
+      if (member != null) {
+        subscriptionIds.add(member.id);
+      } else {
+        AppLogger.warning(
+          'Subscription not found for profile removal',
+          data: {'roomId': roomId, 'profileId': profileId},
+        );
+      }
+    }
+
     // Queue for server sync
     await _jobRepo.addJob(JobType.removeRoomMembers, {
       'roomId': roomId,
       'profileIds': profileIds,
+      if (subscriptionIds.isNotEmpty) 'subscriptionIds': subscriptionIds,
     });
 
     AppLogger.info(

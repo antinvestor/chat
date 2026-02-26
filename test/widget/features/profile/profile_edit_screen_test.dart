@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -98,6 +99,14 @@ class MockProfileRepository implements ProfileRepository {
 
   @override
   Future<ProfileUpdateResult> updateProfilePhoto(File imageFile) async {
+    if (shouldFail) {
+      return ProfileUpdateResult.failure(failureMessage ?? 'Failed');
+    }
+    return ProfileUpdateResult.success();
+  }
+
+  @override
+  Future<ProfileUpdateResult> updateProfilePhotoBytes(Uint8List bytes) async {
     if (shouldFail) {
       return ProfileUpdateResult.failure(failureMessage ?? 'Failed');
     }
@@ -213,11 +222,11 @@ void main() {
       expect(find.text('Phone Numbers'), findsOneWidget);
     });
 
-    testWidgets('displays tap to change photo text', (tester) async {
+    testWidgets('displays tap to add photo text', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
-      expect(find.text('Tap to change photo'), findsOneWidget);
+      expect(find.text('Tap to add a photo'), findsOneWidget);
     });
 
     testWidgets('shows empty state when no emails', (tester) async {

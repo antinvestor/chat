@@ -9,12 +9,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logging/app_logger.dart';
 import '../networking/client.dart';
 import 'files_config_service.dart';
-import 'mxc_uri.dart';
 
 /// Default chunk size for streaming uploads (256KB).
 const int _uploadChunkSize = 256 * 1024;
 
-/// Result of an MXC upload operation.
+/// Threshold for using multipart upload (100MB).
+const int _multipartThreshold = 100 * 1024 * 1024;
+
+/// Default part size for multipart uploads (5MB).
+const int _multipartPartSize = 5 * 1024 * 1024;
+
+/// Result of an upload operation using direct HTTP URLs.
 class MxcUploadResult {
   const MxcUploadResult({
     required this.contentUri,
@@ -22,7 +27,7 @@ class MxcUploadResult {
     required this.serverName,
   });
 
-  /// The full MXC URI (e.g. `mxc://files.stawi.dev/abc123`).
+  /// The direct HTTP URL for the content.
   final String contentUri;
 
   /// The media ID component.
@@ -31,12 +36,9 @@ class MxcUploadResult {
   /// The server name component.
   final String serverName;
 
-  /// Parsed [MxcUri] for convenience.
-  MxcUri get mxcUri => MxcUri.fromParts(serverName, mediaId);
-
   /// Legacy-compatible file URL getter.
   ///
-  /// Returns the MXC URI string for backward compatibility with code
+  /// Returns the HTTP URL for backward compatibility with code
   /// that expects a `fileUrl` field.
   String get fileUrl => contentUri;
 }
@@ -106,36 +108,53 @@ class MxcUploadService {
 
     final response = await client.uploadContent(controller.stream);
 
+    final contentUrl = _configService.buildContentUrl(response.mediaId);
+
     AppLogger.info(
-      'File uploaded via MXC',
-      data: {
-        'contentUri': response.contentUri,
-        'fileName': fileName,
-        'size': fileSize,
-      },
+      'File uploaded via HTTP',
+      data: {'contentUrl': contentUrl, 'fileName': fileName, 'size': fileSize},
     );
 
     return MxcUploadResult(
-      contentUri: response.contentUri,
+      contentUri: contentUrl,
       mediaId: response.mediaId,
       serverName: response.serverName,
     );
   }
 
   /// Upload raw bytes via streaming RPC.
+  /// Uses multipart upload for files larger than 100MB.
   Future<MxcUploadResult> uploadBytes(
     Uint8List bytes,
     String filename,
     String mimeType, {
     void Function(double progress)? onProgress,
   }) async {
+    AppLogger.debug(
+      'uploadBytes: starting upload of $filename, size: ${bytes.length}, mimeType: $mimeType',
+    );
+
     await _validateFileSize(bytes.length);
 
+    // Use multipart upload for large files
+    if (bytes.length > _multipartThreshold) {
+      return _uploadBytesMultipart(bytes, filename, mimeType, onProgress);
+    }
+
+    return _uploadBytesStreaming(bytes, filename, mimeType, onProgress);
+  }
+
+  /// Upload using streaming RPC (for files < 100MB).
+  Future<MxcUploadResult> _uploadBytesStreaming(
+    Uint8List bytes,
+    String filename,
+    String mimeType,
+    void Function(double progress)? onProgress,
+  ) async {
     final client = await _getClient();
 
     final controller = StreamController<UploadContentRequest>();
 
-    // Send metadata first
     controller.add(
       UploadContentRequest(
         metadata: UploadMetadata(
@@ -146,7 +165,6 @@ class MxcUploadService {
       ),
     );
 
-    // Send in chunks
     var bytesSent = 0;
     while (bytesSent < bytes.length) {
       final end = bytesSent + _uploadChunkSize;
@@ -163,10 +181,90 @@ class MxcUploadService {
 
     final response = await client.uploadContent(controller.stream);
 
+    final contentUrl = _configService.buildContentUrl(response.mediaId);
+
+    AppLogger.debug('uploadBytes: response received: $contentUrl');
+
     return MxcUploadResult(
-      contentUri: response.contentUri,
+      contentUri: contentUrl,
       mediaId: response.mediaId,
       serverName: response.serverName,
+    );
+  }
+
+  /// Upload using multipart upload (for files > 100MB).
+  Future<MxcUploadResult> _uploadBytesMultipart(
+    Uint8List bytes,
+    String filename,
+    String mimeType,
+    void Function(double progress)? onProgress,
+  ) async {
+    final client = await _getClient();
+
+    // Create multipart upload
+    final createResponse = await client.createMultipartUpload(
+      CreateMultipartUploadRequest(
+        filename: filename,
+        contentType: mimeType,
+        totalSize: Int64(bytes.length),
+      ),
+    );
+
+    final uploadId = createResponse.uploadId;
+    AppLogger.debug(
+      'uploadBytes: created multipart upload, uploadId: $uploadId',
+    );
+
+    // Upload parts
+    final parts = <CompleteMultipartUploadRequest_Part>[];
+    var bytesSent = 0;
+    var partNumber = 1;
+
+    while (bytesSent < bytes.length) {
+      final end = bytesSent + _multipartPartSize;
+      final partEnd = end > bytes.length ? bytes.length : end;
+      final partData = bytes.sublist(bytesSent, partEnd);
+
+      final partResponse = await client.uploadMultipartPart(
+        UploadMultipartPartRequest(
+          uploadId: uploadId,
+          partNumber: partNumber,
+          content: partData,
+        ),
+      );
+
+      parts.add(
+        CompleteMultipartUploadRequest_Part(
+          partNumber: partNumber,
+          etag: partResponse.etag,
+        ),
+      );
+
+      bytesSent = partEnd;
+      partNumber++;
+      onProgress?.call(bytesSent / bytes.length);
+
+      AppLogger.debug(
+        'uploadBytes: uploaded part $partNumber, etag: ${partResponse.etag}',
+      );
+    }
+
+    // Complete multipart upload
+    final completeResponse = await client.completeMultipartUpload(
+      CompleteMultipartUploadRequest(uploadId: uploadId, parts: parts),
+    );
+
+    final metadata = completeResponse.metadata;
+    final serverName = _configService.serverName;
+    final mediaId = metadata.mediaId;
+    final contentUri = _configService.buildContentUrl(mediaId);
+
+    AppLogger.debug('uploadBytes: multipart upload complete: $contentUri');
+
+    return MxcUploadResult(
+      contentUri: contentUri,
+      mediaId: mediaId,
+      serverName: serverName,
     );
   }
 

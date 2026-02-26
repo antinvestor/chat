@@ -222,7 +222,7 @@ return $default(_that.id,_that.name,_that.type,_that.unreadCount,_that.lastMessa
 
 class _RoomWithLastMessage extends RoomWithLastMessage {
   const _RoomWithLastMessage({required this.id, required this.name, required this.type, required this.unreadCount, this.lastMessageText, this.lastMessageTimestamp, this.lastMessageSenderId, this.lastMessageSenderName, this.isTyping, this.draftText, this.mutedUntil}): super._();
-
+  
 
 @override final  String id;
 @override final  String name;

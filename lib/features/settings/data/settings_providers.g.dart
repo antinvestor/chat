@@ -82,7 +82,7 @@ final class CacheManagerProvider
   CacheManager create() => CacheManager();
 }
 
-String _$cacheManagerHash() => r'429aabcad658d78e0b654e5285c36050d2d4f9a5';
+String _$cacheManagerHash() => r'37c6ad923ba72e8208f819d30b4dc76d90dcce4e';
 
 abstract class _$CacheManager extends $AsyncNotifier<int> {
   FutureOr<int> build();

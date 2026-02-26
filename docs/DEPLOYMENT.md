@@ -203,7 +203,7 @@ Create two environments in `Settings > Environments`:
 2. **production**
    - Optional: Required reviewers for approval
    - Optional: Wait timer before deployment
-   - Environment URL: `https://chat.antinvestor.com`
+   - Environment URL: `https://chat.stawi.im`
 
 ## Deployment Process
 

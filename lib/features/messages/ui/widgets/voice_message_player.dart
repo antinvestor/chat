@@ -174,7 +174,16 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     } else {
       newSpeed = 1.0;
     }
-    await _audioPlayer?.setSpeed(newSpeed);
+    final player = _audioPlayer;
+    if (player != null) {
+      unawaited(
+        player.setSpeed(newSpeed).catchError((e) {
+          // AudioPlayer may not be initialized in test environments.
+          debugPrint('Failed to set playback speed: $e');
+        }),
+      );
+    }
+    if (!mounted) return;
     setState(() => _playbackSpeed = newSpeed);
   }
 

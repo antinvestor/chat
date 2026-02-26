@@ -263,6 +263,31 @@ class PendingJobRepository {
     AppLogger.debug('Job deleted from queue', data: {'jobId': id});
   }
 
+  /// Defer a job without incrementing retry count.
+  ///
+  /// Use this for transient prerequisites (e.g. missing subscription ID)
+  /// to avoid exhausting retries.
+  Future<void> deferJob(
+    int id, {
+    Duration delay = const Duration(seconds: 5),
+    String? reason,
+  }) async {
+    final nextRetryAt =
+        DateTime.now().millisecondsSinceEpoch + delay.inMilliseconds;
+    final errorData = reason != null
+        ? jsonEncode({'message': reason, 'retryAt': nextRetryAt})
+        : null;
+
+    await (_database.update(
+      _database.pendingJobs,
+    )..where((t) => t.id.equals(id))).write(
+      PendingJobsCompanion(
+        nextRetryAt: Value(nextRetryAt),
+        lastError: Value(errorData),
+      ),
+    );
+  }
+
   /// Mark a job as permanently failed with an error message
   ///
   /// Use this when a job cannot be retried (e.g., invalid data, permission denied)

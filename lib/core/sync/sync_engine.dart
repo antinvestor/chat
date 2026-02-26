@@ -23,6 +23,7 @@ import '../auth/token_refresh_coordinator.dart';
 import '../crypto/e2e_encryption_service.dart';
 import '../db/database.dart';
 import '../logging/app_logger.dart';
+import '../networking/api_config.dart';
 import '../networking/client.dart';
 import 'pending_job.dart' as domain_job;
 import 'pending_job_repository.dart';
@@ -54,6 +55,15 @@ class TokenRefreshPermanentError implements Exception {
 
   @override
   String toString() => 'TokenRefreshPermanentError: $message';
+}
+
+/// Exception used to defer a job when subscription ID is not available yet.
+class MissingSubscriptionIdException implements Exception {
+  MissingSubscriptionIdException(this.roomId);
+  final String roomId;
+
+  @override
+  String toString() => 'MissingSubscriptionIdException(roomId: $roomId)';
 }
 
 /// Async provider for SyncEngine since it depends on async client providers
@@ -823,11 +833,17 @@ class SyncEngine with WidgetsBindingObserver {
           content = {'text': textBody};
         }
       } else if (payload.hasAttachment()) {
+        final base = ApiConfig.filesBaseUrl.replaceAll(RegExp(r'/+$'), '');
+        final contentUrl =
+            '$base/v1/content/${payload.attachment.attachmentId}';
         content = {
           'attachmentId': payload.attachment.attachmentId,
           'fileName': payload.attachment.filename,
           'mimeType': payload.attachment.mimeType,
           'size': payload.attachment.sizeBytes.toInt(),
+          'mediaId': payload.attachment.attachmentId,
+          'contentUri': contentUrl,
+          'url': contentUrl,
         };
       } else if (payload.hasEncrypted()) {
         // Decrypt the message using E2EE service
@@ -863,11 +879,25 @@ class SyncEngine with WidgetsBindingObserver {
               ciphertext,
               senderKey: senderKey,
             );
-            content = {
-              'text': plaintext,
-              'encrypted': true, // Mark as was encrypted for UI indicator
-              'decrypted': true,
-            };
+            // If plaintext is JSON, treat as structured content (e.g. media)
+            try {
+              final decoded = jsonDecode(plaintext);
+              if (decoded is Map<String, dynamic>) {
+                content = {...decoded, 'encrypted': true, 'decrypted': true};
+              } else {
+                content = {
+                  'text': plaintext,
+                  'encrypted': true, // Mark as was encrypted for UI indicator
+                  'decrypted': true,
+                };
+              }
+            } catch (_) {
+              content = {
+                'text': plaintext,
+                'encrypted': true, // Mark as was encrypted for UI indicator
+                'decrypted': true,
+              };
+            }
             AppLogger.debug(
               'Message decrypted',
               data: {'roomId': event.roomId, 'sessionId': sessionId},
@@ -1639,6 +1669,16 @@ class SyncEngine with WidgetsBindingObserver {
           break;
       }
       await _jobRepo.deleteJob(job.id);
+    } on MissingSubscriptionIdException catch (e) {
+      await _jobRepo.deferJob(
+        job.id,
+        reason: 'subscription_missing:${e.roomId}',
+      );
+      AppLogger.debug(
+        'Deferred job due to missing subscription',
+        data: {'jobId': job.id, 'roomId': e.roomId},
+      );
+      return;
     } catch (e, stackTrace) {
       AppLogger.error(
         'Job processing failed',
@@ -1796,14 +1836,39 @@ class SyncEngine with WidgetsBindingObserver {
 
   Future<void> _processRemoveRoomMembers(domain_job.PendingJob job) async {
     final payload = job.payload;
+    final roomId = payload['roomId'] as String;
 
     // Note: The API now expects subscription_id instead of profileIds
-    // For now, we'll use profileIds as subscription IDs (they should match)
-    final subscriptionIds = (payload['profileIds'] as List<dynamic>)
-        .cast<String>();
+    // Prefer explicit subscription IDs, else map profile IDs to subscriptions
+    final explicitIds = (payload['subscriptionIds'] as List<dynamic>?)
+        ?.cast<String>();
+    final subscriptionIds = <String>[];
+    if (explicitIds != null && explicitIds.isNotEmpty) {
+      subscriptionIds.addAll(explicitIds);
+    } else {
+      final profileIds =
+          (payload['profileIds'] as List<dynamic>?)?.cast<String>() ?? [];
+      for (final profileId in profileIds) {
+        final member = await _roomSubscriptionRepository.getMemberByProfileId(
+          roomId,
+          profileId,
+        );
+        if (member != null) {
+          subscriptionIds.add(member.id);
+        } else {
+          AppLogger.warning(
+            'Subscription not found for profile removal',
+            data: {'roomId': roomId, 'profileId': profileId},
+          );
+        }
+      }
+    }
+    if (subscriptionIds.isEmpty) {
+      throw StateError('No subscription IDs found for removal');
+    }
 
     final request = pb.RemoveRoomSubscriptionsRequest(
-      roomId: payload['roomId'] as String,
+      roomId: roomId,
       subscriptionId: subscriptionIds,
     );
 
@@ -1851,17 +1916,18 @@ class SyncEngine with WidgetsBindingObserver {
     final payload = job.payload;
     final roomId = payload['id'] as String;
 
-    // Get current profile's profile ID to remove their subscription
-    final currentProfileId = await _authRepository.getCurrentProfileId();
-    if (currentProfileId == null) {
-      throw Exception('Cannot leave room: Profile not authenticated');
+    // Get current profile's subscription ID to remove their subscription
+    final subscriptionId = await getCurrentSubscriptionId(
+      roomId,
+      syncIfMissing: true,
+    );
+    if (subscriptionId == null) {
+      throw MissingSubscriptionIdException(roomId);
     }
 
     final request = pb.RemoveRoomSubscriptionsRequest(
       roomId: roomId,
-      subscriptionId: [
-        currentProfileId,
-      ], // Remove current profile's subscription
+      subscriptionId: [subscriptionId], // Remove current profile's subscription
     );
 
     await _chatClient.removeRoomSubscriptions(request);
@@ -1877,6 +1943,9 @@ class SyncEngine with WidgetsBindingObserver {
       roomId,
       syncIfMissing: true,
     );
+    if (subscriptionId == null || subscriptionId.isEmpty) {
+      throw MissingSubscriptionIdException(roomId);
+    }
 
     // Create timestamp
     final now = DateTime.now();
@@ -1892,7 +1961,14 @@ class SyncEngine with WidgetsBindingObserver {
 
     // Build event with payload-based content
     final pbPayload = pb.Payload();
-    if (localType == domain.RoomEventType.text) {
+    if (content['encrypted'] == true && content['ciphertext'] != null) {
+      pbPayload.encrypted = pb.EncryptedContent(
+        algorithm: content['algorithm'] as String? ?? 'megolm.v1',
+        ciphertext: base64Decode(content['ciphertext'] as String),
+        senderKeyId: content['senderKey'] as String? ?? '',
+        sessionId: content['sessionId'] as String? ?? '',
+      );
+    } else if (localType == domain.RoomEventType.text) {
       pbPayload.text = pb.TextContent(
         body: content['text'] as String? ?? '',
         format: 'plain',
@@ -1907,8 +1983,12 @@ class SyncEngine with WidgetsBindingObserver {
         localType == domain.RoomEventType.video ||
         localType == domain.RoomEventType.audio ||
         localType == domain.RoomEventType.file) {
+      final attachmentId = content['attachmentId'] as String?;
+      if (attachmentId == null || attachmentId.isEmpty) {
+        throw StateError('Missing attachmentId for media message');
+      }
       pbPayload.attachment = pb.AttachmentContent(
-        attachmentId: content['attachmentId'] as String? ?? '',
+        attachmentId: attachmentId,
         filename: content['fileName'] as String? ?? '',
         mimeType: content['mimeType'] as String? ?? '',
         sizeBytes: Int64(content['size'] as int? ?? 0),
@@ -1939,7 +2019,7 @@ class SyncEngine with WidgetsBindingObserver {
       final localId = payload['localId'] as String;
       // Use the same subscriptionId that was used at message creation time
       // so the UI's isMe check (senderId == currentUserSubscriptionId) stays consistent
-      final senderSubId = subscriptionId ?? payload['localId'] as String;
+      final senderSubId = subscriptionId;
       await _messageRepo.updateMessageIdAfterAck(
         localId,
         serverId: ackEventId.first,
@@ -2069,7 +2149,13 @@ class SyncEngine with WidgetsBindingObserver {
     final originalMessageId = payload['originalMessageId'] as String;
     final destinationRoomId = payload['destinationRoomId'] as String;
     final localId = payload['localId'] as String?;
-    final currentProfileId = await _authRepository.getCurrentProfileId();
+    final subscriptionId = await getCurrentSubscriptionId(
+      destinationRoomId,
+      syncIfMissing: true,
+    );
+    if (subscriptionId == null || subscriptionId.isEmpty) {
+      throw MissingSubscriptionIdException(destinationRoomId);
+    }
 
     // Get original message content
     final content = payload['content'] as Map<String, dynamic>;
@@ -2103,6 +2189,7 @@ class SyncEngine with WidgetsBindingObserver {
     final event = pb.RoomEvent(
       id: localId ?? '',
       roomId: destinationRoomId,
+      subscriptionId: subscriptionId,
       type: protoType,
       sentAt: timestamp,
       payload: pbPayload,
@@ -2117,7 +2204,7 @@ class SyncEngine with WidgetsBindingObserver {
       final updatedEvent = domain.RoomEvent(
         id: ackEventId.first,
         roomId: destinationRoomId,
-        senderId: currentProfileId ?? 'unknown',
+        senderId: subscriptionId,
         type: localType,
         content: content,
         status: domain.EventStatus.sent,

@@ -267,11 +267,20 @@ class BackgroundSyncTask {
               if (payload.hasText()) {
                 content = {'text': payload.text.body};
               } else if (payload.hasAttachment()) {
+                final base = ApiConfig.filesBaseUrl.replaceAll(
+                  RegExp(r'/+$'),
+                  '',
+                );
+                final contentUrl =
+                    '$base/v1/content/${payload.attachment.attachmentId}';
                 content = {
                   'attachmentId': payload.attachment.attachmentId,
                   'fileName': payload.attachment.filename,
                   'mimeType': payload.attachment.mimeType,
                   'size': payload.attachment.sizeBytes.toInt(),
+                  'mediaId': payload.attachment.attachmentId,
+                  'contentUri': contentUrl,
+                  'url': contentUrl,
                 };
               } else if (payload.hasRoomChange()) {
                 final roomChange = payload.roomChange;

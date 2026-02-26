@@ -51,6 +51,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   // Pagination state for virtualized list
   bool _isLoadingMore = false;
   bool _hasMoreMessages = true;
+  int _pageSize = 50;
 
   @override
   void initState() {
@@ -417,7 +418,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // This runs once per room entry and uses caching to avoid redundant syncs
     ref.watch(syncRoomMembersOnEntryProvider(widget.roomId));
 
-    final messagesAsync = ref.watch(messagesStreamProvider(widget.roomId));
+    final messagesAsync = ref.watch(
+      paginatedMessagesStreamProvider((
+        roomId: widget.roomId,
+        limit: _pageSize,
+      )),
+    );
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -687,6 +693,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (mounted) {
         setState(() {
           _hasMoreMessages = hasMore;
+          if (hasMore) {
+            _pageSize += 30;
+          }
           _isLoadingMore = false;
         });
       }

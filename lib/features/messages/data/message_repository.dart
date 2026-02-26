@@ -29,7 +29,7 @@ class MessageRepository {
   }) async {
     final query = _database.select(_database.roomEvents)
       ..where((t) => t.roomId.equals(roomId))
-      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..orderBy([(t) => OrderingTerm.desc(_effectiveTimestamp(t))])
       ..limit(limit);
 
     final results = await query.get();
@@ -47,9 +47,9 @@ class MessageRepository {
       ..where(
         (t) =>
             t.roomId.equals(roomId) &
-            t.createdAt.isSmallerThanValue(beforeTimestamp),
+            _effectiveTimestamp(t).isSmallerThanValue(beforeTimestamp),
       )
-      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..orderBy([(t) => OrderingTerm.desc(_effectiveTimestamp(t))])
       ..limit(limit);
 
     final results = await query.get();
@@ -60,19 +60,23 @@ class MessageRepository {
   Future<int?> getOldestMessageTimestamp(String roomId) async {
     final query = _database.select(_database.roomEvents)
       ..where((t) => t.roomId.equals(roomId))
-      ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
+      ..orderBy([(t) => OrderingTerm.asc(_effectiveTimestamp(t))])
       ..limit(1);
 
     final result = await query.getSingleOrNull();
-    return result?.createdAt;
+    if (result == null) return null;
+    return result.serverTs ?? result.createdAt;
   }
 
   /// Get total message count for a room
   Future<int> getMessageCount(String roomId) async {
-    final query = _database.select(_database.roomEvents)
-      ..where((t) => t.roomId.equals(roomId));
-    final results = await query.get();
-    return results.length;
+    final count =
+        await (_database.selectOnly(_database.roomEvents)
+              ..addColumns([countAll()])
+              ..where(_database.roomEvents.roomId.equals(roomId)))
+            .map((row) => row.read(countAll()))
+            .getSingle();
+    return count ?? 0;
   }
 
   /// Watch messages for a room - provides reactive updates for instant UI refresh
@@ -82,7 +86,7 @@ class MessageRepository {
   }) {
     final query = _database.select(_database.roomEvents)
       ..where((t) => t.roomId.equals(roomId))
-      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..orderBy([(t) => OrderingTerm.desc(_effectiveTimestamp(t))])
       ..limit(limit);
 
     return query.watch().map(
@@ -544,5 +548,10 @@ class MessageRepository {
     starredAt: row.starredAt,
     retryCount: row.retryCount,
     errorMessage: row.errorMessage,
+  );
+
+  Expression<int> _effectiveTimestamp(RoomEvents table) => ifNull<int>(
+    table.serverTs.dartCast<int>(),
+    table.createdAt.dartCast<int>(),
   );
 }

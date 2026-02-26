@@ -10,8 +10,8 @@ part of 'upload_progress_provider.dart';
 // ignore_for_file: type=lint, type=warning
 /// Manages upload progress state for multiple concurrent uploads
 ///
-/// Provides methods to start, cancel, retry, and track uploads.
-/// Exposes a stream of progress updates for UI binding.
+/// Provides methods to start, cancel, retry, and track uploads
+/// using [MxcUploadService] for proto-based streaming uploads.
 ///
 /// Example:
 /// ```dart
@@ -20,9 +20,6 @@ part of 'upload_progress_provider.dart';
 ///
 /// // Start an upload
 /// ref.read(uploadProgressProvider.notifier).startUpload(file, 'msg-123');
-///
-/// // Cancel an upload
-/// ref.read(uploadProgressProvider.notifier).cancelUpload('msg-123');
 /// ```
 
 @ProviderFor(UploadProgressNotifier)
@@ -30,8 +27,8 @@ final uploadProgressProvider = UploadProgressNotifierProvider._();
 
 /// Manages upload progress state for multiple concurrent uploads
 ///
-/// Provides methods to start, cancel, retry, and track uploads.
-/// Exposes a stream of progress updates for UI binding.
+/// Provides methods to start, cancel, retry, and track uploads
+/// using [MxcUploadService] for proto-based streaming uploads.
 ///
 /// Example:
 /// ```dart
@@ -40,17 +37,14 @@ final uploadProgressProvider = UploadProgressNotifierProvider._();
 ///
 /// // Start an upload
 /// ref.read(uploadProgressProvider.notifier).startUpload(file, 'msg-123');
-///
-/// // Cancel an upload
-/// ref.read(uploadProgressProvider.notifier).cancelUpload('msg-123');
 /// ```
 final class UploadProgressNotifierProvider
     extends
         $NotifierProvider<UploadProgressNotifier, Map<String, UploadProgress>> {
   /// Manages upload progress state for multiple concurrent uploads
   ///
-  /// Provides methods to start, cancel, retry, and track uploads.
-  /// Exposes a stream of progress updates for UI binding.
+  /// Provides methods to start, cancel, retry, and track uploads
+  /// using [MxcUploadService] for proto-based streaming uploads.
   ///
   /// Example:
   /// ```dart
@@ -59,9 +53,6 @@ final class UploadProgressNotifierProvider
   ///
   /// // Start an upload
   /// ref.read(uploadProgressProvider.notifier).startUpload(file, 'msg-123');
-  ///
-  /// // Cancel an upload
-  /// ref.read(uploadProgressProvider.notifier).cancelUpload('msg-123');
   /// ```
   UploadProgressNotifierProvider._()
     : super(
@@ -91,12 +82,12 @@ final class UploadProgressNotifierProvider
 }
 
 String _$uploadProgressNotifierHash() =>
-    r'85473fed5e52d1c64befd56a8e48b8931f67e8ca';
+    r'94540f368c99381ff5c071226bee08b3348b0a53';
 
 /// Manages upload progress state for multiple concurrent uploads
 ///
-/// Provides methods to start, cancel, retry, and track uploads.
-/// Exposes a stream of progress updates for UI binding.
+/// Provides methods to start, cancel, retry, and track uploads
+/// using [MxcUploadService] for proto-based streaming uploads.
 ///
 /// Example:
 /// ```dart
@@ -105,9 +96,6 @@ String _$uploadProgressNotifierHash() =>
 ///
 /// // Start an upload
 /// ref.read(uploadProgressProvider.notifier).startUpload(file, 'msg-123');
-///
-/// // Cancel an upload
-/// ref.read(uploadProgressProvider.notifier).cancelUpload('msg-123');
 /// ```
 
 abstract class _$UploadProgressNotifier
@@ -438,5 +426,3 @@ final class TotalUploadProgressProvider
 
 String _$totalUploadProgressHash() =>
     r'80a99e838fda0c1a0e2f96d97cd8e8352c624d80';
-
-// uploadProgressStream provider removed (was using deprecated ProgressiveUploadService)

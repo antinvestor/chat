@@ -71,7 +71,7 @@ dependencies:
   image_cropper: ^11.0.0
   intl: ^0.20.2
   json_annotation: ^4.11.0
-  just_audio: ^0.9.43
+  just_audio: ^0.10.5
   local_auth: ^3.0.1
   logger: ^2.7.0
   openid_client: ^0.4.9+1
@@ -87,7 +87,7 @@ dependencies:
   share_plus: ^12.0.1
   shared_preferences: ^2.4.0
   sim_card_code: ^0.1.0
-  sqlite3: any
+  sqlite3: ^2.4.6
   url_launcher: ^6.3.2
   uuid: ^4.5.3
   video_compress: ^3.1.2
@@ -98,7 +98,7 @@ dependencies:
   xid: ^1.2.1
 dev_dependencies:
   build_runner: ^2.13.1
-  drift_dev: ^2.30.1
+  drift_dev: ^2.31.0
   flutter_lints: ^6.0.0
   flutter_native_splash: ^2.4.7
   flutter_test:

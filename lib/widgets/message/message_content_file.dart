@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/files/content_resolver.dart';
@@ -166,17 +167,19 @@ class MessageContentFile extends ConsumerWidget {
       }
     }
 
-    if (ContentResolver.isMxcContent(content)) {
-      final tempDir = await Directory.systemTemp.createTemp('chat_download_');
-      final destPath = '${tempDir.path}/$fileName';
+    final tempDir = await getTemporaryDirectory();
+    final downloadDir = Directory('${tempDir.path}/chat_downloads');
+    if (!downloadDir.existsSync()) {
+      await downloadDir.create(recursive: true);
+    }
+    final destPath = '${downloadDir.path}/$fileName';
 
-      final resolver = ref.read(contentResolverProvider);
-      final file = await resolver.resolveFileDownload(content, destPath);
-      if (file != null) {
-        final uri = Uri.file(file.path);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
+    final resolver = ref.read(contentResolverProvider);
+    final file = await resolver.resolveFileDownload(content, destPath);
+    if (file != null) {
+      final uri = Uri.file(file.path);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
       return;
     }

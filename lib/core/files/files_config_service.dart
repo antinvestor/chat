@@ -2,6 +2,7 @@ import 'package:antinvestor_api_files/antinvestor_api_files.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../logging/app_logger.dart';
+import '../networking/api_config.dart';
 import '../networking/client.dart';
 
 /// Service to retrieve and cache the Files API configuration.
@@ -12,6 +13,56 @@ class FilesConfigService {
   FilesConfigService(this._getClient);
 
   final Future<FilesServiceClient> Function() _getClient;
+
+  /// Base URL for HTTP uploads
+  String get baseUrl => ApiConfig.filesBaseUrl;
+
+  /// Server name derived from base URL (e.g., "files.stawi.dev" from "https://files.stawi.dev")
+  String get serverName {
+    final uri = Uri.parse(baseUrl);
+    return uri.host;
+  }
+
+  /// Build a direct HTTP URL for content by media ID.
+  String buildContentUrl(String mediaId) => _buildContentUrl(baseUrl, mediaId);
+
+  /// Build a direct HTTP URL for thumbnails by media ID.
+  String buildThumbnailUrl(
+    String mediaId, {
+    int width = 256,
+    int height = 256,
+    ThumbnailMethod method = ThumbnailMethod.CROP,
+  }) => _buildThumbnailUrl(
+    baseUrl,
+    mediaId,
+    width: width,
+    height: height,
+    method: method,
+  );
+
+  static String _buildContentUrl(String baseUrl, String mediaId) =>
+      '${baseUrl.replaceAll(RegExp(r"/+$"), "")}/v1/content/$mediaId';
+
+  static String _buildThumbnailUrl(
+    String baseUrl,
+    String mediaId, {
+    int width = 256,
+    int height = 256,
+    ThumbnailMethod method = ThumbnailMethod.CROP,
+  }) {
+    final uri = Uri.parse(
+      '${baseUrl.replaceAll(RegExp(r"/+$"), "")}/v1/content/thumbnail/$mediaId',
+    );
+    return uri
+        .replace(
+          queryParameters: {
+            'width': '$width',
+            'height': '$height',
+            'method': method.name.toLowerCase(),
+          },
+        )
+        .toString();
+  }
 
   /// Cached max upload size (bytes). Null until first fetch.
   int? _cachedMaxUploadSize;
@@ -25,7 +76,7 @@ class FilesConfigService {
     try {
       final client = await _getClient();
       final response = await client.getConfig(GetConfigRequest());
-      _cachedMaxUploadSize = response.maxUploadSize.toInt();
+      _cachedMaxUploadSize = response.maxUploadBytes.toInt();
 
       AppLogger.info(
         'Files config loaded',

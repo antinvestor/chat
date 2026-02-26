@@ -1,14 +1,12 @@
 // ignore_for_file: avoid_dynamic_calls
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../core/logging/app_logger.dart';
 import '../../../core/navigation/navigation_helper.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../widgets/profile_image_picker.dart';
 import '../../auth/data/user_info_provider.dart';
 import '../data/profile_repository.dart';
 import '../domain/user_status.dart';
@@ -25,12 +23,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _displayNameController = TextEditingController();
   final _bioController = TextEditingController();
   final _statusMessageController = TextEditingController();
-  final _imagePicker = ImagePicker();
 
   bool _isLoading = false;
   bool _isSaving = false;
-  File? _selectedImage;
+  PickedImage? _selectedImage;
   String? _currentAvatarUrl;
+  bool _isRemovingPhoto = false;
   List<ContactInfo> _contacts = [];
   UserStatus _currentStatus = UserStatus.offline;
   String? _originalStatusMessage;
@@ -93,84 +91,38 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final pickedFile = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-
-      if (pickedFile != null) {
-        setState(() {
-          _selectedImage = File(pickedFile.path);
-        });
-      }
-    } catch (e) {
-      _showError('Failed to pick image: $e');
-    }
+  void _onImagePicked(PickedImage image) {
+    setState(() {
+      _selectedImage = image;
+      _isRemovingPhoto = false;
+    });
   }
 
-  Future<void> _takePhoto() async {
-    try {
-      final pickedFile = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-
-      if (pickedFile != null) {
-        setState(() {
-          _selectedImage = File(pickedFile.path);
-        });
-      }
-    } catch (e) {
-      _showError('Failed to take photo: $e');
-    }
-  }
-
-  void _showImageSourceDialog() {
-    showModalBottomSheet(
+  void _removePhoto() {
+    showDialog(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choose from Gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Take a Photo'),
-              onTap: () {
-                Navigator.pop(context);
-                _takePhoto();
-              },
-            ),
-            if (_currentAvatarUrl != null || _selectedImage != null)
-              ListTile(
-                leading: Icon(Icons.delete, color: Colors.red.shade600),
-                title: Text(
-                  'Remove Photo',
-                  style: TextStyle(color: Colors.red.shade600),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    _selectedImage = null;
-                    _currentAvatarUrl = null;
-                  });
-                },
-              ),
-          ],
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Photo'),
+        content: const Text(
+          'Are you sure you want to remove your profile photo?',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _selectedImage = null;
+                _currentAvatarUrl = null;
+                _isRemovingPhoto = true;
+              });
+            },
+            child: Text('Remove', style: TextStyle(color: Colors.red.shade600)),
+          ),
+        ],
       ),
     );
   }
@@ -274,8 +226,13 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
   /// Updates profile photo if selected. Returns false if update failed.
   Future<bool> _updateProfilePhoto(ProfileRepository profileRepo) async {
+    if (_isRemovingPhoto) {
+      return true;
+    }
     if (_selectedImage != null) {
-      final result = await profileRepo.updateProfilePhoto(_selectedImage!);
+      final result = await profileRepo.updateProfilePhotoBytes(
+        _selectedImage!.bytes,
+      );
       if (!result.success) {
         _showError('Failed to update photo. Please try again.');
         return false;
@@ -712,55 +669,42 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   Widget _buildPhotoSection(ThemeData theme) => Center(
     child: Column(
       children: [
-        GestureDetector(
-          onTap: _showImageSourceDialog,
-          child: Stack(
-            children: [
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
-                backgroundImage: _selectedImage != null
-                    ? FileImage(_selectedImage!)
-                    : (_currentAvatarUrl != null
-                          ? NetworkImage(_currentAvatarUrl!)
-                          : null),
-                child: (_selectedImage == null && _currentAvatarUrl == null)
-                    ? Text(
-                        _displayNameController.text.isNotEmpty
-                            ? _displayNameController.text[0].toUpperCase()
-                            : 'U',
-                        style: const TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryGreen,
-                        ),
-                      )
-                    : null,
-              ),
+        Stack(
+          children: [
+            ProfileImagePicker(
+              onImagePicked: _onImagePicked,
+              currentImageUrl: _currentAvatarUrl,
+              size: 120,
+            ),
+            if (_currentAvatarUrl != null || _selectedImage != null)
               Positioned(
                 bottom: 0,
                 right: 0,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    color: Colors.white,
-                    size: 20,
+                child: GestureDetector(
+                  onTap: _removePhoto,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade600,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(
-          'Tap to change photo',
+          _selectedImage != null || _currentAvatarUrl != null
+              ? 'Tap to change photo'
+              : 'Tap to add a photo',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

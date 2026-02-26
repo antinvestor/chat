@@ -10,8 +10,7 @@ part of 'transfer_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// Manages download progress state for multiple concurrent downloads
 ///
-/// Provides methods to start, cancel, retry, and track downloads.
-/// Exposes a stream of progress updates for UI binding.
+/// Uses [ContentResolver] for downloading files via MXC or legacy URLs.
 ///
 /// Example:
 /// ```dart
@@ -20,12 +19,9 @@ part of 'transfer_providers.dart';
 ///
 /// // Start a download
 /// ref.read(downloadProgressProvider.notifier).startDownload(
-///   fileUrl: 'https://example.com/file.pdf',
+///   fileUrl: 'mxc://server/media_id',
 ///   downloadId: 'dl-123',
 /// );
-///
-/// // Cancel a download
-/// ref.read(downloadProgressProvider.notifier).cancelDownload('dl-123');
 /// ```
 
 @ProviderFor(DownloadProgressNotifier)
@@ -33,8 +29,7 @@ final downloadProgressProvider = DownloadProgressNotifierProvider._();
 
 /// Manages download progress state for multiple concurrent downloads
 ///
-/// Provides methods to start, cancel, retry, and track downloads.
-/// Exposes a stream of progress updates for UI binding.
+/// Uses [ContentResolver] for downloading files via MXC or legacy URLs.
 ///
 /// Example:
 /// ```dart
@@ -43,12 +38,9 @@ final downloadProgressProvider = DownloadProgressNotifierProvider._();
 ///
 /// // Start a download
 /// ref.read(downloadProgressProvider.notifier).startDownload(
-///   fileUrl: 'https://example.com/file.pdf',
+///   fileUrl: 'mxc://server/media_id',
 ///   downloadId: 'dl-123',
 /// );
-///
-/// // Cancel a download
-/// ref.read(downloadProgressProvider.notifier).cancelDownload('dl-123');
 /// ```
 final class DownloadProgressNotifierProvider
     extends
@@ -58,8 +50,7 @@ final class DownloadProgressNotifierProvider
         > {
   /// Manages download progress state for multiple concurrent downloads
   ///
-  /// Provides methods to start, cancel, retry, and track downloads.
-  /// Exposes a stream of progress updates for UI binding.
+  /// Uses [ContentResolver] for downloading files via MXC or legacy URLs.
   ///
   /// Example:
   /// ```dart
@@ -68,12 +59,9 @@ final class DownloadProgressNotifierProvider
   ///
   /// // Start a download
   /// ref.read(downloadProgressProvider.notifier).startDownload(
-  ///   fileUrl: 'https://example.com/file.pdf',
+  ///   fileUrl: 'mxc://server/media_id',
   ///   downloadId: 'dl-123',
   /// );
-  ///
-  /// // Cancel a download
-  /// ref.read(downloadProgressProvider.notifier).cancelDownload('dl-123');
   /// ```
   DownloadProgressNotifierProvider._()
     : super(
@@ -105,12 +93,11 @@ final class DownloadProgressNotifierProvider
 }
 
 String _$downloadProgressNotifierHash() =>
-    r'3c13b1b3f68497f86fa5683e37f4611edde246b5';
+    r'4785c1cad39f0e4a66f14d36193d4b1ef6bd6025';
 
 /// Manages download progress state for multiple concurrent downloads
 ///
-/// Provides methods to start, cancel, retry, and track downloads.
-/// Exposes a stream of progress updates for UI binding.
+/// Uses [ContentResolver] for downloading files via MXC or legacy URLs.
 ///
 /// Example:
 /// ```dart
@@ -119,12 +106,9 @@ String _$downloadProgressNotifierHash() =>
 ///
 /// // Start a download
 /// ref.read(downloadProgressProvider.notifier).startDownload(
-///   fileUrl: 'https://example.com/file.pdf',
+///   fileUrl: 'mxc://server/media_id',
 ///   downloadId: 'dl-123',
 /// );
-///
-/// // Cancel a download
-/// ref.read(downloadProgressProvider.notifier).cancelDownload('dl-123');
 /// ```
 
 abstract class _$DownloadProgressNotifier
@@ -155,27 +139,11 @@ abstract class _$DownloadProgressNotifier
 }
 
 /// Provider for a specific download's progress
-///
-/// Example:
-/// ```dart
-/// final progress = ref.watch(singleDownloadProgressProvider('dl-123'));
-/// if (progress != null && progress.isInProgress) {
-///   // Show progress indicator
-/// }
-/// ```
 
 @ProviderFor(singleDownloadProgress)
 final singleDownloadProgressProvider = SingleDownloadProgressFamily._();
 
 /// Provider for a specific download's progress
-///
-/// Example:
-/// ```dart
-/// final progress = ref.watch(singleDownloadProgressProvider('dl-123'));
-/// if (progress != null && progress.isInProgress) {
-///   // Show progress indicator
-/// }
-/// ```
 
 final class SingleDownloadProgressProvider
     extends
@@ -186,14 +154,6 @@ final class SingleDownloadProgressProvider
         >
     with $Provider<DownloadProgress?> {
   /// Provider for a specific download's progress
-  ///
-  /// Example:
-  /// ```dart
-  /// final progress = ref.watch(singleDownloadProgressProvider('dl-123'));
-  /// if (progress != null && progress.isInProgress) {
-  ///   // Show progress indicator
-  /// }
-  /// ```
   SingleDownloadProgressProvider._({
     required SingleDownloadProgressFamily super.from,
     required String super.argument,
@@ -251,14 +211,6 @@ String _$singleDownloadProgressHash() =>
     r'93ce005de13bb6c7531e06acdbe2ddd2809d699a';
 
 /// Provider for a specific download's progress
-///
-/// Example:
-/// ```dart
-/// final progress = ref.watch(singleDownloadProgressProvider('dl-123'));
-/// if (progress != null && progress.isInProgress) {
-///   // Show progress indicator
-/// }
-/// ```
 
 final class SingleDownloadProgressFamily extends $Family
     with $FunctionalFamilyOverride<DownloadProgress?, String> {
@@ -272,14 +224,6 @@ final class SingleDownloadProgressFamily extends $Family
       );
 
   /// Provider for a specific download's progress
-  ///
-  /// Example:
-  /// ```dart
-  /// final progress = ref.watch(singleDownloadProgressProvider('dl-123'));
-  /// if (progress != null && progress.isInProgress) {
-  ///   // Show progress indicator
-  /// }
-  /// ```
 
   SingleDownloadProgressProvider call(String downloadId) =>
       SingleDownloadProgressProvider._(argument: downloadId, from: this);
@@ -466,8 +410,6 @@ final class TotalDownloadProgressProvider
 
 String _$totalDownloadProgressHash() =>
     r'c027c028cd0e825c2cf95e32433547a639d61d54';
-
-// downloadProgressStream provider removed (was using deprecated ProgressiveDownloadService)
 
 /// Provider for TransferQueueService
 
@@ -773,7 +715,7 @@ String _$overallTransferProgressHash() =>
 
 /// Provider that automatically shows/updates transfer notifications
 ///
-/// This provider listens to upload and download progress streams
+/// This provider watches upload and download progress state notifiers
 /// and shows appropriate notifications.
 
 @ProviderFor(TransferNotifications)
@@ -781,13 +723,13 @@ final transferNotificationsProvider = TransferNotificationsProvider._();
 
 /// Provider that automatically shows/updates transfer notifications
 ///
-/// This provider listens to upload and download progress streams
+/// This provider watches upload and download progress state notifiers
 /// and shows appropriate notifications.
 final class TransferNotificationsProvider
     extends $NotifierProvider<TransferNotifications, bool> {
   /// Provider that automatically shows/updates transfer notifications
   ///
-  /// This provider listens to upload and download progress streams
+  /// This provider watches upload and download progress state notifiers
   /// and shows appropriate notifications.
   TransferNotificationsProvider._()
     : super(
@@ -817,11 +759,11 @@ final class TransferNotificationsProvider
 }
 
 String _$transferNotificationsHash() =>
-    r'e939458962e83d9f4c5802945b023b130d2a6641';
+    r'4543af100cb315660c9dc134fee349377e191025';
 
 /// Provider that automatically shows/updates transfer notifications
 ///
-/// This provider listens to upload and download progress streams
+/// This provider watches upload and download progress state notifiers
 /// and shows appropriate notifications.
 
 abstract class _$TransferNotifications extends $Notifier<bool> {
@@ -843,32 +785,17 @@ abstract class _$TransferNotifications extends $Notifier<bool> {
 }
 
 /// Provider to activate transfer notifications
-///
-/// Use this at app startup to enable automatic transfer notifications:
-/// ```dart
-/// ref.watch(transferNotificationsActiveProvider);
-/// ```
 
 @ProviderFor(transferNotificationsActive)
 final transferNotificationsActiveProvider =
     TransferNotificationsActiveProvider._();
 
 /// Provider to activate transfer notifications
-///
-/// Use this at app startup to enable automatic transfer notifications:
-/// ```dart
-/// ref.watch(transferNotificationsActiveProvider);
-/// ```
 
 final class TransferNotificationsActiveProvider
     extends $FunctionalProvider<bool, bool, bool>
     with $Provider<bool> {
   /// Provider to activate transfer notifications
-  ///
-  /// Use this at app startup to enable automatic transfer notifications:
-  /// ```dart
-  /// ref.watch(transferNotificationsActiveProvider);
-  /// ```
   TransferNotificationsActiveProvider._()
     : super(
         from: null,

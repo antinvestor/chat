@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/files/content_resolver.dart';
 
-/// Shared MXC/HTTPS image resolver widget.
+/// Shared HTTP image resolver widget.
 ///
-/// Resolves images from MXC URIs (via ContentResolver), legacy HTTPS URLs,
-/// or local file paths, with placeholder and error fallbacks.
+/// Resolves images from direct URLs, attachment IDs, or local file paths,
+/// with placeholder and error fallbacks.
 class ResolvedMediaImage extends ConsumerWidget {
   const ResolvedMediaImage({
     required this.content,
@@ -33,37 +33,12 @@ class ResolvedMediaImage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ContentResolver.isMxcContent(content)) {
-      final resolver = ref.watch(contentResolverProvider);
-      final future = useThumbnail
-          ? resolver.resolveVideoThumbnail(content)
-          : resolver.resolveImageUrl(
-              content,
-              width: (width ?? 250).toInt(),
-              height: (height ?? 200).toInt(),
-            );
+    final resolver = ref.watch(contentResolverProvider);
+    final resolvedUrl = url ?? resolver.resolveLegacyUrl(content);
 
-      return FutureBuilder<dynamic>(
-        future: future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildPlaceholder(placeholderIcon);
-          }
-          if (snapshot.hasData && snapshot.data != null) {
-            return Image.memory(
-              snapshot.data!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => _buildPlaceholder(errorIcon),
-            );
-          }
-          return _buildPlaceholder(errorIcon);
-        },
-      );
-    }
-
-    if (url != null) {
+    if (resolvedUrl != null) {
       return Image.network(
-        url!,
+        resolvedUrl,
         fit: BoxFit.cover,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
@@ -81,7 +56,30 @@ class ResolvedMediaImage extends ConsumerWidget {
       );
     }
 
-    return _buildPlaceholder(placeholderIcon);
+    final future = useThumbnail
+        ? resolver.resolveVideoThumbnail(content)
+        : resolver.resolveImageUrl(
+            content,
+            width: (width ?? 250).toInt(),
+            height: (height ?? 200).toInt(),
+          );
+
+    return FutureBuilder<dynamic>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildPlaceholder(placeholderIcon);
+        }
+        if (snapshot.hasData && snapshot.data != null) {
+          return Image.memory(
+            snapshot.data!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _buildPlaceholder(errorIcon),
+          );
+        }
+        return _buildPlaceholder(errorIcon);
+      },
+    );
   }
 
   Widget _buildPlaceholder(IconData icon) => Container(

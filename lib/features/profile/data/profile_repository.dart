@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:antinvestor_api_common/antinvestor_api_common.dart' as common;
 import 'package:antinvestor_api_profile/antinvestor_api_profile.dart' as pb;
@@ -215,26 +216,90 @@ class ProfileRepository {
     return updateStatus(currentStatus, statusMessage: '');
   }
 
-  /// Update the user's profile photo
+  /// Update the user's profile photo using a File (mobile/desktop)
   /// Returns the URL of the uploaded avatar
   Future<ProfileUpdateResult> updateProfilePhoto(File imageFile) async {
+    return _updateProfilePhotoWithData(null, imageFile);
+  }
+
+  /// Update the user's profile photo using raw bytes (web/mobile)
+  /// Returns the URL of the uploaded avatar
+  Future<ProfileUpdateResult> updateProfilePhotoBytes(Uint8List bytes) async {
+    return _updateProfilePhotoWithData(bytes, null);
+  }
+
+  /// Internal method that handles both bytes and file uploads
+  Future<ProfileUpdateResult> _updateProfilePhotoWithData(
+    Uint8List? bytes,
+    File? imageFile,
+  ) async {
     try {
+      AppLogger.debug(
+        '_updateProfilePhotoWithData: Starting profile photo update',
+      );
+
+      AppLogger.debug(
+        '_updateProfilePhotoWithData: Getting profileClientProvider.future',
+      );
       final profileClient = await _ref.read(profileClientProvider.future);
+      AppLogger.debug('_updateProfilePhotoWithData: Got profile client');
+
+      AppLogger.debug(
+        '_updateProfilePhotoWithData: Getting mxcUploadServiceProvider',
+      );
       final uploadService = _ref.read(mxcUploadServiceProvider);
+      AppLogger.debug('_updateProfilePhotoWithData: Got upload service');
+
+      AppLogger.debug(
+        '_updateProfilePhotoWithData: Getting userInfoProvider.future',
+      );
       final userInfo = await _ref.read(userInfoProvider.future);
+      AppLogger.debug(
+        '_updateProfilePhotoWithData: Got user info: ${userInfo?.id}',
+      );
 
       if (userInfo?.id == null) {
+        AppLogger.warning(
+          '_updateProfilePhotoWithData: User not authenticated',
+        );
         return ProfileUpdateResult.failure('User not authenticated');
       }
 
-      // Upload the image first
-      final uploadResult = await uploadService.uploadFile(
-        imageFile,
-        mimeType: 'image/jpeg',
-      );
-      final avatarUrl = uploadResult.contentUri;
+      String avatarUrl;
 
-      // Update profile with new avatar URL
+      if (bytes != null) {
+        AppLogger.debug(
+          '_updateProfilePhotoWithData: Uploading ${bytes.length} bytes',
+        );
+        final uploadResult = await uploadService.uploadBytes(
+          bytes,
+          'profile_photo.jpg',
+          'image/jpeg',
+        );
+        avatarUrl = uploadResult.contentUri;
+        AppLogger.debug(
+          '_updateProfilePhotoWithData: Upload complete, avatarUrl: $avatarUrl',
+        );
+      } else if (imageFile != null) {
+        AppLogger.debug(
+          '_updateProfilePhotoWithData: Uploading file: ${imageFile.path}',
+        );
+        final uploadResult = await uploadService.uploadFile(
+          imageFile,
+          mimeType: 'image/jpeg',
+        );
+        avatarUrl = uploadResult.contentUri;
+      } else {
+        AppLogger.warning(
+          '_updateProfilePhotoWithData: No image data provided',
+        );
+        return ProfileUpdateResult.failure('No image data provided');
+      }
+
+      AppLogger.debug(
+        '_updateProfilePhotoWithData: Updating profile with avatar URL',
+      );
+
       final properties = common.Struct()
         ..fields['avatar_url'] = (common.Value()..stringValue = avatarUrl);
 
@@ -243,9 +308,13 @@ class ProfileRepository {
         properties: properties,
       );
 
+      AppLogger.debug(
+        '_updateProfilePhotoWithData: Calling profileClient.stub.update',
+      );
       await profileClient.stub.update(request);
+      AppLogger.debug('_updateProfilePhotoWithData: Profile update complete');
 
-      // Update local database
+      AppLogger.debug('_updateProfilePhotoWithData: Updating local profile');
       await _updateLocalProfile(avatarUrl: avatarUrl);
 
       AppLogger.info('Profile photo updated', data: {'url': avatarUrl});

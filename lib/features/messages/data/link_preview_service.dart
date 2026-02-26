@@ -166,9 +166,12 @@ class LinkPreviewService {
     final title = getString('og:title') ?? getString('title');
     if (title == null || title.isEmpty) return null;
 
-    final imageUrl = response.hasOgImage() && response.ogImage.isNotEmpty
-        ? response.ogImage
-        : getString('og:image');
+    String? imageUrl;
+    if (response.hasOgImageMediaId() && response.ogImageMediaId.isNotEmpty) {
+      final base = ApiConfig.filesBaseUrl.replaceAll(RegExp(r'/+$'), '');
+      imageUrl = '$base/v1/content/${response.ogImageMediaId}';
+    }
+    imageUrl ??= getString('og:image');
 
     final baseUri = Uri.parse(url);
 

@@ -11,7 +11,7 @@ This document defines the architecture for a production-grade, offline-first, en
 
 ### Key Dependencies
 *   **Networking**: `connectrpc` (Connect RPC client), `http` (for OIDC).
-*   **Database**: `sqlite3` (via `ffi`), `sqlite3_flutter_libs`. **NO ORMs** (drift/sqflite) as per requirements.
+*   **Database**: Drift + SQLite (`drift`, `sqlite3_flutter_libs`) as the production ORM for reactive queries and migrations.
 *   **Encryption**: `vodozemac` (v0.4.1) for Olm/Megolm implementation.
 *   **Authentication**: `openid_client` for OIDC/PKCE.
 *   **State Management**: `flutter_riverpod` (v2.x) with `riverpod_annotation`.

@@ -27,7 +27,7 @@ part 'transfer_providers.g.dart';
 ///
 /// // Start a download
 /// ref.read(downloadProgressProvider.notifier).startDownload(
-///   fileUrl: 'mxc://server/media_id',
+///   fileUrl: 'https://files.example.com/v1/content/media_id',
 ///   downloadId: 'dl-123',
 /// );
 /// ```

@@ -353,6 +353,7 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
     // Reverse index since list is reversed
     final reversedIndex = widget.messages.length - 1 - index;
     final message = widget.messages[reversedIndex];
+    final provisionalSenderId = 'provisional_${widget.roomId}';
 
     // Calculate grouping
     final groupingInfo = _calculateGrouping(reversedIndex);
@@ -362,6 +363,7 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
       key: ValueKey(message.id),
       message: message,
       currentUserSubscriptionId: widget.currentUserSubscriptionId,
+      isProvisionalSender: message.senderId == provisionalSenderId,
       isGroupChat: widget.isGroupChat,
       showDateHeader: groupingInfo.showDateHeader,
       shouldGroupWithPrevious: groupingInfo.shouldGroupWithPrevious,
@@ -387,7 +389,8 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
 
     if (index < widget.messages.length - 1) {
       final nextMessage = widget.messages[index + 1];
-      final timeDiff = message.createdAt - nextMessage.createdAt;
+      final timeDiff =
+          _displayTimestamp(message) - _displayTimestamp(nextMessage);
       shouldGroupWithPrevious =
           nextMessage.senderId == message.senderId &&
           timeDiff < widget.config.groupingThresholdMs;
@@ -395,10 +398,10 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
 
       // Check if date changed
       final messageDate = DateTime.fromMillisecondsSinceEpoch(
-        message.createdAt,
+        _displayTimestamp(message),
       );
       final nextDate = DateTime.fromMillisecondsSinceEpoch(
-        nextMessage.createdAt,
+        _displayTimestamp(nextMessage),
       );
       showDateHeader =
           messageDate.day != nextDate.day ||
@@ -415,6 +418,9 @@ class _VirtualizedMessageListState extends ConsumerState<VirtualizedMessageList>
       removeTail: removeTail,
     );
   }
+
+  int _displayTimestamp(RoomEvent message) =>
+      message.serverTs ?? message.createdAt;
 
   Widget _buildEmptyState(BuildContext context) => Center(
     child: Column(
@@ -481,6 +487,7 @@ class _OptimizedMessageItem extends ConsumerStatefulWidget {
     required this.onDeleteMessage,
     super.key,
     this.currentUserSubscriptionId,
+    this.isProvisionalSender = false,
     this.isGroupChat = false,
     this.enableKeepAlive = true,
     this.onSizeChanged,
@@ -491,6 +498,7 @@ class _OptimizedMessageItem extends ConsumerStatefulWidget {
 
   /// Current user's subscription ID - passed from parent to avoid async issues
   final String? currentUserSubscriptionId;
+  final bool isProvisionalSender;
 
   /// Whether this is a group chat
   final bool isGroupChat;
@@ -544,8 +552,9 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
     // Use subscription ID passed from parent to determine if message is from me
     // This avoids async race conditions that caused messages to appear on wrong side
     final isMe =
-        widget.currentUserSubscriptionId != null &&
-        widget.message.senderId == widget.currentUserSubscriptionId;
+        (widget.currentUserSubscriptionId != null &&
+            widget.message.senderId == widget.currentUserSubscriptionId) ||
+        widget.isProvisionalSender;
 
     // Use shared validation logic from MessageSendingService
     final canEdit = MessageSendingService.canEditMessage(
@@ -573,7 +582,9 @@ class _OptimizedMessageItemState extends ConsumerState<_OptimizedMessageItem>
         child: Column(
           children: [
             if (widget.showDateHeader)
-              DateHeader(timestamp: widget.message.createdAt),
+              DateHeader(
+                timestamp: widget.message.serverTs ?? widget.message.createdAt,
+              ),
             _buildMessageWidget(isMe, canEdit, canDelete, canForward),
           ],
         ),

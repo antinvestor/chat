@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$RoomEvent {
 
 // Required parameters first
- String get id; String get roomId; String get senderId;// Profile ID (from ContactLink.profileId)
+ String get id; String get roomId; String get senderId;// Subscription ID (room-specific sender identifier)
  RoomEventType get type; Map<String, dynamic> get content; int get createdAt;// Optional parameters
  String? get senderContactId;// Contact ID (from ContactLink.contactId)
  String? get parentId; EventStatus get status; int? get serverTs; String? get localId; int? get editedAt;// Timestamp when message was last edited
@@ -258,7 +258,7 @@ class _RoomEvent extends RoomEvent {
 @override final  String id;
 @override final  String roomId;
 @override final  String senderId;
-// Profile ID (from ContactLink.profileId)
+// Subscription ID (room-specific sender identifier)
 @override final  RoomEventType type;
  final  Map<String, dynamic> _content;
 @override Map<String, dynamic> get content {

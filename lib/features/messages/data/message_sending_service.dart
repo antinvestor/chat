@@ -95,6 +95,7 @@ class MessageSendingService {
         final encrypted = await _encryptionService.encryptGroup(roomId, text);
         content = {
           'encrypted': true,
+          'algorithm': 'megolm.v1',
           'ciphertext': encrypted.ciphertext,
           'sessionId': encrypted.sessionId,
           'messageIndex': encrypted.messageIndex,
@@ -333,7 +334,7 @@ class MessageSendingService {
       'fileName': fileName,
       'fileSize': fileSize,
       'uploading': true,
-      if (caption != null) 'caption': caption,
+      'caption': ?caption,
       if (thumbnailResult != null)
         'localThumbnailPath': thumbnailResult.file.path,
       ...?extraContent,
@@ -362,11 +363,11 @@ class MessageSendingService {
         );
       }
 
-      // Upload thumbnail first via MXC (if generated)
-      String? thumbnailContentUri;
+      // Upload thumbnail first (if generated)
+      String? thumbnailUrl;
       if (thumbnailResult != null) {
         AppLogger.debug(
-          'Uploading thumbnail via MXC',
+          'Uploading thumbnail',
           data: {'size': thumbnailResult.size},
         );
         try {
@@ -375,7 +376,7 @@ class MessageSendingService {
             thumbBytes,
             'image/jpeg',
           );
-          thumbnailContentUri = thumbResult.contentUri;
+          thumbnailUrl = thumbResult.contentUri;
         } catch (e) {
           AppLogger.warning(
             'Thumbnail upload failed, continuing without',
@@ -384,9 +385,9 @@ class MessageSendingService {
         }
       }
 
-      // Upload main file via MXC streaming
+      // Upload main file via streaming
       AppLogger.info(
-        'Uploading media file via MXC',
+        'Uploading media file',
         data: {'fileName': fileName, 'size': fileSize},
       );
 
@@ -395,21 +396,19 @@ class MessageSendingService {
         onProgress: onProgress,
       );
 
-      // Build content with both MXC and legacy fields
+      // Build content with direct HTTP URLs
       content = {
-        // New MXC fields
         'contentUri': uploadResult.contentUri,
         'mediaId': uploadResult.mediaId,
-        'serverName': uploadResult.serverName,
-        // Legacy field for backward compatibility
+        // Attachment fields for Chat API payload
+        'attachmentId': uploadResult.mediaId,
+        'size': fileSize,
         'url': uploadResult.contentUri,
         'fileName': fileName,
         'fileSize': fileSize,
         'mimeType': _detectMimeType(fileName),
-        if (thumbnailContentUri != null)
-          'thumbnailContentUri': thumbnailContentUri,
-        if (thumbnailContentUri != null) 'thumbnailUrl': thumbnailContentUri,
-        if (caption != null) 'caption': caption,
+        'thumbnailUrl': ?thumbnailUrl,
+        'caption': ?caption,
         ...?extraContent,
       };
 
@@ -418,12 +417,14 @@ class MessageSendingService {
         try {
           final encrypted = await _encryptionService.encryptGroup(
             roomId,
-            content.toString(),
+            jsonEncode(content),
           );
           content = {
             'encrypted': true,
+            'algorithm': 'megolm.v1',
             'ciphertext': encrypted.ciphertext,
             'sessionId': encrypted.sessionId,
+            'senderKey': encrypted.senderKey,
             'originalType': type.toString(),
           };
         } catch (e) {

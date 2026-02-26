@@ -20,15 +20,15 @@ class ApiConfig {
   );
   static const String devicesBaseUrl = String.fromEnvironment(
     'DEVICES_URL',
-    defaultValue: 'https://devices.stawi.dev',
+    defaultValue: 'https://api.stawi.im/devices',
   );
   static const String filesBaseUrl = String.fromEnvironment(
     'FILES_URL',
-    defaultValue: 'https://files.stawi.dev',
+    defaultValue: 'https://api.stawi.im/files',
   );
   static const String profileBaseUrl = String.fromEnvironment(
     'PROFILE_URL',
-    defaultValue: 'https://profile.stawi.dev',
+    defaultValue: 'https://profile.stawi.org',
   );
 
   // OAuth2 configuration (configurable via --dart-define)
