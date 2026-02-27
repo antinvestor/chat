@@ -109,7 +109,7 @@ jobs:
           echo "$CHANGELOG" > /tmp/changelog.txt
 
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: artifacts/
         continue-on-error: true
@@ -169,7 +169,7 @@ jobs:
     steps:
       - name: Download web build
         id: download
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: web-build-production
           path: build/web
@@ -210,7 +210,7 @@ jobs:
 
       - name: Download AAB
         id: download
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: android-aab-production
           path: artifacts/
@@ -251,7 +251,7 @@ jobs:
     steps:
       - name: Download IPA
         id: download
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ios-ipa-production
           path: artifacts/

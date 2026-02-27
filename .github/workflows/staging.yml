@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: Download web build
         id: download
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: web-build-staging
           path: build/web
@@ -80,7 +80,7 @@ jobs:
     steps:
       - name: Download APK
         id: download
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: android-apk-staging
           path: artifacts/
@@ -120,7 +120,7 @@ jobs:
     steps:
       - name: Download IPA
         id: download
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ios-ipa-staging
           path: artifacts/
