@@ -139,13 +139,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download staging APK
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: staging-apk
           path: ./apks
 
       - name: Download test APK
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: test-apk
           path: ./apks
