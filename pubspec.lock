@@ -69,10 +69,10 @@ packages:
     dependency: "direct main"
     description:
       name: antinvestor_api_files
-      sha256: ad68df3ef8e43e6bd8fed758fa837a09118d20f96634f9c0bf6d2df7d2e0021b
+      sha256: d15a72f61d942a666a5a39152c946501a216d94cde68298575d471703967ec7b
       url: "https://pub.dev"
     source: hosted
-    version: "1.52.1"
+    version: "1.53.19"
   antinvestor_api_profile:
     dependency: "direct main"
     description:
@@ -85,10 +85,10 @@ packages:
     dependency: "direct main"
     description:
       name: app_badge_plus
-      sha256: "152c22866f4b6d0d4eb3c8fe6916a77bbc0e3939da11b51cce38a4a26738dd60"
+      sha256: ce3d8fdfcf39a1552cc8dea499ee3b4a86273ccf04c8de29e7960c739b045ae6
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.6"
+    version: "1.2.7"
   app_links:
     dependency: "direct main"
     description:
@@ -785,10 +785,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_webrtc
-      sha256: "0f86b518e9349e71a136a96e0ea11294cad8a8531b2bc9ae99e69df332ac898a"
+      sha256: c549ea8ffb20167110ad0a28e5f17a2650b5bea8837d984898cd9b0ffd5fa78b
       url: "https://pub.dev"
     source: hosted
-    version: "1.3.0"
+    version: "1.3.1"
   freezed:
     dependency: "direct dev"
     description:
@@ -1075,10 +1075,10 @@ packages:
     dependency: "direct main"
     description:
       name: local_auth
-      sha256: a4f1bf57f0236a4aeb5e8f0ec180e197f4b112a3456baa6c1e73b546630b0422
+      sha256: ae6f382f638108c6becd134318d7c3f0a93875383a54010f61d7c97ac05d5137
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.0"
+    version: "3.0.1"
   local_auth_android:
     dependency: transitive
     description:
@@ -1976,10 +1976,10 @@ packages:
     dependency: "direct main"
     description:
       name: uuid
-      sha256: a11b666489b1954e01d992f3d601b1804a33937b5a8fe677bd26b8a9f96f96e8
+      sha256: "1fef9e8e11e2991bb773070d4656b7bd5d850967a2456cfc83cf47925ba79489"
       url: "https://pub.dev"
     source: hosted
-    version: "4.5.2"
+    version: "4.5.3"
   vector_math:
     dependency: transitive
     description:
