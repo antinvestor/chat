@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/logging/app_logger.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../widgets/profile_image_picker.dart';
 import '../../auth/data/user_info_provider.dart';
 import '../../onboarding/data/onboarding_repository.dart';
 import '../data/profile_repository.dart';
-import '../../../core/logging/app_logger.dart';
-import '../../../core/theme/app_theme.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -134,7 +134,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bool requiresPhoto = !_hasExistingAvatar;
+    final requiresPhoto = !_hasExistingAvatar;
 
     return Scaffold(
       body: SafeArea(
@@ -168,7 +168,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     ProfileImagePicker(
                       onImagePicked: _onImagePicked,
                       currentImageUrl: _currentAvatarUrl,
-                      size: 144,
                     ),
                     const SizedBox(height: 16),
                     Text(

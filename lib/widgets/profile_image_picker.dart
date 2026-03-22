@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../core/files/mxc_upload_service.dart';
+import '../../core/files/files_upload_service.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -24,8 +24,8 @@ class PickedImage {
 
 class ProfileImagePicker extends ConsumerStatefulWidget {
   const ProfileImagePicker({
-    super.key,
     required this.onImagePicked,
+    super.key,
     this.size = 144,
     this.currentImageUrl,
     this.enabled = true,
@@ -211,9 +211,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
 
 class ProfileImageUploader extends ConsumerStatefulWidget {
   const ProfileImageUploader({
-    super.key,
     required this.selectedImage,
     required this.currentImageUrl,
+    super.key,
     this.size = 144,
     this.onUploadComplete,
     this.onUploadError,
@@ -248,7 +248,7 @@ class _ProfileImageUploaderState extends ConsumerState<ProfileImageUploader> {
     setState(() => _isUploading = true);
 
     try {
-      final uploadService = ref.read(mxcUploadServiceProvider);
+      final uploadService = ref.read(filesUploadServiceProvider);
       final result = await uploadService.uploadBytes(
         image.bytes,
         image.fileName,

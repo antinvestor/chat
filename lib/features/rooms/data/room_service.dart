@@ -196,7 +196,7 @@ class RoomService {
     final updatedMetadata = {
       ...?existingRoom.metadata,
       ...?metadata,
-      if (description != null) 'description': description,
+      'description': ?description,
       'pendingSync': true,
     };
 
@@ -275,11 +275,9 @@ class RoomService {
 
     final updatedMetadata = {
       ...?existingRoom.metadata,
-      if (editInfoPermission != null) 'editInfoPermission': editInfoPermission,
-      if (sendMessagesPermission != null)
-        'sendMessagesPermission': sendMessagesPermission,
-      if (addMembersPermission != null)
-        'addMembersPermission': addMembersPermission,
+      'editInfoPermission': ?editInfoPermission,
+      'sendMessagesPermission': ?sendMessagesPermission,
+      'addMembersPermission': ?addMembersPermission,
       'pendingSync': true,
     };
 
