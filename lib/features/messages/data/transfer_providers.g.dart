@@ -19,7 +19,7 @@ part of 'transfer_providers.dart';
 ///
 /// // Start a download
 /// ref.read(downloadProgressProvider.notifier).startDownload(
-///   fileUrl: 'mxc://server/media_id',
+///   fileUrl: 'https://files.example.com/v1/content/media_id',
 ///   downloadId: 'dl-123',
 /// );
 /// ```
@@ -38,7 +38,7 @@ final downloadProgressProvider = DownloadProgressNotifierProvider._();
 ///
 /// // Start a download
 /// ref.read(downloadProgressProvider.notifier).startDownload(
-///   fileUrl: 'mxc://server/media_id',
+///   fileUrl: 'https://files.example.com/v1/content/media_id',
 ///   downloadId: 'dl-123',
 /// );
 /// ```
@@ -59,7 +59,7 @@ final class DownloadProgressNotifierProvider
   ///
   /// // Start a download
   /// ref.read(downloadProgressProvider.notifier).startDownload(
-  ///   fileUrl: 'mxc://server/media_id',
+  ///   fileUrl: 'https://files.example.com/v1/content/media_id',
   ///   downloadId: 'dl-123',
   /// );
   /// ```
@@ -106,7 +106,7 @@ String _$downloadProgressNotifierHash() =>
 ///
 /// // Start a download
 /// ref.read(downloadProgressProvider.notifier).startDownload(
-///   fileUrl: 'mxc://server/media_id',
+///   fileUrl: 'https://files.example.com/v1/content/media_id',
 ///   downloadId: 'dl-123',
 /// );
 /// ```

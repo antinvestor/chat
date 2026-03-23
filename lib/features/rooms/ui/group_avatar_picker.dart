@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/files/mxc_upload_service.dart';
+import '../../../core/files/files_upload_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -121,7 +121,7 @@ class _GroupAvatarPickerState extends ConsumerState<GroupAvatarPicker> {
       });
 
       // Upload the image
-      final uploadService = ref.read(mxcUploadServiceProvider);
+      final uploadService = ref.read(filesUploadServiceProvider);
       final result = await uploadService.uploadFile(
         File(pickedFile.path),
         mimeType: 'image/jpeg',

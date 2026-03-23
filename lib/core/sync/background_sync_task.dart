@@ -15,6 +15,7 @@ import '../../features/messages/domain/room_event.dart' as domain;
 import '../../features/notifications/badge_service.dart';
 import '../auth/shared_token_service.dart';
 import '../db/database.dart';
+import '../files/files_config_service.dart';
 import '../logging/app_logger.dart';
 import '../networking/api_config.dart';
 import '../settings/settings_service.dart';
@@ -267,12 +268,10 @@ class BackgroundSyncTask {
               if (payload.hasText()) {
                 content = {'text': payload.text.body};
               } else if (payload.hasAttachment()) {
-                final base = ApiConfig.filesBaseUrl.replaceAll(
-                  RegExp(r'/+$'),
-                  '',
+                final contentUrl = FilesConfigService.buildContentUrlFrom(
+                  ApiConfig.filesBaseUrl,
+                  payload.attachment.attachmentId,
                 );
-                final contentUrl =
-                    '$base/v1/content/${payload.attachment.attachmentId}';
                 content = {
                   'attachmentId': payload.attachment.attachmentId,
                   'fileName': payload.attachment.filename,
@@ -552,7 +551,7 @@ class BackgroundSyncTask {
     final request = pb.UpdateRoomRequest(
       roomId: payload['id'] as String,
       name: payload['name'] as String? ?? '',
-      topic: payload['description'] as String? ?? '',
+      description: payload['description'] as String? ?? '',
     );
 
     if (payload['metadata'] != null) {

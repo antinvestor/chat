@@ -10,7 +10,7 @@ import '../../../core/crypto/e2e_encryption_service.dart';
 import '../../../core/crypto/key_exchange_service.dart';
 import '../../../core/db/database.dart';
 import '../../../core/files/files_config_service.dart';
-import '../../../core/files/mxc_upload_service.dart';
+import '../../../core/files/files_upload_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/media/media_compression_service.dart';
 import '../../../core/media/thumbnail_service.dart';
@@ -36,7 +36,7 @@ class MessageSendingService {
     this._compressionService,
     this._thumbnailService,
     this._getSubscriptionIdForRoom,
-    this._mxcUploadService,
+    this._filesUploadService,
     this._filesConfigService,
   );
 
@@ -45,7 +45,7 @@ class MessageSendingService {
   final E2EEncryptionService _encryptionService;
   final MediaCompressionService _compressionService;
   final ThumbnailService _thumbnailService;
-  final MxcUploadService _mxcUploadService;
+  final FilesUploadService _filesUploadService;
   final FilesConfigService _filesConfigService;
 
   /// Callback to get current user's subscription ID for a room
@@ -301,7 +301,7 @@ class MessageSendingService {
 
   /// Internal method for sending media messages
   ///
-  /// Uses [MxcUploadService] for streaming uploads via proto API.
+  /// Uses [FilesUploadService] for streaming uploads via proto API.
   /// The content map includes both new MXC fields and legacy `url` field
   /// for backward compatibility.
   Future<domain.RoomEvent> _sendMediaMessage({
@@ -372,7 +372,7 @@ class MessageSendingService {
         );
         try {
           final thumbBytes = await thumbnailResult.file.readAsBytes();
-          final thumbResult = await _mxcUploadService.uploadThumbnail(
+          final thumbResult = await _filesUploadService.uploadThumbnail(
             thumbBytes,
             'image/jpeg',
           );
@@ -391,7 +391,7 @@ class MessageSendingService {
         data: {'fileName': fileName, 'size': fileSize},
       );
 
-      final uploadResult = await _mxcUploadService.uploadFile(
+      final uploadResult = await _filesUploadService.uploadFile(
         file,
         onProgress: onProgress,
       );
@@ -919,7 +919,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
   final compressionService = ref.watch(mediaCompressionServiceProvider);
   final thumbnailService = ref.watch(thumbnailServiceProvider);
   final authContextService = ref.watch(authContextServiceProvider);
-  final mxcUploadService = ref.watch(mxcUploadServiceProvider);
+  final filesUploadService = ref.watch(filesUploadServiceProvider);
   final filesConfigService = ref.watch(filesConfigServiceProvider);
 
   return MessageSendingService(
@@ -932,7 +932,7 @@ final messageSendingServiceProvider = Provider<MessageSendingService>((ref) {
       // Use AuthContextService for atomic auth state and automatic sync
       return authContextService.requireSubscriptionIdForRoom(roomId);
     },
-    mxcUploadService,
+    filesUploadService,
     filesConfigService,
   );
 });

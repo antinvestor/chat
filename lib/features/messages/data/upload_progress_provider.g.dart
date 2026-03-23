@@ -11,7 +11,7 @@ part of 'upload_progress_provider.dart';
 /// Manages upload progress state for multiple concurrent uploads
 ///
 /// Provides methods to start, cancel, retry, and track uploads
-/// using [MxcUploadService] for proto-based streaming uploads.
+/// using [FilesUploadService] for proto-based streaming uploads.
 ///
 /// Example:
 /// ```dart
@@ -28,7 +28,7 @@ final uploadProgressProvider = UploadProgressNotifierProvider._();
 /// Manages upload progress state for multiple concurrent uploads
 ///
 /// Provides methods to start, cancel, retry, and track uploads
-/// using [MxcUploadService] for proto-based streaming uploads.
+/// using [FilesUploadService] for proto-based streaming uploads.
 ///
 /// Example:
 /// ```dart
@@ -44,7 +44,7 @@ final class UploadProgressNotifierProvider
   /// Manages upload progress state for multiple concurrent uploads
   ///
   /// Provides methods to start, cancel, retry, and track uploads
-  /// using [MxcUploadService] for proto-based streaming uploads.
+  /// using [FilesUploadService] for proto-based streaming uploads.
   ///
   /// Example:
   /// ```dart
@@ -82,12 +82,12 @@ final class UploadProgressNotifierProvider
 }
 
 String _$uploadProgressNotifierHash() =>
-    r'94540f368c99381ff5c071226bee08b3348b0a53';
+    r'1a05fee8c2721a6441399e62f64d212aa639440f';
 
 /// Manages upload progress state for multiple concurrent uploads
 ///
 /// Provides methods to start, cancel, retry, and track uploads
-/// using [MxcUploadService] for proto-based streaming uploads.
+/// using [FilesUploadService] for proto-based streaming uploads.
 ///
 /// Example:
 /// ```dart

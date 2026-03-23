@@ -32,10 +32,10 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  antinvestor_api_chat: ^1.53.20
+  antinvestor_api_chat: 1.53.20
   antinvestor_api_common: ^1.52.0
   antinvestor_api_device: ^1.53.13
-  antinvestor_api_files: ^1.53.19
+  antinvestor_api_files: 1.53.19
   antinvestor_api_profile: ^1.52.1
   app_badge_plus: ^1.2.7
   app_links: ^7.0.0
@@ -82,7 +82,7 @@ dependencies:
   protobuf: ^4.2.0
   qr_flutter: ^4.1.0
   record: ^6.2.0
-  riverpod_annotation: ^4.0.0
+  riverpod_annotation: ^4.0.2
   sentry_flutter: ^9.15.0
   share_plus: ^12.0.1
   shared_preferences: ^2.4.0
@@ -103,14 +103,14 @@ dev_dependencies:
   flutter_native_splash: ^2.4.7
   flutter_test:
     sdk: flutter
-  freezed: ^3.2.3
+  freezed: ^3.2.5
   import_sorter: ^4.6.0
   integration_test:
     sdk: flutter
   json_serializable: ^6.11.2
   # patrol: ^4.1.1  # Disabled: PatrolServer Kotlin compilation error with current Gradle/Kotlin setup
   # patrol_finders: ^3.0.0
-  riverpod_generator: ^4.0.0+1
+  riverpod_generator: ^4.0.3
 
 import_sorter:
   emojis: true # Optional, defaults to false
@@ -176,5 +176,3 @@ dependency_overrides:
   # Fix Flutter SDK pinning test_api 0.7.7 conflicting with
   # riverpod_generator 4.x (analyzer ^9.0.0) + vodozemac (test_core)
   test_api: 0.7.9
-
-# Note: antinvestor_api_common override commented out to use pub.dev version

@@ -22,6 +22,7 @@ import '../../features/rooms/data/room_sync_state.dart';
 import '../auth/token_refresh_coordinator.dart';
 import '../crypto/e2e_encryption_service.dart';
 import '../db/database.dart';
+import '../files/files_config_service.dart';
 import '../logging/app_logger.dart';
 import '../networking/api_config.dart';
 import '../networking/client.dart';
@@ -833,9 +834,10 @@ class SyncEngine with WidgetsBindingObserver {
           content = {'text': textBody};
         }
       } else if (payload.hasAttachment()) {
-        final base = ApiConfig.filesBaseUrl.replaceAll(RegExp(r'/+$'), '');
-        final contentUrl =
-            '$base/v1/content/${payload.attachment.attachmentId}';
+        final contentUrl = FilesConfigService.buildContentUrlFrom(
+          ApiConfig.filesBaseUrl,
+          payload.attachment.attachmentId,
+        );
         content = {
           'attachmentId': payload.attachment.attachmentId,
           'fileName': payload.attachment.filename,
@@ -1611,7 +1613,7 @@ class SyncEngine with WidgetsBindingObserver {
           await _processSendMessage(job);
           break;
         case domain_job.JobType.uploadFile:
-          // File uploads are handled by MxcUploadService before queuing
+          // File uploads are handled by FilesUploadService before queuing
           break;
         case domain_job.JobType.createRoom:
           await _processCreateRoom(job);
@@ -1769,7 +1771,7 @@ class SyncEngine with WidgetsBindingObserver {
     final request = pb.UpdateRoomRequest(
       roomId: roomId,
       name: payload['name'] as String? ?? '',
-      topic: payload['description'] as String? ?? '',
+      description: payload['description'] as String? ?? '',
     );
 
     // Build metadata including avatar and permissions if present

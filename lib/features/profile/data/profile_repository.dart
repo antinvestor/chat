@@ -8,7 +8,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/database.dart';
-import '../../../core/files/mxc_upload_service.dart';
+import '../../../core/files/files_upload_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/client.dart';
 import '../../auth/data/user_info_provider.dart';
@@ -245,9 +245,9 @@ class ProfileRepository {
       AppLogger.debug('_updateProfilePhotoWithData: Got profile client');
 
       AppLogger.debug(
-        '_updateProfilePhotoWithData: Getting mxcUploadServiceProvider',
+        '_updateProfilePhotoWithData: Getting filesUploadServiceProvider',
       );
-      final uploadService = _ref.read(mxcUploadServiceProvider);
+      final uploadService = _ref.read(filesUploadServiceProvider);
       AppLogger.debug('_updateProfilePhotoWithData: Got upload service');
 
       AppLogger.debug(

@@ -17,14 +17,8 @@ class FilesConfigService {
   /// Base URL for HTTP uploads
   String get baseUrl => ApiConfig.filesBaseUrl;
 
-  /// Server name derived from base URL (e.g., "files.stawi.dev" from "https://files.stawi.dev")
-  String get serverName {
-    final uri = Uri.parse(baseUrl);
-    return uri.host;
-  }
-
   /// Build a direct HTTP URL for content by media ID.
-  String buildContentUrl(String mediaId) => _buildContentUrl(baseUrl, mediaId);
+  String buildContentUrl(String mediaId) => contentUrl(baseUrl, mediaId);
 
   /// Build a direct HTTP URL for thumbnails by media ID.
   String buildThumbnailUrl(
@@ -32,7 +26,7 @@ class FilesConfigService {
     int width = 256,
     int height = 256,
     ThumbnailMethod method = ThumbnailMethod.CROP,
-  }) => _buildThumbnailUrl(
+  }) => thumbnailUrl(
     baseUrl,
     mediaId,
     width: width,
@@ -40,29 +34,12 @@ class FilesConfigService {
     method: method,
   );
 
-  static String _buildContentUrl(String baseUrl, String mediaId) =>
-      '${baseUrl.replaceAll(RegExp(r"/+$"), "")}/v1/content/$mediaId';
-
-  static String _buildThumbnailUrl(
-    String baseUrl,
-    String mediaId, {
-    int width = 256,
-    int height = 256,
-    ThumbnailMethod method = ThumbnailMethod.CROP,
-  }) {
-    final uri = Uri.parse(
-      '${baseUrl.replaceAll(RegExp(r"/+$"), "")}/v1/content/thumbnail/$mediaId',
-    );
-    return uri
-        .replace(
-          queryParameters: {
-            'width': '$width',
-            'height': '$height',
-            'method': method.name.toLowerCase(),
-          },
-        )
-        .toString();
-  }
+  /// Build a content URL from a base URL and media ID.
+  ///
+  /// Public static utility for code that doesn't have access to a
+  /// [FilesConfigService] instance (e.g. sync engine, background tasks).
+  static String buildContentUrlFrom(String baseUrl, String mediaId) =>
+      contentUrl(baseUrl, mediaId);
 
   /// Cached max upload size (bytes). Null until first fetch.
   int? _cachedMaxUploadSize;

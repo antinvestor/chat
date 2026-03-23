@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../core/files/mxc_upload_service.dart';
+import '../../../core/files/files_upload_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../domain/upload_progress.dart';
 
@@ -11,7 +11,7 @@ part 'upload_progress_provider.g.dart';
 /// Manages upload progress state for multiple concurrent uploads
 ///
 /// Provides methods to start, cancel, retry, and track uploads
-/// using [MxcUploadService] for proto-based streaming uploads.
+/// using [FilesUploadService] for proto-based streaming uploads.
 ///
 /// Example:
 /// ```dart
@@ -28,7 +28,7 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
     return {};
   }
 
-  MxcUploadService get _uploadService => ref.read(mxcUploadServiceProvider);
+  FilesUploadService get _uploadService => ref.read(filesUploadServiceProvider);
 
   /// Start a new upload
   ///
@@ -37,8 +37,8 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
   /// - [localId]: Local message ID for tracking
   /// - [mimeType]: Optional MIME type
   ///
-  /// Returns [MxcUploadResult] when complete
-  Future<MxcUploadResult> startUpload(
+  /// Returns [FilesUploadResult] when complete
+  Future<FilesUploadResult> startUpload(
     File file, {
     required String localId,
     String? mimeType,
@@ -114,8 +114,8 @@ class UploadProgressNotifier extends _$UploadProgressNotifier {
   /// - [localId]: Local message ID
   /// - [mimeType]: Optional MIME type
   ///
-  /// Returns [MxcUploadResult] when complete
-  Future<MxcUploadResult> retryUpload(
+  /// Returns [FilesUploadResult] when complete
+  Future<FilesUploadResult> retryUpload(
     File file, {
     required String localId,
     String? mimeType,

@@ -20,8 +20,8 @@ const int _multipartThreshold = 100 * 1024 * 1024;
 const int _multipartPartSize = 5 * 1024 * 1024;
 
 /// Result of an upload operation using direct HTTP URLs.
-class MxcUploadResult {
-  const MxcUploadResult({
+class FilesUploadResult {
+  const FilesUploadResult({
     required this.contentUri,
     required this.mediaId,
     required this.serverName,
@@ -47,11 +47,13 @@ class MxcUploadResult {
 /// streaming RPC.
 ///
 /// Provides a unified streaming upload path that works for all file sizes.
-class MxcUploadService {
-  MxcUploadService(this._getClient, this._configService);
+class FilesUploadService {
+  FilesUploadService(this._getClient, this._configService);
 
   final Future<FilesServiceClient> Function() _getClient;
   final FilesConfigService _configService;
+
+  String get _baseUrl => _configService.baseUrl;
 
   /// Upload a [File] via streaming RPC.
   ///
@@ -59,7 +61,7 @@ class MxcUploadService {
   /// Calls [onProgress] with values from 0.0 to 1.0 during upload.
   ///
   /// Throws [StateError] if the file exceeds the server's max upload size.
-  Future<MxcUploadResult> uploadFile(
+  Future<FilesUploadResult> uploadFile(
     File file, {
     String? mimeType,
     void Function(double progress)? onProgress,
@@ -107,16 +109,15 @@ class MxcUploadService {
     }
 
     final response = await client.uploadContent(controller.stream);
-
-    final contentUrl = _configService.buildContentUrl(response.mediaId);
+    final uploadUrl = contentUrlFromResponse(_baseUrl, response);
 
     AppLogger.info(
       'File uploaded via HTTP',
-      data: {'contentUrl': contentUrl, 'fileName': fileName, 'size': fileSize},
+      data: {'contentUrl': uploadUrl, 'fileName': fileName, 'size': fileSize},
     );
 
-    return MxcUploadResult(
-      contentUri: contentUrl,
+    return FilesUploadResult(
+      contentUri: uploadUrl,
       mediaId: response.mediaId,
       serverName: response.serverName,
     );
@@ -124,7 +125,7 @@ class MxcUploadService {
 
   /// Upload raw bytes via streaming RPC.
   /// Uses multipart upload for files larger than 100MB.
-  Future<MxcUploadResult> uploadBytes(
+  Future<FilesUploadResult> uploadBytes(
     Uint8List bytes,
     String filename,
     String mimeType, {
@@ -145,7 +146,7 @@ class MxcUploadService {
   }
 
   /// Upload using streaming RPC (for files < 100MB).
-  Future<MxcUploadResult> _uploadBytesStreaming(
+  Future<FilesUploadResult> _uploadBytesStreaming(
     Uint8List bytes,
     String filename,
     String mimeType,
@@ -180,20 +181,19 @@ class MxcUploadService {
     await controller.close();
 
     final response = await client.uploadContent(controller.stream);
+    final uploadUrl = contentUrlFromResponse(_baseUrl, response);
 
-    final contentUrl = _configService.buildContentUrl(response.mediaId);
+    AppLogger.debug('uploadBytes: response received: $uploadUrl');
 
-    AppLogger.debug('uploadBytes: response received: $contentUrl');
-
-    return MxcUploadResult(
-      contentUri: contentUrl,
+    return FilesUploadResult(
+      contentUri: uploadUrl,
       mediaId: response.mediaId,
       serverName: response.serverName,
     );
   }
 
   /// Upload using multipart upload (for files > 100MB).
-  Future<MxcUploadResult> _uploadBytesMultipart(
+  Future<FilesUploadResult> _uploadBytesMultipart(
     Uint8List bytes,
     String filename,
     String mimeType,
@@ -255,28 +255,29 @@ class MxcUploadService {
     );
 
     final metadata = completeResponse.metadata;
-    final serverName = _configService.serverName;
     final mediaId = metadata.mediaId;
-    final contentUri = _configService.buildContentUrl(mediaId);
+    final uploadUrl = metadata.contentUri.isNotEmpty
+        ? metadata.contentUri
+        : contentUrl(_baseUrl, mediaId);
 
-    AppLogger.debug('uploadBytes: multipart upload complete: $contentUri');
+    AppLogger.debug('uploadBytes: multipart upload complete: $uploadUrl');
 
-    return MxcUploadResult(
-      contentUri: contentUri,
+    return FilesUploadResult(
+      contentUri: uploadUrl,
       mediaId: mediaId,
-      serverName: serverName,
+      serverName: Uri.parse(_baseUrl).host,
     );
   }
 
   /// Upload a thumbnail image (convenience wrapper with simpler logging).
-  Future<MxcUploadResult> uploadThumbnail(
+  Future<FilesUploadResult> uploadThumbnail(
     Uint8List bytes,
     String mimeType,
   ) async {
     final result = await uploadBytes(bytes, 'thumbnail', mimeType);
 
     AppLogger.debug(
-      'Thumbnail uploaded via MXC',
+      'Thumbnail uploaded',
       data: {'contentUri': result.contentUri, 'size': bytes.length},
     );
 
@@ -322,10 +323,10 @@ class MxcUploadService {
   }
 }
 
-/// Provider for [MxcUploadService].
-final mxcUploadServiceProvider = Provider<MxcUploadService>((ref) {
+/// Provider for [FilesUploadService].
+final filesUploadServiceProvider = Provider<FilesUploadService>((ref) {
   final configService = ref.watch(filesConfigServiceProvider);
-  return MxcUploadService(
+  return FilesUploadService(
     () => ref.read(filesServiceClientProvider.future),
     configService,
   );

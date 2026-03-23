@@ -7,6 +7,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:html_unescape/html_unescape.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../core/files/files_config_service.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/networking/api_config.dart';
 import '../../../core/networking/client.dart';
@@ -168,8 +169,10 @@ class LinkPreviewService {
 
     String? imageUrl;
     if (response.hasOgImageMediaId() && response.ogImageMediaId.isNotEmpty) {
-      final base = ApiConfig.filesBaseUrl.replaceAll(RegExp(r'/+$'), '');
-      imageUrl = '$base/v1/content/${response.ogImageMediaId}';
+      imageUrl = FilesConfigService.buildContentUrlFrom(
+        ApiConfig.filesBaseUrl,
+        response.ogImageMediaId,
+      );
     }
     imageUrl ??= getString('og:image');
 
